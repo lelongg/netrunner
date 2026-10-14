@@ -9,6 +9,7 @@ interface Props {
   prompt: any;
   render: (msg: unknown) => string;
   send: (command: string, args?: unknown) => void;
+  closePrompt: () => void;
   disabled: boolean;
 }
 
@@ -31,7 +32,7 @@ function choiceLabel(value: any, render: (m: unknown) => string) {
   return render(value);
 }
 
-export function PromptPanel({ view, side, prompt, render, send, disabled }: Props) {
+export function PromptPanel({ view, side, prompt, render, send, closePrompt, disabled }: Props) {
   const ptype = prompt["prompt-type"];
   const choices = prompt.choices;
   const eid = prompt.eid;
@@ -93,6 +94,11 @@ export function PromptPanel({ view, side, prompt, render, send, disabled }: Prop
         {prompt["offer-bad-pub?"] && (
           <button disabled={disabled} onClick={() => send("bad-pub-choice", { eid })}>
             Bad publicity ({view.runner?.["bad-pub-credit"] ?? "?"} available)
+          </button>
+        )}
+        {ptype === "select" && !(prompt.selectable ?? []).length && choices.every((c: any) => c.value === "Hide") && (
+          <button class="primary" disabled={disabled} onClick={closePrompt}>
+            Skip · no valid target
           </button>
         )}
       </div>

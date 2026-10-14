@@ -362,6 +362,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave }
   };
   const current = selected ? findCard(view, selected.cid) : null;
   const promptId = prompt?.eid?.eid;
+  const closePrompt = () => session.say("/close-prompt", side);
 
   useEffect(() => setPicking(false), [!!view.run, promptId, view["active-player"], side]);
 
@@ -400,7 +401,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave }
       </section>
     );
   } else if (prompt && ptype !== "run") {
-    panel = <PromptPanel key={promptId} view={view} side={side} prompt={prompt} render={render} send={send} disabled={disabled} />;
+    panel = <PromptPanel key={promptId} view={view} side={side} prompt={prompt} render={render} send={send} closePrompt={closePrompt} disabled={disabled} />;
   } else if (picking && side === "runner") {
     const list: string[] = me["runnable-list"] ?? [];
     panel = (
@@ -513,6 +514,16 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave }
           >
             Indicate action
           </button>
+          {prompt && ptype !== "run" && (
+            <button
+              onClick={() => {
+                if (confirm("Close the current prompt? Use this only if the game is stuck.")) closePrompt();
+                setMenu(false);
+              }}
+            >
+              Close stuck prompt
+            </button>
+          )}
           <button
             class="danger"
             onClick={() => {
