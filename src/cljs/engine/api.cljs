@@ -89,10 +89,17 @@
         states (or (:public-states @state) (diffs/public-states state))]
     (->js (get (views states) (side-kw side)))))
 
-(defn- apply-and-diff [game f]
+(defn- apply-and-diff
+  "Runs f on the game state and refreshes the cached views. Like the Jinteki
+  server, an action that throws is rolled back before the error propagates."
+  [game f]
   (let [state (.-state game)
         old-state @state
-        ret (f state)
+        ret (try
+              (f state)
+              (catch :default e
+                (reset! state old-state)
+                (throw e)))
         d (diffs/public-diffs old-state state true false false)]
     (swap! state assoc :public-states (:public-states d))
     (->js {:ok (boolean ret)

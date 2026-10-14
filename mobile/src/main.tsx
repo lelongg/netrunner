@@ -43,7 +43,7 @@ function App() {
     session?.forget();
     session?.close();
     setSession(null);
-    setSave(null);
+    setSave(loadSave());
     history.replaceState(null, "", location.pathname);
   };
 
@@ -56,8 +56,8 @@ function App() {
         save={joinParam && joinParam !== save?.code ? null : save}
         onResume={() => save && resume(save)}
         onDiscard={() => {
-          clearSave();
-          setSave(null);
+          if (save) clearSave(save);
+          setSave(loadSave());
         }}
         onStart={(role: Role, name: string, code?: string) => {
           if (!loaded) return;

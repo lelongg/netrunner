@@ -7,7 +7,7 @@ export type Role = "host" | "guest" | "local";
 export type Msg =
   | { t: "hello"; name: string }
   | { t: "lobby"; host: string; hostSide: Side; hostReady: boolean; started: boolean }
-  | { t: "deck"; deck: WireDeck }
+  | { t: "deck"; deck: WireDeck; side: Side }
   | { t: "start" }
   | { t: "view"; view: any }
   | { t: "act"; command: string; args: unknown }
@@ -51,8 +51,9 @@ export type SavedGame =
 type Listener = () => void;
 
 const PEER_PREFIX = "nsg-mobile-";
-const SAVE_KEY = "nsg.save";
+const SAVE_KEYS = { game: "nsg.save", guest: "nsg.guest" } as const;
 const RETRY_MS = 2500;
+const MAX_RETRIES = 36;
 const other = (s: Side): Side => (s === "corp" ? "runner" : "corp");
 
 export function newRoomCode() {
@@ -76,9 +77,11 @@ function sfc32(a: number, b: number, c: number, d: number) {
   };
 }
 
-export function loadSave(): SavedGame | null {
+const saveKey = (role: Role) => (role === "guest" ? SAVE_KEYS.guest : SAVE_KEYS.game);
+
+function readSave(key: string): SavedGame | null {
   try {
-    const raw = localStorage.getItem(SAVE_KEY);
+    const raw = localStorage.getItem(key);
     const save = raw ? (JSON.parse(raw) as SavedGame) : null;
     return save?.v === 1 ? save : null;
   } catch {
@@ -86,23 +89,30 @@ export function loadSave(): SavedGame | null {
   }
 }
 
-function writeSave(save: SavedGame | null) {
+export function loadSave(): SavedGame | null {
+  return readSave(SAVE_KEYS.game) ?? readSave(SAVE_KEYS.guest);
+}
+
+function writeSave(role: Role, save: SavedGame | null) {
   try {
-    if (save) localStorage.setItem(SAVE_KEY, JSON.stringify(save));
-    else localStorage.removeItem(SAVE_KEY);
+    if (save) localStorage.setItem(saveKey(role), JSON.stringify(save));
+    else localStorage.removeItem(saveKey(role));
   } catch {
     /* storage unavailable or full */
   }
 }
 
-export function clearSave() {
-  writeSave(null);
+export function clearSave(save: SavedGame) {
+  writeSave(save.role, null);
 }
+
+const deckSide = (db: CardDb, deck: WireDeck): Side | undefined => db.byTitle.get(deck.identity)?.side.toLowerCase() as Side | undefined;
 
 export class Session {
   lobby: LobbyState;
   views: Partial<Record<Side, any>> = {};
   pending = false;
+  actionError: string | null = null;
   private listeners = new Set<Listener>();
   private peer?: Peer;
   private conn?: DataConnection;
@@ -113,6 +123,7 @@ export class Session {
   private rng?: () => number;
   private log: Entry[] = [];
   private closed = false;
+  private failures = 0;
 
   constructor(
     private engine: EngineApi,
@@ -133,7 +144,7 @@ export class Session {
     };
     if (role === "host") this.host();
     if (role === "guest") {
-      writeSave({ v: 1, role: "guest", code, myName, savedAt: Date.now() });
+      writeSave("guest", { v: 1, role: "guest", code, myName, savedAt: Date.now() });
       this.peer = new Peer();
       this.peer.on("open", () => this.connect());
       this.peer.on("error", (e: any) => this.onGuestError(e));
@@ -188,27 +199,34 @@ export class Session {
     const conn = this.peer.connect(PEER_PREFIX + this.lobby.code, { reliable: true });
     this.conn = conn;
     conn.on("open", () => {
+      this.failures = 0;
       this.patch({ status: "connected", error: undefined });
       this.post({ t: "hello", name: this.lobby.myName });
-      if (this.lobby.myDeck && !this.lobby.started) this.post({ t: "deck", deck: this.lobby.myDeck });
     });
     conn.on("data", (d) => this.onGuestMessage(d as Msg));
     conn.on("close", () => {
       if (this.conn !== conn || this.closed) return;
       this.pending = false;
-      this.patch({ status: "connecting" });
-      setTimeout(() => this.connect(), RETRY_MS);
+      this.retry(() => this.connect());
     });
+  }
+
+  private retry(again: () => void) {
+    if (++this.failures > MAX_RETRIES) {
+      this.patch({ status: "closed", error: "Host unreachable. Resume from the home screen once it is back." });
+      return;
+    }
+    this.patch({ status: "connecting" });
+    setTimeout(() => !this.closed && again(), RETRY_MS);
   }
 
   private onGuestError(e: any) {
     if (this.closed) return;
     if (e?.type === "peer-unavailable" || e?.type === "network" || e?.type === "disconnected") {
-      this.patch({ status: "connecting", error: "Host unreachable, retrying…" });
-      setTimeout(() => {
+      this.retry(() => {
         if (this.peer?.disconnected) this.peer.reconnect();
         this.connect();
-      }, RETRY_MS);
+      });
     } else this.patch({ error: String(e?.message ?? e), status: "closed" });
   }
 
@@ -235,7 +253,7 @@ export class Session {
         if (this.game) this.post({ t: "view", view: this.engine.view(this.game, guest) });
         break;
       case "deck":
-        if (this.lobby.started) break;
+        if (this.lobby.started || msg.side !== guest || deckSide(this.db, msg.deck) !== guest) break;
         this.opponentDeck = msg.deck;
         this.patch({ opponentDeckReady: true });
         break;
@@ -257,7 +275,7 @@ export class Session {
         const mySide = other(msg.hostSide);
         const myDeck = mySide === this.lobby.mySide ? this.lobby.myDeck : undefined;
         this.patch({ opponentName: msg.host, mySide, myDeck, started: msg.started || this.lobby.started });
-        if (myDeck && !msg.started) this.post({ t: "deck", deck: myDeck });
+        if (myDeck && !msg.started) this.post({ t: "deck", deck: myDeck, side: mySide });
         break;
       }
       case "view":
@@ -268,7 +286,8 @@ export class Session {
         break;
       case "error":
         this.pending = false;
-        this.patch({ error: msg.message });
+        this.actionError = msg.message;
+        this.emit();
         break;
     }
   }
@@ -289,12 +308,20 @@ export class Session {
       return;
     }
     this.patch({ myDeck: deck });
-    if (this.lobby.role === "guest") this.post({ t: "deck", deck });
+    if (this.lobby.role === "guest") this.post({ t: "deck", deck, side: this.lobby.mySide });
     else this.post(this.lobbyMsg());
   }
 
   get canStart() {
-    return this.lobby.role !== "guest" && !!this.lobby.myDeck && !!this.opponentDeck && !this.lobby.started;
+    const { role, myDeck, mySide, started } = this.lobby;
+    return (
+      role !== "guest" &&
+      !started &&
+      !!myDeck &&
+      !!this.opponentDeck &&
+      deckSide(this.db, myDeck) === mySide &&
+      deckSide(this.db, this.opponentDeck) === other(mySide)
+    );
   }
 
   private withRng<T>(f: () => T): T {
@@ -342,7 +369,7 @@ export class Session {
 
   private persist() {
     if (this.lobby.role === "guest" || !this.setup || !this.seed) return;
-    writeSave({
+    writeSave(this.lobby.role, {
       v: 1,
       role: this.lobby.role,
       code: this.lobby.code,
@@ -377,7 +404,11 @@ export class Session {
     const error = this.exec(recorded);
     this.log.push(recorded);
     this.persist();
-    if (error && entry.side !== this.lobby.mySide) this.post({ t: "error", message: String(error) });
+    if (error) {
+      const message = "That action failed in the engine and was undone.";
+      if (entry.side !== this.lobby.mySide && this.lobby.role === "host") this.post({ t: "error", message });
+      else this.actionError = message;
+    }
     this.broadcast();
   }
 
@@ -410,8 +441,13 @@ export class Session {
     this.perform({ side, kind: "concede" });
   }
 
+  clearActionError() {
+    this.actionError = null;
+    this.emit();
+  }
+
   forget() {
-    writeSave(null);
+    writeSave(this.lobby.role, null);
   }
 
   close() {

@@ -3,3 +3,4 @@ dist
 engine
 public/data
 public/i18n
+fuzz-failures.json

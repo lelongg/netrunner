@@ -608,6 +608,7 @@ textarea:focus {
 /* board */
 
 .board {
+  position: relative;
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -890,6 +891,19 @@ textarea:focus {
   margin-top: -14px;
 }
 
+.zone-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  overflow-y: auto;
+  --tile-w: 64px;
+  --tile-h: 89px;
+}
+
+.pile .tile {
+  cursor: pointer;
+}
+
 /* dock */
 
 .dock {
@@ -1025,13 +1039,44 @@ textarea:focus {
   --tile-h: 89px;
 }
 
+.toasts {
+  position: absolute;
+  top: calc(96px + env(safe-area-inset-top));
+  left: 10px;
+  right: 10px;
+  z-index: 35;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.toasts > * {
+  pointer-events: auto;
+}
+
 .toast {
-  margin: 6px 10px 0;
+  min-height: 0;
   padding: 8px 10px;
   border: 1px solid var(--yellow);
-  background: #1c1a08;
+  background: #1c1a08f2;
   color: var(--yellow);
   font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  text-align: left;
+  box-shadow: 0 6px 18px #000a;
+}
+
+.toast-count {
+  font-weight: 700;
+}
+
+.toast.error {
+  border-color: var(--red);
+  background: #2a0b09f2;
+  color: var(--red-soft);
 }
 
 .toast.info {

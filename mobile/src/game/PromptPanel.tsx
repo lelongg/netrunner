@@ -82,7 +82,7 @@ export function PromptPanel({ view, side, prompt, render, send, disabled }: Prop
   } else if (Array.isArray(choices)) {
     body = (
       <div class="choices">
-        {ptype === "select" && <p class="hint">Tap the highlighted cards on the board.</p>}
+        {ptype === "select" && <p class="hint">Tap the highlighted cards to select them.</p>}
         {choices
           .filter((c: any) => c.value !== "Hide")
           .map((c: any) => (

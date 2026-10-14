@@ -94,23 +94,93 @@ function MeBar({ view, side, name }: { view: any; side: Side; name: string }) {
   );
 }
 
-function Pile({ label, count, cards, onTap, owner, side }: { label: string; count: number; cards?: any[]; onTap: (c: any) => void; owner: boolean; side: "Corp" | "Runner" }) {
+type ZoneKey = "discard" | "play-area" | "rfg" | "set-aside";
+interface ZoneRef {
+  owner: Side;
+  key: ZoneKey;
+}
+
+const ZONE_LABELS: Record<Side, Record<ZoneKey, string>> = {
+  corp: { discard: "Archives", "play-area": "Play area", rfg: "Removed", "set-aside": "Set aside" },
+  runner: { discard: "Heap", "play-area": "Play area", rfg: "Removed", "set-aside": "Set aside" },
+};
+
+function Pile({ label, count, cards, owner, side, selectable, onOpen }: { label: string; count: number; cards?: any[]; owner: boolean; side: Side; selectable: Set<unknown>; onOpen?: () => void }) {
   const top = cards?.[cards.length - 1];
+  const target = (cards ?? []).some((c) => selectable.has(c.cid));
+  const back = `back ${side === "corp" ? "corp" : "runner"}`;
+  const face = top ? (
+    <CardTile card={top} owner={owner} size="sm" onTap={onOpen} selectable={target} />
+  ) : (
+    <div class={`tile tile-sm ${count ? back : "empty"}`} />
+  );
   return (
     <div class="pile">
-      {top ? (
-        <CardTile card={top} owner={owner} onTap={onTap} size="sm" />
-      ) : (
-        <div class={`tile tile-sm ${count ? `back ${side === "Corp" ? "corp" : "runner"}` : "empty"}`} />
-      )}
-      <span>
+      {face}
+      <span class={target ? "yellow" : ""}>
         {label} {count}
       </span>
     </div>
   );
 }
 
-function CorpArea({ view, side, mine, onTap, selectable, runServer }: { view: any; side: Side; mine: boolean; onTap: (c: any) => void; selectable: Set<unknown>; runServer?: string }) {
+function Piles({ view, zoneOwner, viewer, onTap, onZone, selectable }: { view: any; zoneOwner: Side; viewer: Side; onTap: (c: any) => void; onZone: (z: ZoneRef) => void; selectable: Set<unknown> }) {
+  const p = view[zoneOwner] ?? {};
+  const owner = viewer === zoneOwner;
+  const labels = ZONE_LABELS[zoneOwner];
+  const zone = (key: ZoneKey) => {
+    const cards: any[] = p[key] ?? [];
+    if (key !== "discard" && !cards.length) return null;
+    return <Pile label={labels[key]} count={cards.length} cards={cards} owner={owner} side={zoneOwner} selectable={selectable} onOpen={cards.length ? () => onZone({ owner: zoneOwner, key }) : undefined} />;
+  };
+  return (
+    <div class="piles">
+      {p.identity && <CardTile card={p.identity} owner={owner} onTap={onTap} size="sm" selectable={selectable.has(p.identity.cid)} />}
+      <Pile label={zoneOwner === "corp" ? "R&D" : "Stack"} count={p["deck-count"] ?? 0} owner={owner} side={zoneOwner} selectable={selectable} />
+      {zone("discard")}
+      {zone("play-area")}
+      {zone("rfg")}
+      {zone("set-aside")}
+      {(p.scored ?? []).length > 0 && (
+        <div class="scored">
+          {p.scored.map((c: any) => (
+            <CardTile card={c} owner={owner} onTap={onTap} size="sm" selectable={selectable.has(c.cid)} />
+          ))}
+        </div>
+      )}
+      {(p.current ?? []).map((c: any) => (
+        <CardTile card={c} owner={owner} onTap={onTap} size="sm" selectable={selectable.has(c.cid)} />
+      ))}
+    </div>
+  );
+}
+
+function ZoneSheet({ zone, view, viewer, selectable, onTap, onClose }: { zone: ZoneRef; view: any; viewer: Side; selectable: Set<unknown>; onTap: (c: any) => void; onClose: () => void }) {
+  const cards: any[] = view[zone.owner]?.[zone.key] ?? [];
+  const mine = viewer === zone.owner;
+  return (
+    <div class="sheet-backdrop" onClick={onClose}>
+      <div class="sheet panel zone-sheet" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={ZONE_LABELS[zone.owner][zone.key]}>
+        <div class="row">
+          <span class="label">
+            {mine ? "Your" : "Their"} {ZONE_LABELS[zone.owner][zone.key]} · {cards.length}
+          </span>
+          <button class="ghost" onClick={onClose} aria-label="Close">
+            ✕
+          </button>
+        </div>
+        {cards.length === 0 && <span class="status">Empty</span>}
+        <div class="zone-grid">
+          {[...cards].reverse().map((c) => (
+            <CardTile card={c} owner={mine} onTap={onTap} selectable={selectable.has(c.cid)} />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CorpArea({ view, side, mine, onTap, onZone, selectable, runServer }: { view: any; side: Side; mine: boolean; onTap: (c: any) => void; onZone: (z: ZoneRef) => void; selectable: Set<unknown>; runServer?: string }) {
   const corp = view.corp ?? {};
   const servers = corp.servers ?? {};
   const owner = side === "corp";
@@ -144,26 +214,12 @@ function CorpArea({ view, side, mine, onTap, selectable, runServer }: { view: an
           );
         })}
       </div>
-      <div class="piles">
-        {corp.identity && <CardTile card={corp.identity} owner={owner} onTap={onTap} size="sm" />}
-        <Pile label="R&D" count={corp["deck-count"] ?? 0} onTap={onTap} owner={owner} side="Corp" />
-        <Pile label="Arch" count={(corp.discard ?? []).length} cards={corp.discard} onTap={onTap} owner={owner} side="Corp" />
-        {(corp.scored ?? []).length > 0 && (
-          <div class="scored">
-            {corp.scored.map((c: any) => (
-              <CardTile card={c} owner={owner} onTap={onTap} size="sm" />
-            ))}
-          </div>
-        )}
-        {(corp.current ?? []).map((c: any) => (
-          <CardTile card={c} owner={owner} onTap={onTap} size="sm" />
-        ))}
-      </div>
+      <Piles view={view} zoneOwner="corp" viewer={side} onTap={onTap} onZone={onZone} selectable={selectable} />
     </div>
   );
 }
 
-function RunnerArea({ view, side, onTap, selectable }: { view: any; side: Side; onTap: (c: any) => void; selectable: Set<unknown> }) {
+function RunnerArea({ view, side, onTap, onZone, selectable }: { view: any; side: Side; onTap: (c: any) => void; onZone: (z: ZoneRef) => void; selectable: Set<unknown> }) {
   const runner = view.runner ?? {};
   const rig = runner.rig ?? {};
   const owner = side === "runner";
@@ -190,21 +246,7 @@ function RunnerArea({ view, side, onTap, selectable }: { view: any; side: Side; 
       {row("Hardware", rig.hardware)}
       {row("Resources", rig.resource)}
       {row("Facedown", rig.facedown)}
-      <div class="piles">
-        {runner.identity && <CardTile card={runner.identity} owner={owner} onTap={onTap} size="sm" />}
-        <Pile label="Stack" count={runner["deck-count"] ?? 0} onTap={onTap} owner={owner} side="Runner" />
-        <Pile label="Heap" count={(runner.discard ?? []).length} cards={runner.discard} onTap={onTap} owner={owner} side="Runner" />
-        {(runner.scored ?? []).length > 0 && (
-          <div class="scored">
-            {runner.scored.map((c: any) => (
-              <CardTile card={c} owner={owner} onTap={onTap} size="sm" />
-            ))}
-          </div>
-        )}
-        {(runner.current ?? []).map((c: any) => (
-          <CardTile card={c} owner={owner} onTap={onTap} size="sm" />
-        ))}
-      </div>
+      <Piles view={view} zoneOwner="runner" viewer={side} onTap={onTap} onZone={onZone} selectable={selectable} />
     </div>
   );
 }
@@ -247,6 +289,48 @@ function Log({ view, render, onSay, onClose }: { view: any; render: (m: unknown)
   );
 }
 
+const TOAST_MS = 4000;
+const ACTION_ERROR = "action-error";
+const TOAST_MAX = 3;
+
+function Toasts({ toasts, render, dismiss }: { toasts: any[]; render: (m: unknown) => string; dismiss: (id: string) => void }) {
+  const timers = useRef(new Map<string, number>());
+  useEffect(() => {
+    const live = new Set(toasts.map((t) => t.id));
+    for (const t of toasts) {
+      if (!timers.current.has(t.id)) timers.current.set(t.id, window.setTimeout(() => dismiss(t.id), TOAST_MS));
+    }
+    for (const [id, handle] of timers.current) {
+      if (!live.has(id)) {
+        clearTimeout(handle);
+        timers.current.delete(id);
+      }
+    }
+  });
+  useEffect(() => () => timers.current.forEach((handle) => clearTimeout(handle)), []);
+  if (!toasts.length) return null;
+  const groups = new Map<string, { text: string; type: string; ids: string[] }>();
+  for (const t of toasts) {
+    const text = iconize(render(t.msg));
+    const group = groups.get(text) ?? { text, type: String(t.type), ids: [] as string[] };
+    group.ids.push(t.id);
+    groups.set(text, group);
+  }
+  const all = [...groups.values()];
+  const hidden = all.length - TOAST_MAX;
+  return (
+    <div class="toasts" aria-live="polite">
+      {all.slice(-TOAST_MAX).map((g) => (
+        <button class={`toast ${g.type}`} onClick={() => g.ids.forEach(dismiss)}>
+          {g.text}
+          {g.ids.length > 1 && <span class="toast-count"> ×{g.ids.length}</span>}
+        </button>
+      ))}
+      {hidden > 0 && <span class="label">+{hidden} more</span>}
+    </div>
+  );
+}
+
 function feedText(view: any, side: Side, names: Record<Side, string>) {
   if (view.winner) return `${names[view.winner as Side] ?? view.winner} wins`;
   if (view.run) {
@@ -262,6 +346,8 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave }
   const [showLog, setShowLog] = useState(false);
   const [picking, setPicking] = useState(false);
   const [menu, setMenu] = useState(false);
+  const [zone, setZone] = useState<ZoneRef | null>(null);
+  const autoZone = useRef(false);
   const render = (m: unknown) => engine.renderMessage(m);
   const send = (command: string, args?: unknown) => session.send(command, args, side);
   const disabled = session.pending;
@@ -274,18 +360,27 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave }
     if (ptype === "select" && (selectable.has(card.cid) || card.selected)) send("select", { card: cardRef(card), eid: prompt.eid });
     else setSelected(card);
   };
-  const current = selected ? (findCard(view, selected.cid) ?? selected) : null;
+  const current = selected ? findCard(view, selected.cid) : null;
+  const promptId = prompt?.eid?.eid;
+
+  useEffect(() => setPicking(false), [!!view.run, promptId, view["active-player"], side]);
+
+  useEffect(() => {
+    const wanted: Side | null = prompt?.["show-discard"] ? side : prompt?.["show-opponent-discard"] ? opp : null;
+    if (wanted) {
+      setZone({ owner: wanted, key: "discard" });
+      autoZone.current = true;
+    } else if (autoZone.current) {
+      setZone(null);
+      autoZone.current = false;
+    }
+  }, [promptId, side]);
   const names = {
     [side]: me.user?.username ?? "You",
     [opp]: view[opp]?.user?.username ?? "Opponent",
   } as Record<Side, string>;
 
   const toasts: any[] = me.toast ?? [];
-  useEffect(() => {
-    if (!toasts.length) return;
-    const t = setTimeout(() => toasts.forEach((x) => send("toast", { id: x.id })), 3500);
-    return () => clearTimeout(t);
-  }, [toasts.map((t) => t.id).join()]);
 
   const log: any[] = view.log ?? [];
   const lastLog = log[log.length - 1];
@@ -305,7 +400,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave }
       </section>
     );
   } else if (prompt && ptype !== "run") {
-    panel = <PromptPanel view={view} side={side} prompt={prompt} render={render} send={send} disabled={disabled} />;
+    panel = <PromptPanel key={promptId} view={view} side={side} prompt={prompt} render={render} send={send} disabled={disabled} />;
   } else if (picking && side === "runner") {
     const list: string[] = me["runnable-list"] ?? [];
     panel = (
@@ -375,15 +470,15 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave }
 
   const theirArea =
     opp === "corp" ? (
-      <CorpArea view={view} side={side} mine={false} onTap={tap} selectable={selectable} runServer={runServer} />
+      <CorpArea view={view} side={side} mine={false} onTap={tap} onZone={setZone} selectable={selectable} runServer={runServer} />
     ) : (
-      <RunnerArea view={view} side={side} onTap={tap} selectable={selectable} />
+      <RunnerArea view={view} side={side} onTap={tap} onZone={setZone} selectable={selectable} />
     );
   const myArea =
     side === "corp" ? (
-      <CorpArea view={view} side={side} mine onTap={tap} selectable={selectable} runServer={runServer} />
+      <CorpArea view={view} side={side} mine onTap={tap} onZone={setZone} selectable={selectable} runServer={runServer} />
     ) : (
-      <RunnerArea view={view} side={side} onTap={tap} selectable={selectable} />
+      <RunnerArea view={view} side={side} onTap={tap} onZone={setZone} selectable={selectable} />
     );
   const hand: any[] = [...(me.hand ?? []), ...(me.discard ?? []).filter((c: any) => c["flashback-playable"])];
 
@@ -432,6 +527,11 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave }
           </button>
         </nav>
       )}
+      <Toasts
+        toasts={session.actionError ? [...toasts, { id: ACTION_ERROR, type: "error", msg: session.actionError }] : toasts}
+        render={render}
+        dismiss={(id) => (id === ACTION_ERROR ? session.clearActionError() : send("toast", { id }))}
+      />
       <main class="playfield">
         <Opponent view={view} side={opp} name={names[opp]} />
         {theirArea}
@@ -439,11 +539,6 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave }
         {myArea}
       </main>
       <footer class="dock">
-        {toasts.map((t) => (
-          <div class={`toast ${t.type}`} onClick={() => send("toast", { id: t.id })}>
-            {iconize(render(t.msg))}
-          </div>
-        ))}
         <button class="last-log" onClick={() => setShowLog(true)}>
           {lastLog ? iconize(render(lastLog.text)).slice(0, 140) : "Log"}
         </button>
@@ -456,6 +551,19 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave }
           {hand.length === 0 && <span class="hint">Empty hand</span>}
         </div>
       </footer>
+      {zone && (
+        <ZoneSheet
+          zone={zone}
+          view={view}
+          viewer={side}
+          selectable={selectable}
+          onTap={tap}
+          onClose={() => {
+            setZone(null);
+            autoZone.current = false;
+          }}
+        />
+      )}
       {current && <CardSheet card={current} view={view} side={side} db={db} send={send} disabled={disabled} onClose={() => setSelected(null)} />}
       {showLog && <Log view={view} render={render} onSay={(t) => session.say(t, side)} onClose={() => setShowLog(false)} />}
     </div>

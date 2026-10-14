@@ -120,7 +120,10 @@ export function cardCommands(card: any, view: any, side: Side): Command[] {
   if (mine && active) {
     if (side === "corp") {
       for (const a of actionList(card, view, side)) {
-        out.push({ label: ACTION_LABELS[a], command: a, args: { card: ref }, kind: a === "trash" ? "danger" : "normal" });
+        const me = view[side] ?? {};
+        const enabled = a === "advance" ? me.click > 0 && me.credit > 0 : undefined;
+        const label = a === "rez" && card.cost != null ? `${ACTION_LABELS[a]} · ${card.cost}¢` : ACTION_LABELS[a];
+        out.push({ label, command: a, args: { card: ref }, kind: a === "trash" ? "danger" : "normal", enabled });
       }
     } else if (card.type === "Program" && z === "rig") {
       out.push({ label: ACTION_LABELS.trash, command: "trash", args: { card: ref }, kind: "danger" });
@@ -167,12 +170,12 @@ export function basicCommands(view: any, side: Side): Command[] {
   if (post) {
     if (myTurn) {
       out.push(
-        post["requires-consent?"]
-          ? { label: "Continue end of turn", command: "post-discard-pass-priority", enabled: !post[`${side}?`], kind: "primary" }
+        post["requires-consent"]
+          ? { label: "Continue end of turn", command: "post-discard-pass-priority", enabled: !post[side], kind: "primary" }
           : { label: "Continue end of turn", command: "end-post-discard", kind: "primary" },
       );
-    } else if (post["requires-consent?"]) {
-      out.push({ label: "Allow end of turn", command: "post-discard-pass-priority", enabled: !post[`${side}?`], kind: "primary" });
+    } else if (post["requires-consent"]) {
+      out.push({ label: "Allow end of turn", command: "post-discard-pass-priority", enabled: !post[side], kind: "primary" });
     }
     return out;
   }
@@ -181,12 +184,12 @@ export function basicCommands(view: any, side: Side): Command[] {
     const label = view["active-player"] === "corp" ? "Mandatory draw" : "Take clicks";
     if (myTurn) {
       out.push(
-        p12["requires-consent?"]
-          ? { label, command: "phase-12-pass-priority", enabled: !p12[`${side}?`], kind: "primary" }
+        p12["requires-consent"]
+          ? { label, command: "phase-12-pass-priority", enabled: !p12[side], kind: "primary" }
           : { label, command: "end-phase-12", kind: "primary" },
       );
-    } else if (p12["requires-consent?"]) {
-      out.push({ label: `Allow ${label.toLowerCase()}`, command: "phase-12-pass-priority", enabled: !p12[`${side}?`], kind: "primary" });
+    } else if (p12["requires-consent"]) {
+      out.push({ label: `Allow ${label.toLowerCase()}`, command: "phase-12-pass-priority", enabled: !p12[side], kind: "primary" });
     }
     return out;
   }
@@ -243,7 +246,7 @@ export function runCommands(view: any, side: Side, autoContinue = false): Comman
   const ice = currentIce(view);
   if (side === "corp") {
     if (run?.phase === "approach-ice" && ice && !ice.rezzed)
-      out.push({ label: `Rez ${ice.title ?? "ice"}`, command: "rez", args: { card: cardRef(ice), "press-continue": autoContinue }, kind: "primary" });
+      out.push({ label: `Rez ${ice.title ?? "ice"}${ice.cost != null ? ` · ${ice.cost}¢` : ""}`, command: "rez", args: { card: cardRef(ice), "press-continue": autoContinue }, kind: "primary" });
     if ((run?.phase === "encounter-ice" || enc) && ice) {
       const subs: any[] = ice.subroutines ?? [];
       out.push({
@@ -273,9 +276,10 @@ export function runCommands(view: any, side: Side, autoContinue = false): Comman
   } else if (run) {
     if (run["next-phase"] && run.phase !== "initiation")
       out.push({ label: nextPhaseLabel(view), command: "start-next-phase", enabled: !run["no-action"], kind: "primary" });
+    else if (run.phase === "initiation" || (!run["next-phase"] && run.position !== 0))
+      out.push({ label: nextPhaseLabel(view), command: "continue", enabled: run["no-action"] !== "runner", kind: "primary" });
     else if (run.position === 0 && run.phase === "movement")
       out.push({ label: "Breach server", command: "continue", enabled: run["no-action"] !== "runner", kind: "primary" });
-    else out.push({ label: nextPhaseLabel(view), command: "continue", enabled: run["no-action"] !== "runner", kind: "primary" });
   }
   if (run && !view["forced-encounter"] && run.phase !== "success")
     out.push({
@@ -292,11 +296,11 @@ export function findCard(view: any, cid: unknown): any {
   const walk = (x: any) => {
     if (found || !x || typeof x !== "object") return;
     if (Array.isArray(x)) return x.forEach(walk);
-    if (x.cid === cid && x.zone) {
+    if (x.cid === cid && (x.zone || x.type === "Identity")) {
       found = x;
       return;
     }
-    for (const k of ["corp", "runner", "servers", "rig", "hosted", "content", "ices", "hq", "rd", "archives", "hand", "scored", "discard", "current", "play-area", "program", "hardware", "resource", "facedown"]) {
+    for (const k of ["corp", "runner", "identity", "servers", "rig", "hosted", "content", "ices", "hq", "rd", "archives", "hand", "deck", "scored", "discard", "current", "play-area", "rfg", "set-aside", "program", "hardware", "resource", "facedown"]) {
       if (k in x) walk(x[k]);
     }
     for (const k of Object.keys(x)) if (k.startsWith("remote")) walk(x[k]);
