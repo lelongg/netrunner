@@ -383,7 +383,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave }
   const toasts: any[] = me.toast ?? [];
 
   const log: any[] = view.log ?? [];
-  const lastLog = log[log.length - 1];
+  const lastLog = [...log].reverse().find((e) => !/^\s*\[hr\]\s*$/i.test(String(e.text?.["raw-text"] ?? e.text ?? "")));
   const runServer = view.run?.server?.[0];
   const ice = currentIce(view);
   const link = session.lobby.role === "local" ? null : session.lobby.status;

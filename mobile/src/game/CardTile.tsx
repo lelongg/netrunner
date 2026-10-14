@@ -60,7 +60,7 @@ export function CardTile({
           {counters(card).map((c) => (
             <span class="badge">{c}</span>
           ))}
-          {strength != null && strength !== false && <span class="badge str">⚔{strength}</span>}
+          {strength != null && strength !== false && <span class="badge str">str {strength}</span>}
         </div>
         {dim && <span class="state">unrezzed</span>}
         {owner && card.side === "Corp" && zone0(card) === "servers" && !isFaceup(card) && card.type === "Agenda" && <span class="state">facedown</span>}
