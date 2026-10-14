@@ -18,7 +18,8 @@
    [game.core.winning :refer [concede]]
    [game.quotes :as quotes]
    [jinteki.cards :refer [all-cards]]
-   [jinteki.i18n :as i18n]))
+   [jinteki.i18n :as i18n]
+   [jinteki.preconstructed :as precon]))
 
 (defn- ->clj [x]
   (js->clj x :keywordize-keys true))
@@ -141,3 +142,20 @@
       (or (:raw-text m)
           (try (i18n/build-msg m)
                (catch :default _ (str (:msg/type m))))))))
+
+(defn- precon-deck [{:keys [name identity cards format]}]
+  {:name name
+   :format format
+   :identity (:title identity)
+   :cards (mapv (fn [{:keys [qty card]}] {:qty qty :title card}) cards)})
+
+(defn precons
+  "Preconstructed matchups: [{key, title, corp, runner}] with decks as card titles."
+  []
+  (->js
+   (for [k (concat [:beginner :intermediate] (sort precon/all-matchups))
+         :let [{:keys [tr-inner corp runner]} (precon/matchup-by-key k)]]
+     {:key k
+      :title (second tr-inner)
+      :corp (precon-deck corp)
+      :runner (precon-deck runner)})))

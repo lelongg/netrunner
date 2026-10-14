@@ -1,0 +1,78 @@
+name: Mobile app
+
+on:
+  push:
+    branches: ["master"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: mobile-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: 'Build engine and mobile app'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Prepare java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Install clojure tools
+        uses: DeLaGuardo/setup-clojure@13.0
+        with:
+          lein: 2.9.1
+
+      - name: Cache lein project dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.m2
+            ~/.lein
+          key: ${{ runner.os }}-mobile-clojure-${{ hashFiles('**/project.clj') }}
+          restore-keys: ${{ runner.os }}-mobile-clojure
+
+      - name: Install npm dependencies
+        run: npm ci && npm ci --prefix mobile
+
+      - name: Compile the engine to JavaScript
+        run: npx shadow-cljs release engine
+
+      - name: Fetch card data
+        run: npm run cards --prefix mobile
+
+      - name: Engine smoke test
+        run: npm run smoke --prefix mobile
+
+      - name: Build mobile app
+        run: npm run build --prefix mobile
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: mobile/dist
+
+  deploy:
+    name: 'Deploy to GitHub Pages'
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

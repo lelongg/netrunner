@@ -1,92 +1,78 @@
+import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import * as engine from "../engine/engine.js";
 
-const cards = JSON.parse(await readFile(new URL("../public/data/cards.json", import.meta.url), "utf8"));
+const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
+const cards = JSON.parse(await read("../public/data/cards.json"));
 const byTitle = new Map(cards.map((c) => [c.title, c]));
-const deck = (identity, list) => ({
-  identity: byTitle.get(identity),
-  cards: Object.entries(list).map(([title, qty]) => ({ qty, card: byTitle.get(title) })),
-});
 
-console.log("cards loaded:", engine.loadCards(cards));
+assert.equal(engine.loadCards(cards), cards.length);
+engine.loadDictionary("en", (await read("../public/i18n/en/messages.ftl")) + (await read("../public/i18n/en/ui.ftl")));
+
+const matchups = engine.precons();
+assert.ok(matchups.length > 2, "preconstructed matchups available");
+const deck = (p) => ({
+  identity: byTitle.get(p.identity),
+  cards: p.cards.map(({ qty, title }) => ({ qty, card: byTitle.get(title) })),
+});
+const { corp, runner } = matchups[0];
 
 const game = engine.createGame({
   gameid: "smoke",
   format: "casual",
-  corp: {
-    user: { username: "corp" },
-    deck: deck("Haas-Bioroid: Engineering the Future", {
-      "Hedge Fund": 3, "Ice Wall": 3, "Enigma": 3, "Priority Requisition": 3,
-      "Hostile Takeover": 3, "PAD Campaign": 3, "Wall of Static": 3, "Melange Mining Corp.": 3,
-    }),
-  },
-  runner: {
-    user: { username: "runner" },
-    deck: deck('Kate "Mac" McCaffrey: Digital Tinker', {
-      "Sure Gamble": 3, "Corroder": 3, "Diesel": 3, "Gordian Blade": 3,
-      "Daily Casts": 3, "Armitage Codebusting": 3, "Easy Mark": 3, "Infiltration": 3,
-    }),
-  },
+  corp: { user: { username: "corp" }, deck: deck(corp) },
+  runner: { user: { username: "runner" }, deck: deck(runner) },
 });
 
-const show = (label) => {
-  const v = engine.view(game, "corp");
-  const r = engine.view(game, "runner");
-  console.log(
-    `${label}: turn=${v.turn} active=${v["active-player"]} corp(credits=${v.corp.credit}, clicks=${v.corp.click}, hand=${v.corp.hand.length})`,
-    `runner(credits=${r.runner.credit}, clicks=${r.runner.click}, hand=${r.runner.hand.length})`,
-    `corp sees runner hand: ${JSON.stringify(v.runner.hand).slice(0, 40)}`,
-  );
-};
-
+const view = (side) => engine.view(game, side);
+const prompt = (side) => view(side)[side]["prompt-state"];
 const choose = (side, value) => {
-  const prompt = engine.view(game, side)[side]["prompt-state"];
-  const choice = prompt.choices.find((c) => c.value === value);
-  return engine.act(game, side, "choice", { eid: prompt.eid, choice: { uuid: choice.uuid } });
+  const p = prompt(side);
+  const choice = p.choices.find((c) => c.value === value);
+  assert.ok(choice, `${side} can choose ${value}`);
+  return engine.act(game, side, "choice", { eid: p.eid, choice: { uuid: choice.uuid } });
 };
 
-show("start");
+assert.equal(view("corp").corp.hand.length, 5);
+assert.equal(view("corp").runner.hand.length, 0, "corp cannot see the grip");
+assert.equal(view("corp").runner["hand-count"], 5);
 choose("corp", "Keep");
 choose("runner", "Keep");
-show("kept");
-console.log("start-turn", engine.act(game, "corp", "start-turn", null).ok);
-show("corp turn");
-for (let i = 0; i < 2; i++) engine.act(game, "corp", "credit", null);
-const hand = engine.view(game, "corp").corp.hand;
-const card = hand.find((c) => c.type === "Operation" && c.cost <= 7) ?? hand.find((c) => c.type !== "Operation");
-console.log("corp plays", card.title);
-engine.act(game, "corp", "play", card.type === "Operation" ? { card } : { card, server: "New remote" });
-show("corp clicked");
-const res = engine.act(game, "corp", "end-turn", null);
-console.log("diff keys", Object.keys(res.diffs), JSON.stringify(res.diffs.runner).length, "bytes runner diff");
-engine.act(game, "runner", "start-turn", null);
-show("runner turn");
-engine.act(game, "runner", "run", { server: "HQ" });
-let rv = engine.view(game, "runner");
-console.log("run:", JSON.stringify(rv.run)?.slice(0, 200));
-for (let i = 0; i < 6 && engine.view(game, "runner").run; i++) {
-  const p = engine.view(game, "runner").runner["prompt-state"];
-  if (p && p.choices && p.choices.length) {
-    console.log("prompt:", p.msg, p.choices.map((c) => c.value));
-    choose("runner", p.choices[0].value);
-  } else {
-    engine.act(game, "runner", "continue", null);
-  }
-}
-show("after run");
-const log = engine.view(game, "runner").log;
-console.log("log entries:", log.length);
-console.log(JSON.stringify(log.slice(-6), null, 1).slice(0, 1500));
-console.log("view size runner:", JSON.stringify(engine.view(game, "runner")).length);
 
-const ftl = async (lang) =>
-  (await Promise.all(["messages.ftl", "ui.ftl"].map((f) =>
-    readFile(new URL(`../../resources/public/i18n/${lang}/${f}`, import.meta.url), "utf8")))).join("\n");
-engine.loadDictionary("en", await ftl("en"));
-engine.loadDictionary("fr", await ftl("fr"));
-for (const lang of ["en", "fr"]) {
-  engine.setLanguage(lang);
-  console.log(`--- log (${lang})`);
-  for (const entry of engine.view(game, "runner").log.slice(-8)) console.log(engine.renderMessage(entry.text));
-  console.log("prompt:", engine.renderMessage(engine.view(game, "corp").corp["prompt-state"]?.msg));
+engine.act(game, "corp", "start-turn", null);
+assert.equal(view("corp").corp.click, 3);
+const before = view("corp").corp.credit;
+engine.act(game, "corp", "credit", null);
+assert.equal(view("corp").corp.credit, before + 1);
+
+const install = view("corp").corp.hand.find((c) => c.type !== "Operation");
+engine.act(game, "corp", "play", { card: install, server: "New remote" });
+const remote = view("runner").corp.servers.remote1;
+assert.ok(remote, "remote server created");
+assert.equal([...(remote.content ?? []), ...(remote.ices ?? [])][0].title, undefined, "installed card is hidden from the runner");
+
+while (view("corp").corp.click > 0) engine.act(game, "corp", "credit", null);
+engine.act(game, "corp", "end-turn", null);
+const discard = prompt("corp");
+if (discard?.["prompt-type"] === "select") {
+  engine.act(game, "corp", "select", { card: view("corp").corp.hand[0], eid: discard.eid });
 }
+
+engine.act(game, "runner", "start-turn", null);
+assert.equal(view("runner")["active-player"], "runner");
+assert.equal(view("runner").runner.click, 4);
+engine.act(game, "runner", "run", { server: "HQ" });
+assert.ok(view("runner").run, "run started");
+for (let i = 0; i < 20 && view("runner").run; i++) {
+  const p = prompt("runner");
+  if (p?.choices?.length && p["prompt-type"] !== "run") choose("runner", p.choices.at(-1).value);
+  else engine.act(game, "runner", "continue", null);
+  if (view("corp").run) engine.act(game, "corp", "continue", null);
+}
+assert.equal(view("runner").run, undefined, "run finished");
+assert.equal(view("runner").runner.click, 3);
+
+const log = view("runner").log.map((e) => engine.renderMessage(e.text));
+assert.ok(log.some((l) => /make a run on HQ/.test(l)), "run is logged");
+assert.ok(log.some((l) => /keeps .* hand/.test(l)), "msg maps are rendered via Fluent");
+console.log(`smoke ok: ${log.length} log lines, view ${JSON.stringify(view("runner")).length} bytes`);
