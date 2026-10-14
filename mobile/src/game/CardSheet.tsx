@@ -2,6 +2,7 @@ import { useState } from "preact/hooks";
 import { cardImage, type Side } from "../engine";
 import { type Command, cardCommands, cardRef } from "./actions";
 import { visibleCode } from "./CardTile";
+import { RichText } from "./RichText";
 import { TYPE_LABELS, iconize, serverLabel } from "./text";
 
 interface Props {
@@ -46,7 +47,7 @@ export function CardSheet({ card, view, side, db, send, onClose, disabled }: Pro
                 {card.subtypes?.length ? ` — ${card.subtypes.join(", ")}` : ""}
               </p>
             )}
-            {full?.text && <p class="card-text">{iconize(full.text)}</p>}
+            {full?.text && <RichText class="card-text" text={full.text} />}
             {(card.subroutines ?? []).length > 0 && side === "runner" && (
               <ul class="subs">
                 {card.subroutines.map((s: any) => (

@@ -735,6 +735,12 @@ button.icon {
   margin: 0;
 }
 
+.card-text ul {
+  margin: 4px 0;
+  padding-left: 18px;
+  white-space: normal;
+}
+
 .subs {
   padding-left: 0;
   list-style: none;
