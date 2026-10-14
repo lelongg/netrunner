@@ -1,6 +1,7 @@
 import { useState } from "preact/hooks";
-import { cardImage, type Side } from "../engine";
+import type { Side } from "../engine";
 import { type Command, cardCommands, cardRef } from "./actions";
+import { CardImage } from "./CardImage";
 import { visibleCode } from "./CardTile";
 import { RichText } from "./RichText";
 import { iconize, serverLabel } from "./text";
@@ -39,7 +40,7 @@ export function CardSheet({ card, view, side, db, send, onClose, disabled }: Pro
       <div class="sheet panel" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={code ? card.title : "Hidden card"}>
         <div class="sheet-head">
           {code ? (
-            <img class="sheet-img" crossOrigin="anonymous" src={cardImage(code, "large")} alt={card.title} />
+            <CardImage class="sheet-img" code={code} alt={card.title} size="large" />
           ) : (
             <div class="sheet-img back">Hidden</div>
           )}

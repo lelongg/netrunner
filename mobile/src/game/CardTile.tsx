@@ -1,4 +1,4 @@
-import { cardImage } from "../engine";
+import { CardImage } from "./CardImage";
 import { advancement, isFaceup, zone0 } from "./actions";
 
 export function visibleCode(card: any, viewerIsOwner: boolean): string | undefined {
@@ -55,7 +55,7 @@ export function CardTile({
   return (
     <div class="tile-wrap">
       <button class={classes} onClick={() => onTap?.(card)} aria-label={card.title ?? "Hidden card"}>
-        {code ? <img crossOrigin="anonymous" src={cardImage(code, size === "lg" ? "large" : "small")} alt={card.title} loading="lazy" /> : <span class="back-label">{card.side === "Corp" ? "CORP" : "RUN"}</span>}
+        {code ? <CardImage code={code} alt={card.title} size={size === "lg" ? "large" : "small"} lazy /> : <span class="back-label">{card.side === "Corp" ? "CORP" : "RUN"}</span>}
         <div class="badges">
           {counters(card).map((c) => (
             <span class="badge">{c}</span>

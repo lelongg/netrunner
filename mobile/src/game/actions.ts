@@ -144,7 +144,7 @@ export function cardCommands(card: any, view: any, side: Side): Command[] {
     );
 
   const subs: any[] = card.subroutines ?? [];
-  if (side === "corp" && mine && subs.length) {
+  if (side === "corp" && mine && subs.length && z === "servers") {
     if (card.rezzed && subs.some((s) => !s.fired && !s.broken))
       out.push({ label: "Fire unbroken subroutines", command: "unbroken-subroutines", args: { card: ref } });
     subs.forEach((s, i) =>

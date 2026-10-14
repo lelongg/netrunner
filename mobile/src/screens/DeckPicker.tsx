@@ -1,5 +1,6 @@
 import { useMemo, useState } from "preact/hooks";
-import { type CardDb, type Matchup, type Side, cardImage } from "../engine";
+import type { CardDb, Matchup, Side } from "../engine";
+import { CardImage } from "../game/CardImage";
 import { type WireDeck, deckSize, fromPrecon, fromWire, importNrdb, parseDecklist, saveDeck, savedDecks, toWire } from "../decks";
 
 interface Props {
@@ -46,7 +47,7 @@ export function DeckPicker({ side, db, matchups, value, onChange }: Props) {
     <div class="deck-picker">
       {current && (
         <div class="deck-current">
-          <img crossOrigin="anonymous" src={cardImage(current.identity.code, "small")} alt="" />
+          <CardImage class="deck-identity" code={current.identity.code} alt={current.identity.title} size="small" />
           <div>
             <strong>{current.name}</strong>
             <span>{current.identity.title}</span>
