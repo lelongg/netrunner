@@ -65,15 +65,15 @@ function actionList(card: any, view: any, side: Side): string[] {
 }
 
 const ACTION_LABELS: Record<string, string> = {
-  advance: "Avancer",
-  score: "Marquer",
-  trash: "Mettre à la corbeille",
-  rez: "Activer (rez)",
-  derez: "Désactiver (derez)",
+  advance: "Advance",
+  score: "Score",
+  trash: "Trash",
+  rez: "Rez",
+  derez: "Derez",
 };
 
 export function abilityLabel(ab: any): string {
-  const base = ab.label ?? (typeof ab.msg === "string" ? ab.msg.charAt(0).toUpperCase() + ab.msg.slice(1) : "Capacité");
+  const base = ab.label ?? (typeof ab.msg === "string" ? ab.msg.charAt(0).toUpperCase() + ab.msg.slice(1) : "Ability");
   return ab["cost-label"] ? `${ab["cost-label"]} : ${base}` : base;
 }
 
@@ -92,14 +92,14 @@ export function cardCommands(card: any, view: any, side: Side): Command[] {
     const selectable = (prompt.selectable ?? []).includes(card.cid);
     if (selectable || card.selected)
       out.push({
-        label: card.selected ? "Désélectionner" : "Sélectionner",
+        label: card.selected ? "Deselect" : "Select",
         command: "select",
         args: { card: ref, eid: prompt.eid },
         kind: "primary",
       });
   } else if (prompt && Array.isArray(prompt.choices) && (prompt.selectable ?? []).includes(card.cid)) {
     const choice = prompt.choices.find((c: any) => c?.value?.cid === card.cid);
-    if (choice) out.push({ label: "Choisir cette carte", command: "choice", args: { eid: prompt.eid, choice: { uuid: choice.uuid } }, kind: "primary" });
+    if (choice) out.push({ label: "Choose this card", command: "choice", args: { eid: prompt.eid, choice: { uuid: choice.uuid } }, kind: "primary" });
   }
 
   if (mine && !prompt) {
@@ -108,9 +108,9 @@ export function cardCommands(card: any, view: any, side: Side): Command[] {
     if (fromHand || flashback) {
       const command = flashback ? "flashback" : "play";
       if (side === "corp" && card.type !== "Operation") {
-        out.push({ label: "Installer…", command: "generate-install-list", args: { card: ref }, kind: "primary", then: "install-list" });
+        out.push({ label: "Install…", command: "generate-install-list", args: { card: ref }, kind: "primary", then: "install-list" });
       } else {
-        const verb = card.type === "Operation" || card.type === "Event" ? "Jouer" : "Installer";
+        const verb = card.type === "Operation" || card.type === "Event" ? "Play" : "Install";
         out.push({ label: flashback ? `${verb} (flashback)` : verb, command, args: { card: ref }, kind: "primary" });
       }
     }
@@ -146,9 +146,9 @@ export function cardCommands(card: any, view: any, side: Side): Command[] {
   const subs: any[] = card.subroutines ?? [];
   if (side === "corp" && mine && subs.length) {
     if (card.rezzed && subs.some((s) => !s.fired && !s.broken))
-      out.push({ label: "Déclencher les sous-routines non brisées", command: "unbroken-subroutines", args: { card: ref } });
+      out.push({ label: "Fire unbroken subroutines", command: "unbroken-subroutines", args: { card: ref } });
     subs.forEach((s, i) =>
-      out.push({ label: `↳ ${s.label ?? `Sous-routine ${i + 1}`}${s.broken ? " (brisée)" : ""}`, command: "subroutine", args: { card: ref, subroutine: i } }),
+      out.push({ label: `↳ ${s.label ?? `Subroutine ${i + 1}`}${s.broken ? " (broken)" : ""}`, command: "subroutine", args: { card: ref, subroutine: i } }),
     );
   }
   return out;
@@ -168,17 +168,17 @@ export function basicCommands(view: any, side: Side): Command[] {
     if (myTurn) {
       out.push(
         post["requires-consent?"]
-          ? { label: "Continuer la fin de tour", command: "post-discard-pass-priority", enabled: !post[`${side}?`], kind: "primary" }
-          : { label: "Continuer la fin de tour", command: "end-post-discard", kind: "primary" },
+          ? { label: "Continue end of turn", command: "post-discard-pass-priority", enabled: !post[`${side}?`], kind: "primary" }
+          : { label: "Continue end of turn", command: "end-post-discard", kind: "primary" },
       );
     } else if (post["requires-consent?"]) {
-      out.push({ label: "Autoriser la fin de tour", command: "post-discard-pass-priority", enabled: !post[`${side}?`], kind: "primary" });
+      out.push({ label: "Allow end of turn", command: "post-discard-pass-priority", enabled: !post[`${side}?`], kind: "primary" });
     }
     return out;
   }
   const p12 = view["corp-phase-12"] || view["runner-phase-12"];
   if (p12) {
-    const label = view["active-player"] === "corp" ? "Pioche obligatoire" : "Prendre les clics";
+    const label = view["active-player"] === "corp" ? "Mandatory draw" : "Take clicks";
     if (myTurn) {
       out.push(
         p12["requires-consent?"]
@@ -186,24 +186,24 @@ export function basicCommands(view: any, side: Side): Command[] {
           : { label, command: "end-phase-12", kind: "primary" },
       );
     } else if (p12["requires-consent?"]) {
-      out.push({ label: `Autoriser : ${label.toLowerCase()}`, command: "phase-12-pass-priority", enabled: !p12[`${side}?`], kind: "primary" });
+      out.push({ label: `Allow ${label.toLowerCase()}`, command: "phase-12-pass-priority", enabled: !p12[`${side}?`], kind: "primary" });
     }
     return out;
   }
   if (!myTurn) {
-    if (view["end-turn"]) out.push({ label: "Commencer mon tour", command: "start-turn", kind: "primary" });
+    if (view["end-turn"]) out.push({ label: "Start turn", command: "start-turn", kind: "primary" });
     return out;
   }
-  if (me.click === 0 && !view["end-turn"]) out.push({ label: "Fin de tour", command: "end-turn", kind: "primary" });
-  if (playable(0)) out.push({ label: "+1 ¢", command: "credit" });
-  if (playable(1) && (me["deck-count"] ?? 0) > 0) out.push({ label: "Piocher", command: "draw" });
+  if (me.click === 0 && !view["end-turn"]) out.push({ label: "End turn", command: "end-turn", kind: "primary" });
+  if (playable(0)) out.push({ label: "Gain credit", command: "credit" });
+  if (playable(1) && (me["deck-count"] ?? 0) > 0) out.push({ label: "Draw", command: "draw" });
   if (side === "runner") {
     if (!phaseLocked && me.click > 0) out.push({ label: "Run…", command: "generate-runnable-zones", then: "install-list" });
-    if (!phaseLocked && playable(5) && (me.tag?.base ?? 0) > 0) out.push({ label: "Retirer un tag", command: "remove-tag" });
+    if (!phaseLocked && playable(5) && (me.tag?.base ?? 0) > 0) out.push({ label: "Remove tag", command: "remove-tag" });
   } else {
-    if (playable(6)) out.push({ label: "Purger les virus", command: "purge" });
+    if (playable(6)) out.push({ label: "Purge", command: "purge" });
     const tagged = view.runner?.tag?.["is-tagged"] || (view.runner?.tag?.total ?? 0) > 0;
-    if (playable(5) && tagged) out.push({ label: "Détruire une ressource", command: "trash-resource" });
+    if (playable(5) && tagged) out.push({ label: "Trash resource", command: "trash-resource" });
   }
   return out;
 }
@@ -224,15 +224,15 @@ function nextPhaseLabel(view: any): string {
   const ice = currentIce(view);
   switch (run?.phase) {
     case "initiation":
-      return run.position === 0 ? "Approcher le serveur" : "Approcher la glace";
+      return run.position === 0 ? "Approach server" : "Approach ice";
     case "approach-ice":
-      return ice?.rezzed ? "Rencontrer la glace" : "Mouvement";
+      return ice?.rezzed ? "Encounter ice" : "Movement";
     case "encounter-ice":
-      return "Mouvement";
+      return "Movement";
     case "movement":
-      return run.position === 0 ? "Accéder au serveur" : "Approcher la glace";
+      return run.position === 0 ? "Breach server" : "Approach ice";
     default:
-      return "Terminer le run";
+      return "End run";
   }
 }
 
@@ -243,20 +243,20 @@ export function runCommands(view: any, side: Side, autoContinue = false): Comman
   const ice = currentIce(view);
   if (side === "corp") {
     if (run?.phase === "approach-ice" && ice && !ice.rezzed)
-      out.push({ label: `Activer ${ice.title ?? "la glace"}`, command: "rez", args: { card: cardRef(ice), "press-continue": autoContinue }, kind: "primary" });
+      out.push({ label: `Rez ${ice.title ?? "ice"}`, command: "rez", args: { card: cardRef(ice), "press-continue": autoContinue }, kind: "primary" });
     if ((run?.phase === "encounter-ice" || enc) && ice) {
       const subs: any[] = ice.subroutines ?? [];
       out.push({
-        label: "Déclencher les sous-routines non brisées",
+        label: "Fire unbroken subroutines",
         command: "unbroken-subroutines",
         args: { card: cardRef(ice) },
         enabled: subs.some((s) => !s.broken && !s.fired && s.resolve !== false),
       });
     }
     if (enc) {
-      out.push({ label: "Continuer", command: "continue", enabled: enc["no-action"] !== "corp", kind: "primary" });
+      out.push({ label: "Continue", command: "continue", enabled: enc["no-action"] !== "corp", kind: "primary" });
     } else if (run) {
-      const label = run.phase === "initiation" ? nextPhaseLabel(view) : run["next-phase"] || run.position === 0 ? "Aucune autre action" : nextPhaseLabel(view);
+      const label = run.phase === "initiation" ? nextPhaseLabel(view) : run["next-phase"] || run.position === 0 ? "No further actions" : nextPhaseLabel(view);
       out.push({
         label,
         command: "continue",
@@ -265,21 +265,21 @@ export function runCommands(view: any, side: Side, autoContinue = false): Comman
       });
     }
     if (run && (enc?.["encounter-count"] ?? 0) <= 1 && run.phase !== "success")
-      out.push({ label: run["corp-auto-no-action"] ? "Arrêter de passer automatiquement" : "Passer automatiquement", command: "toggle-auto-no-action" });
+      out.push({ label: run["corp-auto-no-action"] ? "Stop auto-passing" : "Auto-pass priority", command: "toggle-auto-no-action" });
     return out;
   }
   if (enc) {
-    out.push({ label: "Continuer", command: "continue", enabled: enc["no-action"] !== "runner", kind: "primary" });
+    out.push({ label: "Continue", command: "continue", enabled: enc["no-action"] !== "runner", kind: "primary" });
   } else if (run) {
     if (run["next-phase"] && run.phase !== "initiation")
       out.push({ label: nextPhaseLabel(view), command: "start-next-phase", enabled: !run["no-action"], kind: "primary" });
     else if (run.position === 0 && run.phase === "movement")
-      out.push({ label: "Accéder au serveur", command: "continue", enabled: run["no-action"] !== "runner", kind: "primary" });
+      out.push({ label: "Breach server", command: "continue", enabled: run["no-action"] !== "runner", kind: "primary" });
     else out.push({ label: nextPhaseLabel(view), command: "continue", enabled: run["no-action"] !== "runner", kind: "primary" });
   }
   if (run && !view["forced-encounter"] && run.phase !== "success")
     out.push({
-      label: "Se déconnecter (jack out)",
+      label: "Jack out",
       command: "jack-out",
       enabled: run.phase === "movement" && !run["cannot-jack-out"] && run["no-action"] !== "runner",
       kind: "danger",

@@ -1,5 +1,6 @@
 import { useState } from "preact/hooks";
 import type { Role, SavedGame } from "../session";
+import { Cta, Ticker } from "../ui";
 
 interface Props {
   ready: boolean;
@@ -11,8 +12,7 @@ interface Props {
   onStart: (role: Role, name: string, code?: string) => void;
 }
 
-const ROLE_LABEL: Record<Role, string> = { host: "hébergée", guest: "rejointe", local: "locale" };
-
+const ROLE_LABEL: Record<Role, string> = { host: "hosted", guest: "joined", local: "local" };
 const NAME_KEY = "nsg.name";
 
 function storedName() {
@@ -24,7 +24,7 @@ function storedName() {
 }
 
 export function Home({ ready, error, initialJoin, save, onResume, onDiscard, onStart }: Props) {
-  const [name, setName] = useState(storedName() || "Joueur");
+  const [name, setName] = useState(storedName() || "Player");
   const [code, setCode] = useState(initialJoin ?? "");
   const go = (role: Role, c?: string) => {
     try {
@@ -32,48 +32,82 @@ export function Home({ ready, error, initialJoin, save, onResume, onDiscard, onS
     } catch {
       /* storage unavailable */
     }
-    onStart(role, name.trim() || "Joueur", c);
+    onStart(role, name.trim() || "Player", c);
   };
   return (
-    <div class="screen home">
-      <h1 class="logo">
-        Null Signal <span>mobile</span>
-      </h1>
-      <p class="tagline">Le moteur de Jinteki, dans votre poche. Sans serveur : un joueur héberge la partie.</p>
-      {!ready && !error && <p class="status">Chargement du moteur et des cartes…</p>}
-      {error && <p class="error">{error}</p>}
-      {save && (
-        <section class="card-block resume">
-          <h2>Partie en cours</h2>
-          <p class="hint">
-            Partie {ROLE_LABEL[save.role]} · code {save.code}
-            {save.role !== "guest" ? ` · ${save.log.length} actions` : ""}
-          </p>
-          <button class="primary big" disabled={!ready} onClick={onResume}>Reprendre</button>
-          <button class="ghost" onClick={onDiscard}>Abandonner cette sauvegarde</button>
+    <>
+      <Ticker>
+        Engine <span class={ready ? "cyan" : "yellow"}>{ready ? "ready" : error ? "offline" : "loading"}</span>
+      </Ticker>
+      <div class="screen home">
+        <section class="panel hero">
+          <div class="row">
+            <span class="label">Netrunner // mobile</span>
+            <span class="label">P2P</span>
+          </div>
+          <h1 style="margin: 0; display: flex; flex-direction: column">
+            <span class="big">NULL</span>
+            <span class="big outline">SIGNAL</span>
+          </h1>
+          <p>The Jinteki engine in your pocket. No server: one player hosts, the other connects.</p>
         </section>
-      )}
-      <label class="field">
-        Pseudo
-        <input value={name} onInput={(e) => setName((e.target as HTMLInputElement).value)} maxLength={24} />
-      </label>
-      <section class="card-block">
-        <h2>Héberger</h2>
-        <p class="hint">Votre téléphone fait tourner la partie. Gardez l'appli ouverte pendant le jeu.</p>
-        <button class="primary big" disabled={!ready} onClick={() => go("host")}>Créer une partie</button>
-      </section>
-      <section class="card-block">
-        <h2>Rejoindre</h2>
-        <input class="code-input" value={code} onInput={(e) => setCode((e.target as HTMLInputElement).value.toUpperCase())} placeholder="CODE" maxLength={5} />
-        <button class="primary big" disabled={!ready || code.trim().length < 5} onClick={() => go("guest", code.trim())}>Rejoindre</button>
-      </section>
-      <section class="card-block">
-        <h2>Sur un seul appareil</h2>
-        <button disabled={!ready} onClick={() => go("local")}>Partie locale (2 joueurs)</button>
-      </section>
-      <p class="fineprint">
-        Fan-made, non officiel. Moteur de règles : Jinteki.net (MIT). Données et images de cartes : NetrunnerDB / Null Signal Games.
-      </p>
-    </div>
+
+        {error && <p class="error">{error}</p>}
+
+        {save && (
+          <section class="panel cyan section">
+            <div class="row">
+              <span class="label cyan">Game in progress</span>
+              <span class="label">{save.code}</span>
+            </div>
+            <p class="hint">
+              {ROLE_LABEL[save.role]} game{save.role !== "guest" ? ` · ${save.log.length} actions` : ""}
+            </p>
+            <Cta onClick={onResume} disabled={!ready}>
+              Resume
+            </Cta>
+            <button class="ghost" onClick={onDiscard}>
+              Discard save
+            </button>
+          </section>
+        )}
+
+        <label class="field">
+          <span class="label">Handle</span>
+          <input value={name} onInput={(e) => setName((e.target as HTMLInputElement).value)} maxLength={24} />
+        </label>
+
+        <Cta onClick={() => go("host")} disabled={!ready}>
+          Host a game
+        </Cta>
+
+        <div class="field">
+          <span class="label">Join</span>
+          <div class="join-row">
+            <label class="prompt-input">
+              <input
+                aria-label="Game code"
+                placeholder="game code"
+                value={code}
+                maxLength={5}
+                onInput={(e) => setCode((e.target as HTMLInputElement).value.toUpperCase())}
+              />
+            </label>
+            <button aria-label="Join game" disabled={!ready || code.trim().length < 5} onClick={() => go("guest", code.trim())}>
+              →
+            </button>
+          </div>
+        </div>
+
+        <button class="primary" disabled={!ready} onClick={() => go("local")}>
+          Local game · 2 players, 1 device
+        </button>
+
+        <div class="footer">
+          <span>Engine: Jinteki · MIT</span>
+          <span>Cards: NetrunnerDB</span>
+        </div>
+      </div>
+    </>
   );
 }

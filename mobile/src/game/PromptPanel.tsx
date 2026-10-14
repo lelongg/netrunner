@@ -17,11 +17,11 @@ function NumberPicker({ min, max, initial, onSubmit, disabled, extra }: { min: n
   useEffect(() => setN(initial), [initial, min, max]);
   return (
     <div class="number-picker">
-      <button onClick={() => setN(Math.max(min, n - 1))} disabled={disabled || n <= min}>−</button>
+      <button aria-label="Decrease" onClick={() => setN(Math.max(min, n - 1))} disabled={disabled || n <= min}>−</button>
       <output>{n}</output>
-      <button onClick={() => setN(Math.min(max, n + 1))} disabled={disabled || n >= max}>+</button>
+      <button aria-label="Increase" onClick={() => setN(Math.min(max, n + 1))} disabled={disabled || n >= max}>+</button>
       {extra}
-      <button class="primary" onClick={() => onSubmit(n)} disabled={disabled}>Valider</button>
+      <button class="primary submit" onClick={() => onSubmit(n)} disabled={disabled}>Confirm</button>
     </div>
   );
 }
@@ -41,7 +41,7 @@ export function PromptPanel({ view, side, prompt, render, send, disabled }: Prop
   let body: preact.ComponentChildren = null;
 
   if (ptype === "waiting") {
-    body = <p class="waiting">⏳</p>;
+    body = <span class="status">Waiting…</span>;
   } else if (choices && typeof choices === "object" && !Array.isArray(choices) && choices.number != null) {
     const max = Number(choices.number);
     const min = Number(choices.minimum ?? 0);
@@ -50,10 +50,10 @@ export function PromptPanel({ view, side, prompt, render, send, disabled }: Prop
     const max = Number(choices ?? 0);
     const info =
       prompt.strength != null
-        ? `Force à battre : ${prompt.strength}`
+        ? `Strength to beat: ${prompt.strength}`
         : prompt.player === "corp"
-          ? `Trace ${prompt.base}${prompt.bonus ? `+${prompt.bonus}` : ""} — lien du Runner : ${prompt.link}`
-          : `Trace ${prompt.base}${prompt.bonus ? `+${prompt.bonus}` : ""} + crédits Corp — votre lien : ${prompt.link}`;
+          ? `Trace ${prompt.base}${prompt.bonus ? `+${prompt.bonus}` : ""} · Runner link ${prompt.link}`
+          : `Trace ${prompt.base}${prompt.bonus ? `+${prompt.bonus}` : ""} + Corp credits · your link ${prompt.link}`;
     body = (
       <>
         <p class="hint">{info}</p>
@@ -66,13 +66,13 @@ export function PromptPanel({ view, side, prompt, render, send, disabled }: Prop
     const options: string[] = choices.autocomplete ?? [];
     body = (
       <div class="card-title-input">
-        <input list="card-titles" value={title} onInput={(e) => setTitle((e.target as HTMLInputElement).value)} placeholder="Nom de carte" />
+        <input list="card-titles" value={title} onInput={(e) => setTitle((e.target as HTMLInputElement).value)} placeholder="card name" aria-label="Card name" />
         <datalist id="card-titles">
           {options.slice(0, 500).map((o) => (
             <option value={o} />
           ))}
         </datalist>
-        <button class="primary" disabled={disabled || !title} onClick={() => answer(title)}>Valider</button>
+        <button class="primary" disabled={disabled || !title} onClick={() => answer(title)}>Confirm</button>
       </div>
     );
   } else if (choices && typeof choices === "object" && !Array.isArray(choices) && choices.counter) {
@@ -82,7 +82,7 @@ export function PromptPanel({ view, side, prompt, render, send, disabled }: Prop
   } else if (Array.isArray(choices)) {
     body = (
       <div class="choices">
-        {ptype === "select" && <p class="hint">Touchez les cartes en surbrillance sur le plateau.</p>}
+        {ptype === "select" && <p class="hint">Tap the highlighted cards on the board.</p>}
         {choices
           .filter((c: any) => c.value !== "Hide")
           .map((c: any) => (
@@ -92,7 +92,7 @@ export function PromptPanel({ view, side, prompt, render, send, disabled }: Prop
           ))}
         {prompt["offer-bad-pub?"] && (
           <button disabled={disabled} onClick={() => send("bad-pub-choice", { eid })}>
-            Mauvaise publicité ({view.runner?.["bad-pub-credit"] ?? "?"} dispo.)
+            Bad publicity ({view.runner?.["bad-pub-credit"] ?? "?"} available)
           </button>
         )}
       </div>
@@ -101,7 +101,7 @@ export function PromptPanel({ view, side, prompt, render, send, disabled }: Prop
 
   return (
     <section class={`prompt prompt-${ptype ?? "other"}`}>
-      {prompt.card?.title && prompt.card.type !== "Basic Action" && <div class="prompt-card">{prompt.card.title}</div>}
+      {prompt.card?.title && prompt.card.type !== "Basic Action" && <span class="prompt-card">{prompt.card.title}</span>}
       <p class="prompt-msg">{msg}</p>
       {body}
     </section>

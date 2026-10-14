@@ -3,7 +3,7 @@ import { cardImage, type Side } from "../engine";
 import { type Command, cardCommands, cardRef } from "./actions";
 import { visibleCode } from "./CardTile";
 import { RichText } from "./RichText";
-import { TYPE_LABELS, iconize, serverLabel } from "./text";
+import { iconize, serverLabel } from "./text";
 
 interface Props {
   card: any;
@@ -36,17 +36,19 @@ export function CardSheet({ card, view, side, db, send, onClose, disabled }: Pro
 
   return (
     <div class="sheet-backdrop" onClick={onClose}>
-      <div class="sheet" onClick={(e) => e.stopPropagation()}>
+      <div class="sheet panel" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={code ? card.title : "Hidden card"}>
         <div class="sheet-head">
-          {code ? <img class="sheet-img" crossOrigin="anonymous" src={cardImage(code, "large")} alt={card.title} /> : <div class="sheet-img back">Carte cachée</div>}
+          {code ? (
+            <img class="sheet-img" crossOrigin="anonymous" src={cardImage(code, "large")} alt={card.title} />
+          ) : (
+            <div class="sheet-img back">Hidden</div>
+          )}
           <div class="sheet-info">
-            <h2>{code ? card.title : "Carte cachée"}</h2>
-            {code && (
-              <p class="meta">
-                {TYPE_LABELS[card.type] ?? card.type}
-                {card.subtypes?.length ? ` — ${card.subtypes.join(", ")}` : ""}
-              </p>
-            )}
+            <span class="label">
+              {code ? card.type : card.side}
+              {code && card.subtypes?.length ? ` · ${card.subtypes.join(" · ")}` : ""}
+            </span>
+            <h2>{code ? card.title : "Hidden card"}</h2>
             {full?.text && <RichText class="card-text" text={full.text} />}
             {(card.subroutines ?? []).length > 0 && side === "runner" && (
               <ul class="subs">
@@ -59,24 +61,34 @@ export function CardSheet({ card, view, side, db, send, onClose, disabled }: Pro
         </div>
         {installing ? (
           <div class="sheet-actions">
-            <p class="hint">Où installer {card.title} ?</p>
-            {installList.length === 0 && <p class="hint">Chargement…</p>}
+            <span class="label">Install {card.title} in…</span>
+            {installList.length === 0 && <span class="status">Loading…</span>}
             {installList.map((s) => (
               <button class="primary" disabled={disabled} onClick={() => install(s)}>
                 {serverLabel(s)}
               </button>
             ))}
-            <button onClick={() => { send("generate-install-list", null); onClose(); }}>Annuler</button>
+            <button
+              class="ghost"
+              onClick={() => {
+                send("generate-install-list", null);
+                onClose();
+              }}
+            >
+              Cancel
+            </button>
           </div>
         ) : (
           <div class="sheet-actions">
-            {commands.length === 0 && <p class="hint">Aucune action disponible.</p>}
+            {commands.length === 0 && <span class="status">No action available</span>}
             {commands.map((c) => (
-              <button class={c.kind ?? ""} disabled={disabled || c.enabled === false} onClick={() => run(c)}>
+              <button class={c.kind === "danger" ? "danger" : c.kind === "primary" ? "primary" : ""} disabled={disabled || c.enabled === false} onClick={() => run(c)}>
                 {iconize(c.label)}
               </button>
             ))}
-            <button class="ghost" onClick={onClose}>Fermer</button>
+            <button class="ghost" onClick={onClose}>
+              Close
+            </button>
           </div>
         )}
       </div>

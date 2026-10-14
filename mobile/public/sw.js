@@ -1,4 +1,4 @@
-const VERSION = "v1";
+const VERSION = "v2";
 const SHELL = `nsg-shell-${VERSION}`;
 const DATA = `nsg-data-${VERSION}`;
 const IMAGES = "nsg-images";
@@ -12,8 +12,6 @@ const PRECACHE = [
   "./data/codes.json",
   "./i18n/en/messages.ftl",
   "./i18n/en/ui.ftl",
-  "./i18n/fr/messages.ftl",
-  "./i18n/fr/ui.ftl",
 ];
 
 self.addEventListener("install", (event) => {

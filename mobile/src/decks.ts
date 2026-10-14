@@ -24,7 +24,7 @@ function build(name: string, side: Side, found: Map<Card, number>): Deck {
   const sideName = side === "corp" ? "Corp" : "Runner";
   const entries = [...found.entries()].filter(([c]) => c.side === sideName);
   const identity = entries.find(([c]) => c.type === "Identity")?.[0];
-  if (!identity) throw new Error(`Aucune identité ${sideName} trouvée dans ce deck`);
+  if (!identity) throw new Error(`No ${sideName} identity found in this deck`);
   const cards: DeckEntry[] = entries
     .filter(([c]) => c.type !== "Identity")
     .map(([card, qty]) => ({ qty, card }))
@@ -32,7 +32,7 @@ function build(name: string, side: Side, found: Map<Card, number>): Deck {
   return { name, identity, cards };
 }
 
-export function parseDecklist(text: string, side: Side, db: CardDb, name = "Deck importé"): Deck {
+export function parseDecklist(text: string, side: Side, db: CardDb, name = "Imported deck"): Deck {
   const find = finder(db);
   const found = new Map<Card, number>();
   const unknown: string[] = [];
@@ -48,13 +48,13 @@ export function parseDecklist(text: string, side: Side, db: CardDb, name = "Deck
     else if (!/^[A-Za-z ]+\(\d+\)$/.test(line)) unknown.push(title);
   }
   const deck = build(name, side, found);
-  if (unknown.length) console.warn("Cartes inconnues", unknown);
+  if (unknown.length) console.warn("Unknown cards", unknown);
   return deck;
 }
 
 export async function importNrdb(url: string, side: Side, db: CardDb): Promise<Deck> {
   const id = url.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|\b\d{3,}\b)/i)?.[1];
-  if (!id) throw new Error("Lien NetrunnerDB non reconnu");
+  if (!id) throw new Error("Unrecognized NetrunnerDB link");
   const kinds = url.includes("/deck/") ? ["deck", "decklist"] : ["decklist", "deck"];
   for (const kind of kinds) {
     const res = await fetch(`https://netrunnerdb.com/api/2.0/public/${kind}/${id}`);
@@ -69,12 +69,12 @@ export async function importNrdb(url: string, side: Side, db: CardDb): Promise<D
     }
     return build(data.name ?? "Deck NetrunnerDB", side, found);
   }
-  throw new Error("Deck introuvable sur NetrunnerDB (est-il public ou partagé ?)");
+  throw new Error("Deck not found on NetrunnerDB (is it published or shared?)");
 }
 
 export function fromPrecon(p: PreconDeck, db: CardDb): Deck {
   const identity = db.byTitle.get(p.identity);
-  if (!identity) throw new Error(`Identité inconnue: ${p.identity}`);
+  if (!identity) throw new Error(`Unknown identity: ${p.identity}`);
   return {
     name: p.name,
     identity,

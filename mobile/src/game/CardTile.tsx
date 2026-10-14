@@ -54,16 +54,16 @@ export function CardTile({
   const hosted: any[] = card.hosted ?? [];
   return (
     <div class="tile-wrap">
-      <button class={classes} onClick={() => onTap?.(card)} aria-label={card.title ?? "Carte cachée"}>
-        {code ? <img crossOrigin="anonymous" src={cardImage(code, size === "lg" ? "large" : "small")} alt={card.title} loading="lazy" /> : <span class="back-label">{card.side === "Corp" ? "NSG" : "◆"}</span>}
+      <button class={classes} onClick={() => onTap?.(card)} aria-label={card.title ?? "Hidden card"}>
+        {code ? <img crossOrigin="anonymous" src={cardImage(code, size === "lg" ? "large" : "small")} alt={card.title} loading="lazy" /> : <span class="back-label">{card.side === "Corp" ? "CORP" : "RUN"}</span>}
         <div class="badges">
           {counters(card).map((c) => (
             <span class="badge">{c}</span>
           ))}
           {strength != null && strength !== false && <span class="badge str">⚔{strength}</span>}
         </div>
-        {dim && <span class="state">non activée</span>}
-        {owner && card.side === "Corp" && zone0(card) === "servers" && !isFaceup(card) && card.type === "Agenda" && <span class="state">face cachée</span>}
+        {dim && <span class="state">unrezzed</span>}
+        {owner && card.side === "Corp" && zone0(card) === "servers" && !isFaceup(card) && card.type === "Agenda" && <span class="state">facedown</span>}
       </button>
       {hosted.length > 0 && (
         <div class="hosted">

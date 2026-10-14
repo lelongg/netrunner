@@ -50,14 +50,14 @@ export function DeckPicker({ side, db, matchups, value, onChange }: Props) {
           <div>
             <strong>{current.name}</strong>
             <span>{current.identity.title}</span>
-            <span>{deckSize(current)} cartes</span>
+            <span>{deckSize(current)} cards</span>
           </div>
         </div>
       )}
       <div class="tabs">
         {(["precon", "saved", "import"] as Tab[]).map((t) => (
           <button class={tab === t ? "on" : ""} onClick={() => setTab(t)}>
-            {t === "precon" ? "Préconstruits" : t === "saved" ? "Mes decks" : "Importer"}
+            {t === "precon" ? "Precons" : t === "saved" ? "My decks" : "Import"}
           </button>
         ))}
       </div>
@@ -78,7 +78,7 @@ export function DeckPicker({ side, db, matchups, value, onChange }: Props) {
       )}
       {tab === "saved" && (
         <ul class="deck-list">
-          {saved.length === 0 && <li class="hint">Aucun deck importé pour ce camp.</li>}
+          {saved.length === 0 && <li class="hint">No imported deck for this side yet.</li>}
           {saved.map((d) => (
             <li>
               <button class={value?.name === d.name ? "on" : ""} onClick={() => pick(d)}>
@@ -95,10 +95,10 @@ export function DeckPicker({ side, db, matchups, value, onChange }: Props) {
             rows={6}
             value={text}
             onInput={(e) => setText((e.target as HTMLTextAreaElement).value)}
-            placeholder={"Lien NetrunnerDB\nou liste texte :\nHaas-Bioroid: Precision Design\n3x Hedge Fund\n…"}
+            placeholder={"NetrunnerDB link\nor a text decklist:\nHaas-Bioroid: Precision Design\n3x Hedge Fund\n…"}
           />
           <button class="primary" disabled={busy || !text.trim()} onClick={doImport}>
-            {busy ? "Import…" : "Importer"}
+            {busy ? "Importing…" : "Import"}
           </button>
         </div>
       )}

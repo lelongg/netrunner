@@ -204,7 +204,7 @@ export class Session {
   private onGuestError(e: any) {
     if (this.closed) return;
     if (e?.type === "peer-unavailable" || e?.type === "network" || e?.type === "disconnected") {
-      this.patch({ status: "connecting", error: "Hôte injoignable, nouvelle tentative…" });
+      this.patch({ status: "connecting", error: "Host unreachable, retrying…" });
       setTimeout(() => {
         if (this.peer?.disconnected) this.peer.reconnect();
         this.connect();
@@ -319,7 +319,7 @@ export class Session {
     const mine = fromWire(this.lobby.myDeck!, this.db);
     const theirs = fromWire(this.opponentDeck!, this.db);
     const me = { username: this.lobby.myName };
-    const them = { username: this.lobby.opponentName ?? (this.lobby.role === "local" ? "Joueur 2" : "Adversaire") };
+    const them = { username: this.lobby.opponentName ?? (this.lobby.role === "local" ? "Player 2" : "Opponent") };
     const players =
       this.lobby.mySide === "corp"
         ? { corp: { user: me, deck: engineDeck(mine) }, runner: { user: them, deck: engineDeck(theirs) } }

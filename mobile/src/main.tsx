@@ -7,7 +7,6 @@ import { Lobby } from "./screens/Lobby";
 import { type Role, type SavedGame, Session, clearSave, loadSave, newRoomCode } from "./session";
 import "./styles.css";
 
-const lang = navigator.language?.startsWith("fr") ? "fr" : "en";
 const joinParam = new URLSearchParams(location.search).get("join")?.toUpperCase() ?? undefined;
 if (joinParam) history.replaceState(null, "", location.pathname);
 
@@ -35,9 +34,9 @@ function App() {
   }, [loaded]);
 
   useEffect(() => {
-    loadEngine(lang)
+    loadEngine()
       .then(({ engine, db }) => setLoaded({ engine, db, matchups: engine.precons() }))
-      .catch((e) => setError(`Impossible de charger le moteur : ${e}`));
+      .catch((e) => setError(`Could not load the engine: ${e}`));
   }, []);
 
   const leave = () => {
@@ -89,7 +88,7 @@ function App() {
   }
 
   const view = session.views[lobby.mySide];
-  if (!view) return <p class="status">Synchronisation…</p>;
+  if (!view) return <p class="status">Syncing…</p>;
   return <Board session={session} engine={loaded.engine} db={loaded.db} side={lobby.mySide} view={view} onLeave={leave} />;
 }
 

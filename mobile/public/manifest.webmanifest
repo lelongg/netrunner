@@ -1,13 +1,13 @@
 {
   "name": "Null Signal Mobile",
   "short_name": "Null Signal",
-  "description": "Netrunner sur mobile avec le moteur de Jinteki, sans serveur.",
+  "description": "Netrunner on mobile with the Jinteki engine, no server needed.",
   "id": "./",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "lang": "fr",
+  "lang": "en",
   "background_color": "#060708",
   "theme_color": "#060708",
   "icons": [
