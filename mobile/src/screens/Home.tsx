@@ -1,12 +1,17 @@
 import { useState } from "preact/hooks";
-import type { Role } from "../session";
+import type { Role, SavedGame } from "../session";
 
 interface Props {
   ready: boolean;
   error?: string;
   initialJoin?: string;
+  save: SavedGame | null;
+  onResume: () => void;
+  onDiscard: () => void;
   onStart: (role: Role, name: string, code?: string) => void;
 }
+
+const ROLE_LABEL: Record<Role, string> = { host: "hébergée", guest: "rejointe", local: "locale" };
 
 const NAME_KEY = "nsg.name";
 
@@ -18,7 +23,7 @@ function storedName() {
   }
 }
 
-export function Home({ ready, error, initialJoin, onStart }: Props) {
+export function Home({ ready, error, initialJoin, save, onResume, onDiscard, onStart }: Props) {
   const [name, setName] = useState(storedName() || "Joueur");
   const [code, setCode] = useState(initialJoin ?? "");
   const go = (role: Role, c?: string) => {
@@ -37,6 +42,17 @@ export function Home({ ready, error, initialJoin, onStart }: Props) {
       <p class="tagline">Le moteur de Jinteki, dans votre poche. Sans serveur : un joueur héberge la partie.</p>
       {!ready && !error && <p class="status">Chargement du moteur et des cartes…</p>}
       {error && <p class="error">{error}</p>}
+      {save && (
+        <section class="card-block resume">
+          <h2>Partie en cours</h2>
+          <p class="hint">
+            Partie {ROLE_LABEL[save.role]} · code {save.code}
+            {save.role !== "guest" ? ` · ${save.log.length} actions` : ""}
+          </p>
+          <button class="primary big" disabled={!ready} onClick={onResume}>Reprendre</button>
+          <button class="ghost" onClick={onDiscard}>Abandonner cette sauvegarde</button>
+        </section>
+      )}
       <label class="field">
         Pseudo
         <input value={name} onInput={(e) => setName((e.target as HTMLInputElement).value)} maxLength={24} />

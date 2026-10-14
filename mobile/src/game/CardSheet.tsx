@@ -38,7 +38,7 @@ export function CardSheet({ card, view, side, db, send, onClose, disabled }: Pro
     <div class="sheet-backdrop" onClick={onClose}>
       <div class="sheet" onClick={(e) => e.stopPropagation()}>
         <div class="sheet-head">
-          {code ? <img class="sheet-img" src={cardImage(code, "large")} alt={card.title} /> : <div class="sheet-img back">Carte cachée</div>}
+          {code ? <img class="sheet-img" crossOrigin="anonymous" src={cardImage(code, "large")} alt={card.title} /> : <div class="sheet-img back">Carte cachée</div>}
           <div class="sheet-info">
             <h2>{code ? card.title : "Carte cachée"}</h2>
             {code && (

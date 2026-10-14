@@ -35,19 +35,7 @@
      (let [al (java.util.ArrayList. ^java.util.Collection c)]
        (java.util.Collections/shuffle al rng)
        (clojure.lang.RT/vector (.toArray al)))
-     :cljs
-     (let [a (to-array c)
-           n (alength a)
-           r (js/Uint32Array. 1)]
-       (loop [i (dec n)]
-         (when (pos? i)
-           (.getRandomValues js/crypto r)
-           (let [j (mod (aget r 0) (inc i))
-                 t (aget a i)]
-             (aset a i (aget a j))
-             (aset a j t))
-           (recur (dec i))))
-       (vec a))))
+     :cljs (shuffle c)))
 
 (defn shuffle!
   "Shuffles the vector in @state [side kw]."

@@ -28,14 +28,75 @@ export interface LobbyState {
   error?: string;
 }
 
+type Entry =
+  | { side: Side; kind: "act"; command: string; args: unknown }
+  | { side: Side; kind: "say"; user?: string; text: string }
+  | { side: Side; kind: "concede" };
+
+export type SavedGame =
+  | {
+      v: 1;
+      role: "host" | "local";
+      code: string;
+      myName: string;
+      mySide: Side;
+      opponentName?: string;
+      setup: unknown;
+      seed: number[];
+      log: Entry[];
+      savedAt: number;
+    }
+  | { v: 1; role: "guest"; code: string; myName: string; savedAt: number };
+
 type Listener = () => void;
 
 const PEER_PREFIX = "nsg-mobile-";
+const SAVE_KEY = "nsg.save";
+const RETRY_MS = 2500;
 const other = (s: Side): Side => (s === "corp" ? "runner" : "corp");
 
 export function newRoomCode() {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   return Array.from(crypto.getRandomValues(new Uint32Array(5)), (n) => alphabet[n % alphabet.length]).join("");
+}
+
+function sfc32(a: number, b: number, c: number, d: number) {
+  return () => {
+    a |= 0;
+    b |= 0;
+    c |= 0;
+    d |= 0;
+    const t = (((a + b) | 0) + d) | 0;
+    d = (d + 1) | 0;
+    a = b ^ (b >>> 9);
+    b = (c + (c << 3)) | 0;
+    c = (c << 21) | (c >>> 11);
+    c = (c + t) | 0;
+    return (t >>> 0) / 4294967296;
+  };
+}
+
+export function loadSave(): SavedGame | null {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    const save = raw ? (JSON.parse(raw) as SavedGame) : null;
+    return save?.v === 1 ? save : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeSave(save: SavedGame | null) {
+  try {
+    if (save) localStorage.setItem(SAVE_KEY, JSON.stringify(save));
+    else localStorage.removeItem(SAVE_KEY);
+  } catch {
+    /* storage unavailable or full */
+  }
+}
+
+export function clearSave() {
+  writeSave(null);
 }
 
 export class Session {
@@ -47,6 +108,11 @@ export class Session {
   private conn?: DataConnection;
   private game?: GameHandle;
   private opponentDeck?: WireDeck;
+  private setup?: unknown;
+  private seed?: number[];
+  private rng?: () => number;
+  private log: Entry[] = [];
+  private closed = false;
 
   constructor(
     private engine: EngineApi,
@@ -66,7 +132,19 @@ export class Session {
       started: false,
     };
     if (role === "host") this.host();
-    if (role === "guest") this.join();
+    if (role === "guest") {
+      writeSave({ v: 1, role: "guest", code, myName, savedAt: Date.now() });
+      this.peer = new Peer();
+      this.peer.on("open", () => this.connect());
+      this.peer.on("error", (e: any) => this.onGuestError(e));
+    }
+  }
+
+  static resume(engine: EngineApi, db: CardDb, save: SavedGame): Session {
+    if (save.role === "guest") return new Session(engine, db, "guest", save.code, save.myName);
+    const session = new Session(engine, db, save.role, save.code, save.myName, save.mySide);
+    session.restore(save);
+    return session;
   }
 
   subscribe(fn: Listener) {
@@ -84,10 +162,18 @@ export class Session {
   }
 
   private host() {
-    this.peer = new Peer(PEER_PREFIX + this.lobby.code);
-    this.peer.on("open", () => this.patch({ status: "waiting" }));
-    this.peer.on("error", (e) => this.patch({ error: String(e.message ?? e) }));
-    this.peer.on("connection", (conn) => {
+    const peer = new Peer(PEER_PREFIX + this.lobby.code);
+    this.peer = peer;
+    peer.on("open", () => this.patch({ status: this.conn?.open ? "connected" : "waiting", error: undefined }));
+    peer.on("error", (e: any) => {
+      if (e?.type === "unavailable-id" && !this.closed) {
+        peer.destroy();
+        this.patch({ status: "connecting" });
+        setTimeout(() => !this.closed && this.host(), RETRY_MS);
+      } else this.patch({ error: String(e?.message ?? e) });
+    });
+    peer.on("disconnected", () => !this.closed && peer.reconnect());
+    peer.on("connection", (conn) => {
       this.conn?.close();
       this.conn = conn;
       conn.on("data", (d) => this.onHostMessage(d as Msg));
@@ -97,20 +183,33 @@ export class Session {
     });
   }
 
-  private join() {
-    this.peer = new Peer();
-    this.peer.on("error", (e) => this.patch({ error: String(e.message ?? e), status: "closed" }));
-    this.peer.on("open", () => {
-      const conn = this.peer!.connect(PEER_PREFIX + this.lobby.code, { reliable: true });
-      this.conn = conn;
-      conn.on("open", () => {
-        this.patch({ status: "connected" });
-        this.post({ t: "hello", name: this.lobby.myName });
-        if (this.lobby.myDeck) this.post({ t: "deck", deck: this.lobby.myDeck });
-      });
-      conn.on("data", (d) => this.onGuestMessage(d as Msg));
-      conn.on("close", () => this.patch({ status: "closed" }));
+  private connect() {
+    if (this.closed || !this.peer || this.peer.destroyed) return;
+    const conn = this.peer.connect(PEER_PREFIX + this.lobby.code, { reliable: true });
+    this.conn = conn;
+    conn.on("open", () => {
+      this.patch({ status: "connected", error: undefined });
+      this.post({ t: "hello", name: this.lobby.myName });
+      if (this.lobby.myDeck && !this.lobby.started) this.post({ t: "deck", deck: this.lobby.myDeck });
     });
+    conn.on("data", (d) => this.onGuestMessage(d as Msg));
+    conn.on("close", () => {
+      if (this.conn !== conn || this.closed) return;
+      this.pending = false;
+      this.patch({ status: "connecting" });
+      setTimeout(() => this.connect(), RETRY_MS);
+    });
+  }
+
+  private onGuestError(e: any) {
+    if (this.closed) return;
+    if (e?.type === "peer-unavailable" || e?.type === "network" || e?.type === "disconnected") {
+      this.patch({ status: "connecting", error: "Hôte injoignable, nouvelle tentative…" });
+      setTimeout(() => {
+        if (this.peer?.disconnected) this.peer.reconnect();
+        this.connect();
+      }, RETRY_MS);
+    } else this.patch({ error: String(e?.message ?? e), status: "closed" });
   }
 
   private post(msg: Msg) {
@@ -128,31 +227,26 @@ export class Session {
   }
 
   private onHostMessage(msg: Msg) {
+    const guest = other(this.lobby.mySide);
     switch (msg.t) {
       case "hello":
         this.patch({ opponentName: msg.name, status: "connected" });
         this.post(this.lobbyMsg());
-        if (this.game) this.post({ t: "view", view: this.engine.view(this.game, other(this.lobby.mySide)) });
+        if (this.game) this.post({ t: "view", view: this.engine.view(this.game, guest) });
         break;
       case "deck":
+        if (this.lobby.started) break;
         this.opponentDeck = msg.deck;
         this.patch({ opponentDeckReady: true });
         break;
       case "act":
-        this.apply(other(this.lobby.mySide), msg.command, msg.args);
+        this.perform({ side: guest, kind: "act", command: msg.command, args: msg.args });
         break;
       case "say":
-        if (this.game) {
-          const side = other(this.lobby.mySide);
-          this.engine.say(this.game, side, { username: this.lobby.opponentName }, msg.text);
-          this.broadcast();
-        }
+        this.perform({ side: guest, kind: "say", user: this.lobby.opponentName, text: msg.text });
         break;
       case "concede":
-        if (this.game) {
-          this.engine.concede(this.game, other(this.lobby.mySide));
-          this.broadcast();
-        }
+        this.perform({ side: guest, kind: "concede" });
         break;
     }
   }
@@ -203,6 +297,23 @@ export class Session {
     return this.lobby.role !== "guest" && !!this.lobby.myDeck && !!this.opponentDeck && !this.lobby.started;
   }
 
+  private withRng<T>(f: () => T): T {
+    const random = Math.random;
+    Math.random = this.rng!;
+    try {
+      return f();
+    } finally {
+      Math.random = random;
+    }
+  }
+
+  private boot(setup: unknown, seed: number[]) {
+    this.setup = setup;
+    this.seed = seed;
+    this.rng = sfc32(seed[0], seed[1], seed[2], seed[3]);
+    this.game = this.withRng(() => this.engine.createGame(setup));
+  }
+
   start() {
     if (!this.canStart) return;
     const mine = fromWire(this.lobby.myDeck!, this.db);
@@ -213,9 +324,60 @@ export class Session {
       this.lobby.mySide === "corp"
         ? { corp: { user: me, deck: engineDeck(mine) }, runner: { user: them, deck: engineDeck(theirs) } }
         : { corp: { user: them, deck: engineDeck(theirs) }, runner: { user: me, deck: engineDeck(mine) } };
-    this.game = this.engine.createGame({ gameid: this.lobby.code, format: "casual", ...players });
+    this.boot({ gameid: this.lobby.code, format: "casual", ...players }, Array.from(crypto.getRandomValues(new Uint32Array(4))));
+    this.log = [];
     this.lobby = { ...this.lobby, started: true };
+    this.persist();
     this.post(this.lobbyMsg());
+    this.broadcast();
+  }
+
+  private restore(save: Extract<SavedGame, { role: "host" | "local" }>) {
+    this.boot(save.setup, save.seed);
+    for (const entry of save.log) this.exec(entry);
+    this.log = [...save.log];
+    this.lobby = { ...this.lobby, opponentName: save.opponentName, started: true, opponentDeckReady: true };
+    this.broadcast();
+  }
+
+  private persist() {
+    if (this.lobby.role === "guest" || !this.setup || !this.seed) return;
+    writeSave({
+      v: 1,
+      role: this.lobby.role,
+      code: this.lobby.code,
+      myName: this.lobby.myName,
+      mySide: this.lobby.mySide,
+      opponentName: this.lobby.opponentName,
+      setup: this.setup,
+      seed: this.seed,
+      log: this.log,
+      savedAt: Date.now(),
+    });
+  }
+
+  private exec(entry: Entry) {
+    const game = this.game!;
+    try {
+      this.withRng(() => {
+        if (entry.kind === "act") this.engine.act(game, entry.side, entry.command, entry.args ?? null);
+        else if (entry.kind === "say") this.engine.say(game, entry.side, { username: entry.user }, entry.text);
+        else this.engine.concede(game, entry.side);
+      });
+      return null;
+    } catch (e) {
+      console.error(e);
+      return e;
+    }
+  }
+
+  private perform(entry: Entry) {
+    if (!this.game) return;
+    const recorded: Entry = JSON.parse(JSON.stringify(entry));
+    const error = this.exec(recorded);
+    this.log.push(recorded);
+    this.persist();
+    if (error && entry.side !== this.lobby.mySide) this.post({ t: "error", message: String(error) });
     this.broadcast();
   }
 
@@ -227,43 +389,33 @@ export class Session {
     this.emit();
   }
 
-  private apply(side: Side, command: string, args: unknown) {
-    if (!this.game) return;
-    try {
-      this.engine.act(this.game, side, command, args ?? null);
-    } catch (e) {
-      console.error(e);
-      if (side !== this.lobby.mySide) this.post({ t: "error", message: String(e) });
-    }
-    this.broadcast();
-  }
-
   send(command: string, args?: unknown, side: Side = this.lobby.mySide) {
     if (this.lobby.role === "guest") {
       this.pending = true;
       this.post({ t: "act", command, args: args ?? null });
       this.emit();
     } else {
-      this.apply(side, command, args);
+      this.perform({ side, kind: "act", command, args: args ?? null });
     }
   }
 
   say(text: string, side: Side = this.lobby.mySide) {
     if (this.lobby.role === "guest") return this.post({ t: "say", text });
-    if (!this.game) return;
-    const name = side === this.lobby.mySide ? this.lobby.myName : this.lobby.opponentName;
-    this.engine.say(this.game, side, { username: name }, text);
-    this.broadcast();
+    const user = side === this.lobby.mySide ? this.lobby.myName : this.lobby.opponentName;
+    this.perform({ side, kind: "say", user, text });
   }
 
   concede(side: Side = this.lobby.mySide) {
     if (this.lobby.role === "guest") return this.post({ t: "concede" });
-    if (!this.game) return;
-    this.engine.concede(this.game, side);
-    this.broadcast();
+    this.perform({ side, kind: "concede" });
+  }
+
+  forget() {
+    writeSave(null);
   }
 
   close() {
+    this.closed = true;
     this.conn?.close();
     this.peer?.destroy();
   }

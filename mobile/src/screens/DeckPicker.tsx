@@ -46,7 +46,7 @@ export function DeckPicker({ side, db, matchups, value, onChange }: Props) {
     <div class="deck-picker">
       {current && (
         <div class="deck-current">
-          <img src={cardImage(current.identity.code, "small")} alt="" />
+          <img crossOrigin="anonymous" src={cardImage(current.identity.code, "small")} alt="" />
           <div>
             <strong>{current.name}</strong>
             <span>{current.identity.title}</span>

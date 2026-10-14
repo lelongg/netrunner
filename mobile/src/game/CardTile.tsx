@@ -55,7 +55,7 @@ export function CardTile({
   return (
     <div class="tile-wrap">
       <button class={classes} onClick={() => onTap?.(card)} aria-label={card.title ?? "Carte cachée"}>
-        {code ? <img src={cardImage(code, size === "lg" ? "large" : "small")} alt={card.title} loading="lazy" /> : <span class="back-label">{card.side === "Corp" ? "NSG" : "◆"}</span>}
+        {code ? <img crossOrigin="anonymous" src={cardImage(code, size === "lg" ? "large" : "small")} alt={card.title} loading="lazy" /> : <span class="back-label">{card.side === "Corp" ? "NSG" : "◆"}</span>}
         <div class="badges">
           {counters(card).map((c) => (
             <span class="badge">{c}</span>

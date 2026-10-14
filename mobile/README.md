@@ -60,11 +60,29 @@ La mise en relation passe par le serveur public gratuit de PeerJS. Pour ne dépe
 personne, on peut lancer son propre `peerjs-server` (quelques Mo de RAM) et passer
 `host`/`port` au constructeur `Peer` dans `src/session.ts`.
 
+## Sauvegarde et reprise
+
+L'état du moteur contient des fonctions et ne se sérialise pas. L'hôte enregistre donc
+la partie sous forme de journal : la configuration, une graine aléatoire et la liste des
+actions (`localStorage`, clé `nsg.save`). Pendant chaque appel au moteur, `Math.random`
+est remplacé par un générateur `sfc32` initialisé avec cette graine. Rejouer le journal
+reproduit exactement la même partie : mélanges, identifiants des choix, etc. Le test de
+fumée vérifie que le rejeu redonne des vues identiques.
+
+- L'hôte (ou la partie locale) recharge : la partie est rejouée et reprend où elle était.
+  L'invité se reconnecte automatiquement.
+- L'invité recharge : il rejoint la même partie et reçoit sa vue.
+- « Quitter » efface la sauvegarde.
+
+## PWA
+
+Installable (manifeste et icônes) et utilisable hors ligne après une première visite :
+`public/sw.js` met en cache l'appli, le moteur, les données de cartes et les images
+NetrunnerDB déjà vues. Une partie locale se joue sans réseau. Le jeu en ligne demande
+évidemment une connexion.
+
 ## Limites actuelles
 
-- L'hôte doit garder l'appli au premier plan : si son navigateur est fermé ou mis en
-  veille, la partie est perdue (l'état du moteur n'est pas sérialisable tel quel).
-- L'invité peut recharger la page et rejoindre avec le même code : il récupère la partie.
 - Pas d'anti-triche côté hôte : l'hôte a l'état complet en mémoire. À réserver aux
   parties entre personnes de confiance.
-- Les messages de jeu sont surtout en anglais (traductions françaises partielles en amont).
+- Une sauvegarde par appareil : lancer une nouvelle partie remplace la précédente.
