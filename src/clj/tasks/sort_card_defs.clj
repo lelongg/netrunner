@@ -8,7 +8,7 @@
 (defn open-base-defs []
   (->> (io/file "src" "clj" "game" "cards")
        (#(.listFiles %))
-       (filter #(str/ends-with? (.getPath %) ".clj"))
+       (filter #(re-find #"\.cljc?$" (.getPath %)))
        sort
        (map slurp)))
 
@@ -32,7 +32,7 @@
                                    (sort-by #(slugify (last (re-find #"defcard \"(.+)\"" %)) " "))
                                    (str/join "\n\n")))]]
 
-    (spit (str "src/clj/game/cards/" t ".clj") (str header card-defs))))
+    (spit (str "src/clj/game/cards/" t ".cljc") (str header card-defs))))
 
 (comment
   (split-em))

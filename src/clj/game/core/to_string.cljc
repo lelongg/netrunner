@@ -1,15 +1,15 @@
 (ns game.core.to-string
   (:require
    [clojure.string :as str]
-   [game.core.card :refer [#?(:clj card-index)
-                           #?(:clj get-card)
+   [game.core.card :refer [card-index
+                           get-card
                            condition-counter? corp? get-title ice? in-current?
                            in-discard? in-hand? in-play-area? in-scored?
                            installed? rezzed?]]
-   [game.core.servers :refer [#?(:clj auxiliary->name)
+   [game.core.servers :refer [auxiliary->name
                               is-auxiliary? is-root? zone->name]]))
 
-#?(:clj (defn card-str
+(defn card-str
           "Gets a string description of an installed card, reflecting whether it is rezzed,
   in/protecting a server, facedown, or hosted."
           ([state card] (card-str state card nil))
@@ -36,7 +36,7 @@
                          (get-title card))
                     (when (= :scored (first zone))
                       (str " the Runner's " (auxiliary->name zone)))))
-                (when host (str " hosted on " (card-str state (get-card state host))))))))
+                (when host (str " hosted on " (card-str state (get-card state host)))))))
 
 (defn remote-num
   "Converts a remote zone to a string"

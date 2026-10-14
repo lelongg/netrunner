@@ -1,0 +1,21 @@
+{
+  "name": "netrunner-mobile",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "engine": "cd .. && npx shadow-cljs compile engine",
+    "engine:release": "cd .. && npx shadow-cljs release engine",
+    "cards": "node scripts/build-cards.mjs",
+    "smoke": "node scripts/smoke.mjs"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "^2.9.1",
+    "edn-data": "^1.1.2",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.10"
+  },
+  "dependencies": {
+    "peerjs": "^1.5.4",
+    "preact": "^10.24.3"
+  }
+}

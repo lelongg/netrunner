@@ -92,47 +92,47 @@
 (defn in-server?
   "Checks if the specified card is installed in -- and not PROTECTING -- a server"
   [card]
-  (= (last (get-zone card)) #?(:clj :content
+  (= (last (get-zone card)) #?(:engine :content :clj :content
                                :cljs "content")))
 
 (defn in-hand?
   "Checks if the specified card is in the hand."
   [card]
-  (= (get-zone card) #?(:clj [:hand]
+  (= (get-zone card) #?(:engine [:hand] :clj [:hand]
                         :cljs ["hand"])))
 
 (defn in-discard?
   "Checks if the specified card is in the discard pile."
   [card]
-  (= (get-zone card) #?(:clj [:discard]
+  (= (get-zone card) #?(:engine [:discard] :clj [:discard]
                         :cljs ["discard"])))
 
 (defn in-deck?
   "Checks if the specified card is in the draw deck."
   [card]
-  (= (get-zone card) #?(:clj [:deck]
+  (= (get-zone card) #?(:engine [:deck] :clj [:deck]
                         :cljs ["deck"])))
 
 (defn in-archives-root?
   [card]
-  (= (get-zone card) #?(:clj [:servers :archives :content]
+  (= (get-zone card) #?(:engine [:servers :archives :content] :clj [:servers :archives :content]
                         :cljs ["servers" "archives" "content"])))
 
 (defn in-hq-root?
   [card]
-  (= (get-zone card) #?(:clj [:servers :hq :content]
+  (= (get-zone card) #?(:engine [:servers :hq :content] :clj [:servers :hq :content]
                         :cljs ["servers" "hq" "content"])))
 
 (defn in-rd-root?
   [card]
-  (= (get-zone card) #?(:clj [:servers :rd :content]
+  (= (get-zone card) #?(:engine [:servers :rd :content] :clj [:servers :rd :content]
                         :cljs ["servers" "rd" "content"])))
 
 (defn in-remote-root?
   [card remote]
-  (let [remote #?(:clj remote
+  (let [remote #?(:engine remote :clj remote
                   :cljs (if (keyword? remote) (name remote) remote))]
-    (= (get-zone card) #?(:clj [:servers remote :content]
+    (= (get-zone card) #?(:engine [:servers remote :content] :clj [:servers remote :content]
                           :cljs ["servers" remote "content"]))))
 
 (defn in-root?
@@ -143,17 +143,17 @@
 
 (defn protecting-archives?
   [card]
-  (= (get-zone card) #?(:clj [:servers :archives :ices]
+  (= (get-zone card) #?(:engine [:servers :archives :ices] :clj [:servers :archives :ices]
                         :cljs ["servers" "archives" "ices"])))
 
 (defn protecting-hq?
   [card]
-  (= (get-zone card) #?(:clj [:servers :hq :ices]
+  (= (get-zone card) #?(:engine [:servers :hq :ices] :clj [:servers :hq :ices]
                         :cljs ["servers" "hq" "ices"])))
 
 (defn protecting-rd?
   [card]
-  (= (get-zone card) #?(:clj [:servers :rd :ices]
+  (= (get-zone card) #?(:engine [:servers :rd :ices] :clj [:servers :rd :ices]
                         :cljs ["servers" "rd" "ices"])))
 
 (defn protecting-a-central?
@@ -165,19 +165,19 @@
 (defn in-play-area?
   "Checks if the specified card is in the play area."
   [card]
-  (= (get-zone card) #?(:clj [:play-area]
+  (= (get-zone card) #?(:engine [:play-area] :clj [:play-area]
                         :cljs ["play-area"])))
 
 (defn in-destroyed?
   "Checks if the specific card is in a set-aside area."
   [card]
-  (= (get-zone card) #?(:clj [:destroyed]
+  (= (get-zone card) #?(:engine [:destroyed] :clj [:destroyed]
                         :cljs ["destroyed"])))
 
 (defn in-set-aside?
   "Checks if the specific card is in a set-aside area."
   [card]
-  (= (get-zone card) #?(:clj [:set-aside]
+  (= (get-zone card) #?(:engine [:set-aside] :clj [:set-aside]
                         :cljs ["set-aside"])))
 
 (defn set-aside-visible?
@@ -191,19 +191,19 @@
 (defn in-current?
   "Checks if the specified card is in the 'current' zone."
   [card]
-  (= (get-zone card) #?(:clj [:current]
+  (= (get-zone card) #?(:engine [:current] :clj [:current]
                         :cljs ["current"])))
 
 (defn in-scored?
   "Checks if the specified card is in _a_ score area (don't know which one)."
   [card]
-  (= (get-zone card) #?(:clj [:scored]
+  (= (get-zone card) #?(:engine [:scored] :clj [:scored]
                         :cljs ["scored"])))
 
 (defn in-rfg?
   "Checks if the specified card is in the 'remove from game' zone"
   [card]
-  (= (get-zone card) #?(:clj [:rfg]
+  (= (get-zone card) #?(:engine [:rfg] :clj [:rfg]
                         :cljs ["rfg"])))
 
 (defn- card-is?
@@ -347,14 +347,14 @@
 (defn installed?
   [card]
   (or (:installed card)
-      (= (first (get-zone card)) #?(:clj :servers
+      (= (first (get-zone card)) #?(:engine :servers :clj :servers
                                     :cljs "servers"))))
 
 (defn facedown?
   "Checks if the specified card is facedown."
   [card]
   (or (when-not (condition-counter? card)
-        (= (get-zone card) #?(:clj [:rig :facedown]
+        (= (get-zone card) #?(:engine [:rig :facedown] :clj [:rig :facedown]
                               :cljs ["rig" "facedown"])))
       (:facedown card)))
 
@@ -394,14 +394,14 @@
 (defn can-be-advanced?
   "Returns true if the card can be advanced"
   ([card]
-   (or (card-is? card :advanceable #?(:clj :always
+   (or (card-is? card :advanceable #?(:engine :always :clj :always
                                       :cljs "always"))
        ;; e.g. Tyrant, Woodcutter
-       (and (card-is? card :advanceable #?(:clj :while-rezzed
+       (and (card-is? card :advanceable #?(:engine :while-rezzed :clj :while-rezzed
                                            :cljs "while-rezzed"))
             (rezzed? card))
        ;; e.g. Haas Arcology AI
-       (and (card-is? card :advanceable #?(:clj :while-unrezzed
+       (and (card-is? card :advanceable #?(:engine :while-unrezzed :clj :while-unrezzed
                                            :cljs "while-unrezzed"))
             (not (rezzed? card)))
        (and (is-type? card "Agenda")
@@ -434,8 +434,7 @@
          r2 (func card2)]
      (and r1 r2 (= r1 r2)))))
 
-#?(:clj
-   (do
+(do
      (defn assoc-host-zones
        "Associates a new zone onto a card and its host(s)."
        [card]
@@ -485,7 +484,7 @@
                         (if-let [c (some #(when (same-card? % target) %) (:hosted card))]
                           c
                           (some #(when-let [s (search % target)] s) (:hosted card)))))]
-         (helper root-host card)))))
+         (helper root-host card))))
 
 (defn card-index
   "Get the zero-based index of the given card in its server's list of content"

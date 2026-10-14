@@ -7,4 +7,21 @@
                    :watch-path "/css"
                    :repl-init-ns dev.nr}
         :dev {:modules {:main {:entries [dev.nr]}}}
-        :release {:modules {:main {:entries [prod.nr]}}}}}}
+        :release {:modules {:main {:entries [prod.nr]}}}}
+  :engine {:target :esm
+           :output-dir "mobile/engine"
+           :modules {:engine {:exports {loadCards engine.api/load-cards
+                                        loadQuotes engine.api/load-quotes
+                                        createGame engine.api/create-game
+                                        view engine.api/view
+                                        act engine.api/act
+                                        say engine.api/say
+                                        notify engine.api/notify
+                                        concede engine.api/concede!
+                                        winner engine.api/winner
+                                        loadDictionary engine.api/load-dictionary
+                                        setLanguage engine.api/set-language
+                                        renderMessage engine.api/render-message}}}
+           :compiler-options {:infer-externs :auto
+                              :reader-features #{:engine}
+                              :warnings {:fn-arity false}}}}}

@@ -2,24 +2,28 @@
   (:refer-clojure :exclude [format])
   (:require
    #?(:clj [clojure.java.io :as io])
-   #?(:cljs [reagent.core :as r])
-   #?(:cljs [nr.appstate :refer [app-state]])
-   #?(:cljs [cljs.core.async :refer [take!] :refer-macros [go]])
-   #?(:cljs [nr.ajax :refer [GET]])
+   #?@(:engine []
+       :cljs [[reagent.core :as r]
+              [nr.appstate :refer [app-state]]
+              [cljs.core.async :refer [take!] :refer-macros [go]]
+              [nr.ajax :refer [GET]]])
    [clojure.string :as str]
    [game.core.card :refer [get-title]]
    [game.core.schemas :as schemas :refer [EffectMsg MsgMap]]
    [game.core.to-string :refer [card-str-edn]]
-   [noahtheduke.fluent :as fluent]))
+   [noahtheduke.fluent :as fluent])
+  #?(:cljs (:require-macros [jinteki.i18n])))
 
 #?(:clj (set! *warn-on-reflection* true))
 
 (def language-cursor
-  #?(:clj (delay "en")
+  #?(:engine (atom "en")
+     :clj (delay "en")
      :cljs (r/cursor app-state [:options :language])))
 
 (defonce fluent-dictionary
-  #?(:clj (atom nil)
+  #?(:engine (atom nil)
+     :clj (atom nil)
      :cljs (r/atom {})))
 
 (defn insert-lang! [lang content]
@@ -56,7 +60,8 @@
    (comment
      (load-dictionary! "public/i18n")))
 
-#?(:cljs
+#?(:engine nil
+   :cljs
    (go (let [lang (get-in @app-state [:options :language] "en")]
          (take! (GET (str "/data/language/" lang))
                 (fn [response]

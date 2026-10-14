@@ -26,8 +26,9 @@
 (def clojure-grammar
   (insta/parser
     "clojure  = form+
-    <form>      = <ws> (anon-fn | fn | list | vector | map | set | symbol | literal | metadata | comment | splice | unquote) <ws>
+    <form>      = <ws> (reader-cond | anon-fn | fn | list | vector | map | set | symbol | literal | metadata | comment | splice | unquote) <ws>
     fn          = <'(' ws> form* <ws ')'>
+    <reader-cond> = <ws '#?' '@'?> fn
     <anon-fn>   = <ws '#'> fn
     list        = <ws ('\\''|'`')> fn
     vector      = <'[' ws> form* <ws ']'>
@@ -245,7 +246,7 @@
 ;; for reference:
 ;; * emacs autosaves contain a #, and backups contain a ~
 (defn get-clojure-files [d]
-  (sort (filter #(re-matches #"[^#~]*\.clj$" %) (seq (.list (clojure.java.io/file d))))))
+  (sort (remove #{"schemas.cljc"} (filter #(re-matches #"[^#~]*\.cljc?$" %) (seq (.list (clojure.java.io/file d)))))))
 
 (deftest cards-are-async-test
   (doseq [fname (get-clojure-files card-base-str)]

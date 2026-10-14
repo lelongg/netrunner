@@ -1,12 +1,15 @@
 (ns jinteki.cards
-  #?(:cljs
+  #?(:engine (:require)
+     :cljs
      (:require [reagent.core :as r])))
 
 
-(defonce all-cards #?(:clj (atom {})
+(defonce all-cards #?(:engine (atom {})
+                      :clj (atom {})
                       :cljs (r/atom {})))
 
-(defonce mwl #?(:clj (atom {})
+(defonce mwl #?(:engine (atom {})
+                :clj (atom {})
                 :cljs (r/atom {})))
 
 (defonce sets (atom []))
