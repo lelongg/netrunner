@@ -1,5 +1,6 @@
 import Peer, { type DataConnection } from "peerjs";
 import type { CardDb, Deck, EngineApi, GameHandle, Side } from "./engine";
+import { HeuristicBot } from "./bot/heuristic.ts";
 import { type WireDeck, engineDeck, fromWire } from "./decks";
 
 export type Role = "host" | "guest" | "local";
@@ -25,6 +26,7 @@ export interface LobbyState {
   myDeck?: WireDeck;
   opponentDeckReady: boolean;
   started: boolean;
+  vsBot?: boolean;
   error?: string;
 }
 
@@ -41,6 +43,7 @@ export type SavedGame =
       myName: string;
       mySide: Side;
       opponentName?: string;
+      vsBot?: boolean;
       setup: unknown;
       deckNames?: Partial<Record<Side, string>>;
       seed: number[];
@@ -55,6 +58,7 @@ const PEER_PREFIX = "nsg-mobile-";
 const SAVE_KEYS = { game: "nsg.save", guest: "nsg.guest" } as const;
 const RETRY_MS = 2500;
 const MAX_RETRIES = 36;
+const BOT_DELAY_MS = 450;
 const other = (s: Side): Side => (s === "corp" ? "runner" : "corp");
 
 export function newRoomCode() {
@@ -125,6 +129,8 @@ export class Session {
   private rng?: () => number;
   private log: Entry[] = [];
   private closed = false;
+  private bot?: HeuristicBot;
+  private botTimer?: number;
   private failures = 0;
 
   constructor(
@@ -301,6 +307,29 @@ export class Session {
     }
   }
 
+  enableBot() {
+    this.patch({ vsBot: true, opponentName: "Bot" });
+  }
+
+  private makeBot() {
+    if (!this.lobby.vsBot) return;
+    this.bot = new HeuristicBot(other(this.lobby.mySide), (title) => this.db.byTitle.get(title) as any);
+  }
+
+  private scheduleBot() {
+    const bot = this.bot;
+    if (!bot || this.botTimer !== undefined || this.closed) return;
+    if (!this.views[bot.side] || this.views[bot.side].winner) return;
+    this.botTimer = window.setTimeout(() => {
+      this.botTimer = undefined;
+      if (this.closed) return;
+      const move = bot.decide(this.views[bot.side]);
+      if (!move) return;
+      if (move.say) this.say(move.say, bot.side);
+      else this.perform({ side: bot.side, kind: "act", command: move.command, args: move.args ?? null });
+    }, BOT_DELAY_MS);
+  }
+
   setSide(side: Side) {
     if (this.lobby.role === "guest" || side === this.lobby.mySide) return;
     this.opponentDeck = undefined;
@@ -367,6 +396,7 @@ export class Session {
     this.boot({ gameid: this.lobby.code, format: "casual", ...players }, Array.from(crypto.getRandomValues(new Uint32Array(4))));
     this.log = [];
     this.lobby = { ...this.lobby, started: true };
+    this.makeBot();
     this.persist();
     this.post(this.lobbyMsg());
     this.broadcast();
@@ -377,7 +407,8 @@ export class Session {
     this.boot(save.setup, save.seed);
     for (const entry of save.log) this.exec(entry);
     this.log = [...save.log];
-    this.lobby = { ...this.lobby, opponentName: save.opponentName, started: true, opponentDeckReady: true };
+    this.lobby = { ...this.lobby, opponentName: save.opponentName, vsBot: save.vsBot, started: true, opponentDeckReady: true };
+    this.makeBot();
     this.broadcast();
   }
 
@@ -390,6 +421,7 @@ export class Session {
       myName: this.lobby.myName,
       mySide: this.lobby.mySide,
       opponentName: this.lobby.opponentName,
+      vsBot: this.lobby.vsBot,
       setup: this.setup,
       deckNames: this.deckNames,
       seed: this.seed,
@@ -433,6 +465,7 @@ export class Session {
     this.views.runner = this.engine.view(this.game, "runner");
     this.post({ t: "view", view: this.views[other(this.lobby.mySide)] });
     this.emit();
+    this.scheduleBot();
   }
 
   send(command: string, args?: unknown, side: Side = this.lobby.mySide) {
@@ -477,6 +510,7 @@ export class Session {
 
   close() {
     this.closed = true;
+    if (this.botTimer !== undefined) clearTimeout(this.botTimer);
     this.conn?.close();
     this.peer?.destroy();
   }

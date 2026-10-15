@@ -59,9 +59,11 @@ function App() {
           if (save) clearSave(save);
           setSave(loadSave());
         }}
-        onStart={(role: Role, name: string, code?: string) => {
+        onStart={(role: Role, name: string, code?: string, vsBot?: boolean) => {
           if (!loaded) return;
-          setSession(new Session(loaded.engine, loaded.db, role, code ?? newRoomCode(), name));
+          const next = new Session(loaded.engine, loaded.db, role, code ?? newRoomCode(), name);
+          if (vsBot) next.enableBot();
+          setSession(next);
           setLocalSide("corp");
         }}
       />
@@ -71,7 +73,7 @@ function App() {
   const { lobby } = session;
   if (!lobby.started) return <Lobby session={session} db={loaded.db} matchups={loaded.matchups} onLeave={leave} />;
 
-  if (lobby.role === "local") {
+  if (lobby.role === "local" && !lobby.vsBot) {
     const view = session.views[localSide];
     if (!view) return null;
     return (

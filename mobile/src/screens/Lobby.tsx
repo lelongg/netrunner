@@ -27,8 +27,9 @@ export function Lobby({ session, db, matchups, onLeave }: Props) {
   const [opponentDeck, setOpponentDeck] = useState<WireDeck>();
   const [copied, setCopied] = useState(false);
   const link = shareLink(lobby.code);
-  const status =
-    lobby.role === "local"
+  const status = lobby.vsBot
+    ? "Solo game · you against the bot"
+    : lobby.role === "local"
       ? "Local game · both sides on this device"
       : lobby.status === "connecting"
         ? "Connecting to the relay…"
@@ -83,7 +84,7 @@ export function Lobby({ session, db, matchups, onLeave }: Props) {
 
         <section class="panel section">
           <div class="row">
-            <span class="label">{lobby.role === "local" ? "Player 1" : "You"}</span>
+            <span class="label">{lobby.role === "local" && !lobby.vsBot ? "Player 1" : "You"}</span>
             <span class={`label who-${lobby.mySide}`}>{SIDE_LABEL[lobby.mySide]}</span>
           </div>
           {lobby.role !== "guest" && (
@@ -108,7 +109,7 @@ export function Lobby({ session, db, matchups, onLeave }: Props) {
         {lobby.role === "local" && (
           <section class="panel section">
             <div class="row">
-              <span class="label">Player 2</span>
+              <span class="label">{lobby.vsBot ? "Bot" : "Player 2"}</span>
               <span class={`label who-${other(lobby.mySide)}`}>{SIDE_LABEL[other(lobby.mySide)]}</span>
             </div>
             <DeckPicker

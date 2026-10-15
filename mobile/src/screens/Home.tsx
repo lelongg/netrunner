@@ -9,7 +9,7 @@ interface Props {
   save: SavedGame | null;
   onResume: () => void;
   onDiscard: () => void;
-  onStart: (role: Role, name: string, code?: string) => void;
+  onStart: (role: Role, name: string, code?: string, vsBot?: boolean) => void;
 }
 
 const ROLE_LABEL: Record<Role, string> = { host: "hosted", guest: "joined", local: "local" };
@@ -26,13 +26,13 @@ function storedName() {
 export function Home({ ready, error, initialJoin, save, onResume, onDiscard, onStart }: Props) {
   const [name, setName] = useState(storedName() || "Player");
   const [code, setCode] = useState(initialJoin ?? "");
-  const go = (role: Role, c?: string) => {
+  const go = (role: Role, c?: string, vsBot?: boolean) => {
     try {
       localStorage.setItem(NAME_KEY, name);
     } catch {
       /* storage unavailable */
     }
-    onStart(role, name.trim() || "Player", c);
+    onStart(role, name.trim() || "Player", c, vsBot);
   };
   return (
     <>
@@ -99,7 +99,11 @@ export function Home({ ready, error, initialJoin, save, onResume, onDiscard, onS
           </div>
         </div>
 
-        <button class="primary" disabled={!ready} onClick={() => go("local")}>
+        <button class="primary" disabled={!ready} onClick={() => go("local", undefined, true)}>
+          Solo · play vs the bot
+        </button>
+
+        <button disabled={!ready} onClick={() => go("local")}>
           Local game · 2 players, 1 device
         </button>
 
