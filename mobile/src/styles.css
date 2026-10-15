@@ -1788,3 +1788,81 @@ button:active:not(:disabled) {
     background: var(--yellow);
   }
 }
+
+.lobby {
+  gap: 12px;
+  padding-top: 12px;
+}
+
+.invite-body {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+
+.invite .qr {
+  width: min(40vw, 160px);
+  flex: none;
+}
+
+.invite-side {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  flex: 1;
+}
+
+.invite-side .code {
+  font-size: 44px;
+}
+
+.lobby-link {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+.seat-deck {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.seat-deck-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 8px 10px;
+  border: 1px solid var(--line-2);
+  background: var(--panel-2);
+  text-align: left;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.seat-deck-main .deck-identity {
+  width: 40px;
+  flex: none;
+}
+
+.seat-change {
+  flex: none;
+  padding: 0 14px;
+}
+
+.lobby-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: auto;
+}
+
+.deck-choose .deck-list {
+  max-height: 58vh;
+}

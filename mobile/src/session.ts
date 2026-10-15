@@ -15,7 +15,8 @@ export type Msg =
   | { t: "say"; text: string }
   | { t: "concede" }
   | { t: "error"; message: string }
-  | { t: "ping" };
+  | { t: "ping" }
+  | { t: "unready" };
 
 export interface LobbyState {
   code: string;
@@ -25,6 +26,7 @@ export interface LobbyState {
   opponentName?: string;
   mySide: Side;
   myDeck?: WireDeck;
+  ready?: boolean;
   opponentDeckReady: boolean;
   started: boolean;
   vsBot?: boolean;
@@ -308,6 +310,11 @@ export class Session {
         this.opponentDeck = msg.deck;
         this.patch({ opponentDeckReady: true });
         break;
+      case "unready":
+        if (this.lobby.started) break;
+        this.opponentDeck = undefined;
+        this.patch({ opponentDeckReady: false });
+        break;
       case "act":
         this.perform({ side: guest, kind: "act", command: msg.command, args: msg.args });
         break;
@@ -324,9 +331,11 @@ export class Session {
     switch (msg.t) {
       case "lobby": {
         const mySide = other(msg.hostSide);
-        const myDeck = mySide === this.lobby.mySide ? this.lobby.myDeck : undefined;
-        this.patch({ opponentName: msg.host, mySide, myDeck, started: msg.started || this.lobby.started });
-        if (myDeck && !msg.started) this.post({ t: "deck", deck: myDeck, side: mySide });
+        const same = mySide === this.lobby.mySide;
+        const myDeck = same ? this.lobby.myDeck : undefined;
+        const ready = same && !!this.lobby.ready && !!myDeck;
+        this.patch({ opponentName: msg.host, mySide, myDeck, ready, started: msg.started || this.lobby.started });
+        if (ready && !msg.started) this.post({ t: "deck", deck: myDeck!, side: mySide });
         break;
       }
       case "view":
@@ -381,12 +390,21 @@ export class Session {
       } else this.patch({ myDeck: deck });
       return;
     }
-    this.patch({ myDeck: deck });
     if (this.lobby.role === "guest") {
+      if (this.lobby.ready) this.post({ t: "unready" });
+      this.patch({ myDeck: deck, ready: false });
       writeSave("guest", { v: 1, role: "guest", code: this.lobby.code, myName: this.lobby.myName, myDeck: deck, savedAt: Date.now() });
-      this.post({ t: "deck", deck, side: this.lobby.mySide });
+    } else {
+      this.patch({ myDeck: deck });
+      this.post(this.lobbyMsg());
     }
-    else this.post(this.lobbyMsg());
+  }
+
+  setReady(ready: boolean) {
+    if (this.lobby.role !== "guest" || this.lobby.started) return;
+    if (ready && this.lobby.myDeck) this.post({ t: "deck", deck: this.lobby.myDeck, side: this.lobby.mySide });
+    else if (!ready) this.post({ t: "unready" });
+    this.patch({ ready: ready && !!this.lobby.myDeck });
   }
 
   get canStart() {

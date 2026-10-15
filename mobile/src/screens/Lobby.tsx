@@ -1,10 +1,13 @@
-import { useEffect, useState } from "preact/hooks";
+import { useEffect, useMemo, useState } from "preact/hooks";
 import type { CardDb, Matchup, Side } from "../engine";
-import type { WireDeck } from "../decks";
+import { type WireDeck, deckSize, fromWire } from "../decks";
 import type { Session } from "../session";
 import { QrCode } from "../QrCode";
 import { Cta, Ticker } from "../ui";
 import { DeckPicker } from "./DeckPicker";
+import { DeckViewer } from "./DeckViewer";
+import { CardImage } from "../game/CardImage";
+import { useBackClose } from "../back";
 import { Icon } from "../icons";
 
 interface Props {
@@ -62,22 +65,105 @@ function JoinStatus({ lobby }: { lobby: Session["lobby"] }) {
   );
 }
 
+function DeckSheet({ side, db, matchups, value, onPick, onClose }: { side: Side; db: CardDb; matchups: Matchup[]; value?: WireDeck; onPick: (d: WireDeck) => void; onClose: () => void }) {
+  useBackClose(true, onClose);
+  return (
+    <div class="sheet-backdrop" onClick={onClose}>
+      <div class="sheet panel deck-choose" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={`Choose a ${SIDE_LABEL[side]} deck`}>
+        <div class="row">
+          <span class={`label who-${side}`}>Choose a {SIDE_LABEL[side]} deck</span>
+          <button class="ghost" onClick={onClose} aria-label="Close">
+            <Icon name="close" />
+          </button>
+        </div>
+        <DeckPicker
+          side={side}
+          db={db}
+          matchups={matchups}
+          value={value}
+          showCurrent={false}
+          onChange={(d) => {
+            onPick(d);
+            onClose();
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function Seat({
+  label,
+  side,
+  deck,
+  db,
+  matchups,
+  onPick,
+  onSide,
+  locked,
+}: {
+  label: string;
+  side: Side;
+  deck?: WireDeck;
+  db: CardDb;
+  matchups: Matchup[];
+  onPick: (d: WireDeck) => void;
+  onSide?: (s: Side) => void;
+  locked?: boolean;
+}) {
+  const [choosing, setChoosing] = useState(false);
+  const [viewing, setViewing] = useState(false);
+  const current = useMemo(() => (deck ? fromWire(deck, db) : undefined), [deck]);
+  useBackClose(viewing, () => setViewing(false));
+  return (
+    <section class="panel section seat">
+      <div class="row">
+        <span class="label">{label}</span>
+        <span class={`label who-${side}`}>{SIDE_LABEL[side]}</span>
+      </div>
+      {onSide && (
+        <div class="tabs">
+          {(["corp", "runner"] as Side[]).map((s) => (
+            <button class={side === s ? "on" : ""} onClick={() => s !== side && onSide(s)}>
+              {SIDE_LABEL[s]}
+            </button>
+          ))}
+        </div>
+      )}
+      {current ? (
+        <div class="seat-deck">
+          <button class="seat-deck-main" onClick={() => setViewing(true)} aria-label={`View deck ${current.name}`}>
+            <CardImage class="deck-identity" code={current.identity.code} alt={current.identity.title} size="small" />
+            <span class="deck-current-info">
+              <strong>{current.name}</strong>
+              <span>{current.identity.title}</span>
+              <span>{deckSize(current)} cards · view</span>
+            </span>
+          </button>
+          {!locked && (
+            <button class="seat-change" onClick={() => setChoosing(true)}>
+              Change
+            </button>
+          )}
+        </div>
+      ) : (
+        <button class="primary" onClick={() => setChoosing(true)}>
+          Choose a deck
+        </button>
+      )}
+      {choosing && <DeckSheet side={side} db={db} matchups={matchups} value={deck} onPick={onPick} onClose={() => setChoosing(false)} />}
+      {viewing && current && <DeckViewer deck={current} onClose={() => setViewing(false)} />}
+    </section>
+  );
+}
+
 export function Lobby({ session, db, matchups, onLeave }: Props) {
   const { lobby } = session;
   const [opponentDeck, setOpponentDeck] = useState<WireDeck>();
   const [copied, setCopied] = useState(false);
   const link = shareLink(lobby.code);
-  const status = lobby.vsBot
-    ? "Solo game · you against the bot"
-    : lobby.role === "local"
-      ? "Local game · both sides on this device"
-      : lobby.status === "connecting"
-        ? "Connecting to the matchmaking relays…"
-        : lobby.status === "waiting"
-          ? "Waiting for opponent…"
-          : lobby.status === "closed"
-            ? "Connection lost"
-            : `Linked with ${lobby.opponentName ?? "opponent"}`;
+  const opponent = lobby.opponentName ?? "your opponent";
+  const inviting = lobby.role === "host" && lobby.status !== "connected";
 
   const share = async () => {
     try {
@@ -104,90 +190,99 @@ export function Lobby({ session, db, matchups, onLeave }: Props) {
           <h1>SETUP</h1>
         </header>
 
-        {lobby.role !== "local" && (
-          <section class="panel section">
+        {inviting && (
+          <section class="panel section invite">
             <div class="row">
               <span class="label">Game code</span>
-              <span class="label">{lobby.role === "host" ? "Host" : "Guest"}</span>
+              <span class="label">{lobby.status === "waiting" ? "Waiting for opponent" : "Connecting"}</span>
             </div>
-            <span class="code">{lobby.code}</span>
-            {lobby.role === "host" && lobby.status !== "connected" && (
-              <div class="qr-wrap">
-                <QrCode value={link} label={`QR code to join game ${lobby.code}`} />
-                <span class="label">Scan to join</span>
+            <div class="invite-body">
+              <QrCode value={link} label={`QR code to join game ${lobby.code}`} />
+              <div class="invite-side">
+                <span class="code">{lobby.code}</span>
+                <button class="primary" onClick={share}>
+                  {copied ? "Link copied" : "Share link"}
+                </button>
               </div>
-            )}
-            {lobby.role === "host" && (
-              <button class="primary" onClick={share}>
-                {copied ? "Link copied" : "Share invite link"}
-              </button>
-            )}
+            </div>
+            <p class="hint">Keep this screen open until your opponent joins: switching apps pauses the game.</p>
           </section>
         )}
 
-        {lobby.role === "guest" && lobby.status !== "connected" ? (
-          <JoinStatus lobby={lobby} />
-        ) : (
-          <p class={`status ${lobby.status}`}>{status}</p>
+        {lobby.role !== "local" && !inviting && (lobby.role === "host" || lobby.status === "connected") && (
+          <section class="panel section lobby-link">
+            <span class="label">
+              Game <span class="cyan">{lobby.code}</span>
+            </span>
+            <span class="label">{lobby.status === "connected" ? `Linked with ${opponent}` : "Reconnecting…"}</span>
+          </section>
         )}
-        {lobby.role === "host" && lobby.status === "waiting" && <p class="hint">Keep this screen open until your opponent joins: switching apps pauses the game.</p>}
+
+        {lobby.role === "local" && <p class="status">{lobby.vsBot ? "Solo game · you against the bot" : "Local game · both sides on this device"}</p>}
+        {lobby.role === "guest" && lobby.status !== "connected" && <JoinStatus lobby={lobby} />}
         {lobby.error && <p class="error">{lobby.error}</p>}
 
         {(lobby.role !== "guest" || lobby.status === "connected") && (
-          <section class="panel section">
-            <div class="row">
-              <span class="label">{lobby.role === "local" && !lobby.vsBot ? "Player 1" : "You"}</span>
-              <span class={`label who-${lobby.mySide}`}>{SIDE_LABEL[lobby.mySide]}</span>
-            </div>
-            {lobby.role !== "guest" && (
-              <div class="tabs">
-                {(["corp", "runner"] as Side[]).map((s) => (
-                  <button
-                    class={lobby.mySide === s ? "on" : ""}
-                    onClick={() => {
-                      if (s === lobby.mySide) return;
-                      session.setSide(s);
-                      setOpponentDeck(undefined);
-                    }}
-                  >
-                    {SIDE_LABEL[s]}
-                  </button>
-                ))}
-              </div>
-            )}
-            <DeckPicker key={lobby.mySide} side={lobby.mySide} db={db} matchups={matchups} value={lobby.myDeck} onChange={(d) => session.setDeck(d)} />
-          </section>
+          <Seat
+            key={lobby.mySide}
+            label={lobby.role === "local" && !lobby.vsBot ? "Player 1" : "You"}
+            side={lobby.mySide}
+            deck={lobby.myDeck}
+            db={db}
+            matchups={matchups}
+            onPick={(d) => session.setDeck(d)}
+            onSide={
+              lobby.role !== "guest"
+                ? (s) => {
+                    session.setSide(s);
+                    setOpponentDeck(undefined);
+                  }
+                : undefined
+            }
+          />
         )}
 
         {lobby.role === "local" && (
-          <section class="panel section">
-            <div class="row">
-              <span class="label">{lobby.vsBot ? "Bot" : "Player 2"}</span>
-              <span class={`label who-${other(lobby.mySide)}`}>{SIDE_LABEL[other(lobby.mySide)]}</span>
-            </div>
-            <DeckPicker
-              key={other(lobby.mySide)}
-              side={other(lobby.mySide)}
-              db={db}
-              matchups={matchups}
-              value={opponentDeck}
-              onChange={(d) => {
-                setOpponentDeck(d);
-                session.setDeck(d, other(lobby.mySide));
-              }}
-            />
-          </section>
+          <Seat
+            key={other(lobby.mySide)}
+            label={lobby.vsBot ? "Bot" : "Player 2"}
+            side={other(lobby.mySide)}
+            deck={opponentDeck}
+            db={db}
+            matchups={matchups}
+            onPick={(d) => {
+              setOpponentDeck(d);
+              session.setDeck(d, other(lobby.mySide));
+            }}
+          />
         )}
 
-        {lobby.role === "host" && !lobby.opponentDeckReady && <p class="hint">Opponent has not picked a deck yet.</p>}
-
-        {lobby.role === "guest" ? (
-          lobby.status === "connected" && <p class="status">{lobby.myDeck ? "Deck sent · the host starts the game" : "Pick your deck"}</p>
-        ) : (
-          <Cta disabled={!session.canStart} onClick={() => session.start()}>
-            Start game
-          </Cta>
-        )}
+        <div class="lobby-footer">
+          {lobby.role === "host" && lobby.status === "connected" && (
+            <p class={`status ${lobby.opponentDeckReady ? "connected" : ""}`}>
+              {lobby.opponentDeckReady ? `${opponent} is ready` : `Waiting for ${opponent} to pick a deck…`}
+            </p>
+          )}
+          {lobby.role === "guest" ? (
+            lobby.status === "connected" &&
+            (lobby.ready ? (
+              <>
+                <p class="status connected">Ready · waiting for {opponent} to start</p>
+                <button class="ghost" onClick={() => session.setReady(false)}>
+                  Not ready
+                </button>
+              </>
+            ) : (
+              <Cta disabled={!lobby.myDeck} onClick={() => session.setReady(true)}>
+                Ready
+              </Cta>
+            ))
+          ) : (
+            <Cta disabled={!session.canStart} onClick={() => session.start()}>
+              Start game
+            </Cta>
+          )}
+        </div>
       </div>
     </>
   );

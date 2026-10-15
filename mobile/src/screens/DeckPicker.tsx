@@ -12,11 +12,12 @@ interface Props {
   matchups: Matchup[];
   value?: WireDeck;
   onChange: (deck: WireDeck) => void;
+  showCurrent?: boolean;
 }
 
 type Tab = "precon" | "browse" | "saved" | "import";
 
-export function DeckPicker({ side, db, matchups, value, onChange }: Props) {
+export function DeckPicker({ side, db, matchups, value, onChange, showCurrent = true }: Props) {
   const [tab, setTab] = useState<Tab>("precon");
   const [text, setText] = useState("");
   const [error, setError] = useState<string>();
@@ -50,7 +51,7 @@ export function DeckPicker({ side, db, matchups, value, onChange }: Props) {
 
   return (
     <div class="deck-picker">
-      {current && (
+      {showCurrent && current && (
         <button class="deck-current" onClick={() => setViewing(true)} aria-label={`View deck ${current.name}`}>
           <CardImage class="deck-identity" code={current.identity.code} alt={current.identity.title} size="small" />
           <span class="deck-current-info">

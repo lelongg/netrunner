@@ -77,7 +77,15 @@ function App() {
   };
 
   useEffect(() => {
-    if (loaded && save && !session && (!joinParam || joinParam === save.code)) resume(save);
+    if (!loaded || session) return;
+    if (save && (!joinParam || joinParam === save.code)) resume(save);
+    else if (joinParam) {
+      let name = "Player";
+      try {
+        name = localStorage.getItem("nsg.name")?.trim() || name;
+      } catch {}
+      setSession(new Session(loaded.engine, loaded.db, "guest", joinParam, name));
+    }
   }, [loaded]);
 
   useEffect(() => {
