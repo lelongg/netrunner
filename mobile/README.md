@@ -129,8 +129,8 @@ HTTPS tunnel.
 publishes `mobile/dist` to GitHub Pages on every push to `master` (set *Settings → Pages →
 Source* to *GitHub Actions*). Any static host works.
 
-Online games use the relay whose URL is baked in at build time as `VITE_RELAY_URL` (the
-workflow reads the `RELAY_URL` repository variable). Deploying it takes a free Cloudflare
+Online games use the relay whose URL is baked in at build time as `VITE_RELAY_URL`, set in
+`mobile/.env.production`. Deploying it takes a free Cloudflare
 account and one `wrangler deploy`: see [`relay/README.md`](../relay/README.md).
 
 Without a relay URL the app falls back to peer-to-peer links. Matchmaking then goes through [Trystero](https://github.com/dmotz/trystero) over several

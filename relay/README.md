@@ -40,10 +40,9 @@ npx wrangler login     # once, with a free Cloudflare account
 npx wrangler deploy    # prints https://netrunner-relay.<your-subdomain>.workers.dev
 ```
 
-Then build the app with that URL: set the repository variable `RELAY_URL` (Settings →
-Secrets and variables → Actions → Variables) and the Pages workflow passes it as
-`VITE_RELAY_URL`. Without it the app falls back to peer-to-peer links, where the host's app
-must stay open. To deploy the relay from CI instead, add the `CLOUDFLARE_API_TOKEN` (and
+Then point the app at that URL in `mobile/.env.production` (`VITE_RELAY_URL=…`); the
+deployed app uses https://netrunner-relay.lelong-gerald.workers.dev. Without it the app falls
+back to peer-to-peer links, where the host's app must stay open. To deploy the relay from CI instead, add the `CLOUDFLARE_API_TOKEN` (and
 `CLOUDFLARE_ACCOUNT_ID`) secrets; `.github/workflows/relay.yml` deploys on pushes to
 `master` that touch `relay/`.
 
