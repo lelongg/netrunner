@@ -125,7 +125,23 @@ function playGame(m, players) {
     actions++;
   }
   const v = engine.view(game, "corp");
-  return { winner: engine.winner(game), reason: v.reason, turn: v.turn, actions, errors, stuck, points: [v.corp["agenda-point"], v.runner["agenda-point"]] };
+  const lines = v.log.map((e) => engine.renderMessage(e.text));
+  const count = (re) => lines.filter((l) => re.test(l)).length;
+  const stats = {
+    runs: count(/to make a run on/),
+    breaches: count(/ breaches /),
+    steals: count(/ steals /),
+    accesses: count(/ accesses /),
+    endRun: count(/end the run|ends the run|jacks out/i),
+    rezIce: count(/rezzes .* (protecting|ice)/i),
+    breaks: count(/to break/),
+    targets: Object.entries(lines.reduce((m, l) => { const t = l.match(/make a run on (.*)\./)?.[1]; if (t) m[t] = (m[t] ?? 0) + 1; return m; }, {})).map(([k, n]) => `${k}:${n}`).join(" "),
+    stealsWhere: lines.filter((l) => / steals /.test(l)).length,
+    scored: count(/ scores? /),
+    runnerCredits: v.runner.credit,
+    rig: (v.runner.rig.program ?? []).map((c) => c.title).join("+"),
+  };
+  return { winner: engine.winner(game), reason: v.reason, turn: v.turn, actions, errors, stuck, points: [v.corp["agenda-point"], v.runner["agenda-point"]], stats };
 }
 
 const setups = {
@@ -133,11 +149,14 @@ const setups = {
   "bot-vs-bot": [{ corp: "bot", runner: "bot" }],
   "random-vs-random": [{ corp: "random", runner: "random" }],
 };
+const verbose = process.env.VERBOSE === "1";
 for (const players of setups[mode]) {
   const results = [];
   for (let g = 0; g < games; g++) {
     const m = matchArg !== undefined ? Number(matchArg) : g % 2;
-    results.push(playGame(m, players));
+    const r = playGame(m, players);
+    results.push(r);
+    if (verbose) console.log(JSON.stringify({ winner: r.winner, turn: r.turn, points: r.points, ...r.stats }));
   }
   const wins = { corp: 0, runner: 0, none: 0 };
   for (const r of results) wins[r.winner ?? "none"]++;
