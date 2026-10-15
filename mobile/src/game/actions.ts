@@ -288,7 +288,7 @@ export function runCommands(view: any, side: Side, autoContinue = false): Comman
       });
     }
     if (run && (enc?.["encounter-count"] ?? 0) <= 1 && run.phase !== "success")
-      out.push({ label: run["corp-auto-no-action"] ? "Stop auto-passing" : "Auto-pass this run", command: "toggle-auto-no-action" });
+      out.push({ label: run["corp-auto-no-action"] ? "Stop auto-passing" : "Auto-pass", command: "toggle-auto-no-action" });
     return out;
   }
   const waiting = (enc ?? run)?.["no-action"] === "runner";
