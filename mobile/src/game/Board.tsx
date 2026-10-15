@@ -575,6 +575,16 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave }
               <Icon name="swap" /> Switch to {opp}
             </button>
           )}
+          {view["active-player"] === side && !view.winner && (
+            <button
+              onClick={() => {
+                session.say("/undo-click", side);
+                setMenu(false);
+              }}
+            >
+              <Icon name="undo" /> Undo last click
+            </button>
+          )}
           <button
             onClick={() => {
               send("indicate-action");

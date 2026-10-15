@@ -8,6 +8,7 @@ const PATHS = {
   swap: { box: "0 0 24 20", d: "M2 6h18M15 1l5 5-5 5M22 14H4M9 9l-5 5 5 5" },
   plus: { box: "0 0 20 20", d: "M10 2v16M2 10h16" },
   minus: { box: "0 0 20 20", d: "M2 10h16" },
+  undo: { box: "0 0 22 20", d: "M7 3 2 8l5 5M2 8h12a6 6 0 0 1 0 12h-4" },
   sub: { box: "0 0 20 20", d: "M4 2v10h12M11 7l5 5-5 5" },
 } as const;
 
