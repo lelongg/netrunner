@@ -91,7 +91,6 @@ export function CardSheet({ card, view, side, db, send, onClose, disabled, index
           </div>
         ) : (
           <div class="sheet-actions">
-            {commands.length === 0 && <span class="status">No action available</span>}
             {commands.map((c) => (
               <button class={c.kind === "danger" ? "danger" : c.kind === "primary" ? "primary" : ""} disabled={disabled || c.enabled === false} onClick={() => run(c)}>
                 {iconize(c.label)}
