@@ -258,6 +258,8 @@ textarea:focus {
 }
 
 .ticker {
+  position: relative;
+  z-index: 5;
   display: flex;
   align-items: center;
   height: 22px;
@@ -265,8 +267,13 @@ textarea:focus {
   border-bottom: 1px solid var(--line);
   padding-top: env(safe-area-inset-top);
   box-sizing: content-box;
-  overflow: hidden;
   white-space: nowrap;
+}
+
+.ticker-menu::after {
+  content: "";
+  position: absolute;
+  inset: calc(-1 * env(safe-area-inset-top) - 6px) 0 -20px -12px;
 }
 
 .ticker::before {
@@ -291,11 +298,13 @@ textarea:focus {
 }
 
 .ticker-menu {
+  position: relative;
   margin-left: auto;
   flex: none;
   height: 22px;
-  min-width: 44px;
-  padding: 0 12px;
+  min-height: 0;
+  min-width: 52px;
+  padding: 0 16px;
   border: none;
   border-left: 1px solid var(--line);
   background: transparent;
@@ -305,13 +314,45 @@ textarea:focus {
 }
 
 .ticker .feed {
+  flex: 1;
   min-width: 0;
   font-size: 9px;
   letter-spacing: 0.14em;
   padding: 0 10px;
   text-transform: uppercase;
   overflow: hidden;
-  text-overflow: ellipsis;
+}
+
+.ticker .feed.scrolling {
+  padding: 0;
+  mask-image: linear-gradient(90deg, transparent, #000 10px, #000 calc(100% - 10px), transparent);
+}
+
+.feed-track {
+  display: inline-flex;
+}
+
+.feed.scrolling .feed-track {
+  animation: marquee linear infinite;
+}
+
+.feed.scrolling .feed-text {
+  padding: 0 10px 0 10px;
+}
+
+.feed.scrolling .feed-text::after {
+  content: "//";
+  padding-left: 20px;
+  color: var(--muted);
+}
+
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
 }
 
 .cyan {
@@ -1192,8 +1233,16 @@ textarea:focus {
 .me-info {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   padding-bottom: 3px;
+  min-width: 0;
+  flex: 1;
+}
+
+.me-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   min-width: 0;
 }
 
@@ -1201,6 +1250,42 @@ textarea:focus {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  letter-spacing: 0.18em;
+}
+
+.me-points {
+  margin-left: auto;
+  flex: none;
+  color: var(--text);
+}
+
+.opp-info .stats {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: 0.16em;
+}
+
+.turn-state.active {
+  color: var(--cyan);
+}
+
+.turn-state.active::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 8px;
+  vertical-align: 1px;
+  background: var(--cyan);
+  box-shadow: 0 0 6px var(--cyan);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.25;
+  }
 }
 
 .hand {
@@ -1619,6 +1704,7 @@ form.chat input {
 
 button:active:not(:disabled) {
   filter: brightness(1.25);
+  transform: scale(0.97);
 }
 
 .sheet-backdrop {
@@ -1649,6 +1735,14 @@ button:active:not(:disabled) {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
+
+  .feed.scrolling .feed-track {
+    animation: none;
+  }
+
+  .ticker .feed.scrolling {
+    overflow-x: auto;
+  }
 }
 
 .icon {
@@ -1658,6 +1752,10 @@ button:active:not(:disabled) {
   flex: none;
   vertical-align: -0.12em;
   overflow: visible;
+}
+
+.cta-label {
+  min-width: 0;
 }
 
 .cta .cta-arrow {
@@ -1968,4 +2066,280 @@ button:active:not(:disabled) {
 .qr-pending {
   aspect-ratio: 1;
   background: repeating-linear-gradient(0deg, var(--panel-2) 0 3px, #15191d 3px 4px);
+}
+
+.run-fx {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+  --fx: var(--red);
+  animation: fx-flash 1.5s ease-out forwards;
+}
+
+.run-fx.fx-encounter {
+  --fx: var(--yellow);
+  animation-duration: 1.1s;
+}
+
+.run-fx.fx-success {
+  --fx: var(--cyan);
+}
+
+.run-fx.fx-end {
+  --fx: var(--muted);
+}
+
+.fx-band {
+  width: 100%;
+  padding: 14px 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background:
+    repeating-linear-gradient(0deg, transparent 0 3px, rgb(0 0 0 / 0.35) 3px 4px),
+    linear-gradient(90deg, rgb(10 11 13 / 0.96), rgb(10 11 13 / 0.85));
+  border-top: 2px solid var(--fx);
+  border-bottom: 2px solid var(--fx);
+  box-shadow: 0 0 40px color-mix(in srgb, var(--fx) 45%, transparent);
+  transform-origin: center;
+  animation: fx-band 1.5s cubic-bezier(0.2, 0.9, 0.2, 1) forwards;
+}
+
+.fx-encounter .fx-band {
+  animation-duration: 1.1s;
+}
+
+.fx-band::before {
+  content: "";
+  height: 6px;
+  margin: -8px -20px 6px;
+  background: repeating-linear-gradient(135deg, var(--fx) 0 8px, transparent 8px 16px);
+  animation: fx-stripes 0.6s linear infinite;
+}
+
+.fx-title {
+  position: relative;
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 72px;
+  line-height: 0.9;
+  text-transform: uppercase;
+  color: var(--fx);
+  letter-spacing: 0.02em;
+  animation: fx-title 1.5s ease-out forwards;
+}
+
+.fx-encounter .fx-title {
+  font-size: 52px;
+}
+
+.fx-title::before,
+.fx-title::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  opacity: 0.8;
+  animation: fx-glitch 0.45s steps(2) 2;
+}
+
+.fx-title::before {
+  color: var(--cyan);
+  transform: translate(-3px, 0);
+  clip-path: inset(0 0 55% 0);
+}
+
+.fx-title::after {
+  color: var(--red);
+  transform: translate(3px, 0);
+  clip-path: inset(50% 0 0 0);
+}
+
+.fx-success .fx-title::before {
+  color: var(--yellow);
+}
+
+.fx-sub {
+  font-size: 11px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+@keyframes fx-flash {
+  0% {
+    background: color-mix(in srgb, var(--fx) 30%, transparent);
+  }
+  25%,
+  100% {
+    background: transparent;
+  }
+}
+
+@keyframes fx-band {
+  0% {
+    transform: scaleY(0) skewX(-12deg);
+    opacity: 0;
+  }
+  12% {
+    transform: scaleY(1.15) skewX(0);
+    opacity: 1;
+  }
+  20%,
+  78% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scaleY(0.02) translateX(30%);
+    opacity: 0;
+  }
+}
+
+@keyframes fx-title {
+  0% {
+    transform: translateX(-24px);
+    filter: blur(4px);
+  }
+  18% {
+    transform: none;
+    filter: none;
+  }
+}
+
+@keyframes fx-glitch {
+  0% {
+    transform: translate(-6px, 1px);
+  }
+  50% {
+    transform: translate(5px, -1px);
+  }
+  100% {
+    transform: none;
+    opacity: 0;
+  }
+}
+
+@keyframes fx-stripes {
+  to {
+    background-position: 22.6px 0;
+  }
+}
+
+.board.in-run::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--red) 55%, transparent), inset 0 0 60px color-mix(in srgb, var(--red) 22%, transparent);
+  animation: run-vignette 2.4s ease-in-out infinite;
+}
+
+@keyframes run-vignette {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+.server.running {
+  position: relative;
+  box-shadow: 0 0 18px color-mix(in srgb, var(--cyan) 40%, transparent);
+  overflow: hidden;
+}
+
+.server.running::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 40px;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--cyan) 22%, transparent), transparent);
+  animation: server-scan 1.8s linear infinite;
+}
+
+@keyframes server-scan {
+  from {
+    top: -40px;
+  }
+  to {
+    top: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .run-fx {
+    animation: none;
+  }
+
+  .fx-band {
+    animation: fx-fade 1.5s linear forwards;
+  }
+
+  .server.running::after,
+  .board.in-run::after {
+    animation: none;
+  }
+}
+
+@keyframes fx-fade {
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.bump {
+  display: inline-block;
+  animation: bump 0.5s cubic-bezier(0.2, 1.6, 0.4, 1);
+}
+
+.bump-up {
+  --bump: var(--cyan);
+}
+
+.bump-down {
+  --bump: var(--red);
+}
+
+@keyframes bump {
+  0% {
+    transform: scale(1.35) translateY(-2px);
+    color: var(--bump);
+    text-shadow: 0 0 12px var(--bump);
+  }
+  100% {
+    transform: none;
+  }
+}
+
+.tile {
+  animation: tile-in 0.32s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+
+@keyframes tile-in {
+  from {
+    transform: perspective(400px) rotateY(70deg) scale(0.9);
+    opacity: 0;
+    filter: brightness(2);
+  }
+}
+
+.run-fx.fx-turn {
+  --fx: var(--yellow);
+  animation-duration: 1.1s;
+}
+
+.fx-turn .fx-band,
+.fx-turn .fx-title {
+  animation-duration: 1.1s;
+}
+
+.fx-turn .fx-title {
+  font-size: 52px;
 }

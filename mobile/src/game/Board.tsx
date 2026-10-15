@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { CardDb, EngineApi, Side } from "../engine";
 import type { Session } from "../session";
-import { Cta, Meter, Ticker } from "../ui";
+import { Bump, Cta, Meter, Ticker } from "../ui";
 import { type Command, basicCommands, cardRef, currentIce, findCard, otherSide, promptOf, runCommands, siblingsOf } from "./actions";
 import { DeckViewer } from "../screens/DeckViewer";
 import { CardSheet } from "./CardSheet";
@@ -64,7 +64,7 @@ function serverOrder(servers: Record<string, any>) {
 function extras(p: any, side: Side): string[] {
   const out: string[] = [];
   if (side === "runner") {
-    if (p.memory) out.push(`MU ${p.memory.available}/${(p.memory.available ?? 0) + (p.memory.used ?? 0)}`);
+    if (p.memory) out.push(`${p.memory.available}/${(p.memory.available ?? 0) + (p.memory.used ?? 0)} MU`);
     out.push(`${p.tag?.total ?? 0} tag`);
     if (p.link) out.push(`link ${p.link}`);
     if (p["brain-damage"]) out.push(`core dmg ${p["brain-damage"]}`);
@@ -87,20 +87,17 @@ function Opponent({ view, side, name }: { view: any; side: Side; name: string })
           {side} // {name}
         </span>
         <span class="big">
-          {p.credit ?? 0}
+          <Bump value={p.credit ?? 0}>{p.credit ?? 0}</Bump>
           <Icon name="credit" class="big-credit" />
         </span>
       </div>
       <div class="opp-info">
-        <div class="row">
-          <span class={`label ${active ? "cyan" : ""}`}>{active ? "■ their turn" : "□ waiting"}</span>
-        </div>
+        <span class={`label turn-state ${active ? "active" : ""}`}>{active ? "Their turn" : "Waiting"}</span>
         <span class="label" style="color: var(--text)">
           Hand {p["hand-count"] ?? 0} · {p.click ?? 0} click
         </span>
-        <Meter value={points} max={req} tone="red" />
-        <span class="label">
-          Pts {points}/{req}
+        <span class="label stats">
+          <Bump value={points}>{points}</Bump>/{req} pts
           {extras(p, side).map((x) => ` · ${x}`)}
         </span>
       </div>
@@ -116,21 +113,25 @@ function MeBar({ view, side, name }: { view: any; side: Side; name: string }) {
   return (
     <div class="me-bar">
       <span class="big yellow">
-        {p.credit ?? 0}
+        <Bump value={p.credit ?? 0}>{p.credit ?? 0}</Bump>
         <Icon name="credit" class="big-credit" />
       </span>
       <div class="me-info">
-        <span class={`label who-${side}`}>
-          {side} // {name}
-        </span>
-        <div style="display: flex; gap: 10px; align-items: center">
-          <Meter value={clicks} max={Math.max(clicks, side === "runner" ? 4 : 3)} />
-          <span class="label">{clicks} click</span>
+        <div class="me-line">
+          <span class={`label who-${side}`}>
+            {side} // {name}
+          </span>
+          <span class="label me-points">
+            <Bump value={points}>{points}</Bump>/{req} pts
+          </span>
         </div>
-        <span class="label">
-          {points}/{req} pts
-          {extras(p, side).map((x) => ` · ${x}`)}
-        </span>
+        <div class="me-line">
+          <Meter value={clicks} max={Math.max(clicks, side === "runner" ? 4 : 3)} />
+          <span class="label">
+            {clicks} click
+            {extras(p, side).map((x) => ` · ${x}`)}
+          </span>
+        </div>
       </div>
     </div>
   );
@@ -370,6 +371,69 @@ function Log({ view, render, onSay, onClose }: { view: any; render: (m: unknown)
 }
 
 const TOAST_MS = 4000;
+interface Fx {
+  key: number;
+  kind: "start" | "encounter" | "success" | "end" | "turn";
+  title: string;
+  sub: string;
+}
+
+function RunFx({ view, render, side }: { view: any; render: (m: unknown) => string; side: Side }) {
+  const [fx, setFx] = useState<Fx | null>(null);
+  const seen = useRef<{ server?: string; ice?: unknown; log: number }>({ log: 0 });
+  const server: string | undefined = view.run?.server?.[0];
+  const ice = currentIce(view);
+  const encountering = !!view.encounters || view.run?.phase === "encounter-ice";
+  const iceKey = encountering && ice?.rezzed ? `${server}:${ice.cid}:${view.run?.position}` : undefined;
+  const show = (kind: Fx["kind"], title: string, sub: string, buzz: number[]) => {
+    setFx({ key: Date.now(), kind, title, sub });
+    navigator.vibrate?.(buzz);
+  };
+  useEffect(() => {
+    const prev = seen.current;
+    const log: any[] = view.log ?? [];
+    if (server && !prev.server) {
+      show("start", "Run", `${serverName(server)} // initiated`, [20, 40, 60]);
+      prev.log = log.length;
+    } else if (!server && prev.server) {
+      const lines = log.slice(prev.log).map((e) => render(e.text));
+      const breached = lines.some((l) => /\bbreach(es)?\b/i.test(l));
+      const jacked = lines.some((l) => /jacks? out/i.test(l));
+      if (breached) show("success", "Breach", `${serverName(prev.server)} // run successful`, [30, 30, 30, 30, 80]);
+      else show("end", jacked ? "Jack out" : "Run ended", serverName(prev.server), [120]);
+    }
+    prev.server = server;
+  }, [server]);
+  useEffect(() => {
+    if (!iceKey || iceKey === seen.current.ice) return;
+    seen.current.ice = iceKey;
+    const types = (ice?.subtypes ?? []).slice(0, 2).join(" · ");
+    show("encounter", ice?.title ?? "Ice", `Encounter${types ? ` // ${types}` : ""}`, [50]);
+  }, [iceKey]);
+  const myTurn = !view.winner && view["active-player"] === side && Number(view.turn ?? 0) > 0;
+  const mounted = useRef(false);
+  useEffect(() => {
+    if (myTurn && mounted.current) show("turn", "Your turn", `Turn ${view.turn}`, [30, 60, 30]);
+    mounted.current = true;
+  }, [myTurn, view.turn]);
+  useEffect(() => {
+    if (!fx) return;
+    const t = setTimeout(() => setFx(null), fx.kind === "encounter" || fx.kind === "turn" ? 1100 : 1500);
+    return () => clearTimeout(t);
+  }, [fx?.key]);
+  if (!fx) return null;
+  return (
+    <div class={`run-fx fx-${fx.kind} from-${side}`} key={fx.key} aria-live="polite">
+      <div class="fx-band">
+        <span class="fx-title" data-text={fx.title}>
+          {fx.title}
+        </span>
+        <span class="fx-sub">{fx.sub}</span>
+      </div>
+    </div>
+  );
+}
+
 const ACTION_ERROR = "action-error";
 const TOAST_MAX = 3;
 
@@ -596,7 +660,8 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
   const hand: any[] = [...(me.hand ?? []), ...(me.discard ?? []).filter((c: any) => c["flashback-playable"])];
 
   return (
-    <div class={`board side-${side} ${ptype === "select" ? "selecting" : ""}`}>
+    <div class={`board side-${side} ${ptype === "select" ? "selecting" : ""} ${view.run ? "in-run" : ""}`}>
+      <RunFx view={view} render={render} side={side} />
       <Ticker
         action={
           <button class="ticker-menu" onClick={() => setMenu(!menu)} aria-label="Menu" aria-expanded={menu}>
@@ -721,7 +786,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
         <MeBar view={view} side={side} name={names[side]} />
         <div class="hand">
           {hand.map((c) => (
-            <CardTile card={c} owner onTap={tap} selectable={selectable.has(c.cid)} />
+            <CardTile key={c.cid} card={c} owner onTap={tap} selectable={selectable.has(c.cid)} />
           ))}
           {hand.length === 0 && <span class="hint">Empty hand</span>}
         </div>
