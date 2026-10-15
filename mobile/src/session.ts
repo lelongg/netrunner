@@ -14,7 +14,8 @@ export type Msg =
   | { t: "act"; command: string; args: unknown }
   | { t: "say"; text: string }
   | { t: "concede" }
-  | { t: "error"; message: string };
+  | { t: "error"; message: string }
+  | { t: "ping" };
 
 export interface LobbyState {
   code: string;
@@ -57,7 +58,10 @@ type Listener = () => void;
 const PEER_PREFIX = "nsg-mobile-";
 const SAVE_KEYS = { game: "nsg.save", guest: "nsg.guest" } as const;
 const RETRY_MS = 2500;
-const MAX_RETRIES = 36;
+const FAST_RETRIES = 12;
+const SLOW_RETRY_MS = 10000;
+const PING_MS = 4000;
+const STALE_MS = 15000;
 const BOT_DELAY_MS = 450;
 const other = (s: Side): Side => (s === "corp" ? "runner" : "corp");
 
@@ -132,6 +136,9 @@ export class Session {
   private bot?: HeuristicBot;
   private botTimer?: number;
   private failures = 0;
+  private lastSeen = 0;
+  private heartbeat?: number;
+  private wake = () => this.revive();
 
   constructor(
     private engine: EngineApi,
@@ -153,10 +160,47 @@ export class Session {
     if (role === "host") this.host();
     if (role === "guest") {
       writeSave("guest", { v: 1, role: "guest", code, myName, savedAt: Date.now() });
-      this.peer = new Peer();
-      this.peer.on("open", () => this.connect());
-      this.peer.on("error", (e: any) => this.onGuestError(e));
+      this.guestPeer();
     }
+    if (role !== "local") {
+      this.heartbeat = window.setInterval(() => this.beat(), PING_MS);
+      document.addEventListener("visibilitychange", this.wake);
+      addEventListener("online", this.wake);
+    }
+  }
+
+  private guestPeer() {
+    this.peer = new Peer();
+    this.peer.on("open", () => this.connect());
+    this.peer.on("error", (e: any) => this.onGuestError(e));
+  }
+
+  private watch(conn: DataConnection, onMessage: (msg: Msg) => void) {
+    conn.on("data", (d) => {
+      this.lastSeen = Date.now();
+      if ((d as Msg).t !== "ping") onMessage(d as Msg);
+    });
+  }
+
+  private beat() {
+    if (this.closed || !this.conn?.open) return;
+    this.post({ t: "ping" });
+    if (document.visibilityState === "visible" && Date.now() - this.lastSeen > STALE_MS) this.conn.close();
+  }
+
+  private revive() {
+    if (this.closed || document.visibilityState !== "visible") return;
+    this.lastSeen = Date.now();
+    if (this.lobby.role === "host") {
+      if (!this.peer || this.peer.destroyed) this.host();
+      else if (this.peer.disconnected) this.peer.reconnect();
+      return;
+    }
+    if (this.conn?.open && this.lobby.status === "connected") return;
+    this.failures = 0;
+    if (!this.peer || this.peer.destroyed) this.guestPeer();
+    else if (this.peer.disconnected) this.peer.reconnect();
+    else this.connect();
   }
 
   static resume(engine: EngineApi, db: CardDb, save: SavedGame): Session {
@@ -202,7 +246,8 @@ export class Session {
     peer.on("connection", (conn) => {
       this.conn?.close();
       this.conn = conn;
-      conn.on("data", (d) => this.onHostMessage(d as Msg));
+      this.lastSeen = Date.now();
+      this.watch(conn, (m) => this.onHostMessage(m));
       conn.on("close", () => {
         if (this.conn === conn) this.patch({ status: "waiting" });
       });
@@ -215,10 +260,11 @@ export class Session {
     this.conn = conn;
     conn.on("open", () => {
       this.failures = 0;
+      this.lastSeen = Date.now();
       this.patch({ status: "connected", error: undefined });
       this.post({ t: "hello", name: this.lobby.myName });
     });
-    conn.on("data", (d) => this.onGuestMessage(d as Msg));
+    this.watch(conn, (m) => this.onGuestMessage(m));
     conn.on("close", () => {
       if (this.conn !== conn || this.closed) return;
       this.pending = false;
@@ -227,17 +273,15 @@ export class Session {
   }
 
   private retry(again: () => void) {
-    if (++this.failures > MAX_RETRIES) {
-      this.patch({ status: "closed", error: "Host unreachable. Resume from the home screen once it is back." });
-      return;
-    }
-    this.patch({ status: "connecting" });
-    setTimeout(() => !this.closed && again(), RETRY_MS);
+    const slow = ++this.failures > FAST_RETRIES;
+    this.patch({ status: "connecting", error: slow ? "Host unreachable, still trying…" : undefined });
+    if (document.visibilityState !== "visible") return;
+    setTimeout(() => !this.closed && document.visibilityState === "visible" && again(), slow ? SLOW_RETRY_MS : RETRY_MS);
   }
 
   private onGuestError(e: any) {
     if (this.closed) return;
-    if (e?.type === "peer-unavailable" || e?.type === "network" || e?.type === "disconnected") {
+    if (["peer-unavailable", "network", "disconnected", "socket-error", "socket-closed", "server-error", "webrtc"].includes(e?.type)) {
       this.retry(() => {
         if (this.peer?.disconnected) this.peer.reconnect();
         this.connect();
@@ -510,6 +554,9 @@ export class Session {
 
   close() {
     this.closed = true;
+    if (this.heartbeat !== undefined) clearInterval(this.heartbeat);
+    document.removeEventListener("visibilitychange", this.wake);
+    removeEventListener("online", this.wake);
     if (this.botTimer !== undefined) clearTimeout(this.botTimer);
     this.conn?.close();
     this.peer?.destroy();

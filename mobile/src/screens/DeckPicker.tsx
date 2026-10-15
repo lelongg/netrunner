@@ -73,9 +73,10 @@ export function DeckPicker({ side, db, matchups, value, onChange }: Props) {
         <ul class="deck-list">
           {matchups.map((m) => {
             const p = m[side];
+            const name = matchups.filter((o) => o[side].name === p.name).length > 1 ? `${p.name} · ${m.title}` : p.name;
             return (
               <li>
-                <button class={value?.name === p.name ? "on" : ""} onClick={() => pick(toWire(fromPrecon(p, db)))}>
+                <button class={value?.name === name ? "on" : ""} onClick={() => pick(toWire({ ...fromPrecon(p, db), name }))}>
                   <strong>{p.name}</strong>
                   <span>{m.title}</span>
                 </button>
