@@ -366,16 +366,16 @@ export class HeuristicBot {
       let value = key === "rd" ? 3 : key === "hq" ? 2 + Number(view.corp?.["hand-count"] ?? 0) / 5 : key === "archives" ? ((view.corp?.discard ?? []).some((c: any) => !c.seen && !c.title) ? 1.5 : 0) : 0;
       if (key.startsWith("remote")) {
         if (!content.length) continue;
-        const advanced = content.some((c: any) => Number(c["advance-counter"] ?? 0) > 0);
-        if (advanced && hand < 5) continue;
-        value = content.some((c: any) => !c.title || c.type === "Agenda") ? 5 + Number(content[0]?.["advance-counter"] ?? 0) : 2.5;
+        const advancement = Math.max(0, ...content.map((c: any) => Number(c["advance-counter"] ?? 0)));
+        if (advancement > 0 && hand < 2 + advancement) continue;
+        value = content.some((c: any) => !c.title || c.type === "Agenda") ? 5 + advancement * 2 : 2.5;
       }
       if (value <= 0) continue;
       let cost = 0;
       let blocked = false;
       for (const ice of server.ices ?? []) {
         if (!ice.rezzed) {
-          if (covered.size < 2) blocked = true;
+          if (covered.size === 0) blocked = true;
           cost += 3;
           continue;
         }
@@ -400,7 +400,7 @@ export class HeuristicBot {
       if (move && basicCommands(view, "runner").some((c) => c.command === "remove-tag" && c.enabled !== false)) return move;
     }
 
-    if (me.credit < 5) {
+    if (me.credit < 6) {
       const event = playable
         .filter((c) => c.type === "Event" && gainOf(this.info(c).text) > Number(c.cost ?? 0))
         .sort((a, b) => gainOf(this.info(b).text) - gainOf(this.info(a).text))[0];
@@ -427,7 +427,7 @@ export class HeuristicBot {
       if (move) return move;
     }
 
-    if (this.runs < 2) {
+    if (this.runs < (me.credit >= 8 ? 3 : 2)) {
       const target = this.runTarget(view);
       if (target) {
         const move = this.allowed({ command: "run", args: { server: target } });
