@@ -10,6 +10,9 @@ import { type Role, type SavedGame, Session, clearSave, loadSave, newRoomCode } 
 import "./styles.css";
 
 const joinParam = new URLSearchParams(location.search).get("join")?.toUpperCase() ?? undefined;
+const autopilotParam = new URLSearchParams(location.search).has("autopilot");
+const agentParam = new URLSearchParams(location.search).has("agent") || sessionStorage.getItem("nsg.agent") === "1";
+if (agentParam) sessionStorage.setItem("nsg.agent", "1");
 if (joinParam) history.replaceState(null, "", location.pathname);
 
 function useSession(session: Session | null) {
@@ -59,6 +62,9 @@ function App() {
   });
   const [save, setSave] = useState<SavedGame | null>(() => loadSave());
   useSession(session);
+  useEffect(() => {
+    if (agentParam) (window as any).__nsg = { session, engine: loaded?.engine };
+  }, [session, loaded]);
   const hotSeat = !!session && session.lobby.started && session.lobby.role === "local" && !session.lobby.vsBot;
   const waitingFor = hotSeat && !canAct(session.views[localSide], localSide) && canAct(session.views[otherSide(localSide)], otherSide(localSide)) ? otherSide(localSide) : null;
   useEffect(() => {
@@ -84,7 +90,9 @@ function App() {
       try {
         name = localStorage.getItem("nsg.name")?.trim() || name;
       } catch {}
-      setSession(new Session(loaded.engine, loaded.db, "guest", joinParam, name));
+      const joined = new Session(loaded.engine, loaded.db, "guest", joinParam, name);
+      if (autopilotParam) joined.autopilot();
+      setSession(joined);
     }
   }, [loaded]);
 

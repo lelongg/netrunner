@@ -164,6 +164,7 @@ export class Session {
   private wantedSide: Side = "corp";
   private link: LinkStatus = { link: "connecting", peer: false };
   private announced = false;
+  private autoplay = false;
 
   constructor(
     private engine: EngineApi,
@@ -363,7 +364,15 @@ export class Session {
   private refreshViews() {
     if (!this.game) return;
     this.views[this.lobby.mySide] = this.engine.view(this.game, this.lobby.mySide);
+    if (this.autoplay && !this.bot) this.bot = new HeuristicBot(this.lobby.mySide, (title) => this.db.byTitle.get(title) as any);
     this.emit();
+    this.scheduleBot();
+  }
+
+  autopilot() {
+    if (!this.online()) return;
+    this.autoplay = true;
+    this.refreshViews();
   }
 
   // ---------- local and bot games ----------
@@ -384,9 +393,11 @@ export class Session {
     this.botTimer = window.setTimeout(() => {
       this.botTimer = undefined;
       if (this.closed) return;
+      if (this.online() && this.pending) return;
       const move = bot.decide(this.views[bot.side]);
       if (!move) return;
       if (move.say) this.say(move.say, bot.side);
+      else if (this.online()) this.send(move.command, move.args ?? null);
       else this.perform({ side: bot.side, kind: "act", command: move.command, args: move.args ?? null });
     }, BOT_DELAY_MS);
   }
