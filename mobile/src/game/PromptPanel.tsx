@@ -4,7 +4,7 @@ import { findCard } from "./actions";
 import { ZoomableCardImage } from "./CardImage";
 import { Icon } from "../icons";
 import { RichText } from "./RichText";
-import { iconize } from "./text";
+import { byServerOrder, iconize } from "./text";
 import { glyphs } from "./Glyphs";
 
 interface Props {
@@ -90,7 +90,7 @@ export function PromptPanel({ view, side, prompt, render, send, closePrompt, dis
       <>
       {ptype === "select" && <p class="hint">Tap the highlighted cards to select them.</p>}
       <div class="choices">
-        {choices
+        {byServerOrder(choices, (c: any) => c.value)
           .filter((c: any) => c.value !== "Hide")
           .map((c: any) => (
             <button class={ptype === "select" ? "primary wide" : ""} disabled={disabled} onClick={() => answer({ uuid: c.uuid })}>

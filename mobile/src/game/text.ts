@@ -56,3 +56,18 @@ export const PHASE_LABELS: Record<string, string> = {
   "approach-server": "Approach server",
   success: "Success",
 };
+
+const CENTRAL_RANK: Record<string, number> = { HQ: 0, "R&D": 1, Archives: 2 };
+
+export function serverRank(label: unknown): number | undefined {
+  const name = typeof label === "string" ? label : undefined;
+  if (!name) return undefined;
+  if (name in CENTRAL_RANK) return CENTRAL_RANK[name];
+  const remote = name.match(/^Server (\d+)$/);
+  return remote ? 2 + Number(remote[1]) : undefined;
+}
+
+export function byServerOrder<T>(items: T[], label: (item: T) => unknown): T[] {
+  if (!items.length || items.some((i) => serverRank(label(i)) === undefined)) return items;
+  return [...items].sort((a, b) => serverRank(label(a))! - serverRank(label(b))!);
+}

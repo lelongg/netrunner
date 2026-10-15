@@ -3059,3 +3059,134 @@ button:active:not(:disabled) {
   -webkit-background-clip: text;
   background-clip: text;
 }
+
+.encounter {
+  margin: 8px 12px 0;
+  border: 1px solid var(--line-2);
+  border-left: 3px solid var(--muted);
+  background: var(--panel-2);
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.encounter.live {
+  border-left-color: var(--red);
+  box-shadow: inset 0 0 24px rgb(255 59 48 / 0.08);
+}
+
+.enc-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.enc-phase {
+  flex: none;
+  font-size: 8px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.encounter.live .enc-phase {
+  color: var(--red);
+}
+
+.enc-title {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 18px;
+  line-height: 1;
+  text-transform: uppercase;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.enc-meta {
+  margin-left: auto;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.enc-subs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.enc-sub {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text);
+  transition: color 0.2s, opacity 0.2s;
+}
+
+.enc-sub .icon {
+  flex: none;
+  height: 0.9em;
+  color: var(--red);
+}
+
+.enc-label {
+  flex: 1;
+  min-width: 0;
+}
+
+.enc-state {
+  flex: none;
+  font-size: 8px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.enc-sub.live .enc-state {
+  color: var(--yellow);
+}
+
+.enc-sub.broken .enc-label {
+  text-decoration: line-through;
+  text-decoration-color: var(--cyan);
+  text-decoration-thickness: 2px;
+  color: var(--muted);
+}
+
+.enc-sub.broken .icon,
+.enc-sub.broken .enc-state {
+  color: var(--cyan);
+}
+
+.enc-sub.fired .enc-state {
+  color: var(--red);
+}
+
+.enc-sub.fired .enc-label {
+  color: var(--red-soft);
+}
+
+.enc-sub.skipped {
+  opacity: 0.5;
+}
+
+.enc-none {
+  margin: 0;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.encounter.passed {
+  opacity: 0.7;
+}

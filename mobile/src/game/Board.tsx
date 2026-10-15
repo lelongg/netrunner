@@ -8,7 +8,7 @@ import { CardSheet } from "./CardSheet";
 import { CardTile } from "./CardTile";
 import { PromptPanel } from "./PromptPanel";
 import { useBackClose } from "../back";
-import { PHASE_LABELS, iconize, serverLabel, serverName } from "./text";
+import { PHASE_LABELS, byServerOrder, iconize, serverLabel, serverName } from "./text";
 import { Icon } from "../icons";
 import { glyphs } from "./Glyphs";
 import { EventFx } from "./Fx";
@@ -66,7 +66,7 @@ function serverOrder(servers: Record<string, any>) {
 function extras(p: any, side: Side): string[] {
   const out: string[] = [];
   if (side === "runner") {
-    if (p.memory) out.push(`${p.memory.available}/${(p.memory.available ?? 0) + (p.memory.used ?? 0)} MU`);
+    if (p.memory) out.push(`${p.memory.used ?? 0}/${p.memory.available ?? 0} MU`);
     out.push(`${p.tag?.total ?? 0} tag`);
     if (p.link) out.push(`link ${p.link}`);
     if (p["brain-damage"]) out.push(`core dmg ${p["brain-damage"]}`);
@@ -454,6 +454,51 @@ function Log({ view, render, names, onSay, onClose }: { view: any; render: (m: u
   );
 }
 
+function useLastIce(view: any, ice: any) {
+  const last = useRef<any>(null);
+  if (!view.run) last.current = null;
+  else if (ice?.rezzed && (view.encounters || view.run.phase === "encounter-ice")) last.current = ice;
+  return last.current;
+}
+
+function Encounter({ view, ice, passed }: { view: any; ice: any; passed?: boolean }) {
+  const subs: any[] = ice.subroutines ?? [];
+  const encountering = !passed && (!!view.encounters || view.run?.phase === "encounter-ice");
+  const strength = ice["current-strength"] ?? ice.strength;
+  const types = (ice.subtypes ?? []).join(" · ");
+  return (
+    <div class={`encounter ${encountering ? "live" : ""} ${passed ? "passed" : ""}`}>
+      <div class="enc-head">
+        <span class="enc-phase">{passed ? "Passed" : encountering ? "Encounter" : "Approach"}</span>
+        <span class="enc-title">{ice.title}</span>
+        <span class="enc-meta">
+          {types}
+          {strength != null ? ` · str ${strength}` : ""}
+        </span>
+      </div>
+      {subs.length > 0 ? (
+        <ol class="enc-subs">
+          {subs.map((sub) => {
+            const breaker = sub.breaker != null ? findCard(view, sub.breaker)?.title : undefined;
+            const state = sub.broken ? "broken" : sub.fired ? "fired" : sub.resolve === false ? "skipped" : "live";
+            return (
+              <li class={`enc-sub ${state}`}>
+                <Icon name="sub" />
+                <span class="enc-label">{glyphs(iconize(sub.label ?? "Subroutine"))}</span>
+                <span class="enc-state">
+                  {state === "broken" ? (breaker ? `Broken · ${breaker}` : "Broken") : state === "fired" ? "Fired" : state === "skipped" ? "Won't fire" : encountering ? "Unbroken" : passed ? "Resolved" : ""}
+                </span>
+              </li>
+            );
+          })}
+        </ol>
+      ) : (
+        <p class="enc-none">No subroutines</p>
+      )}
+    </div>
+  );
+}
+
 const TOAST_MS = 4000;
 interface Fx {
   key: number;
@@ -648,6 +693,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
     document.querySelector(".server.running")?.scrollIntoView({ block: side === "runner" ? "end" : "start", inline: "center", behavior: "smooth" });
   }, [runServer, view.run?.position, side]);
   const ice = currentIce(view);
+  const lastIce = useLastIce(view, ice);
   const link = session.lobby.role === "local" ? null : session.lobby.status;
 
   let panel: preact.ComponentChildren;
@@ -664,7 +710,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
   } else if (prompt && ptype !== "run") {
     panel = <PromptPanel key={promptId} view={view} side={side} prompt={prompt} render={render} send={send} closePrompt={closePrompt} disabled={disabled} db={db} />;
   } else if (picking && side === "runner") {
-    const list: string[] = me["runnable-list"] ?? [];
+    const list: string[] = byServerOrder(me["runnable-list"] ?? [], (x) => x);
     panel = (
       <section class="prompt">
         <span class="label">Run on…</span>
@@ -697,7 +743,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
         {(view.run || view.encounters) && (
           <p class="run-status">
             Run · {serverName(runServer ?? "")} · {PHASE_LABELS[view.run?.phase] ?? view.run?.phase}
-            {ice ? ` · ${ice.title ?? "unrezzed ice"}` : ""}
+            {ice && !ice.rezzed ? " · unrezzed ice" : ""}
           </p>
         )}
         <div class="buttons">
@@ -870,6 +916,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
         <button class="last-log" onClick={() => setShowLog(true)}>
           {lastLog ? glyphs(iconize(render(lastLog.text)).slice(0, 140)) : "Log"}
         </button>
+        {!view.winner && (ice?.rezzed ? <Encounter view={view} ice={ice} /> : lastIce && <Encounter view={view} ice={lastIce} passed />)}
         {panel}
         <MeBar view={view} side={side} name={names[side]} />
         <div class="hand">

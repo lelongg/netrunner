@@ -118,6 +118,7 @@
 
 (def subroutine-keys
   [:broken
+   :breaker
    :fired
    :label
    :msg
