@@ -1,4 +1,4 @@
-import { useState } from "preact/hooks";
+import { useEffect, useState } from "preact/hooks";
 import type { Side } from "../engine";
 import { type Command, cardCommands, cardRef } from "./actions";
 import { CardImage, ZoomableCardImage } from "./CardImage";
@@ -29,6 +29,7 @@ export function CardSheet({ card, view, side, db, send, onClose, disabled, index
   const full = code ? db.byTitle.get(card.title) : undefined;
   const commands = cardCommands(card, view, side);
   const installList: unknown[] = view.corp?.["install-list"] ?? [];
+  useEffect(() => setInstalling(false), [card.cid]);
   const swipe = useSwipe((dir) => !installing && onStep?.(dir));
 
   const run = (c: Command) => {
@@ -46,7 +47,7 @@ export function CardSheet({ card, view, side, db, send, onClose, disabled, index
     <div class="sheet-backdrop" onClick={onClose}>
       <div class="sheet panel swipeable" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={code ? card.title : "Hidden card"} {...swipe}>
         {onStep && !installing && <Pager index={index} count={count} onStep={onStep} />}
-        <div class={`sheet-head ${slide ? `slide-${slide < 0 ? "prev" : "next"}` : ""}`}>
+        <div key={card.cid} class={`sheet-head ${slide ? `slide-${slide < 0 ? "prev" : "next"}` : ""}`}>
           {code ? (
             <ZoomableCardImage class="sheet-img" code={code} alt={card.title} size="large" />
           ) : (

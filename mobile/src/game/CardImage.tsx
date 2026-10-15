@@ -1,5 +1,6 @@
 import { createPortal } from "preact/compat";
 import { useEffect, useRef, useState } from "preact/hooks";
+import { useBackClose } from "../back";
 import { cardImage } from "../engine";
 
 interface Props {
@@ -82,6 +83,7 @@ export function CardZoom({ code, alt, onClose }: { code: string; alt: string; on
 
 export function ZoomableCardImage(props: Props) {
   const [zoomed, setZoomed] = useState(false);
+  useBackClose(zoomed, () => setZoomed(false));
   return (
     <>
       <button class={`card-zoom-trigger ${props.class ?? ""}`} onClick={() => setZoomed(true)} aria-label={`Enlarge ${props.alt}`}>

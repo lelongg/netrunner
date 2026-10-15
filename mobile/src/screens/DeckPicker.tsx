@@ -1,6 +1,7 @@
 import { useMemo, useState } from "preact/hooks";
 import type { CardDb, Matchup, Side } from "../engine";
 import { CardImage } from "../game/CardImage";
+import { useBackClose } from "../back";
 import { DeckBrowser } from "./DeckBrowser";
 import { DeckViewer } from "./DeckViewer";
 import { type WireDeck, deckSize, fromPrecon, fromWire, importNrdb, parseDecklist, saveDeck, savedDecks, toWire } from "../decks";
@@ -23,6 +24,7 @@ export function DeckPicker({ side, db, matchups, value, onChange }: Props) {
   const [viewing, setViewing] = useState(false);
   const saved = useMemo(() => savedDecks().filter((d) => d.side === side), [value, tab]);
   const current = useMemo(() => (value ? fromWire(value, db) : undefined), [value]);
+  useBackClose(viewing, () => setViewing(false));
 
   const pick = (w: WireDeck) => {
     setError(undefined);

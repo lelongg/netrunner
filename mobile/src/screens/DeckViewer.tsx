@@ -5,6 +5,7 @@ import { CardImage, ZoomableCardImage } from "../game/CardImage";
 import { Pager } from "../game/Pager";
 import { RichText } from "../game/RichText";
 import { useSwipe } from "../game/swipe";
+import { useBackClose } from "../back";
 
 const TYPE_ORDER: Record<string, string[]> = {
   Corp: ["Agenda", "Asset", "Upgrade", "Operation", "ICE"],
@@ -49,7 +50,7 @@ function CardDetail({ card, qty, influence, onClose, index, count, slide, onStep
     <div class="sheet-backdrop" onClick={onClose}>
       <div class="sheet panel swipeable" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={card.title} {...swipe}>
         <Pager index={index} count={count} onStep={onStep} />
-        <div class={`sheet-head ${slide ? `slide-${slide < 0 ? "prev" : "next"}` : ""}`}>
+        <div key={card.code} class={`sheet-head ${slide ? `slide-${slide < 0 ? "prev" : "next"}` : ""}`}>
           <ZoomableCardImage class="sheet-img" code={card.code} alt={card.title} size="large" />
           <div class="sheet-info">
             <span class="label">
@@ -86,6 +87,10 @@ export function DeckViewer({ deck, onClose }: { deck: Deck; onClose: () => void 
   const ordered: { qty?: number; card: Card }[] = [{ card: identity }, ...sections.flatMap((s) => s.entries)];
   const position = detail ? ordered.findIndex((e) => e.card.code === detail.card.code) : -1;
   const [slide, setSlide] = useState<-1 | 1>();
+  useBackClose(!!detail, () => {
+    setDetail(null);
+    setSlide(undefined);
+  });
   const step = (dir: -1 | 1) => {
     const next = ordered[position + dir];
     if (!next) return;
@@ -185,7 +190,6 @@ export function DeckViewer({ deck, onClose }: { deck: Deck; onClose: () => void 
       </div>
       {detail && (
         <CardDetail
-          key={detail.card.code}
           card={detail.card}
           qty={detail.qty}
           influence={influenceOf(identity, detail.card)}

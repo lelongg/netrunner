@@ -7,6 +7,7 @@ import { DeckViewer } from "../screens/DeckViewer";
 import { CardSheet } from "./CardSheet";
 import { CardTile } from "./CardTile";
 import { PromptPanel } from "./PromptPanel";
+import { useBackClose } from "../back";
 import { PHASE_LABELS, iconize, serverLabel, serverName } from "./text";
 
 interface Props {
@@ -62,7 +63,7 @@ function Opponent({ view, side, name }: { view: any; side: Side; name: string })
         </span>
         <Meter value={points} max={req} tone="red" />
         <span class="label">
-          Points {points}/{req}
+          Pts {points}/{req}
           {extras(p, side).map((x) => ` · ${x}`)}
         </span>
       </div>
@@ -125,7 +126,7 @@ function Pile({ label, count, cards, owner, side, selectable, onOpen }: { label:
   );
 }
 
-function Piles({ view, zoneOwner, viewer, onTap, onZone, selectable }: { view: any; zoneOwner: Side; viewer: Side; onTap: (c: any) => void; onZone: (z: ZoneRef) => void; selectable: Set<unknown> }) {
+function Piles({ view, zoneOwner, viewer, onTap, onZone, selectable, centrals = true }: { view: any; zoneOwner: Side; viewer: Side; onTap: (c: any) => void; onZone: (z: ZoneRef) => void; selectable: Set<unknown>; centrals?: boolean }) {
   const p = view[zoneOwner] ?? {};
   const owner = viewer === zoneOwner;
   const labels = ZONE_LABELS[zoneOwner];
@@ -134,11 +135,13 @@ function Piles({ view, zoneOwner, viewer, onTap, onZone, selectable }: { view: a
     if (key !== "discard" && !cards.length) return null;
     return <Pile label={labels[key]} count={cards.length} cards={cards} owner={owner} side={zoneOwner} selectable={selectable} onOpen={cards.length ? () => onZone({ owner: zoneOwner, key }) : undefined} />;
   };
+  const extras = ["play-area", "rfg", "set-aside"].some((k) => (p[k] ?? []).length) || (p.scored ?? []).length || (p.current ?? []).length;
+  if (!centrals && !extras) return null;
   return (
     <div class="piles">
-      {p.identity && <CardTile card={p.identity} owner={owner} onTap={onTap} size="sm" selectable={selectable.has(p.identity.cid)} />}
-      <Pile label={zoneOwner === "corp" ? "R&D" : "Stack"} count={p["deck-count"] ?? 0} owner={owner} side={zoneOwner} selectable={selectable} />
-      {zone("discard")}
+      {centrals && p.identity && <CardTile card={p.identity} owner={owner} onTap={onTap} size="sm" selectable={selectable.has(p.identity.cid)} />}
+      {centrals && <Pile label={zoneOwner === "corp" ? "R&D" : "Stack"} count={p["deck-count"] ?? 0} owner={owner} side={zoneOwner} selectable={selectable} />}
+      {centrals && zone("discard")}
       {zone("play-area")}
       {zone("rfg")}
       {zone("set-aside")}
@@ -186,13 +189,38 @@ function CorpArea({ view, side, mine, onTap, onZone, selectable, runServer }: { 
   const servers = corp.servers ?? {};
   const owner = side === "corp";
   const tile = (c: any) => <CardTile card={c} owner={owner} onTap={onTap} selectable={selectable.has(c.cid)} />;
+  const discard: any[] = corp.discard ?? [];
+  const central = (key: string) => {
+    if (key === "hq") return corp.identity ? tile(corp.identity) : null;
+    if (key === "rd") return <div class={`tile ${corp["deck-count"] ? "back corp" : "empty"}`} />;
+    if (key === "archives") {
+      const top = discard[discard.length - 1];
+      const target = discard.some((c) => selectable.has(c.cid));
+      return top ? (
+        <CardTile card={top} owner={owner} onTap={() => onZone({ owner: "corp", key: "discard" })} selectable={target} />
+      ) : (
+        <div class="tile empty" />
+      );
+    }
+    return null;
+  };
+  const count = (key: string) => (key === "hq" ? corp["hand-count"] ?? (corp.hand ?? []).length : key === "rd" ? corp["deck-count"] ?? 0 : key === "archives" ? discard.length : null);
+  const name = (key: string) => {
+    const n = count(key);
+    return (
+      <span class="server-name">
+        {serverName(key)}
+        {n != null && <b> {n}</b>}
+      </span>
+    );
+  };
   return (
     <div class="area corp-area">
       <div class="row">
         <span class="label">Servers</span>
         <span class="label">サーバー</span>
       </div>
-      {!mine && <Piles view={view} zoneOwner="corp" viewer={side} onTap={onTap} onZone={onZone} selectable={selectable} />}
+      {!mine && <Piles view={view} zoneOwner="corp" viewer={side} onTap={onTap} onZone={onZone} selectable={selectable} centrals={false} />}
       <div class={`servers ${mine ? "mine" : "theirs"}`}>
         {serverOrder(servers).map((key) => {
           const s = servers[key] ?? { content: [], ices: [] };
@@ -202,13 +230,19 @@ function CorpArea({ view, side, mine, onTap, onZone, selectable, runServer }: { 
               {mine ? (
                 <>
                   <div class="ices">{[...ices].reverse().map(tile)}</div>
-                  <div class="content">{(s.content ?? []).map(tile)}</div>
-                  <span class="server-name">{serverName(key)}</span>
+                  <div class="content">
+                    {central(key)}
+                    {(s.content ?? []).map(tile)}
+                  </div>
+                  {name(key)}
                 </>
               ) : (
                 <>
-                  <span class="server-name">{serverName(key)}</span>
-                  <div class="content">{(s.content ?? []).map(tile)}</div>
+                  {name(key)}
+                  <div class="content">
+                    {central(key)}
+                    {(s.content ?? []).map(tile)}
+                  </div>
                   <div class="ices">{ices.map(tile)}</div>
                 </>
               )}
@@ -216,7 +250,7 @@ function CorpArea({ view, side, mine, onTap, onZone, selectable, runServer }: { 
           );
         })}
       </div>
-      {mine && <Piles view={view} zoneOwner="corp" viewer={side} onTap={onTap} onZone={onZone} selectable={selectable} />}
+      {mine && <Piles view={view} zoneOwner="corp" viewer={side} onTap={onTap} onZone={onZone} selectable={selectable} centrals={false} />}
     </div>
   );
 }
@@ -377,6 +411,23 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave }
     setSlide(dir);
     setSelected(next);
   };
+  const closeCard = () => {
+    setSelected(null);
+    setSlide(undefined);
+  };
+  const myMove = !view.winner && (ptype ? ptype !== "waiting" && ptype !== "run" : view["active-player"] === side && !view.run && (me.click ?? 0) > 0);
+  const remote = session.lobby.role !== "local" || session.lobby.vsBot;
+  useEffect(() => {
+    if (myMove && remote) navigator.vibrate?.(40);
+  }, [myMove]);
+  useBackClose(!!current, closeCard);
+  useBackClose(showLog, () => setShowLog(false));
+  useBackClose(menu, () => setMenu(false));
+  useBackClose(deckOpen, () => setDeckOpen(false));
+  useBackClose(!!zone, () => {
+    setZone(null);
+    autoZone.current = false;
+  });
   const promptId = prompt?.eid?.eid;
   const closePrompt = () => session.say("/close-prompt", side);
 
@@ -558,7 +609,13 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave }
           >
             Concede
           </button>
-          <button class="ghost" onClick={onLeave}>
+          <button
+            class="ghost"
+            onClick={() => {
+              if (confirm("Leave this game? It will be discarded.")) onLeave();
+              setMenu(false);
+            }}
+          >
             Leave game
           </button>
         </nav>
@@ -603,7 +660,6 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave }
       )}
       {current && (
         <CardSheet
-          key={current.cid}
           card={current}
           view={view}
           side={side}
@@ -614,10 +670,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave }
           count={siblings.length}
           slide={slide}
           onStep={step}
-          onClose={() => {
-            setSelected(null);
-            setSlide(undefined);
-          }}
+          onClose={closeCard}
         />
       )}
       {showLog && <Log view={view} render={render} onSay={(t) => session.say(t, side)} onClose={() => setShowLog(false)} />}
