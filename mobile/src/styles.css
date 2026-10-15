@@ -2570,7 +2570,14 @@ button:active:not(:disabled) {
   color: var(--yellow);
   text-align: center;
   overflow-wrap: anywhere;
-  animation: fx-title 0.5s ease-out;
+  animation: opening-in 0.35s ease-out;
+}
+
+@keyframes opening-in {
+  from {
+    transform: translateY(8px);
+    opacity: 0;
+  }
 }
 
 .opening-bar {
