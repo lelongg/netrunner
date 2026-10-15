@@ -333,10 +333,74 @@ function RunnerArea({ view, side, onTap, onZone, selectable }: { view: any; side
   );
 }
 
-function Log({ view, render, onSay, onClose }: { view: any; render: (m: unknown) => string; onSay: (t: string) => void; onClose: () => void }) {
+interface LogGroup {
+  kind: "action" | "misc" | "chat";
+  side?: Side;
+  click?: number;
+  lines: preact.ComponentChildren[];
+}
+
+interface LogTurn {
+  number?: number;
+  side?: Side;
+  who?: string;
+  groups: LogGroup[];
+}
+
+const TURN_START = /^(.+?) started \[?their\]? turn (\d+)/i;
+const CLICK_ACTION = /^(.+?) spends (\[click\])+/i;
+
+function groupLog(log: any[], render: (m: unknown) => string, names: Record<Side, string>): LogTurn[] {
+  const sideOf = (text: string): Side | undefined => {
+    const corp = text.startsWith(names.corp);
+    const runner = text.startsWith(names.runner);
+    return corp && !runner ? "corp" : runner && !corp ? "runner" : undefined;
+  };
+  const turns: LogTurn[] = [{ groups: [] }];
+  let turn = turns[0];
+  let group: LogGroup | null = null;
+  let clicks = 0;
+  for (const e of log) {
+    const raw = render(e.text);
+    if (/^\s*\[hr\]\s*$/i.test(raw) || /has no further action\.?$/i.test(raw)) continue;
+    if (e.user !== "__system__") {
+      group = null;
+      turn.groups.push({ kind: "chat", lines: [glyphs(`${e.user?.username ?? "?"}: ${iconize(raw)}`)] });
+      continue;
+    }
+    const line = glyphs(iconize(raw));
+    const start = raw.match(TURN_START);
+    if (start) {
+      const side = sideOf(raw);
+      turn = { number: Number(start[2]), side, who: start[1], groups: [] };
+      turns.push(turn);
+      clicks = 0;
+      group = { kind: "misc", side, lines: [line] };
+      turn.groups.push(group);
+      continue;
+    }
+    if (CLICK_ACTION.test(raw)) {
+      const n = (raw.match(/\[click\]/gi) ?? []).length;
+      group = { kind: "action", side: sideOf(raw), click: clicks + 1, lines: [line] };
+      clicks += n;
+      turn.groups.push(group);
+      continue;
+    }
+    if (!group || group.kind === "chat" || /is ending \[?their\]? turn/i.test(raw)) {
+      group = { kind: "misc", side: sideOf(raw), lines: [line] };
+      turn.groups.push(group);
+      continue;
+    }
+    group.lines.push(line);
+  }
+  return turns.filter((t) => t.groups.length);
+}
+
+function Log({ view, render, names, onSay, onClose }: { view: any; render: (m: unknown) => string; names: Record<Side, string>; onSay: (t: string) => void; onClose: () => void }) {
   const [text, setText] = useState("");
   const end = useRef<HTMLDivElement>(null);
   const log: any[] = view.log ?? [];
+  const turns = useMemo(() => groupLog(log, render, names), [log.length]);
   useEffect(() => end.current?.scrollIntoView(), [log.length]);
   return (
     <div class="sheet-backdrop" onClick={onClose}>
@@ -348,11 +412,29 @@ function Log({ view, render, onSay, onClose }: { view: any; render: (m: unknown)
           </button>
         </div>
         <div class="log">
-          {log.map((e) => {
-            const system = e.user === "__system__";
-            const msg = iconize(render(e.text));
-            return msg === "———" ? <hr /> : <p class={system ? "sys" : "chat"}>{system ? glyphs(msg) : glyphs(`${e.user?.username ?? "?"}: ${msg}`)}</p>;
-          })}
+          {turns.map((t) => (
+            <section class={`log-turn ${t.side ? `side-${t.side}` : ""}`}>
+              <header class="log-turn-head">
+                {t.number ? (
+                  <>
+                    <span>Turn {t.number}</span>
+                    {t.side && <span class={`who-${t.side}`}>{t.side}</span>}
+                    <span class="log-who">{t.who}</span>
+                  </>
+                ) : (
+                  <span>Setup</span>
+                )}
+              </header>
+              {t.groups.map((g) => (
+                <div class={`log-group log-${g.kind} ${g.side ? `side-${g.side}` : ""}`}>
+                  {g.kind === "action" && <span class="log-click">Click {g.click}</span>}
+                  {g.lines.map((l, i) => (
+                    <p class={i > 0 ? "log-sub" : undefined}>{l}</p>
+                  ))}
+                </div>
+              ))}
+            </section>
+          ))}
           <div ref={end} />
         </div>
         <form
@@ -823,7 +905,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
           onClose={closeCard}
         />
       )}
-      {showLog && <Log view={view} render={render} onSay={(t) => session.say(t, side)} onClose={() => setShowLog(false)} />}
+      {showLog && <Log view={view} render={render} names={names} onSay={(t) => session.say(t, side)} onClose={() => setShowLog(false)} />}
     </div>
   );
 }

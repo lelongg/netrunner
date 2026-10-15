@@ -84,7 +84,19 @@ function App() {
     if (autoPass) session!.send("continue", null, "corp");
   }, [autoPass, corpView?.log?.length, corpView?.run?.phase, corpView?.run?.position]);
 
+  const [opening, setOpening] = useState<string | null>(joinParam ?? gameParam?.replace(/^local:.*/, "local game") ?? null);
+  const afterPaint = (fn: () => void) => requestAnimationFrame(() => setTimeout(fn, 0));
+
   const resume = (from: SavedGame) => {
+    if (!loaded) return;
+    setOpening(from.v === 1 ? (from.vsBot ? "solo game" : "local game") : from.code);
+    afterPaint(() => {
+      open(from);
+      setOpening(null);
+    });
+  };
+
+  const open = (from: SavedGame) => {
     if (!loaded) return;
     setSession(Session.resume(loaded.engine, loaded.db, from));
     setLocalSide(from.v === 1 ? from.mySide : "corp");
@@ -100,14 +112,18 @@ function App() {
     if (!loaded || session) return;
     const existing = joinParam ? loadSave(joinParam) : gameParam ? loadSave(gameParam) : null;
     if (existing) resume(existing);
-    else if (joinParam) {
+    else if (!joinParam) setOpening(null);
+    else {
       let name = "Player";
       try {
         name = localStorage.getItem("nsg.name")?.trim() || name;
       } catch {}
-      const joined = new Session(loaded.engine, loaded.db, "guest", joinParam, name);
-      if (autopilotParam) joined.autopilot();
-      setSession(joined);
+      afterPaint(() => {
+        const joined = new Session(loaded.engine, loaded.db, "guest", joinParam, name);
+        if (autopilotParam) joined.autopilot();
+        setSession(joined);
+        setOpening(null);
+      });
     }
   }, [loaded]);
 
@@ -130,6 +146,8 @@ function App() {
     setSaves(listSaves());
   };
 
+  if (opening && !session && !error) return <Opening label={opening} ready={!!loaded} />;
+
   if (!session || !loaded) {
     return (
       <Home
@@ -144,10 +162,16 @@ function App() {
         }}
         onStart={(role: Role, name: string, code?: string, vsBot?: boolean) => {
           if (!loaded) return;
-          const next = new Session(loaded.engine, loaded.db, role, role === "local" ? newRoomCode() : code, name);
-          if (vsBot) next.enableBot();
-          setSession(next);
-          setLocalSide("corp");
+          const existing = role === "guest" && code ? loadSave(code) : null;
+          if (existing) return resume(existing);
+          setOpening(role === "guest" && code ? code : role === "host" ? "new game" : vsBot ? "solo game" : "local game");
+          afterPaint(() => {
+            const next = new Session(loaded.engine, loaded.db, role, role === "local" ? newRoomCode() : code, name);
+            if (vsBot) next.enableBot();
+            setSession(next);
+            setLocalSide("corp");
+            setOpening(null);
+          });
         }}
       />
     );
@@ -192,6 +216,20 @@ function App() {
   const view = session.views[lobby.mySide];
   if (!view) return <p class="status">Syncing…</p>;
   return <Board session={session} engine={loaded.engine} db={loaded.db} side={lobby.mySide} view={view} onLeave={leave} onExit={exit} />;
+}
+
+function Opening({ label, ready }: { label: string; ready: boolean }) {
+  return (
+    <div class="opening" role="status" aria-live="polite">
+      <span class="label">{ready ? "Opening" : "Loading engine"}</span>
+      <span class="opening-title" data-text={label}>
+        {label}
+      </span>
+      <span class="opening-bar">
+        <i />
+      </span>
+    </div>
+  );
 }
 
 const currentBundle = (document.querySelector('script[type="module"][src*="assets/"]') as HTMLScriptElement | null)?.src.split("/").pop();

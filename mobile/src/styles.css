@@ -1493,11 +1493,96 @@ textarea:focus {
 }
 
 .log p {
-  margin: 0 0 6px;
+  margin: 0;
   color: var(--text-2);
 }
 
-.log .chat {
+.log-turn {
+  margin-bottom: 14px;
+}
+
+.log-turn-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 8px;
+  padding: 6px 8px;
+  background: var(--panel-2);
+  border-left: 3px solid var(--muted);
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+.log-turn.side-corp .log-turn-head {
+  border-left-color: var(--corp);
+}
+
+.log-turn.side-runner .log-turn-head {
+  border-left-color: var(--runner);
+}
+
+.log-who {
+  margin-left: auto;
+  color: var(--muted);
+  letter-spacing: 0.12em;
+  text-transform: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.log-group {
+  position: relative;
+  margin: 0 0 6px 4px;
+  padding: 4px 0 4px 10px;
+  border-left: 1px solid var(--line-2);
+}
+
+.log-action {
+  border-left-width: 2px;
+  background: linear-gradient(90deg, rgb(255 255 255 / 0.03), transparent 70%);
+}
+
+.log-group.side-corp.log-action {
+  border-left-color: var(--corp);
+}
+
+.log-group.side-runner.log-action {
+  border-left-color: var(--runner);
+}
+
+.log-click {
+  display: block;
+  font-size: 8px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.log-group.side-corp .log-click {
+  color: var(--corp);
+}
+
+.log-group.side-runner .log-click {
+  color: var(--runner);
+}
+
+.log .log-sub {
+  padding-left: 12px;
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
+.log-chat {
+  border-left-color: var(--cyan);
+}
+
+.log-chat p {
   color: var(--cyan);
 }
 
@@ -2461,4 +2546,51 @@ button:active:not(:disabled) {
 
 .game-delete .icon {
   height: 12px;
+}
+
+.opening {
+  height: 100%;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 24px;
+  background: var(--bg);
+  animation: backdrop-in 0.12s ease-out;
+}
+
+.opening-title {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 56px;
+  line-height: 1;
+  text-transform: uppercase;
+  color: var(--yellow);
+  text-align: center;
+  overflow-wrap: anywhere;
+  animation: fx-title 0.5s ease-out;
+}
+
+.opening-bar {
+  position: relative;
+  width: min(240px, 70vw);
+  height: 4px;
+  overflow: hidden;
+  background: var(--line-2);
+}
+
+.opening-bar i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 40%;
+  background: repeating-linear-gradient(135deg, var(--yellow) 0 6px, var(--bg) 6px 12px);
+  animation: opening-slide 0.9s ease-in-out infinite alternate;
+}
+
+@keyframes opening-slide {
+  to {
+    transform: translateX(150%);
+  }
 }
