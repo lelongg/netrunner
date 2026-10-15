@@ -259,7 +259,7 @@ textarea:focus {
 
 .ticker {
   position: relative;
-  z-index: 5;
+  z-index: 31;
   display: flex;
   align-items: center;
   height: 22px;
@@ -270,11 +270,7 @@ textarea:focus {
   white-space: nowrap;
 }
 
-.ticker-menu::after {
-  content: "";
-  position: absolute;
-  inset: calc(-1 * env(safe-area-inset-top) - 6px) 0 -20px -12px;
-}
+
 
 .ticker::before {
   content: "";
@@ -299,18 +295,54 @@ textarea:focus {
 
 .ticker-menu {
   position: relative;
+  align-self: flex-start;
   margin-left: auto;
   flex: none;
-  height: 22px;
+  width: 60px;
+  height: 40px;
   min-height: 0;
-  min-width: 52px;
-  padding: 0 16px;
+  padding: 0 0 4px 6px;
   border: none;
-  border-left: 1px solid var(--line);
-  background: transparent;
-  color: var(--text);
-  font-size: 15px;
-  line-height: 1;
+  background: var(--red);
+  color: #2a0705;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 16px 100%, 0 calc(100% - 16px));
+  transition: background 0.15s;
+}
+
+.ticker-menu::after {
+  content: "";
+  position: absolute;
+  left: 6px;
+  right: 0;
+  bottom: 0;
+  height: 4px;
+  background: repeating-linear-gradient(135deg, #2a0705 0 4px, transparent 4px 8px);
+  opacity: 0.55;
+}
+
+.ticker-menu span {
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  margin-right: -0.3em;
+}
+
+.ticker-menu[aria-expanded="true"] {
+  background: var(--yellow);
+}
+
+.menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 29;
+  background: rgb(0 0 0 / 0.45);
+  animation: backdrop-in 0.16s ease-out;
 }
 
 .ticker .feed {
@@ -840,7 +872,7 @@ textarea:focus {
 
 .menu {
   position: absolute;
-  top: calc(26px + env(safe-area-inset-top));
+  top: calc(46px + env(safe-area-inset-top));
   right: 6px;
   z-index: 30;
   display: flex;
@@ -1183,7 +1215,8 @@ textarea:focus {
   flex: 1 1 auto;
 }
 
-.buttons button.cta {
+.buttons button.cta,
+.choices button.wide {
   flex-basis: 100%;
 }
 
@@ -1769,7 +1802,8 @@ button:active:not(:disabled) {
 
 .pager .icon,
 .ticker-menu .icon {
-  height: 16px;
+  height: 15px;
+  stroke-width: 2.5;
 }
 
 .subs .icon {

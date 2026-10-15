@@ -666,13 +666,15 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
       <Ticker
         action={
           <button class="ticker-menu" onClick={() => setMenu(!menu)} aria-label="Menu" aria-expanded={menu}>
-            <Icon name="menu" />
+            <Icon name={menu ? "close" : "menu"} />
+            <span>{menu ? "Close" : "Menu"}</span>
           </button>
         }
       >
         {feedText(view, side, names)}
         {link && link !== "connected" && <span class="yellow"> · {link === "waiting" ? "opponent offline" : "reconnecting"}</span>}
       </Ticker>
+      {menu && <div class="menu-backdrop" onClick={() => setMenu(false)} />}
       {menu && (
         <nav class="menu panel">
           <button

@@ -87,12 +87,13 @@ export function PromptPanel({ view, side, prompt, render, send, closePrompt, dis
     body = <NumberPicker min={0} max={max} initial={0} onSubmit={answer} disabled={disabled} />;
   } else if (Array.isArray(choices)) {
     body = (
+      <>
+      {ptype === "select" && <p class="hint">Tap the highlighted cards to select them.</p>}
       <div class="choices">
-        {ptype === "select" && <p class="hint">Tap the highlighted cards to select them.</p>}
         {choices
           .filter((c: any) => c.value !== "Hide")
           .map((c: any) => (
-            <button class={ptype === "select" ? "primary" : ""} disabled={disabled} onClick={() => answer({ uuid: c.uuid })}>
+            <button class={ptype === "select" ? "primary wide" : ""} disabled={disabled} onClick={() => answer({ uuid: c.uuid })}>
               {glyphs(iconize(choiceLabel(c.value, render)))}
             </button>
           ))}
@@ -107,6 +108,7 @@ export function PromptPanel({ view, side, prompt, render, send, closePrompt, dis
           </button>
         )}
       </div>
+      </>
     );
   }
 
