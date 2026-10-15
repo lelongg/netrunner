@@ -244,6 +244,21 @@ function nextPhaseLabel(view: any): string {
   }
 }
 
+function corpPassLabel(view: any): string {
+  const run = view.run;
+  const ice = currentIce(view);
+  switch (run?.phase) {
+    case "initiation":
+      return run.position === 0 ? "Let Runner approach server" : "Let Runner approach ice";
+    case "approach-ice":
+      return ice?.rezzed ? "Let Runner encounter" : "Leave ice unrezzed";
+    case "movement":
+      return run.position === 0 ? "Let Runner breach" : "Let Runner approach ice";
+    default:
+      return "Continue";
+  }
+}
+
 export function runCommands(view: any, side: Side, autoContinue = false): Command[] {
   const run = view.run;
   const enc = view.encounters;
@@ -264,7 +279,7 @@ export function runCommands(view: any, side: Side, autoContinue = false): Comman
     if (enc) {
       out.push({ label: "Continue", command: "continue", enabled: enc["no-action"] !== "corp", kind: "primary" });
     } else if (run) {
-      const label = run.phase === "initiation" ? nextPhaseLabel(view) : run["next-phase"] || run.position === 0 ? "No further actions" : nextPhaseLabel(view);
+      const label = run.phase !== "initiation" && (run["next-phase"] || run.position === 0) ? "No further actions" : corpPassLabel(view);
       out.push({
         label,
         command: "continue",
@@ -273,7 +288,7 @@ export function runCommands(view: any, side: Side, autoContinue = false): Comman
       });
     }
     if (run && (enc?.["encounter-count"] ?? 0) <= 1 && run.phase !== "success")
-      out.push({ label: run["corp-auto-no-action"] ? "Stop auto-passing" : "Auto-pass priority", command: "toggle-auto-no-action" });
+      out.push({ label: run["corp-auto-no-action"] ? "Stop auto-passing" : "Auto-pass this run", command: "toggle-auto-no-action" });
     return out;
   }
   const waiting = (enc ?? run)?.["no-action"] === "runner";
