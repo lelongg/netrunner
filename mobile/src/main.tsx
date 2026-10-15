@@ -2,7 +2,7 @@ import { render } from "preact";
 import { useEffect, useState } from "preact/hooks";
 import { type CardDb, type EngineApi, type Matchup, type Side, loadEngine } from "./engine";
 import { Board } from "./game/Board";
-import { basicCommands, promptOf } from "./game/actions";
+import { basicCommands, promptOf, runCommands } from "./game/actions";
 import { Handoff } from "./screens/Handoff";
 import { Home } from "./screens/Home";
 import { Lobby } from "./screens/Lobby";
@@ -19,12 +19,27 @@ function useSession(session: Session | null) {
 
 const otherSide = (s: Side): Side => (s === "corp" ? "runner" : "corp");
 
+const runnerPassed = (view: any) => (view.encounters ?? view.run)?.["no-action"] === "runner";
+
+function corpDecision(view: any) {
+  if (!view?.run || !runnerPassed(view)) return false;
+  if (runCommands(view, "corp").some((c) => c.enabled !== false && (c.command === "rez" || c.command === "unbroken-subroutines"))) return true;
+  if (view.encounters || view.run.position !== 0) return false;
+  const server = view.corp?.servers?.[view.run.server?.[0]];
+  return (server?.content ?? []).some((c: any) => !c.rezzed && (c.type === "Upgrade" || c.type === "Asset"));
+}
+
 function canAct(view: any, side: Side) {
   if (!view || view.winner) return false;
   const prompt = promptOf(view, side);
   const ptype = prompt?.["prompt-type"];
   if (prompt && ptype !== "waiting" && ptype !== "run") return true;
-  return !prompt && !view.run && basicCommands(view, side).some((c) => c.enabled !== false && c.command !== "toggle-auto-no-action");
+  if (prompt && ptype === "waiting") return false;
+  if (view.run || view.encounters) {
+    if (side === "corp") return corpDecision(view);
+    return runCommands(view, side).some((c) => c.enabled !== false && c.command !== "toggle-auto-no-action");
+  }
+  return basicCommands(view, side).some((c) => c.enabled !== false && c.command !== "toggle-auto-no-action");
 }
 
 function App() {
@@ -40,6 +55,11 @@ function App() {
   useEffect(() => {
     if (waitingFor && handoff !== waitingFor) setHandoff(waitingFor);
   }, [waitingFor]);
+  const corpView = hotSeat ? session!.views.corp : null;
+  const autoPass = !!corpView && !session!.pending && (corpView.run || corpView.encounters) && runnerPassed(corpView) && !corpDecision(corpView) && (promptOf(corpView, "corp")?.["prompt-type"] ?? "run") === "run" && runCommands(corpView, "corp").some((c) => c.command === "continue" && c.enabled !== false);
+  useEffect(() => {
+    if (autoPass) session!.send("continue", null, "corp");
+  }, [autoPass, corpView?.log?.length, corpView?.run?.phase, corpView?.run?.position]);
 
   const resume = (from: SavedGame) => {
     if (!loaded) return;

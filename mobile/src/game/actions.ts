@@ -271,15 +271,17 @@ export function runCommands(view: any, side: Side, autoContinue = false): Comman
       out.push({ label: run["corp-auto-no-action"] ? "Stop auto-passing" : "Auto-pass priority", command: "toggle-auto-no-action" });
     return out;
   }
+  const waiting = (enc ?? run)?.["no-action"] === "runner";
+  const label = (text: string) => (waiting ? "Waiting for Corp…" : text);
   if (enc) {
-    out.push({ label: "Continue", command: "continue", enabled: enc["no-action"] !== "runner", kind: "primary" });
+    out.push({ label: label("Continue"), command: "continue", enabled: !waiting, kind: "primary" });
   } else if (run) {
     if (run["next-phase"] && run.phase !== "initiation")
       out.push({ label: nextPhaseLabel(view), command: "start-next-phase", enabled: !run["no-action"], kind: "primary" });
     else if (run.phase === "initiation" || (!run["next-phase"] && run.position !== 0))
-      out.push({ label: nextPhaseLabel(view), command: "continue", enabled: run["no-action"] !== "runner", kind: "primary" });
+      out.push({ label: label(nextPhaseLabel(view)), command: "continue", enabled: !waiting, kind: "primary" });
     else if (run.position === 0 && run.phase === "movement")
-      out.push({ label: "Breach server", command: "continue", enabled: run["no-action"] !== "runner", kind: "primary" });
+      out.push({ label: label("Breach server"), command: "continue", enabled: !waiting, kind: "primary" });
   }
   if (run && !view["forced-encounter"] && run.phase !== "success")
     out.push({
