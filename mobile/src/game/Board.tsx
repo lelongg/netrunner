@@ -95,7 +95,7 @@ function Opponent({ view, side, name }: { view: any; side: Side; name: string })
       <div class="opp-info">
         <span class={`label turn-state ${active ? "active" : ""}`}>{active ? "Their turn" : "Waiting"}</span>
         <span class="label" style="color: var(--text)">
-          Hand {p["hand-count"] ?? 0} · {p.click ?? 0} click
+          {side === "runner" ? "Grip" : "HQ"} {p["hand-count"] ?? 0} · {p.click ?? 0} click
         </span>
         <span class="label stats">
           <Bump value={points}>{points}</Bump>/{req} pts
@@ -873,7 +873,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
           {hand.map((c) => (
             <CardTile key={c.cid} card={c} owner onTap={tap} selectable={selectable.has(c.cid)} />
           ))}
-          {hand.length === 0 && <span class="hint">Empty hand</span>}
+          {hand.length === 0 && <span class="hint">{side === "runner" ? "Empty grip" : "HQ is empty"}</span>}
         </div>
       </footer>
       {deckOpen && session.deckFor(side) && <DeckViewer deck={session.deckFor(side)!} onClose={() => setDeckOpen(false)} />}
