@@ -929,26 +929,23 @@ textarea:focus {
 }
 
 .servers {
-  display: flex;
-  gap: 8px;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  grid-template-rows: auto auto auto;
+  justify-content: start;
+  column-gap: 8px;
   overflow-x: auto;
   scrollbar-width: none;
   padding: 4px 2px 6px;
 }
 
-.servers.theirs {
-  align-items: flex-end;
-}
-
-.servers.mine {
-  align-items: flex-start;
-}
-
 .server {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
+  grid-row: 1 / span 3;
+  display: grid;
+  grid-template-rows: subgrid;
+  justify-items: center;
+  row-gap: 4px;
   min-width: calc(var(--tile-w) + 8px);
   padding: 4px;
   border: 1px solid transparent;
@@ -981,7 +978,7 @@ textarea:focus {
 
 .piles {
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   gap: 8px;
   overflow-x: auto;
 }
@@ -2599,4 +2596,18 @@ button:active:not(:disabled) {
   to {
     transform: translateX(150%);
   }
+}
+
+.servers.mine .ices,
+.servers.theirs .content {
+  align-self: end;
+}
+
+.servers.mine .content,
+.servers.theirs .ices {
+  align-self: start;
+}
+
+.servers .server-name {
+  align-self: center;
 }
