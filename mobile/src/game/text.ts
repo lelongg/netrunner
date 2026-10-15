@@ -9,6 +9,7 @@ export const GLYPHS: Record<string, IconName> = {
   "\uE006": "link",
   "\uE007": "bolt",
   "\uE008": "warning",
+  "\uE009": "mu",
 };
 
 const ICONS: [RegExp, string][] = [
@@ -17,7 +18,7 @@ const ICONS: [RegExp, string][] = [
   [/\[(credit|credits|c)\]/gi, "\uE002"],
   [/\[subroutine\]/gi, "\uE004"],
   [/\[(trash|trash-ability)\]/gi, "\uE005"],
-  [/\[(mu|memory unit)\]/gi, "MU"],
+  [/\[(mu|memory unit)\]/gi, "\uE009"],
   [/\[link\]/gi, "\uE006"],
   [/\[interrupt\]/gi, "\uE007"],
   [/\[!\]/g, "\uE008"],

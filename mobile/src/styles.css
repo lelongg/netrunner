@@ -1693,13 +1693,36 @@ button:active:not(:disabled) {
 }
 
 .big .big-credit {
-  color: var(--text);
-  height: 0.62em;
-  margin-left: 0.04em;
-  vertical-align: 0.06em;
-  stroke-width: 3.2;
+  font-size: 0.62em;
+  margin-left: 0.06em;
+  vertical-align: 0.12em;
 }
 
-.big.yellow .big-credit {
-  color: var(--yellow);
+@font-face {
+  font-family: "anr-icon";
+  src: url("./fonts/netrunner.woff") format("woff");
+  font-display: block;
+}
+
+.sym {
+  font-family: "anr-icon";
+  font-style: normal;
+  font-weight: normal;
+  letter-spacing: 0;
+  text-transform: none;
+  line-height: 1;
+  display: inline-block;
+  vertical-align: -0.1em;
+}
+
+.sym.glyph {
+  height: auto;
+  font-size: 1.15em;
+  margin: 0 0.1em;
+}
+
+.badge .sym {
+  font-size: 10px;
+  margin: 0 2px 0 0;
+  vertical-align: -1px;
 }

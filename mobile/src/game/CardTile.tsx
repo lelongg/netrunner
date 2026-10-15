@@ -8,7 +8,7 @@ export function visibleCode(card: any, viewerIsOwner: boolean): string | undefin
   return card.code;
 }
 
-const COUNTER_ICONS: Record<string, IconName> = { credit: "credit", virus: "virus", power: "bolt", agenda: "star" };
+const COUNTER_ICONS: Record<string, IconName> = { credit: "credit", virus: "virus", power: "bolt", agenda: "agenda" };
 
 function counters(card: any): [IconName | string, number][] {
   const out: [IconName | string, number][] = [];
