@@ -1650,3 +1650,32 @@ button:active:not(:disabled) {
     transition-duration: 0.01ms !important;
   }
 }
+
+.icon {
+  display: inline-block;
+  height: 1em;
+  width: auto;
+  flex: none;
+  vertical-align: -0.12em;
+  overflow: visible;
+}
+
+.cta .cta-arrow {
+  height: 18px;
+}
+
+.join-row .icon,
+.screen-head .icon {
+  height: 16px;
+}
+
+.pager .icon,
+.ticker-menu .icon {
+  height: 16px;
+}
+
+.subs .icon {
+  height: 0.9em;
+  margin-right: 4px;
+  color: var(--red);
+}

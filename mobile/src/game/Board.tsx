@@ -9,6 +9,7 @@ import { CardTile } from "./CardTile";
 import { PromptPanel } from "./PromptPanel";
 import { useBackClose } from "../back";
 import { PHASE_LABELS, iconize, serverLabel, serverName } from "./text";
+import { Icon } from "../icons";
 
 interface Props {
   session: Session;
@@ -170,7 +171,7 @@ function ZoneSheet({ zone, view, viewer, selectable, onTap, onClose }: { zone: Z
             {mine ? "Your" : "Their"} {ZONE_LABELS[zone.owner][zone.key]} · {cards.length}
           </span>
           <button class="ghost" onClick={onClose} aria-label="Close">
-            ✕
+            <Icon name="close" />
           </button>
         </div>
         {cards.length === 0 && <span class="status">Empty</span>}
@@ -302,7 +303,7 @@ function Log({ view, render, onSay, onClose }: { view: any; render: (m: unknown)
         <div class="row">
           <span class="label">Log</span>
           <button class="ghost" onClick={onClose} aria-label="Close log">
-            ✕
+            <Icon name="close" />
           </button>
         </div>
         <div class="log">
@@ -555,7 +556,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave }
       <Ticker
         action={
           <button class="ticker-menu" onClick={() => setMenu(!menu)} aria-label="Menu" aria-expanded={menu}>
-            ≡
+            <Icon name="menu" />
           </button>
         }
       >
@@ -571,7 +572,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave }
                 setMenu(false);
               }}
             >
-              ⇄ Switch to {opp}
+              <Icon name="swap" /> Switch to {opp}
             </button>
           )}
           <button

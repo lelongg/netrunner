@@ -2,6 +2,7 @@ import { useEffect, useState } from "preact/hooks";
 import type { Side } from "../engine";
 import { findCard } from "./actions";
 import { ZoomableCardImage } from "./CardImage";
+import { Icon } from "../icons";
 import { RichText } from "./RichText";
 import { iconize } from "./text";
 
@@ -21,9 +22,9 @@ function NumberPicker({ min, max, initial, onSubmit, disabled, extra }: { min: n
   useEffect(() => setN(initial), [initial, min, max]);
   return (
     <div class="number-picker">
-      <button aria-label="Decrease" onClick={() => setN(Math.max(min, n - 1))} disabled={disabled || n <= min}>−</button>
+      <button aria-label="Decrease" onClick={() => setN(Math.max(min, n - 1))} disabled={disabled || n <= min}><Icon name="minus" /></button>
       <output>{n}</output>
-      <button aria-label="Increase" onClick={() => setN(Math.min(max, n + 1))} disabled={disabled || n >= max}>+</button>
+      <button aria-label="Increase" onClick={() => setN(Math.min(max, n + 1))} disabled={disabled || n >= max}><Icon name="plus" /></button>
       {extra}
       <button class="primary submit" onClick={() => onSubmit(n)} disabled={disabled}>Confirm</button>
     </div>

@@ -7,6 +7,7 @@ import { Pager } from "./Pager";
 import { RichText } from "./RichText";
 import { useSwipe } from "./swipe";
 import { iconize, serverLabel } from "./text";
+import { Icon } from "../icons";
 
 interface Props {
   card: any;
@@ -63,7 +64,7 @@ export function CardSheet({ card, view, side, db, send, onClose, disabled, index
             {(card.subroutines ?? []).length > 0 && side === "runner" && (
               <ul class="subs">
                 {card.subroutines.map((s: any) => (
-                  <li class={s.broken ? "broken" : s.fired ? "fired" : ""}>↳ {iconize(s.label)}</li>
+                  <li class={s.broken ? "broken" : s.fired ? "fired" : ""}><Icon name="sub" /> {iconize(s.label)}</li>
                 ))}
               </ul>
             )}

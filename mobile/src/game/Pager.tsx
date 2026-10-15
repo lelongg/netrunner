@@ -1,4 +1,5 @@
 import { useEffect } from "preact/hooks";
+import { Icon } from "../icons";
 
 export function Pager({ index, count, onStep }: { index: number; count: number; onStep: (dir: -1 | 1) => void }) {
   useEffect(() => {
@@ -14,13 +15,13 @@ export function Pager({ index, count, onStep }: { index: number; count: number; 
   return (
     <div class="pager">
       <button class="ghost" disabled={index <= 0} onClick={() => onStep(-1)} aria-label="Previous card">
-        ‹
+        <Icon name="chevron-left" />
       </button>
       <span class="label">
         {index + 1} / {count}
       </span>
       <button class="ghost" disabled={index >= count - 1} onClick={() => onStep(1)} aria-label="Next card">
-        ›
+        <Icon name="chevron-right" />
       </button>
     </div>
   );

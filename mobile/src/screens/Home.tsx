@@ -1,6 +1,7 @@
 import { useState } from "preact/hooks";
 import type { Role, SavedGame } from "../session";
 import { Cta, Ticker } from "../ui";
+import { Icon } from "../icons";
 
 interface Props {
   ready: boolean;
@@ -94,7 +95,7 @@ export function Home({ ready, error, initialJoin, save, onResume, onDiscard, onS
               />
             </label>
             <button aria-label="Join game" disabled={!ready || code.trim().length < 5} onClick={() => go("guest", code.trim())}>
-              →
+              <Icon name="arrow-right" />
             </button>
           </div>
         </div>

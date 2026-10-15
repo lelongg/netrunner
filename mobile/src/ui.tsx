@@ -1,4 +1,5 @@
 import type { ComponentChildren } from "preact";
+import { Icon } from "./icons";
 
 export function Meter({ value, max, tone = "cyan", small }: { value: number; max: number; tone?: "cyan" | "red" | "yellow"; small?: boolean }) {
   const count = Math.max(0, Math.min(max, 12));
@@ -36,7 +37,7 @@ export function Cta({ children, onClick, disabled }: { children: ComponentChildr
     <button class="cta" onClick={onClick} disabled={disabled}>
       <span>
         {children}
-        <span aria-hidden="true">→</span>
+        <Icon name="arrow-right" class="cta-arrow" />
       </span>
     </button>
   );

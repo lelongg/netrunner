@@ -5,6 +5,7 @@ import type { Session } from "../session";
 import { QrCode } from "../QrCode";
 import { Cta, Ticker } from "../ui";
 import { DeckPicker } from "./DeckPicker";
+import { Icon } from "../icons";
 
 interface Props {
   session: Session;
@@ -60,7 +61,7 @@ export function Lobby({ session, db, matchups, onLeave }: Props) {
       <div class="screen lobby">
         <header class="screen-head">
           <button class="ghost" onClick={onLeave} aria-label="Back to home">
-            ←
+            <Icon name="arrow-left" />
           </button>
           <h1>SETUP</h1>
         </header>

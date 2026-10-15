@@ -151,7 +151,7 @@ export function cardCommands(card: any, view: any, side: Side): Command[] {
     if (card.rezzed && subs.some((s) => !s.fired && !s.broken))
       out.push({ label: "Fire unbroken subroutines", command: "unbroken-subroutines", args: { card: ref } });
     subs.forEach((s, i) =>
-      out.push({ label: `↳ ${s.label ?? `Subroutine ${i + 1}`}${s.broken ? " (broken)" : ""}`, command: "subroutine", args: { card: ref, subroutine: i } }),
+      out.push({ label: `${s.label ?? `Subroutine ${i + 1}`}${s.broken ? " (broken)" : ""}`, command: "subroutine", args: { card: ref, subroutine: i } }),
     );
   }
   return out;

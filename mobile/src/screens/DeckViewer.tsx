@@ -6,6 +6,7 @@ import { Pager } from "../game/Pager";
 import { RichText } from "../game/RichText";
 import { useSwipe } from "../game/swipe";
 import { useBackClose } from "../back";
+import { Icon } from "../icons";
 
 const TYPE_ORDER: Record<string, string[]> = {
   Corp: ["Agenda", "Asset", "Upgrade", "Operation", "ICE"],
@@ -105,7 +106,7 @@ export function DeckViewer({ deck, onClose }: { deck: Deck; onClose: () => void 
           <div class="row">
             <span class="label">Deck list</span>
             <button class="ghost" onClick={onClose} aria-label="Close deck list">
-              ✕
+              <Icon name="close" />
             </button>
           </div>
           <button class="deck-head" onClick={() => setDetail({ card: identity })}>
