@@ -1,6 +1,7 @@
 import { useEffect, useState } from "preact/hooks";
 import type { Side } from "../engine";
 import { findCard } from "./actions";
+import { ZoomableCardImage } from "./CardImage";
 import { iconize } from "./text";
 
 interface Props {
@@ -105,11 +106,18 @@ export function PromptPanel({ view, side, prompt, render, send, closePrompt, dis
     );
   }
 
+  const source = prompt.card?.title && prompt.card.type !== "Basic Action" ? prompt.card : null;
+  const code: string | undefined = source?.code;
+  const accessed = !!code && /^You accessed /.test(msg);
+
   return (
-    <section class={`prompt prompt-${ptype ?? "other"}`}>
-      {prompt.card?.title && prompt.card.type !== "Basic Action" && <span class="prompt-card">{prompt.card.title}</span>}
-      <p class="prompt-msg">{msg}</p>
-      {body}
+    <section class={`prompt prompt-${ptype ?? "other"} ${code ? "with-card" : ""} ${accessed ? "accessed" : ""}`}>
+      {code && <ZoomableCardImage class="prompt-img" code={code} alt={source.title} size={accessed ? "large" : "small"} />}
+      <div class="prompt-body">
+        {source && <span class="prompt-card">{source.title}</span>}
+        <p class="prompt-msg">{msg}</p>
+        {body}
+      </div>
     </section>
   );
 }

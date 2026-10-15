@@ -260,7 +260,7 @@ textarea:focus {
 .ticker {
   display: flex;
   align-items: center;
-  height: 34px;
+  height: 22px;
   background: #0b0c0e;
   border-bottom: 1px solid var(--line);
   padding-top: env(safe-area-inset-top);
@@ -271,8 +271,8 @@ textarea:focus {
 
 .ticker::before {
   content: "";
-  width: 16px;
-  height: 34px;
+  width: 12px;
+  height: 22px;
   flex: none;
   background: repeating-linear-gradient(135deg, var(--yellow) 0 6px, var(--bg) 6px 12px);
 }
@@ -281,17 +281,17 @@ textarea:focus {
   background: var(--red);
   color: #2a0705;
   font-weight: 700;
-  font-size: 11px;
+  font-size: 9px;
   letter-spacing: 0.3em;
-  padding: 0 12px;
-  height: 34px;
+  padding: 0 8px;
+  height: 22px;
   display: flex;
   align-items: center;
   flex: none;
 }
 
 .ticker .feed {
-  font-size: 11px;
+  font-size: 9px;
   letter-spacing: 0.14em;
   padding: 0 10px;
   text-transform: uppercase;
@@ -1467,4 +1467,27 @@ form.chat input {
     opacity: 0;
     transform: translateX(-28px);
   }
+}
+
+.prompt.with-card {
+  flex-direction: row;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.prompt-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: inherit;
+}
+
+.prompt-img {
+  flex: none;
+  width: 64px;
+}
+
+.prompt.accessed .prompt-img {
+  width: min(42%, 180px);
 }
