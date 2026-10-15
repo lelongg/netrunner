@@ -7,10 +7,11 @@ import { basicCommands, promptOf, runCommands } from "./game/actions";
 import { Handoff } from "./screens/Handoff";
 import { Home } from "./screens/Home";
 import { Lobby } from "./screens/Lobby";
-import { type Role, type SavedGame, Session, clearSave, loadSave, newRoomCode } from "./session";
+import { type Role, type SavedGame, Session, clearSave, listSaves, loadSave, newRoomCode, saveId } from "./session";
 import "./styles.css";
 
 const joinParam = new URLSearchParams(location.search).get("join")?.toUpperCase() ?? undefined;
+const gameParam = new URLSearchParams(location.search).get("game") ?? undefined;
 const seatFromLink = joinParam ? ticketFromHash(joinParam, location.hash) : undefined;
 if (seatFromLink) storeTicket(seatFromLink);
 const autopilotParam = new URLSearchParams(location.search).has("autopilot");
@@ -56,15 +57,19 @@ function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [localSide, setLocalSide] = useState<Side>("corp");
   const [handoff, setHandoff] = useState<Side | null>(null);
-  const [handoffLog, setHandoffLog] = useState<number>(() => {
-    try {
-      return Number(localStorage.getItem(HANDOFF_KEY) ?? 0);
-    } catch {
-      return 0;
-    }
-  });
-  const [save, setSave] = useState<SavedGame | null>(() => loadSave());
+  const [handoffLog, setHandoffLog] = useState(0);
+  const [saves, setSaves] = useState<SavedGame[]>(() => listSaves());
   useSession(session);
+  const currentId = session?.saveId;
+  useEffect(() => {
+    const url = currentId ? `${location.pathname}?game=${encodeURIComponent(currentId)}` : location.pathname;
+    const apply = () => {
+      if (`${location.pathname}${location.search}` !== url) history.replaceState(history.state, "", url);
+    };
+    apply();
+    addEventListener("popstate", apply);
+    return () => removeEventListener("popstate", apply);
+  }, [currentId]);
   useEffect(() => {
     if (agentParam) (window as any).__nsg = { session, engine: loaded?.engine };
   }, [session, loaded]);
@@ -83,11 +88,18 @@ function App() {
     if (!loaded) return;
     setSession(Session.resume(loaded.engine, loaded.db, from));
     setLocalSide(from.v === 1 ? from.mySide : "corp");
+    try {
+      const stored = JSON.parse(localStorage.getItem(HANDOFF_KEY) ?? "null");
+      setHandoffLog(stored?.id === saveId(from) ? Number(stored.at) : 0);
+    } catch {
+      setHandoffLog(0);
+    }
   };
 
   useEffect(() => {
     if (!loaded || session) return;
-    if (save && (!joinParam || joinParam === save.code)) resume(save);
+    const existing = joinParam ? loadSave(joinParam) : gameParam ? loadSave(gameParam) : null;
+    if (existing) resume(existing);
     else if (joinParam) {
       let name = "Player";
       try {
@@ -109,8 +121,13 @@ function App() {
     session?.forget();
     session?.close();
     setSession(null);
-    setSave(loadSave());
-    history.replaceState(null, "", location.pathname);
+    setSaves(listSaves());
+  };
+
+  const exit = () => {
+    session?.close();
+    setSession(null);
+    setSaves(listSaves());
   };
 
   if (!session || !loaded) {
@@ -119,11 +136,11 @@ function App() {
         ready={!!loaded}
         error={error}
         initialJoin={joinParam}
-        save={joinParam && joinParam !== save?.code ? null : save}
-        onResume={() => save && resume(save)}
-        onDiscard={() => {
-          if (save) clearSave(save);
-          setSave(loadSave());
+        saves={saves}
+        onResume={resume}
+        onDiscard={(save) => {
+          clearSave(save);
+          setSaves(listSaves());
         }}
         onStart={(role: Role, name: string, code?: string, vsBot?: boolean) => {
           if (!loaded) return;
@@ -148,7 +165,7 @@ function App() {
             const at = (session.views.corp?.log ?? []).length;
             setHandoffLog(at);
             try {
-              localStorage.setItem(HANDOFF_KEY, String(at));
+              localStorage.setItem(HANDOFF_KEY, JSON.stringify({ id: session.saveId, at }));
             } catch {}
             setLocalSide(handoff);
             setHandoff(null);
@@ -167,13 +184,14 @@ function App() {
         handoffLog={handoffLog}
         onSwitchSide={() => setHandoff(otherSide(localSide))}
         onLeave={leave}
+        onExit={exit}
       />
     );
   }
 
   const view = session.views[lobby.mySide];
   if (!view) return <p class="status">Syncing…</p>;
-  return <Board session={session} engine={loaded.engine} db={loaded.db} side={lobby.mySide} view={view} onLeave={leave} />;
+  return <Board session={session} engine={loaded.engine} db={loaded.db} side={lobby.mySide} view={view} onLeave={leave} onExit={exit} />;
 }
 
 const currentBundle = (document.querySelector('script[type="module"][src*="assets/"]') as HTMLScriptElement | null)?.src.split("/").pop();

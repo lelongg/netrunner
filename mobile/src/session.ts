@@ -44,6 +44,7 @@ export type SavedGame =
       seed: number[];
       log: LocalEntry[];
       savedAt: number;
+      summary?: GameSummary;
     }
   | {
       v: 2;
@@ -54,7 +55,17 @@ export type SavedGame =
       myDeck?: WireDeck;
       entries: Entry[];
       savedAt: number;
+      summary?: GameSummary;
     };
+
+export interface GameSummary {
+  side?: Side;
+  opponent?: string;
+  turn?: number;
+  points?: [number, number];
+  myMove?: boolean;
+  winner?: Side;
+}
 
 type Listener = () => void;
 
@@ -83,35 +94,75 @@ function sfc32(a: number, b: number, c: number, d: number) {
   };
 }
 
-const saveKey = (role: Role) => (role === "local" ? SAVE_KEYS.local : SAVE_KEYS.online);
+const GAME_PREFIX = "nsg.game.";
+const MAX_GAMES = 12;
 
-function readSave(key: string): SavedGame | null {
+export const saveId = (save: { role: Role; code: string }) => (save.role === "local" ? `local:${save.code}` : save.code);
+
+function parseSave(raw: string | null): SavedGame | null {
   try {
-    const raw = localStorage.getItem(key);
     const save = raw ? (JSON.parse(raw) as SavedGame) : null;
-    if (save?.v === 1 && save.role === "local") return save;
-    if (save?.v === 2) return save;
-    return null;
-  } catch {
-    return null;
+    if (save?.v === 1 && save.role === "local" && save.code) return save;
+    if (save?.v === 2 && save.code) return save;
+  } catch {}
+  return null;
+}
+
+function migrateLegacy() {
+  for (const key of Object.values(SAVE_KEYS)) {
+    try {
+      const legacy = parseSave(localStorage.getItem(key));
+      if (legacy && !localStorage.getItem(GAME_PREFIX + saveId(legacy))) localStorage.setItem(GAME_PREFIX + saveId(legacy), JSON.stringify(legacy));
+      localStorage.removeItem(key);
+    } catch {}
   }
 }
 
-export function loadSave(): SavedGame | null {
-  return readSave(SAVE_KEYS.online) ?? readSave(SAVE_KEYS.local);
-}
-
-function writeSave(role: Role, save: SavedGame | null) {
+export function listSaves(): SavedGame[] {
+  migrateLegacy();
+  const out: SavedGame[] = [];
   try {
-    if (save) localStorage.setItem(saveKey(role), JSON.stringify(save));
-    else localStorage.removeItem(saveKey(role));
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key?.startsWith(GAME_PREFIX)) continue;
+      const save = parseSave(localStorage.getItem(key));
+      if (save) out.push(save);
+    }
+  } catch {}
+  return out.sort((a, b) => b.savedAt - a.savedAt);
+}
+
+export function loadSave(id: string): SavedGame | null {
+  migrateLegacy();
+  try {
+    return parseSave(localStorage.getItem(GAME_PREFIX + id));
   } catch {
-    /* storage unavailable or full */
+    return null;
   }
+}
+
+function writeSave(id: string, save: SavedGame | null) {
+  const key = GAME_PREFIX + id;
+  try {
+    if (!save) return localStorage.removeItem(key);
+    const fresh = !localStorage.getItem(key);
+    const others = () => listSaves().filter((g) => saveId(g) !== id);
+    if (fresh) for (const old of others().slice(MAX_GAMES - 1)) localStorage.removeItem(GAME_PREFIX + saveId(old));
+    const raw = JSON.stringify(save);
+    for (;;) {
+      try {
+        return localStorage.setItem(key, raw);
+      } catch {
+        const oldest = others().pop();
+        if (!oldest) return;
+        localStorage.removeItem(GAME_PREFIX + saveId(oldest));
+      }
+    }
+  } catch {}
 }
 
 export function clearSave(save: SavedGame) {
-  writeSave(save.role, null);
+  writeSave(saveId(save), null);
 }
 
 const deckSide = (db: CardDb, deck: WireDeck): Side | undefined => db.byTitle.get(deck.identity)?.side.toLowerCase() as Side | undefined;
@@ -548,7 +599,7 @@ export class Session {
   private persist() {
     if (this.lobby.role === "local") {
       if (!this.setup || !this.seed) return;
-      return writeSave("local", {
+      return writeSave(this.saveId!, {
         v: 1,
         role: "local",
         code: this.lobby.code,
@@ -561,10 +612,11 @@ export class Session {
         seed: this.seed,
         log: this.log,
         savedAt: Date.now(),
+        summary: this.summary(),
       });
     }
     if (!this.lobby.code || !this.transport) return;
-    writeSave(this.lobby.role, {
+    writeSave(this.saveId!, {
       v: 2,
       role: this.lobby.role,
       transport: this.transport.kind,
@@ -573,7 +625,28 @@ export class Session {
       myDeck: this.lobby.myDeck,
       entries: this.entries,
       savedAt: Date.now(),
+      summary: this.summary(),
     });
+  }
+
+  get saveId() {
+    return this.lobby.code ? saveId(this.lobby) : undefined;
+  }
+
+  private summary(): GameSummary {
+    const { mySide, opponentName, started, vsBot, role } = this.lobby;
+    const view = this.views[mySide];
+    const opponent = role === "local" && !vsBot ? undefined : opponentName;
+    if (!started || !view) return { side: mySide, opponent };
+    const points = (side: Side) => Number(view[side]?.["agenda-point"] ?? 0);
+    return {
+      side: mySide,
+      opponent,
+      turn: view.turn,
+      points: [points(mySide), points(other(mySide))],
+      myMove: view["active-player"] === mySide,
+      winner: view.winner || undefined,
+    };
   }
 
   private exec(entry: LocalEntry) {
@@ -650,7 +723,7 @@ export class Session {
   }
 
   forget() {
-    writeSave(this.lobby.role, null);
+    if (this.saveId) writeSave(this.saveId, null);
   }
 
   close() {

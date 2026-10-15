@@ -20,6 +20,7 @@ interface Props {
   view: any;
   onSwitchSide?: () => void;
   onLeave: () => void;
+  onExit: () => void;
   handoffLog?: number;
 }
 
@@ -485,7 +486,7 @@ function feedText(view: any, side: Side, names: Record<Side, string>) {
   return `Turn ${view.turn ?? 0} · ${active === side ? "your move" : `${names[active] ?? active} to play`}`;
 }
 
-export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, handoffLog }: Props) {
+export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, onExit, handoffLog }: Props) {
   const [selected, setSelected] = useState<any>(null);
   const [showLog, setShowLog] = useState(false);
   const [picking, setPicking] = useState(false);
@@ -674,6 +675,14 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
       </Ticker>
       {menu && (
         <nav class="menu panel">
+          <button
+            onClick={() => {
+              setMenu(false);
+              onExit();
+            }}
+          >
+            <Icon name="arrow-left" /> All games
+          </button>
           {onSwitchSide && (
             <button
               onClick={() => {
@@ -759,11 +768,11 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
           <button
             class="ghost"
             onClick={() => {
-              if (confirm("Leave this game? It will be discarded.")) onLeave();
+              if (confirm("Delete this game from this device? You will not be able to come back to it.")) onLeave();
               setMenu(false);
             }}
           >
-            Leave game
+            Delete game
           </button>
         </nav>
       )}

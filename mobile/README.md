@@ -32,6 +32,8 @@ Jinteki.net team.
 - **Built for phones.** Your view is laid out from your seat (the opponent's outermost ice
   is closest to you), tap a card for its text and actions, swipe through a server, hand or
   pile, tap the image for a full-screen high-resolution scan, Android back closes overlays.
+- **Several games at once.** The home screen lists your games in progress with whose move it
+  is; each tab can hold a different one.
 - **Survives real life.** Reloading resumes the game and switching apps reconnects
   automatically. With the relay, either player can close the app mid-game; the other keeps
   playing and the absent one catches up when they return. The game menu has a rejoin link to move
@@ -84,9 +86,10 @@ Jinteki.net team.
 ### Saving and resuming
 
 The engine state holds functions and cannot be serialised, so games are stored as logs:
-online games keep the shared log (`localStorage`, key `nsg.online`, refreshed from the relay
-on reconnect), solo and local games the setup, a random seed and every action (key
-`nsg.save`). During
+online games keep the shared log (refreshed from the relay on reconnect), solo and local
+games the setup, a random seed and every action. Each game has its own `localStorage` key
+(`nsg.game.<code>`, the 12 most recent are kept) and the home screen lists them; a tab keeps
+its game in the URL (`?game=<code>`), so reloading resumes it and a new tab opens the list. During
 each engine call `Math.random` is swapped for an `sfc32` generator seeded from the log, so
 replaying it reproduces the same game: shuffles, choice ids and all. The smoke test checks
 that a replay yields identical views.
@@ -154,7 +157,6 @@ so use ones meant for browsers.
 ## Known limitations
 
 - No cheating protection: each phone runs the full game state. Play with people you trust.
-- One saved game per device: starting a new game replaces the previous one.
 - English only.
 - Card support is whatever the Jinteki engine implements; the newest cards may be missing.
 - In the peer-to-peer fallback, the host must keep the app open and, without a TURN relay,

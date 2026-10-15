@@ -1,5 +1,5 @@
 import { useState } from "preact/hooks";
-import type { Role, SavedGame } from "../session";
+import { type Role, type SavedGame, saveId } from "../session";
 import { Cta, Ticker } from "../ui";
 import { Icon } from "../icons";
 
@@ -7,13 +7,32 @@ interface Props {
   ready: boolean;
   error?: string;
   initialJoin?: string;
-  save: SavedGame | null;
-  onResume: () => void;
-  onDiscard: () => void;
+  saves: SavedGame[];
+  onResume: (save: SavedGame) => void;
+  onDiscard: (save: SavedGame) => void;
   onStart: (role: Role, name: string, code?: string, vsBot?: boolean) => void;
 }
 
-const ROLE_LABEL: Record<Role, string> = { host: "hosted", guest: "joined", local: "local" };
+function describe(save: SavedGame) {
+  const sum = save.summary;
+  const local = save.v === 1;
+  const title = local ? (save.vsBot ? `Solo vs bot` : "Local game") : `vs ${sum?.opponent ?? "…"}`;
+  const bits: string[] = [];
+  if (sum?.side && !(local && !save.vsBot)) bits.push(sum.side);
+  if (sum?.turn) bits.push(`turn ${sum.turn}`);
+  if (sum?.points) bits.push(`${sum.points[0]}–${sum.points[1]}`);
+  if (!sum?.turn) bits.push(local ? `${save.log.length} actions` : "in lobby");
+  const status = sum?.winner ? (sum.winner === sum.side ? "Won" : "Lost") : sum?.turn && sum.myMove && !(local && !save.vsBot) ? "Your move" : undefined;
+  return { title, detail: bits.join(" · "), status };
+}
+
+function ago(ms: number) {
+  const min = Math.round((Date.now() - ms) / 60000);
+  if (min < 1) return "now";
+  if (min < 60) return `${min} min`;
+  const h = Math.round(min / 60);
+  return h < 24 ? `${h} h` : `${Math.round(h / 24)} d`;
+}
 const NAME_KEY = "nsg.name";
 
 function storedName() {
@@ -24,7 +43,7 @@ function storedName() {
   }
 }
 
-export function Home({ ready, error, initialJoin, save, onResume, onDiscard, onStart }: Props) {
+export function Home({ ready, error, initialJoin, saves, onResume, onDiscard, onStart }: Props) {
   const [name, setName] = useState(storedName() || "Player");
   const [code, setCode] = useState(initialJoin ?? "");
   const go = (role: Role, c?: string, vsBot?: boolean) => {
@@ -55,21 +74,38 @@ export function Home({ ready, error, initialJoin, save, onResume, onDiscard, onS
 
         {error && <p class="error">{error}</p>}
 
-        {save && (
-          <section class="panel cyan section">
-            <div class="row">
-              <span class="label cyan">Game in progress</span>
-              <span class="label">{save.code}</span>
-            </div>
-            <p class="hint">
-              {ROLE_LABEL[save.role]} game · {save.v === 1 ? save.log.length : save.entries.length} actions
-            </p>
-            <Cta onClick={onResume} disabled={!ready}>
-              Resume
-            </Cta>
-            <button class="ghost" onClick={onDiscard}>
-              Discard save
-            </button>
+        {saves.length > 0 && (
+          <section class="panel cyan section games">
+            <span class="label cyan">Your games</span>
+            <ul class="game-list">
+              {saves.map((save) => {
+                const { title, detail, status } = describe(save);
+                return (
+                  <li key={saveId(save)}>
+                    <button class="game-row" disabled={!ready} onClick={() => onResume(save)}>
+                      <span class="game-main">
+                        <span class="game-title">{title}</span>
+                        <span class="game-detail">{detail}</span>
+                      </span>
+                      <span class="game-meta">
+                        {status && <span class={status === "Your move" ? "yellow" : status === "Won" ? "cyan" : "red"}>{status}</span>}
+                        <span>{save.v === 2 ? save.code : ago(save.savedAt)}</span>
+                      </span>
+                      <Icon name="arrow-right" />
+                    </button>
+                    <button
+                      class="ghost game-delete"
+                      aria-label={`Delete ${title}`}
+                      onClick={() => {
+                        if (confirm(`Delete "${title}" from this device?`)) onDiscard(save);
+                      }}
+                    >
+                      <Icon name="close" />
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
           </section>
         )}
 
