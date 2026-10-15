@@ -2,6 +2,7 @@ import { useState } from "preact/hooks";
 import type { CardDb, Matchup, Side } from "../engine";
 import type { WireDeck } from "../decks";
 import type { Session } from "../session";
+import { QrCode } from "../QrCode";
 import { Cta, Ticker } from "../ui";
 import { DeckPicker } from "./DeckPicker";
 
@@ -71,6 +72,12 @@ export function Lobby({ session, db, matchups, onLeave }: Props) {
               <span class="label">{lobby.role === "host" ? "Host" : "Guest"}</span>
             </div>
             <span class="code">{lobby.code}</span>
+            {lobby.role === "host" && lobby.status !== "connected" && (
+              <div class="qr-wrap">
+                <QrCode value={link} label={`QR code to join game ${lobby.code}`} />
+                <span class="label">Scan to join</span>
+              </div>
+            )}
             {lobby.role === "host" && (
               <button class="primary" onClick={share}>
                 {copied ? "Link copied" : "Share invite link"}

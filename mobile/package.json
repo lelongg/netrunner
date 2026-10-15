@@ -22,6 +22,7 @@
     "@fontsource/big-shoulders-display": "^5.2.5",
     "@fontsource/space-mono": "^5.2.5",
     "peerjs": "^1.5.4",
-    "preact": "^10.24.3"
+    "preact": "^10.24.3",
+    "uqr": "0.1.3"
   }
 }
