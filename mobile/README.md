@@ -15,7 +15,8 @@ Jinteki.net team.
 ## Features
 
 - **Online play without a server.** Host a game, share the code, the invite link or the QR
-  code, and your opponent joins from their own phone (WebRTC through PeerJS).
+  code, and your opponent joins from their own phone (WebRTC, matched through public Nostr
+  relays with [Trystero](https://github.com/dmotz/trystero)).
 - **Solo against a bot.** A heuristic bot plays either side from its own view of the game,
   without peeking at hidden cards.
 - **Local hot-seat.** Two players on one device, with a privacy screen whenever the device
@@ -49,7 +50,7 @@ Jinteki.net team.
 │      Jinteki engine compiled to JS      │ actions │                          │
 │      (engine/engine.js, ClojureScript)  │  views  │                          │
 └─────────────────────────────────────────┘         └──────────────────────────┘
-                 ▲  matchmaking only (PeerJS public server)
+                 ▲  matchmaking only (public Nostr relays, via Trystero)
 ```
 
 - **Engine.** Jinteki's `src/clj/game/**` sources were converted to `.cljc` with reader
@@ -116,12 +117,16 @@ HTTPS tunnel.
 publishes `mobile/dist` to GitHub Pages on every push to `master` (set *Settings → Pages →
 Source* to *GitHub Actions*). Any static host works: there is no backend.
 
-Matchmaking uses the free public PeerJS server. To depend on nobody, run your own
-`peerjs-server` (a few MB of RAM) and pass `host`/`port` to the `Peer` constructor in
-`src/session.ts`.
+Matchmaking goes through [Trystero](https://github.com/dmotz/trystero) over several
+public Nostr relays at once, so no account or server is needed and no single relay is a
+point of failure. The relays only carry the encrypted connection offers; game data flows
+directly between the phones. The room is the game code (`APP_ID` in `src/session.ts`
+namespaces it). Trystero can also use MQTT brokers, BitTorrent trackers or a self-hosted
+WebSocket relay by changing the import.
 
-Phones on some mobile networks cannot reach each other directly and need a TURN relay.
-PeerJS's default one is often unavailable, so you can provide your own at build time with
+Phones find their public address with Cloudflare's and Google's free STUN servers. Some
+mobile networks still block direct links and need a TURN relay, which you can provide at
+build time with
 `VITE_ICE_SERVERS`, a JSON array of
 [ICE servers](https://developer.mozilla.org/en-US/docs/Web/API/RTCIceServer) (free tiers
 exist at Cloudflare Calls and Metered, for example). The deploy workflow reads it from an
@@ -135,8 +140,8 @@ so use ones meant for browsers.
 - One saved game per device: starting a new game replaces the previous one.
 - English only.
 - Card support is whatever the Jinteki engine implements; the newest cards may be missing.
-- The public PeerJS server can be slow or busy, and without a TURN relay some mobile
-  networks cannot connect at all (the join screen says so).
+- Without a TURN relay, some mobile networks cannot connect at all (the join screen says
+  so).
 
 ## Credits
 
@@ -147,4 +152,4 @@ so use ones meant for browsers.
 - Netrunner is published by [Null Signal Games](https://nullsignal.games). Card names, text
   and art belong to their respective owners.
 - Fonts: Big Shoulders Display and Space Mono (SIL Open Font License).
-- Peer-to-peer: [PeerJS](https://peerjs.com).
+- Peer-to-peer matchmaking: [Trystero](https://github.com/dmotz/trystero).

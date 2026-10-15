@@ -24,10 +24,9 @@ function shareLink(code: string) {
   return url.toString();
 }
 
-const STEPS: { key: "relay" | "host" | "link"; label: string }[] = [
-  { key: "relay", label: "Reach the matchmaking server" },
-  { key: "host", label: "Find the host's game" },
-  { key: "link", label: "Open a direct link between the phones" },
+const STEPS: { key: "relay" | "host"; label: string }[] = [
+  { key: "relay", label: "Reach the matchmaking relays" },
+  { key: "host", label: "Connect to the host's phone" },
 ];
 
 function JoinStatus({ lobby }: { lobby: Session["lobby"] }) {
@@ -52,17 +51,13 @@ function JoinStatus({ lobby }: { lobby: Session["lobby"] }) {
           </li>
         ))}
       </ol>
-      {lobby.hint === "host-missing" && (
-        <p class="hint">
-          No game with this code is open right now. Check the code, and ask the host to keep the game on screen: switching apps on their phone pauses it.
-        </p>
+      {lobby.hint === "unreachable" && (
+        <>
+          <p class="hint">Can't reach the host yet. Check the code, and ask the host to keep the game on screen: switching apps on their phone pauses it.</p>
+          <p class="hint">If it still fails, your networks may block direct links between phones (some mobile carriers do): try with both phones on Wi-Fi, or one on Wi-Fi and the other on mobile data.</p>
+        </>
       )}
-      {lobby.hint === "link-slow" && (
-        <p class="hint">
-          The host's game was found, but the phones can't reach each other directly. Some mobile networks block this: try with both phones on Wi-Fi, or one on Wi-Fi and the other on mobile data.
-        </p>
-      )}
-      {!lobby.hint && seconds >= 15 && <p class="hint">Still trying. Make sure the host keeps the game open on their screen.</p>}
+      {!lobby.hint && seconds >= 10 && <p class="hint">Still trying. Make sure the host keeps the game open on their screen.</p>}
     </section>
   );
 }
@@ -77,7 +72,7 @@ export function Lobby({ session, db, matchups, onLeave }: Props) {
     : lobby.role === "local"
       ? "Local game · both sides on this device"
       : lobby.status === "connecting"
-        ? "Connecting to the relay…"
+        ? "Connecting to the matchmaking relays…"
         : lobby.status === "waiting"
           ? "Waiting for opponent…"
           : lobby.status === "closed"
