@@ -92,6 +92,40 @@ function DeckSheet({ side, db, matchups, value, onPick, onClose }: { side: Side;
   );
 }
 
+function NameField({ name, onSave }: { name: string; onSave: (name: string) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(name);
+  if (!editing)
+    return (
+      <button
+        class="name-chip"
+        onClick={() => {
+          setValue(name);
+          setEditing(true);
+        }}
+        aria-label={`Change your name, currently ${name}`}
+      >
+        {name}
+        <Icon name="edit" />
+      </button>
+    );
+  const save = () => {
+    onSave(value);
+    setEditing(false);
+  };
+  return (
+    <form
+      class="name-edit"
+      onSubmit={(e) => {
+        e.preventDefault();
+        save();
+      }}
+    >
+      <input value={value} maxLength={24} autoFocus onInput={(e) => setValue((e.target as HTMLInputElement).value)} onBlur={save} aria-label="Your name" />
+    </form>
+  );
+}
+
 function Seat({
   label,
   side,
@@ -101,8 +135,14 @@ function Seat({
   onPick,
   onSide,
   locked,
+  inline,
+  name,
+  onName,
 }: {
   label: string;
+  inline?: boolean;
+  name?: string;
+  onName?: (name: string) => void;
   side: Side;
   deck?: WireDeck;
   db: CardDb;
@@ -116,9 +156,12 @@ function Seat({
   const current = useMemo(() => (deck ? fromWire(deck, db) : undefined), [deck]);
   useBackClose(viewing, () => setViewing(false));
   return (
-    <section class="panel section seat">
+    <section class={`panel section seat ${inline ? "inline" : ""}`}>
       <div class="row">
-        <span class="label">{label}</span>
+        <span class="label seat-label">
+          {label}
+          {name && onName && <NameField name={name} onSave={onName} />}
+        </span>
         <span class={`label who-${side}`}>{SIDE_LABEL[side]}</span>
       </div>
       {onSide && (
@@ -131,26 +174,34 @@ function Seat({
         </div>
       )}
       {current ? (
-        <div class="seat-deck">
+        <>
           <button class="seat-deck-main" onClick={() => setViewing(true)} aria-label={`View deck ${current.name}`}>
             <CardImage class="deck-identity" code={current.identity.code} alt={current.identity.title} size="small" />
             <span class="deck-current-info">
               <strong>{current.name}</strong>
               <span>{current.identity.title}</span>
-              <span>{deckSize(current)} cards · view</span>
+              <span>{deckSize(current)} cards</span>
             </span>
           </button>
-          {!locked && (
-            <button class="seat-change" onClick={() => setChoosing(true)}>
-              Change
-            </button>
+          {!inline && (
+            <div class="seat-actions">
+              <button onClick={() => setViewing(true)}>View list</button>
+              {!locked && (
+                <button class="primary" onClick={() => setChoosing(true)}>
+                  Change deck
+                </button>
+              )}
+            </div>
           )}
-        </div>
+        </>
       ) : (
-        <button class="primary" onClick={() => setChoosing(true)}>
-          Choose a deck
-        </button>
+        !inline && (
+          <button class="primary" onClick={() => setChoosing(true)}>
+            Choose a deck
+          </button>
+        )
       )}
+      {inline && <DeckPicker side={side} db={db} matchups={matchups} value={deck} showCurrent={false} onChange={onPick} />}
       {choosing && <DeckSheet side={side} db={db} matchups={matchups} value={deck} onPick={onPick} onClose={() => setChoosing(false)} />}
       {viewing && current && <DeckViewer deck={current} onClose={() => setViewing(false)} />}
     </section>
@@ -180,9 +231,17 @@ export function Lobby({ session, db, matchups, onLeave }: Props) {
   return (
     <>
       <Ticker>
-        Lobby <span class="cyan">{lobby.code}</span> <span class={lobby.status === "connected" ? "cyan" : "yellow"}>{lobby.status}</span>
+        {lobby.role === "local" ? (
+          <>
+            Lobby <span class="cyan">{lobby.vsBot ? "solo" : "local"}</span>
+          </>
+        ) : (
+          <>
+            Lobby <span class="cyan">{lobby.code}</span> <span class={lobby.status === "connected" ? "cyan" : "yellow"}>{lobby.status}</span>
+          </>
+        )}
       </Ticker>
-      <div class="screen lobby">
+      <div class={`screen lobby ${lobby.role !== "local" && !inviting ? "fill" : ""}`}>
         <header class="screen-head">
           <button class="ghost" onClick={onLeave} aria-label="Back to home">
             <Icon name="arrow-left" />
@@ -226,6 +285,9 @@ export function Lobby({ session, db, matchups, onLeave }: Props) {
           <Seat
             key={lobby.mySide}
             label={lobby.role === "local" && !lobby.vsBot ? "Player 1" : "You"}
+            name={lobby.myName}
+            onName={(n) => session.setName(n)}
+            inline={lobby.role !== "local" && !inviting}
             side={lobby.mySide}
             deck={lobby.myDeck}
             db={db}

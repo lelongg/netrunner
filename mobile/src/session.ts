@@ -400,6 +400,19 @@ export class Session {
     }
   }
 
+  setName(name: string) {
+    const myName = name.trim().slice(0, 24) || "Player";
+    if (myName === this.lobby.myName || this.lobby.started) return;
+    try {
+      localStorage.setItem("nsg.name", myName);
+    } catch {}
+    this.patch({ myName });
+    if (this.lobby.role === "guest") {
+      writeSave("guest", { v: 1, role: "guest", code: this.lobby.code, myName, myDeck: this.lobby.myDeck, savedAt: Date.now() });
+      this.post({ t: "hello", name: myName });
+    } else if (this.lobby.role === "host") this.post(this.lobbyMsg());
+  }
+
   setReady(ready: boolean) {
     if (this.lobby.role !== "guest" || this.lobby.started) return;
     if (ready && this.lobby.myDeck) this.post({ t: "deck", deck: this.lobby.myDeck, side: this.lobby.mySide });
