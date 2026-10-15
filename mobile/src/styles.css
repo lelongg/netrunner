@@ -1833,7 +1833,7 @@ button:active:not(:disabled) {
 }
 
 .seat-deck-main {
-  flex: 1;
+  flex: none;
   min-width: 0;
   display: flex;
   gap: 12px;
