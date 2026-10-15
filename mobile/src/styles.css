@@ -467,6 +467,9 @@ textarea:focus {
   padding: 10px;
   border: 1px solid var(--line-2);
   background: var(--panel-2);
+  text-align: left;
+  text-transform: none;
+  letter-spacing: 0;
 }
 
 .deck-current .deck-identity {
@@ -474,18 +477,163 @@ textarea:focus {
   flex: none;
 }
 
-.deck-current div {
+.deck-current-info {
   display: flex;
   flex-direction: column;
   font-size: 11px;
   color: var(--muted);
   min-width: 0;
+  flex: 1;
 }
 
 .deck-current strong {
   color: var(--text);
   text-transform: uppercase;
   letter-spacing: 0.08em;
+}
+
+.deck-sheet {
+  height: 90vh;
+  max-height: none;
+}
+
+.deck-head {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 0;
+  border: none;
+  background: transparent;
+  text-align: left;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.deck-head-img {
+  width: 64px;
+  flex: none;
+}
+
+.deck-head-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.deck-head-info strong {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 26px;
+  line-height: 0.95;
+  text-transform: uppercase;
+}
+
+.deck-stats {
+  display: flex;
+  gap: 10px;
+}
+
+.deck-stats > div {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid var(--line-2);
+  background: var(--panel-2);
+}
+
+.deck-stats .big {
+  font-size: 40px;
+}
+
+.deck-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.deck-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.deck-section > .row {
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 4px;
+}
+
+.deck-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.deck-rows button {
+  width: 100%;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 2px;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  text-align: left;
+  text-transform: none;
+  letter-spacing: 0.02em;
+  font-size: 12px;
+}
+
+.deck-rows .qty {
+  color: var(--cyan);
+  min-width: 26px;
+}
+
+.deck-rows .title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.deck-rows .inf {
+  color: var(--red-soft);
+  font-size: 8px;
+  letter-spacing: 0.1em;
+}
+
+.deck-rows .cost {
+  color: var(--muted);
+  min-width: 28px;
+  text-align: right;
+}
+
+.deck-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.deck-grid-card {
+  position: relative;
+  padding: 0;
+  min-height: 0;
+  border: 1px solid var(--line-2);
+  background: var(--panel-2);
+}
+
+.deck-grid-card .badge {
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  color: var(--cyan);
 }
 
 .deck-list {

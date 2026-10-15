@@ -1,6 +1,7 @@
 import { useMemo, useState } from "preact/hooks";
 import type { CardDb, Matchup, Side } from "../engine";
 import { CardImage } from "../game/CardImage";
+import { DeckViewer } from "./DeckViewer";
 import { type WireDeck, deckSize, fromPrecon, fromWire, importNrdb, parseDecklist, saveDeck, savedDecks, toWire } from "../decks";
 
 interface Props {
@@ -18,6 +19,7 @@ export function DeckPicker({ side, db, matchups, value, onChange }: Props) {
   const [text, setText] = useState("");
   const [error, setError] = useState<string>();
   const [busy, setBusy] = useState(false);
+  const [viewing, setViewing] = useState(false);
   const saved = useMemo(() => savedDecks().filter((d) => d.side === side), [value, tab]);
   const current = useMemo(() => (value ? fromWire(value, db) : undefined), [value]);
 
@@ -46,15 +48,17 @@ export function DeckPicker({ side, db, matchups, value, onChange }: Props) {
   return (
     <div class="deck-picker">
       {current && (
-        <div class="deck-current">
+        <button class="deck-current" onClick={() => setViewing(true)} aria-label={`View deck ${current.name}`}>
           <CardImage class="deck-identity" code={current.identity.code} alt={current.identity.title} size="small" />
-          <div>
+          <span class="deck-current-info">
             <strong>{current.name}</strong>
             <span>{current.identity.title}</span>
             <span>{deckSize(current)} cards</span>
-          </div>
-        </div>
+          </span>
+          <span class="label cyan">View</span>
+        </button>
       )}
+      {viewing && current && <DeckViewer deck={current} onClose={() => setViewing(false)} />}
       <div class="tabs">
         {(["precon", "saved", "import"] as Tab[]).map((t) => (
           <button class={tab === t ? "on" : ""} onClick={() => setTab(t)}>

@@ -1,5 +1,5 @@
 import Peer, { type DataConnection } from "peerjs";
-import type { CardDb, EngineApi, GameHandle, Side } from "./engine";
+import type { CardDb, Deck, EngineApi, GameHandle, Side } from "./engine";
 import { type WireDeck, engineDeck, fromWire } from "./decks";
 
 export type Role = "host" | "guest" | "local";
@@ -42,11 +42,12 @@ export type SavedGame =
       mySide: Side;
       opponentName?: string;
       setup: unknown;
+      deckNames?: Partial<Record<Side, string>>;
       seed: number[];
       log: Entry[];
       savedAt: number;
     }
-  | { v: 1; role: "guest"; code: string; myName: string; savedAt: number };
+  | { v: 1; role: "guest"; code: string; myName: string; myDeck?: WireDeck; savedAt: number };
 
 type Listener = () => void;
 
@@ -119,6 +120,7 @@ export class Session {
   private game?: GameHandle;
   private opponentDeck?: WireDeck;
   private setup?: unknown;
+  private deckNames: Partial<Record<Side, string>> = {};
   private seed?: number[];
   private rng?: () => number;
   private log: Entry[] = [];
@@ -152,7 +154,14 @@ export class Session {
   }
 
   static resume(engine: EngineApi, db: CardDb, save: SavedGame): Session {
-    if (save.role === "guest") return new Session(engine, db, "guest", save.code, save.myName);
+    if (save.role === "guest") {
+      const session = new Session(engine, db, "guest", save.code, save.myName);
+      if (save.myDeck) {
+        session.lobby = { ...session.lobby, myDeck: save.myDeck };
+        writeSave("guest", save);
+      }
+      return session;
+    }
     const session = new Session(engine, db, save.role, save.code, save.myName, save.mySide);
     session.restore(save);
     return session;
@@ -308,7 +317,10 @@ export class Session {
       return;
     }
     this.patch({ myDeck: deck });
-    if (this.lobby.role === "guest") this.post({ t: "deck", deck, side: this.lobby.mySide });
+    if (this.lobby.role === "guest") {
+      writeSave("guest", { v: 1, role: "guest", code: this.lobby.code, myName: this.lobby.myName, myDeck: deck, savedAt: Date.now() });
+      this.post({ t: "deck", deck, side: this.lobby.mySide });
+    }
     else this.post(this.lobbyMsg());
   }
 
@@ -351,6 +363,7 @@ export class Session {
       this.lobby.mySide === "corp"
         ? { corp: { user: me, deck: engineDeck(mine) }, runner: { user: them, deck: engineDeck(theirs) } }
         : { corp: { user: them, deck: engineDeck(theirs) }, runner: { user: me, deck: engineDeck(mine) } };
+    this.deckNames = { [this.lobby.mySide]: mine.name, [other(this.lobby.mySide)]: theirs.name };
     this.boot({ gameid: this.lobby.code, format: "casual", ...players }, Array.from(crypto.getRandomValues(new Uint32Array(4))));
     this.log = [];
     this.lobby = { ...this.lobby, started: true };
@@ -360,6 +373,7 @@ export class Session {
   }
 
   private restore(save: Extract<SavedGame, { role: "host" | "local" }>) {
+    this.deckNames = save.deckNames ?? {};
     this.boot(save.setup, save.seed);
     for (const entry of save.log) this.exec(entry);
     this.log = [...save.log];
@@ -377,6 +391,7 @@ export class Session {
       mySide: this.lobby.mySide,
       opponentName: this.lobby.opponentName,
       setup: this.setup,
+      deckNames: this.deckNames,
       seed: this.seed,
       log: this.log,
       savedAt: Date.now(),
@@ -439,6 +454,16 @@ export class Session {
   concede(side: Side = this.lobby.mySide) {
     if (this.lobby.role === "guest") return this.post({ t: "concede" });
     this.perform({ side, kind: "concede" });
+  }
+
+  deckFor(side: Side): Deck | undefined {
+    const { role, mySide, myDeck } = this.lobby;
+    const name = this.deckNames[side] ?? (side === mySide ? myDeck?.name : undefined);
+    const fromSetup = (this.setup as Record<Side, { deck?: Omit<Deck, "name"> }> | undefined)?.[side]?.deck;
+    if (fromSetup) return { name: name ?? (side === "corp" ? "Corp deck" : "Runner deck"), ...fromSetup };
+    if (side === mySide && myDeck) return fromWire(myDeck, this.db);
+    if (role === "local" && this.opponentDeck) return fromWire(this.opponentDeck, this.db);
+    return undefined;
   }
 
   clearActionError() {

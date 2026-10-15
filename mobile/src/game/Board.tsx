@@ -3,6 +3,7 @@ import type { CardDb, EngineApi, Side } from "../engine";
 import type { Session } from "../session";
 import { Cta, LogoMark, Meter, Ticker } from "../ui";
 import { type Command, basicCommands, cardRef, currentIce, findCard, otherSide, promptOf, runCommands } from "./actions";
+import { DeckViewer } from "../screens/DeckViewer";
 import { CardSheet } from "./CardSheet";
 import { CardTile } from "./CardTile";
 import { PromptPanel } from "./PromptPanel";
@@ -347,6 +348,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave }
   const [picking, setPicking] = useState(false);
   const [menu, setMenu] = useState(false);
   const [zone, setZone] = useState<ZoneRef | null>(null);
+  const [deckOpen, setDeckOpen] = useState(false);
   const autoZone = useRef(false);
   const render = (m: unknown) => engine.renderMessage(m);
   const send = (command: string, args?: unknown) => session.send(command, args, side);
@@ -514,6 +516,14 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave }
           >
             Indicate action
           </button>
+          <button
+            onClick={() => {
+              setDeckOpen(true);
+              setMenu(false);
+            }}
+          >
+            Deck list
+          </button>
           {prompt && ptype !== "run" && (
             <button
               onClick={() => {
@@ -562,6 +572,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave }
           {hand.length === 0 && <span class="hint">Empty hand</span>}
         </div>
       </footer>
+      {deckOpen && session.deckFor(side) && <DeckViewer deck={session.deckFor(side)!} onClose={() => setDeckOpen(false)} />}
       {zone && (
         <ZoneSheet
           zone={zone}
