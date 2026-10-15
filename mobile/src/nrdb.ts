@@ -57,7 +57,7 @@ function toDecklist(item: any, db: CardDb): Decklist {
   const entries = Object.entries(a.card_slots as Record<string, number>).flatMap(([id, qty]) => {
     const card = cards.get(id);
     if (!card) missing.push(id);
-    return card ? [{ qty, card }] : [];
+    return card && card.type !== "Identity" ? [{ qty, card }] : [];
   });
   const deck = identity && !missing.length ? { name: a.name, identity, cards: entries } : undefined;
   return {

@@ -105,6 +105,8 @@ export function fromWire(w: WireDeck, db: CardDb): Deck {
   return fromPrecon({ name: w.name, identity: w.identity, cards: w.cards.map(([title, qty]) => ({ qty, title })) }, db);
 }
 
+export const playableDeck = (d: Deck): Deck => ({ ...d, cards: d.cards.filter((e) => e.card.type !== "Identity") });
+
 export const engineDeck = (d: Deck) => ({ identity: d.identity, cards: d.cards.map(({ qty, card }) => ({ qty, card })) });
 
 const STORE = "nsg.decks";
