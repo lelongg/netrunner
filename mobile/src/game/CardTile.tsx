@@ -66,6 +66,7 @@ export function CardTile({
           ))}
           {strength != null && strength !== false && <span class="badge str">str {strength}</span>}
         </div>
+        {card.new && <span class="new-tag">New</span>}
         {dim && <span class="state">unrezzed</span>}
         {owner && card.side === "Corp" && zone0(card) === "servers" && !isFaceup(card) && card.type === "Agenda" && <span class="state">facedown</span>}
       </button>

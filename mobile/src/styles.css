@@ -1087,14 +1087,22 @@ textarea:focus {
   box-shadow: 0 0 0 2px var(--text);
 }
 
-.tile.new::after {
-  content: "";
+.new-tag {
   position: absolute;
-  top: 3px;
-  right: 3px;
-  width: 6px;
-  height: 6px;
+  top: 2px;
+  right: 2px;
+  z-index: 1;
+  padding: 1px 3px 1px 4px;
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
   background: var(--yellow);
+  color: var(--bg);
+}
+
+.tile.new .state {
+  right: 28px;
 }
 
 .badges {

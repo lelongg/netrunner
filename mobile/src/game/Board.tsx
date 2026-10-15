@@ -707,14 +707,6 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
           )}
           <button
             onClick={() => {
-              send("indicate-action");
-              setMenu(false);
-            }}
-          >
-            Indicate action
-          </button>
-          <button
-            onClick={() => {
               setDeckOpen(true);
               setMenu(false);
             }}
