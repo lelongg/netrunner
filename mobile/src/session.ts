@@ -133,6 +133,23 @@ export function clearSave(save: SavedGame) {
 
 const deckSide = (db: CardDb, deck: WireDeck): Side | undefined => db.byTitle.get(deck.identity)?.side.toLowerCase() as Side | undefined;
 
+const LAST_DECK = (side: Side) => `nsg.lastDeck.${side}`;
+const LAST_SIDE = "nsg.lastSide";
+
+function rememberedSide(): Side {
+  try {
+    return localStorage.getItem(LAST_SIDE) === "runner" ? "runner" : "corp";
+  } catch {
+    return "corp";
+  }
+}
+
+function remember(key: string, value: string) {
+  try {
+    localStorage.setItem(key, value);
+  } catch {}
+}
+
 export class Session {
   lobby: LobbyState;
   views: Partial<Record<Side, any>> = {};
@@ -163,7 +180,7 @@ export class Session {
     role: Role,
     code: string,
     myName: string,
-    mySide: Side = "corp",
+    mySide: Side = rememberedSide(),
   ) {
     this.lobby = {
       code,
@@ -175,6 +192,7 @@ export class Session {
       started: false,
     };
     if (role === "guest") writeSave("guest", { v: 1, role: "guest", code, myName, savedAt: Date.now() });
+    else this.restoreDecks();
     if (role !== "local") {
       this.openRoom();
       this.heartbeat = window.setInterval(() => this.beat(), PING_MS);
@@ -332,7 +350,7 @@ export class Session {
       case "lobby": {
         const mySide = other(msg.hostSide);
         const same = mySide === this.lobby.mySide;
-        const myDeck = same ? this.lobby.myDeck : undefined;
+        const myDeck = (same ? this.lobby.myDeck : undefined) ?? this.rememberedDeck(mySide);
         const ready = same && !!this.lobby.ready && !!myDeck;
         this.patch({ opponentName: msg.host, mySide, myDeck, ready, started: msg.started || this.lobby.started });
         if (ready && !msg.started) this.post({ t: "deck", deck: myDeck!, side: mySide });
@@ -375,14 +393,41 @@ export class Session {
     }, BOT_DELAY_MS);
   }
 
+  private rememberedDeck(side: Side): WireDeck | undefined {
+    try {
+      const deck: WireDeck = JSON.parse(localStorage.getItem(LAST_DECK(side)) ?? "null");
+      if (!deck || deckSide(this.db, deck) !== side) return undefined;
+      fromWire(deck, this.db);
+      return deck;
+    } catch {
+      return undefined;
+    }
+  }
+
+  private restoreDecks() {
+    const myDeck = this.rememberedDeck(this.lobby.mySide);
+    if (this.lobby.role === "local") {
+      this.opponentDeck = this.rememberedDeck(other(this.lobby.mySide));
+      this.lobby = { ...this.lobby, myDeck, opponentDeckReady: !!this.opponentDeck };
+    } else this.lobby = { ...this.lobby, myDeck };
+  }
+
+  get localOpponentDeck() {
+    return this.lobby.role === "local" ? this.opponentDeck : undefined;
+  }
+
   setSide(side: Side) {
     if (this.lobby.role === "guest" || side === this.lobby.mySide) return;
+    remember(LAST_SIDE, side);
     this.opponentDeck = undefined;
-    this.patch({ mySide: side, myDeck: undefined, opponentDeckReady: false });
+    this.lobby = { ...this.lobby, mySide: side, opponentDeckReady: false };
+    this.restoreDecks();
+    this.emit();
     this.post(this.lobbyMsg());
   }
 
   setDeck(deck: WireDeck, side?: Side) {
+    remember(LAST_DECK(side ?? this.lobby.mySide), JSON.stringify(deck));
     if (this.lobby.role === "local") {
       if (side && side !== this.lobby.mySide) {
         this.opponentDeck = deck;

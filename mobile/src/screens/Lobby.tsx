@@ -210,7 +210,6 @@ function Seat({
 
 export function Lobby({ session, db, matchups, onLeave }: Props) {
   const { lobby } = session;
-  const [opponentDeck, setOpponentDeck] = useState<WireDeck>();
   const [copied, setCopied] = useState(false);
   const link = shareLink(lobby.code);
   const opponent = lobby.opponentName ?? "your opponent";
@@ -295,10 +294,7 @@ export function Lobby({ session, db, matchups, onLeave }: Props) {
             onPick={(d) => session.setDeck(d)}
             onSide={
               lobby.role !== "guest"
-                ? (s) => {
-                    session.setSide(s);
-                    setOpponentDeck(undefined);
-                  }
+                ? (s) => session.setSide(s)
                 : undefined
             }
           />
@@ -309,13 +305,10 @@ export function Lobby({ session, db, matchups, onLeave }: Props) {
             key={other(lobby.mySide)}
             label={lobby.vsBot ? "Bot" : "Player 2"}
             side={other(lobby.mySide)}
-            deck={opponentDeck}
+            deck={session.localOpponentDeck}
             db={db}
             matchups={matchups}
-            onPick={(d) => {
-              setOpponentDeck(d);
-              session.setDeck(d, other(lobby.mySide));
-            }}
+            onPick={(d) => session.setDeck(d, other(lobby.mySide))}
           />
         )}
 
