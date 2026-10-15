@@ -1727,3 +1727,16 @@ button:active:not(:disabled) {
   margin: 0 2px 0 0;
   vertical-align: 0;
 }
+
+.server .ices {
+  gap: 0;
+}
+
+.server .ices > * + * {
+  margin-top: calc(var(--tile-w) * -0.62);
+}
+
+.server .ices > *:hover,
+.server .ices > *:focus-within {
+  z-index: 1;
+}

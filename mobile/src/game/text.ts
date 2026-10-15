@@ -23,6 +23,7 @@ const ICONS: [RegExp, string][] = [
   [/\[interrupt\]/gi, "\uE007"],
   [/\[!\]/g, "\uE008"],
   [/¢/g, "\uE002"],
+  [/↳/g, "\uE004"],
   [/\[(their|pronoun|corp-pronoun|runner-pronoun)\]/g, "their"],
   [/\[(haas-bioroid|jinteki|nbn|weyland-consortium|anarch|criminal|shaper|adam|apex|sunny-lebeau)\]/gi, ""],
 ];

@@ -494,6 +494,10 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
   const log: any[] = view.log ?? [];
   const lastLog = [...log].reverse().find((e) => !/^\s*\[hr\]\s*$/i.test(String(e.text?.["raw-text"] ?? e.text ?? "")));
   const runServer = view.run?.server?.[0];
+  useEffect(() => {
+    if (!runServer) return;
+    document.querySelector(".server.running")?.scrollIntoView({ block: side === "runner" ? "end" : "start", inline: "center", behavior: "smooth" });
+  }, [runServer, view.run?.position, side]);
   const ice = currentIce(view);
   const link = session.lobby.role === "local" ? null : session.lobby.status;
 
