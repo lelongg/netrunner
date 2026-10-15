@@ -1,6 +1,7 @@
 import type { CardDb, Deck, EngineApi, GameHandle, Side } from "./engine";
 import { HeuristicBot } from "./bot/heuristic.ts";
 import { type WireDeck, engineDeck, fromWire } from "./decks";
+import { cardRef } from "./game/actions";
 import { PeerTransport } from "./net/p2p";
 import { RELAY_URL, RelayTransport, createGame, joinGame, rejoinLink, storedTicket } from "./net/relay";
 import type { Entry, LinkStatus, Payload, Seat, Transport } from "./net/types";
@@ -649,12 +650,24 @@ export class Session {
     };
   }
 
+  private unbrokenOnPass(game: GameHandle, side: Side) {
+    const enc = this.engine.view(game, "corp")?.encounters;
+    const ice = enc?.ice;
+    const passed = enc?.["no-action"];
+    if (!ice?.rezzed || !passed || passed === side) return null;
+    const live = (ice.subroutines ?? []).some((s: any) => !s.broken && !s.fired && s.resolve !== false);
+    return live ? cardRef(ice) : null;
+  }
+
   private exec(entry: LocalEntry) {
     const game = this.game!;
     try {
       this.withRng(() => {
-        if (entry.kind === "act") this.engine.act(game, entry.side, entry.command, entry.args ?? null);
-        else if (entry.kind === "say") this.engine.say(game, entry.side, { username: entry.user }, entry.text);
+        if (entry.kind === "act") {
+          const ice = entry.command === "continue" ? this.unbrokenOnPass(game, entry.side) : null;
+          if (ice) this.engine.act(game, "corp", "unbroken-subroutines", { card: ice });
+          else this.engine.act(game, entry.side, entry.command, entry.args ?? null);
+        } else if (entry.kind === "say") this.engine.say(game, entry.side, { username: entry.user }, entry.text);
         else this.engine.concede(game, entry.side);
       });
       return null;
