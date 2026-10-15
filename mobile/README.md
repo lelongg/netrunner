@@ -120,6 +120,14 @@ Matchmaking uses the free public PeerJS server. To depend on nobody, run your ow
 `peerjs-server` (a few MB of RAM) and pass `host`/`port` to the `Peer` constructor in
 `src/session.ts`.
 
+Phones on some mobile networks cannot reach each other directly and need a TURN relay.
+PeerJS's default one is often unavailable, so you can provide your own at build time with
+`VITE_ICE_SERVERS`, a JSON array of
+[ICE servers](https://developer.mozilla.org/en-US/docs/Web/API/RTCIceServer) (free tiers
+exist at Cloudflare Calls and Metered, for example). The deploy workflow reads it from an
+optional `ICE_SERVERS` repository secret. These credentials end up in the public bundle,
+so use ones meant for browsers.
+
 ## Known limitations
 
 - No cheating protection on the host side: the host holds the full game state. Play with
@@ -127,7 +135,8 @@ Matchmaking uses the free public PeerJS server. To depend on nobody, run your ow
 - One saved game per device: starting a new game replaces the previous one.
 - English only.
 - Card support is whatever the Jinteki engine implements; the newest cards may be missing.
-- The public PeerJS server can be slow or busy.
+- The public PeerJS server can be slow or busy, and without a TURN relay some mobile
+  networks cannot connect at all (the join screen says so).
 
 ## Credits
 

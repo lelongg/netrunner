@@ -1,4 +1,4 @@
-import { useState } from "preact/hooks";
+import { useEffect, useState } from "preact/hooks";
 import type { CardDb, Matchup, Side } from "../engine";
 import type { WireDeck } from "../decks";
 import type { Session } from "../session";
@@ -22,6 +22,49 @@ function shareLink(code: string) {
   url.search = `?join=${code}`;
   url.hash = "";
   return url.toString();
+}
+
+const STEPS: { key: "relay" | "host" | "link"; label: string }[] = [
+  { key: "relay", label: "Reach the matchmaking server" },
+  { key: "host", label: "Find the host's game" },
+  { key: "link", label: "Open a direct link between the phones" },
+];
+
+function JoinStatus({ lobby }: { lobby: Session["lobby"] }) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const current = STEPS.findIndex((s) => s.key === (lobby.step ?? "relay"));
+  const seconds = lobby.since ? Math.max(0, Math.round((now - lobby.since) / 1000)) : 0;
+  return (
+    <section class="panel section join-status">
+      <div class="row">
+        <span class="label">Joining</span>
+        <span class="label">{seconds}s</span>
+      </div>
+      <ol class="steps">
+        {STEPS.map((s, i) => (
+          <li class={i < current ? "done" : i === current ? "active" : ""}>
+            <span class="step-mark" aria-hidden="true" />
+            {s.label}
+          </li>
+        ))}
+      </ol>
+      {lobby.hint === "host-missing" && (
+        <p class="hint">
+          No game with this code is open right now. Check the code, and ask the host to keep the game on screen: switching apps on their phone pauses it.
+        </p>
+      )}
+      {lobby.hint === "link-slow" && (
+        <p class="hint">
+          The host's game was found, but the phones can't reach each other directly. Some mobile networks block this: try with both phones on Wi-Fi, or one on Wi-Fi and the other on mobile data.
+        </p>
+      )}
+      {!lobby.hint && seconds >= 15 && <p class="hint">Still trying. Make sure the host keeps the game open on their screen.</p>}
+    </section>
+  );
 }
 
 export function Lobby({ session, db, matchups, onLeave }: Props) {
@@ -87,32 +130,39 @@ export function Lobby({ session, db, matchups, onLeave }: Props) {
           </section>
         )}
 
-        <p class={`status ${lobby.status}`}>{status}</p>
+        {lobby.role === "guest" && lobby.status !== "connected" ? (
+          <JoinStatus lobby={lobby} />
+        ) : (
+          <p class={`status ${lobby.status}`}>{status}</p>
+        )}
+        {lobby.role === "host" && lobby.status === "waiting" && <p class="hint">Keep this screen open until your opponent joins: switching apps pauses the game.</p>}
         {lobby.error && <p class="error">{lobby.error}</p>}
 
-        <section class="panel section">
-          <div class="row">
-            <span class="label">{lobby.role === "local" && !lobby.vsBot ? "Player 1" : "You"}</span>
-            <span class={`label who-${lobby.mySide}`}>{SIDE_LABEL[lobby.mySide]}</span>
-          </div>
-          {lobby.role !== "guest" && (
-            <div class="tabs">
-              {(["corp", "runner"] as Side[]).map((s) => (
-                <button
-                  class={lobby.mySide === s ? "on" : ""}
-                  onClick={() => {
-                    if (s === lobby.mySide) return;
-                    session.setSide(s);
-                    setOpponentDeck(undefined);
-                  }}
-                >
-                  {SIDE_LABEL[s]}
-                </button>
-              ))}
+        {(lobby.role !== "guest" || lobby.status === "connected") && (
+          <section class="panel section">
+            <div class="row">
+              <span class="label">{lobby.role === "local" && !lobby.vsBot ? "Player 1" : "You"}</span>
+              <span class={`label who-${lobby.mySide}`}>{SIDE_LABEL[lobby.mySide]}</span>
             </div>
-          )}
-          <DeckPicker key={lobby.mySide} side={lobby.mySide} db={db} matchups={matchups} value={lobby.myDeck} onChange={(d) => session.setDeck(d)} />
-        </section>
+            {lobby.role !== "guest" && (
+              <div class="tabs">
+                {(["corp", "runner"] as Side[]).map((s) => (
+                  <button
+                    class={lobby.mySide === s ? "on" : ""}
+                    onClick={() => {
+                      if (s === lobby.mySide) return;
+                      session.setSide(s);
+                      setOpponentDeck(undefined);
+                    }}
+                  >
+                    {SIDE_LABEL[s]}
+                  </button>
+                ))}
+              </div>
+            )}
+            <DeckPicker key={lobby.mySide} side={lobby.mySide} db={db} matchups={matchups} value={lobby.myDeck} onChange={(d) => session.setDeck(d)} />
+          </section>
+        )}
 
         {lobby.role === "local" && (
           <section class="panel section">
@@ -137,7 +187,7 @@ export function Lobby({ session, db, matchups, onLeave }: Props) {
         {lobby.role === "host" && !lobby.opponentDeckReady && <p class="hint">Opponent has not picked a deck yet.</p>}
 
         {lobby.role === "guest" ? (
-          <p class="status">{lobby.myDeck ? "Deck sent · the host starts the game" : "Pick your deck"}</p>
+          lobby.status === "connected" && <p class="status">{lobby.myDeck ? "Deck sent · the host starts the game" : "Pick your deck"}</p>
         ) : (
           <Cta disabled={!session.canStart} onClick={() => session.start()}>
             Start game

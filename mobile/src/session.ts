@@ -29,6 +29,9 @@ export interface LobbyState {
   started: boolean;
   vsBot?: boolean;
   error?: string;
+  step?: "relay" | "host" | "link";
+  hint?: "host-missing" | "link-slow";
+  since?: number;
 }
 
 type Entry =
@@ -62,6 +65,17 @@ const FAST_RETRIES = 12;
 const SLOW_RETRY_MS = 10000;
 const PING_MS = 4000;
 const STALE_MS = 15000;
+const LINK_TIMEOUT_MS = 20000;
+
+function peerOptions() {
+  const ice = import.meta.env.VITE_ICE_SERVERS;
+  if (!ice) return {};
+  try {
+    return { config: { iceServers: JSON.parse(ice) } };
+  } catch {
+    return {};
+  }
+}
 const BOT_DELAY_MS = 450;
 const other = (s: Side): Side => (s === "corp" ? "runner" : "corp");
 
@@ -170,7 +184,8 @@ export class Session {
   }
 
   private guestPeer() {
-    this.peer = new Peer();
+    this.patch({ step: "relay", since: this.lobby.since ?? Date.now() });
+    this.peer = new Peer(peerOptions());
     this.peer.on("open", () => this.connect());
     this.peer.on("error", (e: any) => this.onGuestError(e));
   }
@@ -232,7 +247,7 @@ export class Session {
   }
 
   private host() {
-    const peer = new Peer(PEER_PREFIX + this.lobby.code);
+    const peer = new Peer(PEER_PREFIX + this.lobby.code, peerOptions());
     this.peer = peer;
     peer.on("open", () => this.patch({ status: this.conn?.open ? "connected" : "waiting", error: undefined }));
     peer.on("error", (e: any) => {
@@ -258,23 +273,36 @@ export class Session {
     if (this.closed || !this.peer || this.peer.destroyed) return;
     const conn = this.peer.connect(PEER_PREFIX + this.lobby.code, { reliable: true });
     this.conn = conn;
+    if (this.lobby.step !== "link") this.patch({ step: "host" });
+    const pc: RTCPeerConnection | undefined = (conn as any).peerConnection;
+    pc?.addEventListener("iceconnectionstatechange", () => {
+      if (this.conn === conn && pc.iceConnectionState !== "new" && this.lobby.step !== "link") this.patch({ step: "link", hint: undefined });
+    });
+    const timeout = window.setTimeout(() => {
+      if (this.conn !== conn || conn.open || this.closed) return;
+      this.patch({ hint: this.lobby.step === "link" ? "link-slow" : "host-missing" });
+      conn.close();
+    }, LINK_TIMEOUT_MS);
     conn.on("open", () => {
+      clearTimeout(timeout);
       this.failures = 0;
       this.lastSeen = Date.now();
-      this.patch({ status: "connected", error: undefined });
+      this.patch({ status: "connected", error: undefined, step: undefined, hint: undefined, since: undefined });
       this.post({ t: "hello", name: this.lobby.myName });
     });
     this.watch(conn, (m) => this.onGuestMessage(m));
     conn.on("close", () => {
+      clearTimeout(timeout);
       if (this.conn !== conn || this.closed) return;
       this.pending = false;
+      if (this.lobby.status === "connected") this.patch({ since: Date.now() });
       this.retry(() => this.connect());
     });
   }
 
   private retry(again: () => void) {
     const slow = ++this.failures > FAST_RETRIES;
-    this.patch({ status: "connecting", error: slow ? "Host unreachable, still trying…" : undefined });
+    this.patch({ status: "connecting", error: undefined, since: this.lobby.since ?? Date.now() });
     if (document.visibilityState !== "visible") return;
     setTimeout(() => !this.closed && document.visibilityState === "visible" && again(), slow ? SLOW_RETRY_MS : RETRY_MS);
   }
@@ -282,6 +310,8 @@ export class Session {
   private onGuestError(e: any) {
     if (this.closed) return;
     if (["peer-unavailable", "network", "disconnected", "socket-error", "socket-closed", "server-error", "webrtc"].includes(e?.type)) {
+      if (e?.type === "peer-unavailable") this.patch({ step: "host", hint: "host-missing" });
+      else if (e?.type !== "webrtc") this.patch({ step: "relay" });
       this.retry(() => {
         if (this.peer?.disconnected) this.peer.reconnect();
         this.connect();

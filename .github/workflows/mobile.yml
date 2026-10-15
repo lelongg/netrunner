@@ -60,6 +60,8 @@ jobs:
 
       - name: Build mobile app
         run: npm run build --prefix mobile
+        env:
+          VITE_ICE_SERVERS: ${{ secrets.ICE_SERVERS }}
 
       - uses: actions/upload-pages-artifact@v3
         with:
