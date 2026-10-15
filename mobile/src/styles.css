@@ -1964,3 +1964,8 @@ button:active:not(:disabled) {
   min-height: 36px;
   padding: 0 16px;
 }
+
+.qr-pending {
+  aspect-ratio: 1;
+  background: repeating-linear-gradient(0deg, var(--panel-2) 0 3px, #15191d 3px 4px);
+}

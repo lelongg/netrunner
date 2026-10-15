@@ -73,7 +73,7 @@ function App() {
   const resume = (from: SavedGame) => {
     if (!loaded) return;
     setSession(Session.resume(loaded.engine, loaded.db, from));
-    setLocalSide(from.role === "guest" ? "corp" : from.mySide);
+    setLocalSide(from.v === 1 ? from.mySide : "corp");
   };
 
   useEffect(() => {
@@ -116,7 +116,7 @@ function App() {
         }}
         onStart={(role: Role, name: string, code?: string, vsBot?: boolean) => {
           if (!loaded) return;
-          const next = new Session(loaded.engine, loaded.db, role, code ?? newRoomCode(), name);
+          const next = new Session(loaded.engine, loaded.db, role, role === "local" ? newRoomCode() : code, name);
           if (vsBot) next.enableBot();
           setSession(next);
           setLocalSide("corp");

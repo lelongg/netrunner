@@ -1,14 +1,16 @@
 # Netrunner mobile
 
 Play Netrunner online from your phone with the [Jinteki.net](https://github.com/mtgred/netrunner)
-rules engine running entirely in the browser. No game server: one player hosts on their phone,
-the other joins peer-to-peer. Solo against a bot and two-players-one-phone also work.
+rules engine running entirely in the browser. Both phones replay the same list of actions,
+relayed by a tiny Cloudflare Durable Object on the free plan, so either player can leave and
+come back. Solo against a bot and two-players-one-phone also work.
 
 **Play: <https://lelongg.github.io/netrunner/>** · [How it works, features and limitations](mobile/README.md)
 
 ![Home, board, access and card screens](mobile/docs/banner.jpg)
 
-This repository is a fork of Jinteki.net. The mobile app lives in [`mobile/`](mobile); the
+This repository is a fork of Jinteki.net. The mobile app lives in [`mobile/`](mobile) and
+the relay in [`relay/`](relay); the
 engine sources under `src/clj/game` were converted to `.cljc` so they compile to JavaScript
 while the original JVM build and tests keep working. Unofficial fan project, not affiliated
 with or endorsed by Null Signal Games or the Jinteki.net team.

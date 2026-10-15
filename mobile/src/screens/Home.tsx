@@ -62,7 +62,7 @@ export function Home({ ready, error, initialJoin, save, onResume, onDiscard, onS
               <span class="label">{save.code}</span>
             </div>
             <p class="hint">
-              {ROLE_LABEL[save.role]} game{save.role !== "guest" ? ` · ${save.log.length} actions` : ""}
+              {ROLE_LABEL[save.role]} game · {save.v === 1 ? save.log.length : save.entries.length} actions
             </p>
             <Cta onClick={onResume} disabled={!ready}>
               Resume

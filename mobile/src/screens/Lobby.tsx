@@ -3,6 +3,7 @@ import type { CardDb, Matchup, Side } from "../engine";
 import { type WireDeck, deckSize, fromWire } from "../decks";
 import type { Session } from "../session";
 import { QrCode } from "../QrCode";
+import { RELAY_URL } from "../net/relay";
 import { Cta, Ticker } from "../ui";
 import { DeckPicker } from "./DeckPicker";
 import { DeckViewer } from "./DeckViewer";
@@ -213,7 +214,8 @@ export function Lobby({ session, db, matchups, onLeave }: Props) {
   const [copied, setCopied] = useState(false);
   const link = shareLink(lobby.code);
   const opponent = lobby.opponentName ?? "your opponent";
-  const inviting = lobby.role === "host" && lobby.status !== "connected";
+  const inviting = lobby.role === "host" && !lobby.opponentName && lobby.status !== "connected";
+  const inLobby = lobby.role === "local" || (lobby.status !== "connecting" && lobby.status !== "closed");
 
   const share = async () => {
     try {
@@ -255,32 +257,36 @@ export function Lobby({ session, db, matchups, onLeave }: Props) {
               <span class="label">{lobby.status === "waiting" ? "Waiting for opponent" : "Connecting"}</span>
             </div>
             <div class="invite-body">
-              <QrCode value={link} label={`QR code to join game ${lobby.code}`} />
+              {lobby.code ? <QrCode value={link} label={`QR code to join game ${lobby.code}`} /> : <div class="qr qr-pending" />}
               <div class="invite-side">
-                <span class="code">{lobby.code}</span>
-                <button class="primary" onClick={share}>
+                <span class="code">{lobby.code || "·····"}</span>
+                <button class="primary" disabled={!lobby.code} onClick={share}>
                   {copied ? "Link copied" : "Share link"}
                 </button>
               </div>
             </div>
-            <p class="hint">Keep this screen open until your opponent joins: switching apps pauses the game.</p>
+            <p class="hint">
+              {RELAY_URL
+                ? "Your opponent can join even if you leave this screen: the game waits on the relay."
+                : "Keep this screen open until your opponent joins: switching apps pauses the game."}
+            </p>
           </section>
         )}
 
-        {lobby.role !== "local" && !inviting && (lobby.role === "host" || lobby.status === "connected") && (
+        {lobby.role !== "local" && !inviting && inLobby && (
           <section class="panel section lobby-link">
             <span class="label">
               Game <span class="cyan">{lobby.code}</span>
             </span>
-            <span class="label">{lobby.status === "connected" ? `Linked with ${opponent}` : "Reconnecting…"}</span>
+            <span class="label">{lobby.status === "connected" ? `Linked with ${opponent}` : lobby.opponentName ? `${opponent} is offline` : "Waiting for the host"}</span>
           </section>
         )}
 
         {lobby.role === "local" && <p class="status">{lobby.vsBot ? "Solo game · you against the bot" : "Local game · both sides on this device"}</p>}
-        {lobby.role === "guest" && lobby.status !== "connected" && <JoinStatus lobby={lobby} />}
+        {lobby.role === "guest" && !inLobby && lobby.status !== "closed" && <JoinStatus lobby={lobby} />}
         {lobby.error && <p class="error">{lobby.error}</p>}
 
-        {(lobby.role !== "guest" || lobby.status === "connected") && (
+        {inLobby && (
           <Seat
             key={lobby.mySide}
             label={lobby.role === "local" && !lobby.vsBot ? "Player 1" : "You"}
@@ -313,13 +319,13 @@ export function Lobby({ session, db, matchups, onLeave }: Props) {
         )}
 
         <div class="lobby-footer">
-          {lobby.role === "host" && lobby.status === "connected" && (
+          {lobby.role === "host" && !inviting && (
             <p class={`status ${lobby.opponentDeckReady ? "connected" : ""}`}>
               {lobby.opponentDeckReady ? `${opponent} is ready` : `Waiting for ${opponent} to pick a deck…`}
             </p>
           )}
           {lobby.role === "guest" ? (
-            lobby.status === "connected" &&
+            inLobby &&
             (lobby.ready ? (
               <>
                 <p class="status connected">Ready · waiting for {opponent} to start</p>
