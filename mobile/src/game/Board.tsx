@@ -272,19 +272,19 @@ function CorpArea({ view, side, mine, onTap, onZone, selectable, runServer }: { 
               {mine ? (
                 <>
                   <div class="ices">{[...ices].reverse().map(tile)}</div>
+                  {name(key)}
                   <div class="content">
                     {central(key)}
                     {(s.content ?? []).map(tile)}
                   </div>
-                  {name(key)}
                 </>
               ) : (
                 <>
-                  {name(key)}
                   <div class="content">
                     {central(key)}
                     {(s.content ?? []).map(tile)}
                   </div>
+                  {name(key)}
                   <div class="ices">{ices.map(tile)}</div>
                 </>
               )}
