@@ -290,7 +290,22 @@ textarea:focus {
   flex: none;
 }
 
+.ticker-menu {
+  margin-left: auto;
+  flex: none;
+  height: 22px;
+  min-width: 44px;
+  padding: 0 12px;
+  border: none;
+  border-left: 1px solid var(--line);
+  background: transparent;
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1;
+}
+
 .ticker .feed {
+  min-width: 0;
   font-size: 9px;
   letter-spacing: 0.14em;
   padding: 0 10px;
@@ -784,8 +799,8 @@ textarea:focus {
 
 .menu {
   position: absolute;
-  top: calc(96px + env(safe-area-inset-top));
-  right: 10px;
+  top: calc(26px + env(safe-area-inset-top));
+  right: 6px;
   z-index: 30;
   display: flex;
   flex-direction: column;
@@ -845,6 +860,14 @@ textarea:focus {
   gap: 8px;
   overflow-x: auto;
   padding: 4px 2px 6px;
+}
+
+.servers.theirs {
+  align-items: flex-end;
+}
+
+.servers.mine {
+  align-items: flex-start;
 }
 
 .server {
@@ -1469,18 +1492,18 @@ form.chat input {
   }
 }
 
-.prompt.with-card {
-  flex-direction: row;
+.prompt-head {
+  display: flex;
   gap: 12px;
   align-items: flex-start;
 }
 
-.prompt-body {
+.prompt-info {
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: inherit;
+  gap: 6px;
 }
 
 .prompt-img {
@@ -1490,4 +1513,29 @@ form.chat input {
 
 .prompt.accessed .prompt-img {
   width: min(42%, 180px);
+}
+
+.prompt.accessed .prompt-card {
+  font-size: 13px;
+}
+
+.handoff {
+  min-height: calc(100dvh - 23px - env(safe-area-inset-top));
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+.handoff .logo-mark {
+  width: 56px;
+  height: 56px;
+}
+
+.handoff .big {
+  margin: 0;
+  font-size: 64px;
+}
+
+.handoff .cta {
+  align-self: stretch;
 }

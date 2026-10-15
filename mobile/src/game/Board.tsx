@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { CardDb, EngineApi, Side } from "../engine";
 import type { Session } from "../session";
-import { Cta, LogoMark, Meter, Ticker } from "../ui";
+import { Cta, Meter, Ticker } from "../ui";
 import { type Command, basicCommands, cardRef, currentIce, findCard, otherSide, promptOf, runCommands, siblingsOf } from "./actions";
 import { DeckViewer } from "../screens/DeckViewer";
 import { CardSheet } from "./CardSheet";
@@ -192,30 +192,31 @@ function CorpArea({ view, side, mine, onTap, onZone, selectable, runServer }: { 
         <span class="label">Servers</span>
         <span class="label">サーバー</span>
       </div>
-      <div class="servers">
+      {!mine && <Piles view={view} zoneOwner="corp" viewer={side} onTap={onTap} onZone={onZone} selectable={selectable} />}
+      <div class={`servers ${mine ? "mine" : "theirs"}`}>
         {serverOrder(servers).map((key) => {
           const s = servers[key] ?? { content: [], ices: [] };
           const ices = [...(s.ices ?? [])];
-          const iceColumn = mine ? [...ices].reverse() : ices;
           return (
             <div class={`server ${runServer === key ? "running" : ""}`}>
               {mine ? (
                 <>
-                  <div class="ices">{iceColumn.map(tile)}</div>
+                  <div class="ices">{[...ices].reverse().map(tile)}</div>
                   <div class="content">{(s.content ?? []).map(tile)}</div>
+                  <span class="server-name">{serverName(key)}</span>
                 </>
               ) : (
                 <>
+                  <span class="server-name">{serverName(key)}</span>
                   <div class="content">{(s.content ?? []).map(tile)}</div>
-                  <div class="ices">{iceColumn.map(tile)}</div>
+                  <div class="ices">{ices.map(tile)}</div>
                 </>
               )}
-              <span class="server-name">{serverName(key)}</span>
             </div>
           );
         })}
       </div>
-      <Piles view={view} zoneOwner="corp" viewer={side} onTap={onTap} onZone={onZone} selectable={selectable} />
+      {mine && <Piles view={view} zoneOwner="corp" viewer={side} onTap={onTap} onZone={onZone} selectable={selectable} />}
     </div>
   );
 }
@@ -236,18 +237,22 @@ function RunnerArea({ view, side, onTap, onZone, selectable }: { view: any; side
       </div>
     ) : null;
   const empty = !["program", "hardware", "resource", "facedown"].some((k) => rig[k]?.length);
+  const rows: [string, string][] = [
+    ["Programs", "program"],
+    ["Hardware", "hardware"],
+    ["Resources", "resource"],
+    ["Facedown", "facedown"],
+  ];
   return (
     <div class="area runner-area">
       <div class="row">
         <span class="label">Rig</span>
         <span class="label">リグ</span>
       </div>
+      {!owner && <Piles view={view} zoneOwner="runner" viewer={side} onTap={onTap} onZone={onZone} selectable={selectable} />}
       {empty && <span class="hint">Nothing installed</span>}
-      {row("Programs", rig.program)}
-      {row("Hardware", rig.hardware)}
-      {row("Resources", rig.resource)}
-      {row("Facedown", rig.facedown)}
-      <Piles view={view} zoneOwner="runner" viewer={side} onTap={onTap} onZone={onZone} selectable={selectable} />
+      {owner ? rows.map(([label, key]) => row(label, rig[key])) : [...rows].reverse().map(([label, key]) => row(label, rig[key]))}
+      {owner && <Piles view={view} zoneOwner="runner" viewer={side} onTap={onTap} onZone={onZone} selectable={selectable} />}
     </div>
   );
 }
@@ -412,7 +417,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave }
       </section>
     );
   } else if (prompt && ptype !== "run") {
-    panel = <PromptPanel key={promptId} view={view} side={side} prompt={prompt} render={render} send={send} closePrompt={closePrompt} disabled={disabled} />;
+    panel = <PromptPanel key={promptId} view={view} side={side} prompt={prompt} render={render} send={send} closePrompt={closePrompt} disabled={disabled} db={db} />;
   } else if (picking && side === "runner") {
     const list: string[] = me["runnable-list"] ?? [];
     panel = (
@@ -496,27 +501,28 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave }
 
   return (
     <div class={`board side-${side} ${ptype === "select" ? "selecting" : ""}`}>
-      <Ticker>
+      <Ticker
+        action={
+          <button class="ticker-menu" onClick={() => setMenu(!menu)} aria-label="Menu" aria-expanded={menu}>
+            ≡
+          </button>
+        }
+      >
         {feedText(view, side, names)}
         {link && link !== "connected" && <span class="yellow"> · {link === "waiting" ? "opponent offline" : "reconnecting"}</span>}
       </Ticker>
-      <header class="topbar">
-        <LogoMark />
-        <div style="flex: 1" />
-        {onSwitchSide && (
-          <button onClick={onSwitchSide} aria-label={`Switch to ${opp}`}>
-            ⇄ {opp}
-          </button>
-        )}
-        <button class="cyan" onClick={() => setShowLog(true)} aria-label={`Log, ${log.length} entries`}>
-          Log {log.length}
-        </button>
-        <button onClick={() => setMenu(!menu)} aria-label="Menu" aria-expanded={menu}>
-          ≡
-        </button>
-      </header>
       {menu && (
         <nav class="menu panel">
+          {onSwitchSide && (
+            <button
+              onClick={() => {
+                onSwitchSide();
+                setMenu(false);
+              }}
+            >
+              ⇄ Switch to {opp}
+            </button>
+          )}
           <button
             onClick={() => {
               send("indicate-action");

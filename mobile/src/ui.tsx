@@ -11,11 +11,12 @@ export function Meter({ value, max, tone = "cyan", small }: { value: number; max
   );
 }
 
-export function Ticker({ children }: { children: ComponentChildren }) {
+export function Ticker({ children, action }: { children: ComponentChildren; action?: ComponentChildren }) {
   return (
     <div class="ticker">
       <span class="live">LIVE FEED</span>
       <span class="feed">{children}</span>
+      {action}
     </div>
   );
 }

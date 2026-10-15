@@ -2,6 +2,7 @@ import { useEffect, useState } from "preact/hooks";
 import type { Side } from "../engine";
 import { findCard } from "./actions";
 import { ZoomableCardImage } from "./CardImage";
+import { RichText } from "./RichText";
 import { iconize } from "./text";
 
 interface Props {
@@ -12,6 +13,7 @@ interface Props {
   send: (command: string, args?: unknown) => void;
   closePrompt: () => void;
   disabled: boolean;
+  db: { byTitle: Map<string, any> };
 }
 
 function NumberPicker({ min, max, initial, onSubmit, disabled, extra }: { min: number; max: number; initial: number; onSubmit: (n: number) => void; disabled: boolean; extra?: preact.ComponentChildren }) {
@@ -33,7 +35,7 @@ function choiceLabel(value: any, render: (m: unknown) => string) {
   return render(value);
 }
 
-export function PromptPanel({ view, side, prompt, render, send, closePrompt, disabled }: Props) {
+export function PromptPanel({ view, side, prompt, render, send, closePrompt, disabled, db }: Props) {
   const ptype = prompt["prompt-type"];
   const choices = prompt.choices;
   const eid = prompt.eid;
@@ -110,14 +112,32 @@ export function PromptPanel({ view, side, prompt, render, send, closePrompt, dis
   const code: string | undefined = source?.code;
   const accessed = !!code && /^You accessed /.test(msg);
 
+  const full = accessed ? db.byTitle.get(source.title) : undefined;
+
   return (
-    <section class={`prompt prompt-${ptype ?? "other"} ${code ? "with-card" : ""} ${accessed ? "accessed" : ""}`}>
-      {code && <ZoomableCardImage class="prompt-img" code={code} alt={source.title} size={accessed ? "large" : "small"} />}
-      <div class="prompt-body">
-        {source && <span class="prompt-card">{source.title}</span>}
-        <p class="prompt-msg">{msg}</p>
-        {body}
-      </div>
+    <section class={`prompt prompt-${ptype ?? "other"} ${accessed ? "accessed" : ""}`}>
+      {code ? (
+        <div class="prompt-head">
+          <ZoomableCardImage class="prompt-img" code={code} alt={source.title} size={accessed ? "large" : "small"} />
+          <div class="prompt-info">
+            {full && (
+              <span class="label">
+                {full.type}
+                {Array.isArray(full.subtypes) && full.subtypes.length ? ` · ${full.subtypes.join(" · ")}` : ""}
+              </span>
+            )}
+            <span class="prompt-card">{source.title}</span>
+            {full?.text ? <RichText class="card-text" text={full.text} /> : <p class="prompt-msg">{msg}</p>}
+          </div>
+        </div>
+      ) : (
+        <>
+          {source && <span class="prompt-card">{source.title}</span>}
+          <p class="prompt-msg">{msg}</p>
+        </>
+      )}
+      {full?.text && <p class="prompt-msg">{msg}</p>}
+      {body}
     </section>
   );
 }
