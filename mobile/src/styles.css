@@ -1553,3 +1553,38 @@ form.chat input {
   height: auto;
   border: 1px solid var(--line-2);
 }
+
+.deck-browser {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chips button {
+  min-height: 32px;
+  padding: 4px 10px;
+  font-size: 10px;
+}
+
+.chips button.on {
+  border-color: var(--cyan);
+  color: var(--cyan);
+}
+
+.chips .toggle {
+  margin-left: auto;
+}
+
+.deck-list button.more {
+  align-items: center;
+  color: var(--cyan);
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-size: 10px;
+}

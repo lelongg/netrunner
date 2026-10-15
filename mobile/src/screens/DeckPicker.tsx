@@ -1,6 +1,7 @@
 import { useMemo, useState } from "preact/hooks";
 import type { CardDb, Matchup, Side } from "../engine";
 import { CardImage } from "../game/CardImage";
+import { DeckBrowser } from "./DeckBrowser";
 import { DeckViewer } from "./DeckViewer";
 import { type WireDeck, deckSize, fromPrecon, fromWire, importNrdb, parseDecklist, saveDeck, savedDecks, toWire } from "../decks";
 
@@ -12,7 +13,7 @@ interface Props {
   onChange: (deck: WireDeck) => void;
 }
 
-type Tab = "precon" | "saved" | "import";
+type Tab = "precon" | "browse" | "saved" | "import";
 
 export function DeckPicker({ side, db, matchups, value, onChange }: Props) {
   const [tab, setTab] = useState<Tab>("precon");
@@ -60,9 +61,9 @@ export function DeckPicker({ side, db, matchups, value, onChange }: Props) {
       )}
       {viewing && current && <DeckViewer deck={current} onClose={() => setViewing(false)} />}
       <div class="tabs">
-        {(["precon", "saved", "import"] as Tab[]).map((t) => (
+        {(["precon", "browse", "saved", "import"] as Tab[]).map((t) => (
           <button class={tab === t ? "on" : ""} onClick={() => setTab(t)}>
-            {t === "precon" ? "Precons" : t === "saved" ? "My decks" : "Import"}
+            {t === "precon" ? "Precons" : t === "browse" ? "NRDB" : t === "saved" ? "Mine" : "Import"}
           </button>
         ))}
       </div>
@@ -80,6 +81,17 @@ export function DeckPicker({ side, db, matchups, value, onChange }: Props) {
             );
           })}
         </ul>
+      )}
+      {tab === "browse" && (
+        <DeckBrowser
+          side={side}
+          db={db}
+          selected={value?.name}
+          onPick={(l) => {
+            saveDeck(l.deck!, side);
+            pick(toWire(l.deck!));
+          }}
+        />
       )}
       {tab === "saved" && (
         <ul class="deck-list">

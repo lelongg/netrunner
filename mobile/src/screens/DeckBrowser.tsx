@@ -1,0 +1,85 @@
+import { useEffect, useState } from "preact/hooks";
+import type { CardDb, Side } from "../engine";
+import { type Decklist, FACTIONS, fetchDecklists } from "../nrdb";
+
+interface Props {
+  side: Side;
+  db: CardDb;
+  selected?: string;
+  onPick: (list: Decklist) => void;
+}
+
+const day = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+
+export function DeckBrowser({ side, db, selected, onPick }: Props) {
+  const [faction, setFaction] = useState<string | null>(null);
+  const [standard, setStandard] = useState(true);
+  const [lists, setLists] = useState<Decklist[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string>();
+
+  const load = async (next: number, reset: boolean) => {
+    setBusy(true);
+    setError(undefined);
+    try {
+      const res = await fetchDecklists(db, side, faction, next);
+      setLists((prev) => (reset ? res.items : [...prev, ...res.items]));
+      setHasMore(res.hasMore);
+      setPage(next);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  useEffect(() => {
+    setLists([]);
+    load(1, true);
+  }, [side, faction]);
+
+  const shown = lists.filter((l) => l.deck && (!standard || l.standard));
+
+  return (
+    <div class="deck-browser">
+      <div class="chips">
+        <button class={faction === null ? "on" : ""} onClick={() => setFaction(null)}>
+          All
+        </button>
+        {FACTIONS[side].map(([id, label]) => (
+          <button class={faction === id ? "on" : ""} onClick={() => setFaction(id)}>
+            {label}
+          </button>
+        ))}
+        <button class={`toggle ${standard ? "on" : ""}`} onClick={() => setStandard(!standard)} aria-pressed={standard}>
+          Standard only
+        </button>
+      </div>
+      <ul class="deck-list">
+        {shown.map((l) => (
+          <li>
+            <button class={selected === l.name ? "on" : ""} onClick={() => onPick(l)}>
+              <strong>{l.name}</strong>
+              <span>
+                {l.deck!.identity.title} · {l.user} · {day(l.created)}
+              </span>
+            </button>
+          </li>
+        ))}
+        {!busy && !error && shown.length === 0 && <li class="hint">No playable decklist on this page.</li>}
+        {hasMore && (
+          <li>
+            <button class="more" disabled={busy} onClick={() => load(page + 1, false)}>
+              {busy ? "Loading…" : "Load more"}
+            </button>
+          </li>
+        )}
+        {busy && !hasMore && <li class="hint">Loading…</li>}
+      </ul>
+      {error && <p class="error">{error}</p>}
+      <p class="hint">Latest published decklists from NetrunnerDB.</p>
+    </div>
+  );
+}
