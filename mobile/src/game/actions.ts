@@ -60,8 +60,14 @@ function actionList(card: any, view: any, side: Side): string[] {
   )
     out.push("score");
   if (["ICE", "Program"].includes(card.type) && (installed || z === "rig")) out.push("trash");
-  if (["Asset", "ICE", "Upgrade"].includes(card.type) && installed) out.push(card.rezzed ? "derez" : "rez");
+  if (["Asset", "Upgrade"].includes(card.type) && installed && !card.rezzed) out.push("rez");
+  if (card.type === "ICE" && installed && !card.rezzed && view.run?.phase === "approach-ice" && currentIce(view)?.cid === card.cid) out.push("rez");
   return out;
+}
+
+function runnerPassed(view: any, ice: any) {
+  const enc = view.encounters;
+  return !!ice && !!enc && enc["no-action"] === "runner" && currentIce(view)?.cid === ice.cid;
 }
 
 const ACTION_LABELS: Record<string, string> = {
@@ -69,7 +75,6 @@ const ACTION_LABELS: Record<string, string> = {
   score: "Score",
   trash: "Trash",
   rez: "Rez",
-  derez: "Derez",
 };
 
 export function abilityLabel(ab: any): string {
@@ -147,7 +152,7 @@ export function cardCommands(card: any, view: any, side: Side): Command[] {
     );
 
   const subs: any[] = card.subroutines ?? [];
-  if (side === "corp" && mine && subs.length && z === "servers") {
+  if (side === "corp" && mine && subs.length && z === "servers" && runnerPassed(view, card)) {
     if (card.rezzed && subs.some((s) => !s.fired && !s.broken))
       out.push({ label: "Fire unbroken subroutines", command: "unbroken-subroutines", args: { card: ref } });
     subs.forEach((s, i) =>
@@ -253,7 +258,7 @@ export function runCommands(view: any, side: Side, autoContinue = false): Comman
         label: "Fire unbroken subroutines",
         command: "unbroken-subroutines",
         args: { card: cardRef(ice) },
-        enabled: subs.some((s) => !s.broken && !s.fired && s.resolve !== false),
+        enabled: runnerPassed(view, ice) && subs.some((s) => !s.broken && !s.fired && s.resolve !== false),
       });
     }
     if (enc) {
