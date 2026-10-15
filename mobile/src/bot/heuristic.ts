@@ -32,6 +32,8 @@ export class HeuristicBot {
   private runs = 0;
   private banned = new Set<string>();
   private last = { key: "", signature: "", count: 0 };
+  private duds = new Set<string>();
+  private pendingRun: { cids: string[]; points: number; breached: boolean } | null = null;
 
   readonly side: Side;
   private lookup: Lookup;
@@ -51,6 +53,7 @@ export class HeuristicBot {
       this.runs = 0;
       this.banned.clear();
     }
+    this.trackRun(view);
     const move = this.pick(view);
     if (!move) return null;
     const key = `${move.command}:${move.say ?? ""}:${JSON.stringify(move.args ?? null)}`;
@@ -62,8 +65,24 @@ export class HeuristicBot {
         return this.fallback(view);
       }
     } else this.last = { key, signature, count: 0 };
-    if (move.command === "run") this.runs++;
+    if (move.command === "run") {
+      this.runs++;
+      const key = Object.keys(view.corp?.servers ?? {}).find((k) => serverLabel(k) === (move.args as any)?.server);
+      const content: any[] = key?.startsWith("remote") ? (view.corp.servers[key].content ?? []) : [];
+      this.pendingRun = content.length ? { cids: content.filter((c) => !c.rezzed && !c["advance-counter"]).map((c) => c.cid), points: view.runner?.["agenda-point"] ?? 0, breached: false } : null;
+    }
     return move;
+  }
+
+  private trackRun(view: any) {
+    const pending = this.pendingRun;
+    if (!pending) return;
+    if (view.run) {
+      if (view.run.successful) pending.breached = true;
+      return;
+    }
+    if (pending.breached && (view.runner?.["agenda-point"] ?? 0) === pending.points) pending.cids.forEach((cid) => this.duds.add(cid));
+    this.pendingRun = null;
   }
 
   private signature(view: any) {
@@ -367,8 +386,9 @@ export class HeuristicBot {
       if (key.startsWith("remote")) {
         if (!content.length) continue;
         const advancement = Math.max(0, ...content.map((c: any) => Number(c["advance-counter"] ?? 0)));
-        if (advancement > 0 && hand < 2 + advancement) continue;
-        value = content.some((c: any) => !c.title || c.type === "Agenda") ? 5 + advancement * 2 : 2.5;
+        if (advancement > 1 && hand < 1 + advancement) continue;
+        const unknown = content.some((c: any) => (!c.title || c.type === "Agenda") && (Number(c["advance-counter"] ?? 0) > 0 || !this.duds.has(c.cid)));
+        value = unknown ? 5 + advancement * 3 : content.some((c: any) => c.rezzed) ? 2.5 : 0.5;
       }
       if (value <= 0) continue;
       let cost = 0;
