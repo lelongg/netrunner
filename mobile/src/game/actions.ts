@@ -308,3 +308,18 @@ export function findCard(view: any, cid: unknown): any {
   walk(view);
   return found;
 }
+
+export function siblingsOf(view: any, cid: unknown): any[] {
+  let found: any[] | null = null;
+  const walk = (x: any) => {
+    if (found || !x || typeof x !== "object") return;
+    if (Array.isArray(x)) {
+      if (x.some((c) => c?.cid === cid && (c.zone || c.type === "Identity"))) found = x;
+      else x.forEach(walk);
+      return;
+    }
+    for (const v of Object.values(x)) if (v && typeof v === "object") walk(v);
+  };
+  walk(view);
+  return found ?? [];
+}

@@ -1,9 +1,11 @@
 import { useState } from "preact/hooks";
 import type { Side } from "../engine";
 import { type Command, cardCommands, cardRef } from "./actions";
-import { CardImage } from "./CardImage";
+import { CardImage, ZoomableCardImage } from "./CardImage";
 import { visibleCode } from "./CardTile";
+import { Pager } from "./Pager";
 import { RichText } from "./RichText";
+import { useSwipe } from "./swipe";
 import { iconize, serverLabel } from "./text";
 
 interface Props {
@@ -14,15 +16,20 @@ interface Props {
   send: (command: string, args?: unknown) => void;
   onClose: () => void;
   disabled: boolean;
+  index?: number;
+  count?: number;
+  slide?: -1 | 1;
+  onStep?: (dir: -1 | 1) => void;
 }
 
-export function CardSheet({ card, view, side, db, send, onClose, disabled }: Props) {
+export function CardSheet({ card, view, side, db, send, onClose, disabled, index = 0, count = 1, slide, onStep }: Props) {
   const [installing, setInstalling] = useState(false);
   const owner = card.side === (side === "corp" ? "Corp" : "Runner");
   const code = visibleCode(card, owner);
   const full = code ? db.byTitle.get(card.title) : undefined;
   const commands = cardCommands(card, view, side);
   const installList: unknown[] = view.corp?.["install-list"] ?? [];
+  const swipe = useSwipe((dir) => !installing && onStep?.(dir));
 
   const run = (c: Command) => {
     send(c.command, c.args);
@@ -37,10 +44,11 @@ export function CardSheet({ card, view, side, db, send, onClose, disabled }: Pro
 
   return (
     <div class="sheet-backdrop" onClick={onClose}>
-      <div class="sheet panel" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={code ? card.title : "Hidden card"}>
-        <div class="sheet-head">
+      <div class="sheet panel swipeable" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={code ? card.title : "Hidden card"} {...swipe}>
+        {onStep && !installing && <Pager index={index} count={count} onStep={onStep} />}
+        <div class={`sheet-head ${slide ? `slide-${slide < 0 ? "prev" : "next"}` : ""}`}>
           {code ? (
-            <CardImage class="sheet-img" code={code} alt={card.title} size="large" />
+            <ZoomableCardImage class="sheet-img" code={code} alt={card.title} size="large" />
           ) : (
             <div class="sheet-img back">Hidden</div>
           )}

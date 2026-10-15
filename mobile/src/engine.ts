@@ -97,6 +97,6 @@ export function loadEngine() {
   return loading;
 }
 
-export function cardImage(code: string | undefined, size: "small" | "medium" | "large" = "medium") {
-  return code ? `https://card-images.netrunnerdb.com/v2/${size}/${code}.jpg` : undefined;
+export function cardImage(code: string | undefined, size: "small" | "medium" | "large" | "xlarge" = "medium") {
+  return code ? `https://card-images.netrunnerdb.com/v2/${size}/${code}.${size === "xlarge" ? "webp" : "jpg"}` : undefined;
 }

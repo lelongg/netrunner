@@ -1370,3 +1370,101 @@ form.chat input {
     --tile-h: 103px;
   }
 }
+
+.card-zoom-trigger {
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: zoom-in;
+}
+
+.card-zoom {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+  background: #000000f5;
+  backdrop-filter: blur(6px);
+  cursor: zoom-out;
+  animation: card-zoom-in 0.16s ease-out;
+}
+
+.card-zoom-frame {
+  position: relative;
+  width: min(100%, calc((100dvh - 32px) * 300 / 419), 750px);
+  aspect-ratio: 300 / 419;
+  border-radius: 4.5% / 3.2%;
+  overflow: hidden;
+  box-shadow: 0 0 0 1px #ffffff1f, 0 20px 60px #000;
+}
+
+.card-zoom-frame img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.card-zoom-sharp {
+  opacity: 0;
+  transition: opacity 0.2s ease-out;
+}
+
+.card-zoom-frame.loaded .card-zoom-sharp {
+  opacity: 1;
+}
+
+@keyframes card-zoom-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+
+.swipeable {
+  touch-action: pan-y;
+}
+
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: -6px 0 2px;
+}
+
+.pager button {
+  min-width: 44px;
+  min-height: 36px;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.pager button:disabled {
+  opacity: 0.25;
+}
+
+.sheet-head.slide-next {
+  animation: sheet-slide-next 0.18s ease-out;
+}
+
+.sheet-head.slide-prev {
+  animation: sheet-slide-prev 0.18s ease-out;
+}
+
+@keyframes sheet-slide-next {
+  from {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+}
+
+@keyframes sheet-slide-prev {
+  from {
+    opacity: 0;
+    transform: translateX(-28px);
+  }
+}

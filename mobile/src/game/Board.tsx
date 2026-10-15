@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { CardDb, EngineApi, Side } from "../engine";
 import type { Session } from "../session";
 import { Cta, LogoMark, Meter, Ticker } from "../ui";
-import { type Command, basicCommands, cardRef, currentIce, findCard, otherSide, promptOf, runCommands } from "./actions";
+import { type Command, basicCommands, cardRef, currentIce, findCard, otherSide, promptOf, runCommands, siblingsOf } from "./actions";
 import { DeckViewer } from "../screens/DeckViewer";
 import { CardSheet } from "./CardSheet";
 import { CardTile } from "./CardTile";
@@ -363,6 +363,15 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave }
     else setSelected(card);
   };
   const current = selected ? findCard(view, selected.cid) : null;
+  const siblings = current ? siblingsOf(view, current.cid) : [];
+  const position = siblings.findIndex((c) => c.cid === current?.cid);
+  const [slide, setSlide] = useState<-1 | 1>();
+  const step = (dir: -1 | 1) => {
+    const next = siblings[position + dir];
+    if (!next) return;
+    setSlide(dir);
+    setSelected(next);
+  };
   const promptId = prompt?.eid?.eid;
   const closePrompt = () => session.say("/close-prompt", side);
 
@@ -586,7 +595,25 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave }
           }}
         />
       )}
-      {current && <CardSheet card={current} view={view} side={side} db={db} send={send} disabled={disabled} onClose={() => setSelected(null)} />}
+      {current && (
+        <CardSheet
+          key={current.cid}
+          card={current}
+          view={view}
+          side={side}
+          db={db}
+          send={send}
+          disabled={disabled}
+          index={Math.max(0, position)}
+          count={siblings.length}
+          slide={slide}
+          onStep={step}
+          onClose={() => {
+            setSelected(null);
+            setSlide(undefined);
+          }}
+        />
+      )}
       {showLog && <Log view={view} render={render} onSay={(t) => session.say(t, side)} onClose={() => setShowLog(false)} />}
     </div>
   );

@@ -1,8 +1,10 @@
 import { useState } from "preact/hooks";
 import type { Card, Deck, DeckEntry } from "../engine";
 import { deckSize } from "../decks";
-import { CardImage } from "../game/CardImage";
+import { CardImage, ZoomableCardImage } from "../game/CardImage";
+import { Pager } from "../game/Pager";
 import { RichText } from "../game/RichText";
+import { useSwipe } from "../game/swipe";
 
 const TYPE_ORDER: Record<string, string[]> = {
   Corp: ["Agenda", "Asset", "Upgrade", "Operation", "ICE"],
@@ -30,12 +32,25 @@ function groups(deck: Deck) {
     }));
 }
 
-function CardDetail({ card, qty, influence, onClose }: { card: Card; qty?: number; influence: number; onClose: () => void }) {
+interface DetailProps {
+  card: Card;
+  qty?: number;
+  influence: number;
+  onClose: () => void;
+  index: number;
+  count: number;
+  slide?: -1 | 1;
+  onStep: (dir: -1 | 1) => void;
+}
+
+function CardDetail({ card, qty, influence, onClose, index, count, slide, onStep }: DetailProps) {
+  const swipe = useSwipe(onStep);
   return (
     <div class="sheet-backdrop" onClick={onClose}>
-      <div class="sheet panel" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={card.title}>
-        <div class="sheet-head">
-          <CardImage class="sheet-img" code={card.code} alt={card.title} size="large" />
+      <div class="sheet panel swipeable" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={card.title} {...swipe}>
+        <Pager index={index} count={count} onStep={onStep} />
+        <div class={`sheet-head ${slide ? `slide-${slide < 0 ? "prev" : "next"}` : ""}`}>
+          <ZoomableCardImage class="sheet-img" code={card.code} alt={card.title} size="large" />
           <div class="sheet-info">
             <span class="label">
               {card.type}
@@ -68,6 +83,15 @@ export function DeckViewer({ deck, onClose }: { deck: Deck; onClose: () => void 
   const influence = deck.cards.reduce((n, e) => n + influenceOf(identity, e.card) * e.qty, 0);
   const points = deck.cards.reduce((n, e) => n + Number(e.card.agendapoints ?? 0) * e.qty, 0);
   const sections = groups(deck);
+  const ordered: { qty?: number; card: Card }[] = [{ card: identity }, ...sections.flatMap((s) => s.entries)];
+  const position = detail ? ordered.findIndex((e) => e.card.code === detail.card.code) : -1;
+  const [slide, setSlide] = useState<-1 | 1>();
+  const step = (dir: -1 | 1) => {
+    const next = ordered[position + dir];
+    if (!next) return;
+    setSlide(dir);
+    setDetail(next);
+  };
 
   return (
     <>
@@ -159,7 +183,22 @@ export function DeckViewer({ deck, onClose }: { deck: Deck; onClose: () => void 
           </div>
         </div>
       </div>
-      {detail && <CardDetail card={detail.card} qty={detail.qty} influence={influenceOf(identity, detail.card)} onClose={() => setDetail(null)} />}
+      {detail && (
+        <CardDetail
+          key={detail.card.code}
+          card={detail.card}
+          qty={detail.qty}
+          influence={influenceOf(identity, detail.card)}
+          index={Math.max(0, position)}
+          count={ordered.length}
+          slide={slide}
+          onStep={step}
+          onClose={() => {
+            setDetail(null);
+            setSlide(undefined);
+          }}
+        />
+      )}
     </>
   );
 }
