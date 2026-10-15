@@ -81,6 +81,28 @@ Installable (manifeste et icônes) et utilisable hors ligne après une première
 NetrunnerDB déjà vues. Une partie locale se joue sans réseau. Le jeu en ligne demande
 évidemment une connexion.
 
+## Bot (mode Solo)
+
+`src/bot/heuristic.ts` joue un camp à partir de **sa propre vue** uniquement (il ne voit
+pas les cartes cachées) et choisit parmi les coups légaux calculés par `src/game/actions.ts`.
+
+- Corp : marque et avance ses projets, les installe derrière de la glace, joue
+  l'économie, protège les serveurs centraux, active la glace à l'approche.
+- Runner : économie, brise-glaces manquants, runs sur le serveur le plus rentable qu'il
+  pense pouvoir passer (en gardant assez de cartes pour survivre aux dégâts).
+- Un garde-fou bannit un coup répété sans effet et retombe sur `/close-prompt` ou sur la
+  fin de l'étape.
+
+Évaluation sous Node :
+
+```sh
+node --experimental-strip-types scripts/bot-eval.mjs 20 bot-vs-random 0   # 20 parties, decks System Gateway débutant
+node --experimental-strip-types scripts/bot-eval.mjs 20 bot-vs-bot 1      # decks intermédiaires
+```
+
+`scripts/fuzz.mjs` joue des coups légaux au hasard pour traquer les erreurs moteur et les
+prompts sans issue.
+
 ## Limites actuelles
 
 - Pas d'anti-triche côté hôte : l'hôte a l'état complet en mémoire. À réserver aux
