@@ -165,7 +165,46 @@ function App() {
   return <Board session={session} engine={loaded.engine} db={loaded.db} side={lobby.mySide} view={view} onLeave={leave} />;
 }
 
-render(<App />, document.getElementById("app")!);
+const currentBundle = (document.querySelector('script[type="module"][src*="assets/"]') as HTMLScriptElement | null)?.src.split("/").pop();
+
+function UpdateBanner() {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    if (!import.meta.env.PROD || !currentBundle) return;
+    const check = async () => {
+      if (document.visibilityState !== "visible") return;
+      try {
+        const html = await (await fetch("./", { cache: "no-store" })).text();
+        const latest = html.match(/assets\/(index-[^"]+\.js)/)?.[1];
+        if (latest && latest !== currentBundle) setReady(true);
+      } catch {}
+    };
+    check();
+    const timer = setInterval(check, 5 * 60 * 1000);
+    document.addEventListener("visibilitychange", check);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", check);
+    };
+  }, []);
+  if (!ready) return null;
+  return (
+    <div class="update-banner" role="status">
+      <span>New version available</span>
+      <button class="primary" onClick={() => location.reload()}>
+        Reload
+      </button>
+    </div>
+  );
+}
+
+render(
+  <>
+    <App />
+    <UpdateBanner />
+  </>,
+  document.getElementById("app")!,
+);
 
 if (import.meta.env.PROD && "serviceWorker" in navigator) {
   addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(console.error));

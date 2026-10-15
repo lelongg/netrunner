@@ -1940,3 +1940,27 @@ button:active:not(:disabled) {
 .seat-actions button {
   flex: 1;
 }
+
+.update-banner {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: calc(12px + env(safe-area-inset-bottom));
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  background: #0b0c0e;
+  border: 1px solid var(--cyan);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  animation: sheet-up 0.2s ease-out;
+}
+
+.update-banner button {
+  min-height: 36px;
+  padding: 0 16px;
+}
