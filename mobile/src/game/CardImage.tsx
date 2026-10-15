@@ -8,10 +8,14 @@ interface Props {
   size: "small" | "medium" | "large";
   class?: string;
   lazy?: boolean;
+  width?: string;
 }
 
-export function CardImage({ code, alt, size, class: className, lazy }: Props) {
+const WIDTH: Record<Props["size"], string> = { small: "64px", medium: "120px", large: "220px" };
+
+export function CardImage({ code, alt, size, class: className, lazy, width }: Props) {
   const src = cardImage(code, size)!;
+  const srcSet = `${cardImage(code, "small")} 116w, ${cardImage(code, "medium")} 165w, ${cardImage(code, "large")} 300w`;
   const img = useRef<HTMLImageElement>(null);
   const [state, setState] = useState<"loading" | "loaded" | "error">("loading");
 
@@ -26,6 +30,8 @@ export function CardImage({ code, alt, size, class: className, lazy }: Props) {
         ref={img}
         crossOrigin="anonymous"
         src={src}
+        srcset={srcSet}
+        sizes={width ?? WIDTH[size]}
         alt={alt}
         loading={lazy ? "lazy" : undefined}
         decoding="async"

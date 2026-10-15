@@ -172,7 +172,7 @@ export function DeckViewer({ deck, onClose }: { deck: Deck; onClose: () => void 
                   <div class="deck-grid">
                     {section.entries.map((entry) => (
                       <button class="deck-grid-card" onClick={() => setDetail(entry)} aria-label={`${entry.qty} × ${entry.card.title}`}>
-                        <CardImage code={entry.card.code} alt={entry.card.title} size="small" lazy />
+                        <CardImage code={entry.card.code} alt={entry.card.title} size="small" width="25vw" lazy />
                         <span class="badge">×{entry.qty}</span>
                       </button>
                     ))}
