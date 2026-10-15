@@ -40,6 +40,8 @@ export function Ticker({ children, action }: { children: ComponentChildren; acti
     measure();
     const observer = new ResizeObserver(measure);
     if (feed.current) observer.observe(feed.current);
+    if (text.current) observer.observe(text.current);
+    document.fonts?.ready.then(measure);
     return () => observer.disconnect();
   });
   return (
