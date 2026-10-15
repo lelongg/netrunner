@@ -17,6 +17,8 @@ function useSession(session: Session | null) {
   useEffect(() => session?.subscribe(() => setTick((t) => t + 1)), [session]);
 }
 
+const HANDOFF_KEY = "nsg.handoff";
+
 const otherSide = (s: Side): Side => (s === "corp" ? "runner" : "corp");
 
 const runnerPassed = (view: any) => (view.encounters ?? view.run)?.["no-action"] === "runner";
@@ -48,6 +50,13 @@ function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [localSide, setLocalSide] = useState<Side>("corp");
   const [handoff, setHandoff] = useState<Side | null>(null);
+  const [handoffLog, setHandoffLog] = useState<number>(() => {
+    try {
+      return Number(localStorage.getItem(HANDOFF_KEY) ?? 0);
+    } catch {
+      return 0;
+    }
+  });
   const [save, setSave] = useState<SavedGame | null>(() => loadSave());
   useSession(session);
   const hotSeat = !!session && session.lobby.started && session.lobby.role === "local" && !session.lobby.vsBot;
@@ -117,6 +126,11 @@ function App() {
         <Handoff
           side={handoff}
           onReady={() => {
+            const at = (session.views.corp?.log ?? []).length;
+            setHandoffLog(at);
+            try {
+              localStorage.setItem(HANDOFF_KEY, String(at));
+            } catch {}
             setLocalSide(handoff);
             setHandoff(null);
           }}
@@ -131,6 +145,7 @@ function App() {
         db={loaded.db}
         side={localSide}
         view={view}
+        handoffLog={handoffLog}
         onSwitchSide={() => setHandoff(otherSide(localSide))}
         onLeave={leave}
       />

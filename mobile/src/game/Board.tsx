@@ -19,6 +19,38 @@ interface Props {
   view: any;
   onSwitchSide?: () => void;
   onLeave: () => void;
+  handoffLog?: number;
+}
+
+interface ClickMark {
+  log: number;
+  decks: [number, number];
+}
+
+const clickMarks = new WeakMap<Session, Map<string, ClickMark>>();
+const UNDO = /undo-click/i;
+const REVEALING = /\b(draws?|accesses|reveals?|looks? at|search(es)?|mills?|to make a run|breach(es)?|trash(es)? the top)\b/i;
+
+function undoAllowed(session: Session, view: any, side: Side, render: (m: unknown) => string, handoffLog = 0) {
+  const active = view["active-player"] as Side;
+  const clicks = Number(view[active]?.click ?? 0);
+  const log: any[] = view.log ?? [];
+  const decks: [number, number] = [Number(view.corp?.["deck-count"] ?? 0), Number(view.runner?.["deck-count"] ?? 0)];
+  let marks = clickMarks.get(session);
+  if (!marks) clickMarks.set(session, (marks = new Map()));
+  const key = (c: number) => `${view.turn}:${active}:${c}`;
+  if (!view.run) {
+    for (let c = clicks - 1; c >= 0; c--) marks.delete(key(c));
+    const existing = marks.get(key(clicks));
+    if (!existing || log.slice(existing.log).some((e) => UNDO.test(render(e.text)))) marks.set(key(clicks), { log: log.length, decks });
+  }
+  if (side !== active || view.winner || view.run) return false;
+  const mark = marks.get(key(clicks + 1));
+  if (!mark || mark.decks[0] !== decks[0] || mark.decks[1] !== decks[1] || handoffLog > mark.log) return false;
+  return !log.slice(mark.log).some((e) => {
+    const text = render(e.text);
+    return (e.text?.side && e.text.side !== active) || REVEALING.test(text) || UNDO.test(text);
+  });
 }
 
 function serverOrder(servers: Record<string, any>) {
@@ -382,7 +414,7 @@ function feedText(view: any, side: Side, names: Record<Side, string>) {
   return `Turn ${view.turn ?? 0} · ${active === side ? "your move" : `${names[active] ?? active} to play`}`;
 }
 
-export function Board({ session, engine, db, side, view, onSwitchSide, onLeave }: Props) {
+export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, handoffLog }: Props) {
   const [selected, setSelected] = useState<any>(null);
   const [showLog, setShowLog] = useState(false);
   const [picking, setPicking] = useState(false);
@@ -418,6 +450,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave }
   };
   const myMove = !view.winner && (ptype ? ptype !== "waiting" && ptype !== "run" : view["active-player"] === side && !view.run && (me.click ?? 0) > 0);
   const remote = session.lobby.role !== "local" || session.lobby.vsBot;
+  const canUndo = undoAllowed(session, view, side, render, handoffLog);
   useEffect(() => {
     if (myMove && remote) navigator.vibrate?.(40);
   }, [myMove]);
@@ -575,7 +608,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave }
               <Icon name="swap" /> Switch to {opp}
             </button>
           )}
-          {view["active-player"] === side && !view.winner && (
+          {canUndo && (
             <button
               onClick={() => {
                 session.say("/undo-click", side);
