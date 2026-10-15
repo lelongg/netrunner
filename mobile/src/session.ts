@@ -1,6 +1,6 @@
 import type { CardDb, Deck, EngineApi, GameHandle, Side } from "./engine";
 import { HeuristicBot } from "./bot/heuristic.ts";
-import { type WireDeck, engineDeck, fromWire, playableDeck } from "./decks";
+import { type WireDeck, engineDeck, fromWire } from "./decks";
 import { PeerTransport } from "./net/p2p";
 import { RELAY_URL, RelayTransport, createGame, joinGame, rejoinLink, storedTicket } from "./net/relay";
 import type { Entry, LinkStatus, Payload, Seat, Transport } from "./net/types";
@@ -356,7 +356,7 @@ export class Session {
         break;
       case "start":
         if (seat !== 0 || t.started || !t.decks[0] || !t.decks[1] || !Array.isArray(p.seed) || p.seed.length !== 4) break;
-        this.startShared(p.seed, p.v ?? 1);
+        this.startShared(p.seed);
         break;
       case "act":
       case "say":
@@ -375,12 +375,12 @@ export class Session {
     }
   }
 
-  private startShared(seed: number[], version: number) {
+  private startShared(seed: number[]) {
     const t = this.table;
     const seatOf = (side: Side): Seat => (this.sideOf(0) === side ? 0 : 1);
     const player = (side: Side) => {
       const seat = seatOf(side);
-      return { user: { username: t.names[seat] ?? (seat === 0 ? "Host" : "Guest") }, deck: engineDeck(version >= 2 ? playableDeck(fromWire(t.decks[seat]!, this.db)) : fromWire(t.decks[seat]!, this.db)) };
+      return { user: { username: t.names[seat] ?? (seat === 0 ? "Host" : "Guest") }, deck: engineDeck(fromWire(t.decks[seat]!, this.db)) };
     };
     this.deckNames = { corp: t.decks[seatOf("corp")]!.name, runner: t.decks[seatOf("runner")]!.name };
     this.boot({ gameid: this.lobby.code || "online", format: "casual", corp: player("corp"), runner: player("runner") }, seed);
@@ -547,11 +547,11 @@ export class Session {
     const seed = Array.from(crypto.getRandomValues(new Uint32Array(4)));
     if (this.lobby.role === "host") {
       this.push({ k: "deck", deck: this.lobby.myDeck! });
-      this.push({ k: "start", seed, v: 2 });
+      this.push({ k: "start", seed });
       return;
     }
-    const mine = playableDeck(fromWire(this.lobby.myDeck!, this.db));
-    const theirs = playableDeck(fromWire(this.opponentDeck!, this.db));
+    const mine = fromWire(this.lobby.myDeck!, this.db);
+    const theirs = fromWire(this.opponentDeck!, this.db);
     const me = { username: this.lobby.myName };
     const them = { username: this.lobby.opponentName ?? "Player 2" };
     const players =

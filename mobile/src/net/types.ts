@@ -8,7 +8,7 @@ export type Payload =
   | { k: "name"; name: string }
   | { k: "side"; side: Side }
   | { k: "deck"; deck: WireDeck | null }
-  | { k: "start"; seed: number[]; v?: number }
+  | { k: "start"; seed: number[] }
   | { k: "act"; command: string; args: unknown }
   | { k: "say"; text: string }
   | { k: "concede" };
