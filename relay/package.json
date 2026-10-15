@@ -1,0 +1,18 @@
+{
+  "name": "netrunner-relay",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "test": "node test/protocol.mjs",
+    "test:e2e": "node test/reconnect.e2e.mjs"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20260929.1",
+    "playwright-core": "1.63.0",
+    "typescript": "5.6.3",
+    "wrangler": "4.144.0"
+  }
+}
