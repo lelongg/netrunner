@@ -55,7 +55,7 @@ export default {
       return json({ error: "Could not allocate a game code" }, 503, origin);
     }
 
-    const match = url.pathname.match(/^\/games\/([^/]+)\/(join|ws)$/);
+    const match = url.pathname.match(/^\/games\/([^/]+)\/(join|ws|seat)$/);
     if (!match || !CODE_RE.test(match[1])) return json({ error: "Not found" }, 404, origin);
     const room = env.GAME_ROOM.get(env.GAME_ROOM.idFromName(match[1]));
 
@@ -63,6 +63,10 @@ export default {
       const result = await room.join();
       if ("error" in result) return json(result, result.error === "full" ? 409 : 404, origin);
       return json({ code: match[1], ...result }, 200, origin);
+    }
+    if (match[2] === "seat" && request.method === "GET") {
+      const seat = await room.seatOf(url.searchParams.get("token") ?? "");
+      return seat === null ? json({ error: "Unknown seat" }, 404, origin) : json({ code: match[1], seat }, 200, origin);
     }
     if (match[2] === "ws" && request.headers.get("Upgrade") === "websocket") return room.fetch(request);
     return json({ error: "Not found" }, 404, origin);
@@ -102,6 +106,11 @@ export class GameRoom extends DurableObject<Env> {
     return { seat: 1, token: t };
   }
 
+  async seatOf(token: string): Promise<Seat | null> {
+    const row = this.sql.exec<{ seat: number }>("SELECT seat FROM seats WHERE token = ?", token).toArray()[0];
+    return row ? (row.seat as Seat) : null;
+  }
+
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
     const row = this.sql.exec<{ seat: number }>("SELECT seat FROM seats WHERE token = ?", url.searchParams.get("token") ?? "").toArray()[0];
@@ -133,6 +142,13 @@ export class GameRoom extends DurableObject<Env> {
     if (msg.t === "sync") {
       this.sendSince(ws, Math.max(0, Number(msg.since) || 0));
       return ws.send(JSON.stringify({ t: "synced", last: this.lastSeq() }));
+    }
+    if (msg.t === "release") {
+      if (seat !== 0) return this.reject(ws, "Only the host can free a seat");
+      this.sql.exec("DELETE FROM seats WHERE seat = 1");
+      for (const socket of this.ctx.getWebSockets("1")) socket.close(4002, "Seat released by the host");
+      this.broadcastPresence();
+      return;
     }
     if (msg.t !== "append" || !msg.p || typeof msg.p !== "object") return this.reject(ws, "Unknown message");
     if (this.lastSeq() >= MAX_ENTRIES) return this.reject(ws, "This game has reached its size limit");

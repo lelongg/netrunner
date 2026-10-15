@@ -645,6 +645,33 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
           >
             Deck list
           </button>
+          {session.rejoinUrl && (
+            <button
+              onClick={async () => {
+                const url = session.rejoinUrl!;
+                try {
+                  if (navigator.share) await navigator.share({ title: "Rejoin my Netrunner game", url });
+                  else {
+                    await navigator.clipboard.writeText(url);
+                    alert("Rejoin link copied. Keep it private: it lets anyone take your seat.");
+                  }
+                } catch {}
+                setMenu(false);
+              }}
+            >
+              Rejoin link
+            </button>
+          )}
+          {session.canFreeSeat && (
+            <button
+              onClick={() => {
+                if (confirm(`Free ${session.lobby.opponentName ?? "your opponent"}'s seat? Anyone with the game code can then take it and continue the game.`)) session.freeSeat();
+                setMenu(false);
+              }}
+            >
+              Free opponent's seat
+            </button>
+          )}
           {prompt && ptype !== "run" && (
             <button
               onClick={() => {

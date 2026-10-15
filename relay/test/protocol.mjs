@@ -69,3 +69,29 @@ if (process.env.EXPIRY_TEST) {
   const late = await post(`/games/${g.body.code}/join`);
   assert(late.status === 404, "an inactive game is deleted by its alarm");
 }
+
+{
+  const g = await post("/games");
+  const j = await post(`/games/${g.body.code}/join`);
+  const seatCheck = await fetch(`${BASE}/games/${g.body.code}/seat?token=${j.body.token}`, { headers: { Origin: "http://localhost:4178" } });
+  assert(seatCheck.status === 200 && (await seatCheck.json()).seat === 1, "a seat token can be checked");
+  const h = await connect(g.body.code, g.body.token);
+  const guest = await connect(g.body.code, j.body.token);
+  h.ws.send(JSON.stringify({ t: "append", p: { k: "act", n: 1 } }));
+  await wait(300);
+  const closed = new Promise((r) => (guest.ws.onclose = (e) => r(e.code)));
+  guest.ws.send(JSON.stringify({ t: "release" }));
+  await wait(300);
+  assert(guest.inbox.some((m) => m.t === "error"), "a guest cannot free a seat");
+  h.ws.send(JSON.stringify({ t: "release" }));
+  assert((await closed) === 4002, "the host frees the guest seat and the old guest is disconnected (4002)");
+  const gone = await fetch(`${BASE}/games/${g.body.code}/seat?token=${j.body.token}`, { headers: { Origin: "http://localhost:4178" } });
+  assert(gone.status === 404, "the old guest token no longer works");
+  const newcomer = await post(`/games/${g.body.code}/join`);
+  assert(newcomer.status === 200 && newcomer.body.seat === 1, "someone else can take the freed seat");
+  const n = await connect(g.body.code, newcomer.body.token);
+  await wait(400);
+  assert(entries(n.inbox).length === 1, "the newcomer receives the game so far");
+  h.ws.close(); n.ws.close();
+  console.log("seat release checks passed");
+}

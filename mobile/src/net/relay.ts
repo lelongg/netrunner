@@ -25,7 +25,24 @@ export function storedTicket(code: string): SeatTicket | undefined {
   return tickets()[code];
 }
 
-function storeTicket(ticket: SeatTicket) {
+export function forgetTicket(code: string) {
+  try {
+    const all = tickets();
+    delete all[code];
+    localStorage.setItem(TICKETS, JSON.stringify(all));
+  } catch {}
+}
+
+export function rejoinLink(ticket: SeatTicket) {
+  return `${location.origin}${location.pathname}?join=${ticket.code}#seat=${ticket.seat}.${ticket.token}`;
+}
+
+export function ticketFromHash(code: string, hash: string): SeatTicket | undefined {
+  const m = hash.match(/seat=([01])\.([0-9a-f]{16,})/);
+  return m ? { code, seat: Number(m[1]) as Seat, token: m[2] } : undefined;
+}
+
+export function storeTicket(ticket: SeatTicket) {
   try {
     const all = tickets();
     all[ticket.code] = ticket;
@@ -71,6 +88,7 @@ export class RelayTransport implements Transport {
   private pongTimer?: number;
   private status: LinkStatus = { link: "connecting", peer: false, step: "relay", since: Date.now() };
   private wake = () => this.revive();
+  private dead = false;
 
   constructor(
     private ticket: SeatTicket,
@@ -86,6 +104,14 @@ export class RelayTransport implements Transport {
   send(p: Payload) {
     const tagged = this.outbox.add(p);
     if (this.status.link === "open" && this.ws?.readyState === WebSocket.OPEN) this.ws.send(JSON.stringify({ t: "append", p: tagged }));
+  }
+
+  release() {
+    if (this.ticket.seat === 0 && this.ws?.readyState === WebSocket.OPEN) this.ws.send(JSON.stringify({ t: "release" }));
+  }
+
+  get seatTicket() {
+    return this.ticket;
   }
 
   close() {
@@ -141,7 +167,8 @@ export class RelayTransport implements Transport {
       if (this.ws !== ws) return;
       clearInterval(this.pingTimer);
       clearTimeout(this.pongTimer);
-      if (event.code === 4001) return this.setStatus({ link: "connecting", peer: false, error: "This game has expired." });
+      if (event.code === 4001) return this.die("This game has expired.");
+      if (event.code === 4002) return this.die("The host gave your seat to someone else.");
       this.retry();
     };
   }
@@ -153,17 +180,31 @@ export class RelayTransport implements Transport {
     this.pongTimer = window.setTimeout(() => this.ws?.close(), PONG_TIMEOUT_MS);
   }
 
+  private die(error: string) {
+    this.dead = true;
+    forgetTicket(this.ticket.code);
+    this.setStatus({ link: "connecting", peer: false, error });
+  }
+
+  private async checkSeat() {
+    try {
+      const res = await fetch(`${RELAY_URL}/games/${this.ticket.code}/seat?token=${this.ticket.token}`);
+      if (res.status === 404) this.die("This game no longer exists, or your seat was given to someone else.");
+    } catch {}
+  }
+
   private retry() {
-    if (this.closed) return;
+    if (this.closed || this.dead) return;
+    if (this.attempt === 2) void this.checkSeat();
     const since = this.status.since ?? Date.now();
     this.setStatus({ link: "connecting", peer: false, step: "relay", since, hint: Date.now() - since > UNREACHABLE_MS ? "unreachable" : undefined });
     if (document.visibilityState !== "visible") return;
     const delay = Math.min(15000, 500 * 2 ** this.attempt++);
-    this.retryTimer = window.setTimeout(() => this.connect(), delay);
+    this.retryTimer = window.setTimeout(() => !this.dead && this.connect(), delay);
   }
 
   private revive() {
-    if (this.closed || document.visibilityState !== "visible") return;
+    if (this.closed || this.dead || document.visibilityState !== "visible") return;
     if (this.ws?.readyState === WebSocket.OPEN) return this.ping();
     this.attempt = 0;
     this.connect();

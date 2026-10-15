@@ -2,7 +2,7 @@ import type { CardDb, Deck, EngineApi, GameHandle, Side } from "./engine";
 import { HeuristicBot } from "./bot/heuristic.ts";
 import { type WireDeck, engineDeck, fromWire } from "./decks";
 import { PeerTransport } from "./net/p2p";
-import { RELAY_URL, RelayTransport, createGame, joinGame, storedTicket } from "./net/relay";
+import { RELAY_URL, RelayTransport, createGame, joinGame, rejoinLink, storedTicket } from "./net/relay";
 import type { Entry, LinkStatus, Payload, Seat, Transport } from "./net/types";
 
 export type Role = "host" | "guest" | "local";
@@ -250,6 +250,10 @@ export class Session {
   }
 
   private linkChanged(status: LinkStatus) {
+    if (status.error && status.error !== this.link.error) {
+      this.actionError = status.error;
+      if (/seat|no longer exists|expired/.test(status.error)) this.forget();
+    }
     this.link = status;
     if (status.link === "open" && !this.announced) {
       this.announced = true;
@@ -367,6 +371,18 @@ export class Session {
     if (this.autoplay && !this.bot) this.bot = new HeuristicBot(this.lobby.mySide, (title) => this.db.byTitle.get(title) as any);
     this.emit();
     this.scheduleBot();
+  }
+
+  get rejoinUrl(): string | undefined {
+    return this.transport instanceof RelayTransport ? rejoinLink(this.transport.seatTicket) : undefined;
+  }
+
+  get canFreeSeat() {
+    return this.transport instanceof RelayTransport && this.seat === 0 && !!this.table.names[1] && !this.link.peer;
+  }
+
+  freeSeat() {
+    if (this.canFreeSeat) (this.transport as RelayTransport).release();
   }
 
   autopilot() {

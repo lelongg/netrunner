@@ -34,7 +34,9 @@ Jinteki.net team.
   pile, tap the image for a full-screen high-resolution scan, Android back closes overlays.
 - **Survives real life.** Reloading resumes the game and switching apps reconnects
   automatically. With the relay, either player can close the app mid-game; the other keeps
-  playing and the absent one catches up when they return.
+  playing and the absent one catches up when they return. The game menu has a rejoin link to move
+  your seat to another device, and the host can free an absent guest's seat so someone can
+  take it over with the game code.
 - **Undo a click** that revealed nothing: no draws, accesses or runs, no opponent action in
   between, one click at a time.
 

@@ -13,6 +13,7 @@ actions; it never runs game logic.
 - `POST /games/:code/join` takes the second seat and returns `{ code, seat: 1, token }`
   (404 for an unknown code, 409 when both seats are taken).
 - `GET /games/:code/ws?token=…&since=N` upgrades to a WebSocket for that seat.
+- `GET /games/:code/seat?token=…` tells a client whether its seat key is still valid.
 
 One `GameRoom` Durable Object per game (`idFromName(code)`), on the SQLite backend:
 
@@ -24,6 +25,8 @@ One `GameRoom` Durable Object per game (`idFromName(code)`), on the SQLite backe
 - `{ "t": "append", "p": … }` stores the payload with the next sequence number and the
   sender's seat, then broadcasts `{ "t": "entry", "e": { seq, seat, p } }` to both seats
   (the sender uses it as its acknowledgement). `{ "t": "sync", "since": N }` replays again.
+- `{ "t": "release" }` from the host deletes the guest's seat key and disconnects it (close
+  code 4002), so someone else can join with the code and continue the game.
 - Messages over 4 KB are rejected, rooms hold at most two seats and 20 000 entries, and a
   newer connection for a seat replaces the older one.
 - Every write pushes an alarm `EXPIRY_DAYS` (14 by default) ahead; when it fires the game is

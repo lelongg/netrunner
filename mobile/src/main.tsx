@@ -2,6 +2,7 @@ import { render } from "preact";
 import { useEffect, useState } from "preact/hooks";
 import { type CardDb, type EngineApi, type Matchup, type Side, loadEngine } from "./engine";
 import { Board } from "./game/Board";
+import { storeTicket, ticketFromHash } from "./net/relay";
 import { basicCommands, promptOf, runCommands } from "./game/actions";
 import { Handoff } from "./screens/Handoff";
 import { Home } from "./screens/Home";
@@ -10,6 +11,8 @@ import { type Role, type SavedGame, Session, clearSave, loadSave, newRoomCode } 
 import "./styles.css";
 
 const joinParam = new URLSearchParams(location.search).get("join")?.toUpperCase() ?? undefined;
+const seatFromLink = joinParam ? ticketFromHash(joinParam, location.hash) : undefined;
+if (seatFromLink) storeTicket(seatFromLink);
 const autopilotParam = new URLSearchParams(location.search).has("autopilot");
 const agentParam = new URLSearchParams(location.search).has("agent") || sessionStorage.getItem("nsg.agent") === "1";
 if (agentParam) sessionStorage.setItem("nsg.agent", "1");
