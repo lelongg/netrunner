@@ -13,16 +13,25 @@ export function Meter({ value, max, tone = "cyan", small }: { value: number; max
   );
 }
 
-export function Bump({ value, children }: { value: unknown; children: ComponentChildren }) {
+export function Bump({ value, children, delta }: { value: unknown; children: ComponentChildren; delta?: boolean }) {
   const prev = useRef(value);
   const dir = useRef<string>();
+  const diff = useRef(0);
   if (prev.current !== value) {
-    dir.current = Number(value) > Number(prev.current) ? "bump-up" : "bump-down";
+    diff.current = Number(value) - Number(prev.current);
+    dir.current = diff.current > 0 ? "bump-up" : "bump-down";
     prev.current = value;
   }
   return (
-    <span key={String(value)} class={dir.current ? `bump ${dir.current}` : undefined}>
-      {children}
+    <span class="bump-wrap">
+      <span key={String(value)} class={dir.current ? `bump ${dir.current}` : undefined}>
+        {children}
+      </span>
+      {delta && diff.current !== 0 && Number.isFinite(diff.current) && (
+        <span key={`d${String(value)}`} class={`delta ${diff.current > 0 ? "up" : "down"}`} aria-hidden="true">
+          {diff.current > 0 ? `+${diff.current}` : `\u2212${-diff.current}`}
+        </span>
+      )}
     </span>
   );
 }

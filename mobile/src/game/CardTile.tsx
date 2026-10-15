@@ -55,7 +55,7 @@ export function CardTile({
   const hosted: any[] = card.hosted ?? [];
   return (
     <div class="tile-wrap">
-      <button key={`${card.cid}:${code ?? ""}:${card.rezzed ? 1 : 0}`} class={classes} onClick={() => onTap?.(card)} aria-label={card.title ?? "Hidden card"}>
+      <button key={`${card.cid}:${code ?? ""}:${card.rezzed ? 1 : 0}`} class={classes} data-cid={card.cid} onClick={() => onTap?.(card)} aria-label={card.title ?? "Hidden card"}>
         {code ? <CardImage code={code} alt={card.title} size={size === "lg" ? "large" : "small"} lazy /> : <span class="back-label">{card.side === "Corp" ? "CORP" : "RUN"}</span>}
         <div class="badges">
           {counters(card).map(([icon, n]) => (

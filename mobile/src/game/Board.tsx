@@ -11,6 +11,7 @@ import { useBackClose } from "../back";
 import { PHASE_LABELS, iconize, serverLabel, serverName } from "./text";
 import { Icon } from "../icons";
 import { glyphs } from "./Glyphs";
+import { EventFx } from "./Fx";
 
 interface Props {
   session: Session;
@@ -88,7 +89,7 @@ function Opponent({ view, side, name }: { view: any; side: Side; name: string })
           {side} // {name}
         </span>
         <span class="big">
-          <Bump value={p.credit ?? 0}>{p.credit ?? 0}</Bump>
+          <Bump value={p.credit ?? 0} delta>{p.credit ?? 0}</Bump>
           <Icon name="credit" class="big-credit" />
         </span>
       </div>
@@ -114,7 +115,7 @@ function MeBar({ view, side, name }: { view: any; side: Side; name: string }) {
   return (
     <div class="me-bar">
       <span class="big yellow">
-        <Bump value={p.credit ?? 0}>{p.credit ?? 0}</Bump>
+        <Bump value={p.credit ?? 0} delta>{p.credit ?? 0}</Bump>
         <Icon name="credit" class="big-credit" />
       </span>
       <div class="me-info">
@@ -482,8 +483,9 @@ function RunFx({ view, render, side }: { view: any; render: (m: unknown) => stri
       const lines = log.slice(prev.log).map((e) => render(e.text));
       const breached = lines.some((l) => /\bbreach(es)?\b/i.test(l));
       const jacked = lines.some((l) => /jacks? out/i.test(l));
-      if (breached) show("success", "Breach", `${serverName(prev.server)} // run successful`, [30, 30, 30, 30, 80]);
-      else show("end", jacked ? "Jack out" : "Run ended", serverName(prev.server), [120]);
+      const stole = lines.some((l) => /\bsteals .+ agenda points?/i.test(l));
+      if (breached && !stole) show("success", "Breach", `${serverName(prev.server)} // run successful`, [30, 30, 30, 30, 80]);
+      else if (!breached) show("end", jacked ? "Jack out" : "Run ended", serverName(prev.server), [120]);
     }
     prev.server = server;
   }, [server]);
@@ -745,6 +747,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
   return (
     <div class={`board side-${side} ${ptype === "select" ? "selecting" : ""} ${view.run ? "in-run" : ""}`}>
       <RunFx view={view} render={render} side={side} />
+      <EventFx view={view} render={render} db={db} opponent={names[opp]} />
       <Ticker
         action={
           <button class="ticker-menu" onClick={() => setMenu(!menu)} aria-label="Menu" aria-expanded={menu}>
