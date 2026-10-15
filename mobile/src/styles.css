@@ -1679,3 +1679,27 @@ button:active:not(:disabled) {
   margin-right: 4px;
   color: var(--red);
 }
+
+.glyph {
+  height: 0.95em;
+  margin: 0 0.08em;
+  vertical-align: -0.14em;
+}
+
+.badge .glyph {
+  height: 9px;
+  margin: 0 2px 0 0;
+  vertical-align: -1px;
+}
+
+.big .big-credit {
+  color: var(--text);
+  height: 0.62em;
+  margin-left: 0.04em;
+  vertical-align: 0.06em;
+  stroke-width: 3.2;
+}
+
+.big.yellow .big-credit {
+  color: var(--yellow);
+}

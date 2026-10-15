@@ -1,13 +1,27 @@
+import type { IconName } from "../icons";
+
+export const GLYPHS: Record<string, IconName> = {
+  "\uE001": "click",
+  "\uE002": "credit",
+  "\uE003": "recurring",
+  "\uE004": "sub",
+  "\uE005": "trash",
+  "\uE006": "link",
+  "\uE007": "bolt",
+  "\uE008": "warning",
+};
+
 const ICONS: [RegExp, string][] = [
-  [/\[(click|clicks)\]/gi, "◷"],
-  [/\[(credit|credits|c)\]/gi, "¢"],
-  [/\[recurring-credit\]/gi, "↺¢"],
-  [/\[subroutine\]/gi, "↳"],
-  [/\[(trash|trash-ability)\]/gi, "⌫"],
+  [/\[(click|clicks)\]/gi, "\uE001"],
+  [/\[recurring-credit\]/gi, "\uE003"],
+  [/\[(credit|credits|c)\]/gi, "\uE002"],
+  [/\[subroutine\]/gi, "\uE004"],
+  [/\[(trash|trash-ability)\]/gi, "\uE005"],
   [/\[(mu|memory unit)\]/gi, "MU"],
-  [/\[link\]/gi, "⛓"],
-  [/\[interrupt\]/gi, "⚡"],
-  [/\[!\]/g, "⚠"],
+  [/\[link\]/gi, "\uE006"],
+  [/\[interrupt\]/gi, "\uE007"],
+  [/\[!\]/g, "\uE008"],
+  [/¢/g, "\uE002"],
   [/\[(their|pronoun|corp-pronoun|runner-pronoun)\]/g, "their"],
   [/\[(haas-bioroid|jinteki|nbn|weyland-consortium|anarch|criminal|shaper|adam|apex|sunny-lebeau)\]/gi, ""],
 ];

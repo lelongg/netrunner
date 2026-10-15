@@ -1,5 +1,6 @@
 import { CardImage } from "./CardImage";
 import { advancement, isFaceup, zone0 } from "./actions";
+import { ICON_SET, Icon, type IconName } from "../icons";
 
 export function visibleCode(card: any, viewerIsOwner: boolean): string | undefined {
   if (!card?.code) return undefined;
@@ -7,14 +8,14 @@ export function visibleCode(card: any, viewerIsOwner: boolean): string | undefin
   return card.code;
 }
 
-function counters(card: any): string[] {
-  const out: string[] = [];
+const COUNTER_ICONS: Record<string, IconName> = { credit: "credit", virus: "virus", power: "bolt", agenda: "star" };
+
+function counters(card: any): [IconName | string, number][] {
+  const out: [IconName | string, number][] = [];
   const adv = advancement(card);
-  if (adv) out.push(`▲${adv}`);
+  if (adv) out.push(["advance", adv]);
   for (const [k, v] of Object.entries(card.counter ?? {})) {
-    if (!v) continue;
-    const icon = k === "credit" ? "¢" : k === "virus" ? "☣" : k === "power" ? "⚡" : k === "agenda" ? "★" : k.slice(0, 2);
-    out.push(`${icon}${v}`);
+    if (v) out.push([COUNTER_ICONS[k] ?? k.slice(0, 2), Number(v)]);
   }
   return out;
 }
@@ -57,8 +58,11 @@ export function CardTile({
       <button class={classes} onClick={() => onTap?.(card)} aria-label={card.title ?? "Hidden card"}>
         {code ? <CardImage code={code} alt={card.title} size={size === "lg" ? "large" : "small"} lazy /> : <span class="back-label">{card.side === "Corp" ? "CORP" : "RUN"}</span>}
         <div class="badges">
-          {counters(card).map((c) => (
-            <span class="badge">{c}</span>
+          {counters(card).map(([icon, n]) => (
+            <span class="badge">
+              {icon in ICON_SET ? <Icon name={icon as IconName} class="glyph" /> : icon}
+              {n}
+            </span>
           ))}
           {strength != null && strength !== false && <span class="badge str">str {strength}</span>}
         </div>

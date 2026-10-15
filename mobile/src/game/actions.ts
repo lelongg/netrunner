@@ -122,7 +122,7 @@ export function cardCommands(card: any, view: any, side: Side): Command[] {
       for (const a of actionList(card, view, side)) {
         const me = view[side] ?? {};
         const enabled = a === "advance" ? me.click > 0 && me.credit > 0 : undefined;
-        const label = a === "rez" && card.cost != null ? `${ACTION_LABELS[a]} · ${card.cost}¢` : ACTION_LABELS[a];
+        const label = a === "rez" && card.cost != null ? `${ACTION_LABELS[a]} · ${card.cost}[credit]` : ACTION_LABELS[a];
         out.push({ label, command: a, args: { card: ref }, kind: a === "trash" ? "danger" : "normal", enabled });
       }
     } else if (card.type === "Program" && z === "rig") {
@@ -246,7 +246,7 @@ export function runCommands(view: any, side: Side, autoContinue = false): Comman
   const ice = currentIce(view);
   if (side === "corp") {
     if (run?.phase === "approach-ice" && ice && !ice.rezzed)
-      out.push({ label: `Rez ${ice.title ?? "ice"}${ice.cost != null ? ` · ${ice.cost}¢` : ""}`, command: "rez", args: { card: cardRef(ice), "press-continue": autoContinue }, kind: "primary" });
+      out.push({ label: `Rez ${ice.title ?? "ice"}${ice.cost != null ? ` · ${ice.cost}[credit]` : ""}`, command: "rez", args: { card: cardRef(ice), "press-continue": autoContinue }, kind: "primary" });
     if ((run?.phase === "encounter-ice" || enc) && ice) {
       const subs: any[] = ice.subroutines ?? [];
       out.push({

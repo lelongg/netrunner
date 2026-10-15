@@ -1,5 +1,6 @@
 import { type ComponentChildren, h } from "preact";
 import { iconize } from "./text";
+import { glyphs } from "./Glyphs";
 
 const ALLOWED = new Set(["strong", "em", "ul", "li"]);
 
@@ -23,7 +24,7 @@ export function RichText({ text, class: className }: { text: string; class?: str
         stack[stack.length - 1].children.push(h(name, null, ...top.children));
       }
     } else if (part && !(top.tag === "ul" && !part.trim())) {
-      top.children.push(iconize(part));
+      top.children.push(glyphs(iconize(part)));
     }
   }
   while (stack.length > 1) {

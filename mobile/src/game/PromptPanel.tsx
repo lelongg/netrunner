@@ -5,6 +5,7 @@ import { ZoomableCardImage } from "./CardImage";
 import { Icon } from "../icons";
 import { RichText } from "./RichText";
 import { iconize } from "./text";
+import { glyphs } from "./Glyphs";
 
 interface Props {
   view: any;
@@ -92,7 +93,7 @@ export function PromptPanel({ view, side, prompt, render, send, closePrompt, dis
           .filter((c: any) => c.value !== "Hide")
           .map((c: any) => (
             <button class={ptype === "select" ? "primary" : ""} disabled={disabled} onClick={() => answer({ uuid: c.uuid })}>
-              {iconize(choiceLabel(c.value, render))}
+              {glyphs(iconize(choiceLabel(c.value, render)))}
             </button>
           ))}
         {prompt["offer-bad-pub?"] && (
@@ -128,16 +129,16 @@ export function PromptPanel({ view, side, prompt, render, send, closePrompt, dis
               </span>
             )}
             <span class="prompt-card">{source.title}</span>
-            {full?.text ? <RichText class="card-text" text={full.text} /> : <p class="prompt-msg">{msg}</p>}
+            {full?.text ? <RichText class="card-text" text={full.text} /> : <p class="prompt-msg">{glyphs(msg)}</p>}
           </div>
         </div>
       ) : (
         <>
           {source && <span class="prompt-card">{source.title}</span>}
-          <p class="prompt-msg">{msg}</p>
+          <p class="prompt-msg">{glyphs(msg)}</p>
         </>
       )}
-      {full?.text && <p class="prompt-msg">{msg}</p>}
+      {full?.text && <p class="prompt-msg">{glyphs(msg)}</p>}
       {body}
     </section>
   );

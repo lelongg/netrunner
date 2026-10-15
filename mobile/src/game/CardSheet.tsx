@@ -8,6 +8,7 @@ import { RichText } from "./RichText";
 import { useSwipe } from "./swipe";
 import { iconize, serverLabel } from "./text";
 import { Icon } from "../icons";
+import { glyphs } from "./Glyphs";
 
 interface Props {
   card: any;
@@ -64,7 +65,7 @@ export function CardSheet({ card, view, side, db, send, onClose, disabled, index
             {(card.subroutines ?? []).length > 0 && side === "runner" && (
               <ul class="subs">
                 {card.subroutines.map((s: any) => (
-                  <li class={s.broken ? "broken" : s.fired ? "fired" : ""}><Icon name="sub" /> {iconize(s.label)}</li>
+                  <li class={s.broken ? "broken" : s.fired ? "fired" : ""}><Icon name="sub" /> {glyphs(iconize(s.label))}</li>
                 ))}
               </ul>
             )}
@@ -93,7 +94,7 @@ export function CardSheet({ card, view, side, db, send, onClose, disabled, index
           <div class="sheet-actions">
             {commands.map((c) => (
               <button class={c.kind === "danger" ? "danger" : c.kind === "primary" ? "primary" : ""} disabled={disabled || c.enabled === false} onClick={() => run(c)}>
-                {iconize(c.label)}
+                {glyphs(iconize(c.label))}
               </button>
             ))}
             <button class="ghost" onClick={onClose}>

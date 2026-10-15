@@ -167,7 +167,10 @@ export function DeckViewer({ deck, onClose }: { deck: Deck; onClose: () => void 
                                 {String(entry.card.advancementcost)}/{String(entry.card.agendapoints)}
                               </span>
                             ) : (
-                              entry.card.cost != null && <span class="cost">{entry.card.cost}¢</span>
+                              entry.card.cost != null && <span class="cost">
+                                {entry.card.cost}
+                                <Icon name="credit" class="glyph" />
+                              </span>
                             )}
                           </button>
                         </li>

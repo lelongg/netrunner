@@ -10,6 +10,7 @@ import { PromptPanel } from "./PromptPanel";
 import { useBackClose } from "../back";
 import { PHASE_LABELS, iconize, serverLabel, serverName } from "./text";
 import { Icon } from "../icons";
+import { glyphs } from "./Glyphs";
 
 interface Props {
   session: Session;
@@ -85,7 +86,10 @@ function Opponent({ view, side, name }: { view: any; side: Side; name: string })
         <span class={`label who-${side}`}>
           {side} // {name}
         </span>
-        <span class="big">{p.credit ?? 0}¢</span>
+        <span class="big">
+          {p.credit ?? 0}
+          <Icon name="credit" class="big-credit" />
+        </span>
       </div>
       <div class="opp-info">
         <div class="row">
@@ -111,7 +115,10 @@ function MeBar({ view, side, name }: { view: any; side: Side; name: string }) {
   const clicks = p.click ?? 0;
   return (
     <div class="me-bar">
-      <span class="big yellow">{p.credit ?? 0}¢</span>
+      <span class="big yellow">
+        {p.credit ?? 0}
+        <Icon name="credit" class="big-credit" />
+      </span>
       <div class="me-info">
         <span class={`label who-${side}`}>
           {side} // {name}
@@ -342,7 +349,7 @@ function Log({ view, render, onSay, onClose }: { view: any; render: (m: unknown)
           {log.map((e) => {
             const system = e.user === "__system__";
             const msg = iconize(render(e.text));
-            return msg === "———" ? <hr /> : <p class={system ? "sys" : "chat"}>{system ? msg : `${e.user?.username ?? "?"}: ${msg}`}</p>;
+            return msg === "———" ? <hr /> : <p class={system ? "sys" : "chat"}>{system ? glyphs(msg) : glyphs(`${e.user?.username ?? "?"}: ${msg}`)}</p>;
           })}
           <div ref={end} />
         </div>
@@ -395,7 +402,7 @@ function Toasts({ toasts, render, dismiss }: { toasts: any[]; render: (m: unknow
     <div class="toasts" aria-live="polite">
       {all.slice(-TOAST_MAX).map((g) => (
         <button class={`toast ${g.type}`} onClick={() => g.ids.forEach(dismiss)}>
-          {g.text}
+          {glyphs(g.text)}
           {g.ids.length > 1 && <span class="toast-count"> ×{g.ids.length}</span>}
         </button>
       ))}
@@ -549,7 +556,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
                 if (lead.then === "install-list") setPicking(true);
               }}
             >
-              {iconize(lead.label)}
+              {glyphs(iconize(lead.label))}
             </Cta>
           )}
           {others.map((c) => (
@@ -561,7 +568,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
                 if (c.then === "install-list") setPicking(true);
               }}
             >
-              {iconize(c.label)}
+              {glyphs(iconize(c.label))}
             </button>
           ))}
           {commands.length === 0 && <span class="status">Waiting for {names[opp]}…</span>}
@@ -677,7 +684,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
       </main>
       <footer class="dock">
         <button class="last-log" onClick={() => setShowLog(true)}>
-          {lastLog ? iconize(render(lastLog.text)).slice(0, 140) : "Log"}
+          {lastLog ? glyphs(iconize(render(lastLog.text)).slice(0, 140)) : "Log"}
         </button>
         {panel}
         <MeBar view={view} side={side} name={names[side]} />
