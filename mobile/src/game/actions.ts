@@ -115,7 +115,7 @@ export function cardCommands(card: any, view: any, side: Side): Command[] {
     if (fromHand || flashback) {
       const command = flashback ? "flashback" : "play";
       if (side === "corp" && card.type !== "Operation") {
-        out.push({ label: "Install…", command: "generate-install-list", args: { card: ref }, kind: "primary", then: "install-list" });
+        out.push({ label: "Install", command: "generate-install-list", args: { card: ref }, kind: "primary", then: "install-list" });
       } else {
         const verb = card.type === "Operation" || card.type === "Event" ? "Play" : "Install";
         out.push({ label: flashback ? `${verb} (flashback)` : verb, command, args: { card: ref }, kind: "primary" });
