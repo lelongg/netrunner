@@ -69,8 +69,8 @@ server.registerTool(
 );
 server.registerTool(
   "wait_for_turn",
-  { description: "Wait until you have a decision to make (in the lobby: until the game starts), then return what changed since your last look and the action list.", inputSchema: { seconds: z.number().int().optional().describe("Maximum wait, default 50, max 600") } },
-  ({ seconds }) => run((a) => a.wait(seconds ?? 50)),
+  { description: "Wait until you have a decision to make (in the lobby: until the game starts), then return what changed since your last look and the action list.", inputSchema: { seconds: z.number().int().optional().describe("Maximum wait, default 300, max 900") } },
+  ({ seconds }) => run((a) => a.wait(seconds ?? 300)),
 );
 server.registerTool("card_info", { description: "Full text and stats of a card by name.", inputSchema: { name: z.string() } }, ({ name }) => run((a) => a.card(name)));
 server.registerTool("say", { description: "Send a chat message to your opponent's game log.", inputSchema: { message: z.string() } }, ({ message }) => run((a) => a.say(message)));

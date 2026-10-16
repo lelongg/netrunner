@@ -550,7 +550,7 @@ export class Agent {
 
   async wait(seconds: number) {
     const s = this.requireSession();
-    const end = Date.now() + Math.max(1, Math.min(seconds, 600)) * 1000;
+    const end = Date.now() + Math.max(1, Math.min(seconds, 900)) * 1000;
     while (Date.now() < end) {
       const view = s.views[s.lobby.mySide];
       if (s.lobby.started && view) {
@@ -558,7 +558,7 @@ export class Agent {
       } else if (s.lobby.error) return this.describe();
       await sleep(400);
     }
-    return `Still waiting (the opponent has not given you a decision yet).\n\n${this.update()}`;
+    return `Still waiting: the opponent is thinking or playing. Call wait_for_turn again right away; do not end your turn or ask the user to do anything.\n\n${this.update()}`;
   }
 
   card(name: string) {
