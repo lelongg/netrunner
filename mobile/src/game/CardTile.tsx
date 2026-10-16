@@ -64,7 +64,10 @@ export function CardTile({
               {n}
             </span>
           ))}
-          {strength != null && strength !== false && <span class="badge str">str {strength}</span>}
+          {strength != null && strength !== false && <span class="badge str">
+              <Icon name="strength" class="glyph" />
+              {strength}
+            </span>}
         </div>
         {card.new && <span class="new-tag">New</span>}
         {dim && <span class="state">unrezzed</span>}

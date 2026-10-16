@@ -23,7 +23,7 @@ interface Facts {
   hint?: string;
 }
 
-const COUNTER_ICONS: Record<string, IconName> = { virus: "virus", credit: "credit", power: "bolt", advancement: "advance", agenda: "agenda" };
+const COUNTER_ICONS: Record<string, IconName> = { virus: "virus", credit: "credit", power: "power", advancement: "advance", agenda: "agenda" };
 
 function ordinal(n: number) {
   return `${n}${n === 1 ? "st" : n === 2 ? "nd" : n === 3 ? "rd" : "th"}`;
@@ -61,7 +61,7 @@ function cardFacts(card: any, viewer: Side, view: any, known: boolean): Facts {
   for (const [k, v] of Object.entries<any>(card.counter ?? {})) if (v) facts.chips.push(COUNTER_ICONS[k] ? { icon: COUNTER_ICONS[k], text: String(v) } : { text: `${k} ${v}` });
   if (card["rec-counter"]) facts.chips.push({ icon: "recurring", text: String(card["rec-counter"]) });
   const now = card["current-strength"];
-  if (known && now != null && card.strength != null && now !== card.strength) facts.chips.push({ text: `str ${now} (${card.strength})`, tone: "cyan" });
+  if (known && now != null && card.strength != null && now !== card.strength) facts.chips.push({ icon: "strength", text: `${now} (${card.strength})`, tone: "cyan" });
   const hosted: any[] = card.hosted ?? [];
   if (hosted.length) facts.chips.push({ text: `hosting ${hosted.map((h) => (h.title && (h.seen || h.rezzed || h.side === "Runner" || mine) ? h.title : "facedown card")).join(", ")}` });
   return facts;

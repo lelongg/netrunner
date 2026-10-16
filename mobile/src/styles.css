@@ -2844,3 +2844,19 @@ button:active:not(:disabled) {
 .more-hint.left {
   left: 0;
 }
+
+.stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  letter-spacing: 0.08em;
+}
+
+.stat .icon,
+.stat .sym {
+  color: var(--cyan);
+}
+
+.stat .icon {
+  stroke-width: 2.2;
+}

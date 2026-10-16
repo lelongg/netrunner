@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "preact/hooks";
+import type { ComponentChildren } from "preact";
 import type { CardDb, EngineApi, Side } from "../engine";
 import type { Session } from "../session";
 import { Cta, Meter, Ticker } from "../ui";
@@ -12,7 +13,7 @@ import { CardTile } from "./CardTile";
 import { PromptPanel } from "./PromptPanel";
 import { useBackClose } from "../back";
 import { PHASE_LABELS, byServerOrder, iconize, serverLabel, serverName } from "./text";
-import { Icon } from "../icons";
+import { Icon, type IconName } from "../icons";
 import { glyphs } from "./Glyphs";
 import { Breakers } from "./Breakers";
 import { CardImage } from "./CardImage";
@@ -67,16 +68,49 @@ function serverOrder(servers: Record<string, any>) {
   return ["hq", "rd", "archives", ...remotes];
 }
 
-function extras(p: any, side: Side): string[] {
-  const out: string[] = [];
+function Stat({ icon, label, children }: { icon: IconName; label: string; children: ComponentChildren }) {
+  return (
+    <span class="stat" title={label} aria-label={`${label} ${children}`}>
+      <Icon name={icon} />
+      {children}
+    </span>
+  );
+}
+
+function extras(p: any, side: Side) {
+  const out = [];
   if (side === "runner") {
-    if (p.memory) out.push(`${p.memory.used ?? 0}/${p.memory.available ?? 0} MU`);
-    out.push(`${p.tag?.total ?? 0} tag`);
-    if (p.link) out.push(`link ${p.link}`);
-    if (p["brain-damage"]) out.push(`core dmg ${p["brain-damage"]}`);
+    if (p.memory)
+      out.push(
+        <Stat icon="mu" label="Memory">
+          {`${p.memory.used ?? 0}/${p.memory.available ?? 0}`}
+        </Stat>,
+      );
+    out.push(
+      <Stat icon="tag" label="Tags">
+        {p.tag?.total ?? 0}
+      </Stat>,
+    );
+    if (p.link)
+      out.push(
+        <Stat icon="link" label="Link">
+          {p.link}
+        </Stat>,
+      );
+    if (p["brain-damage"])
+      out.push(
+        <Stat icon="core" label="Core damage">
+          {p["brain-damage"]}
+        </Stat>,
+      );
   } else {
     const bp = (p["bad-publicity"]?.base ?? 0) + (p["bad-publicity"]?.additional ?? 0);
-    if (bp) out.push(`${bp} bad pub`);
+    if (bp)
+      out.push(
+        <Stat icon="bad-pub" label="Bad publicity">
+          {bp}
+        </Stat>,
+      );
   }
   return out;
 }
@@ -99,10 +133,15 @@ function Opponent({ view, side, name }: { view: any; side: Side; name: string })
         </div>
         <span class="label stats">
           <span data-anchor={side === "runner" ? "runner-hand" : undefined}>
-            {side === "runner" ? "Grip" : "HQ"} {p["hand-count"] ?? 0}
+            <Stat icon="hand" label={side === "runner" ? "Grip" : "HQ"}>
+              {p["hand-count"] ?? 0}
+            </Stat>
           </span>
-          {` · ${p.click ?? 0} click`}
-          {extras(p, side).map((x) => ` · ${x}`)}
+          {" · "}
+          <Stat icon="click" label="Clicks">
+            {p.click ?? 0}
+          </Stat>
+          {extras(p, side).map((x) => [" · ", x])}
         </span>
       </div>
     </section>
@@ -167,8 +206,10 @@ function MeBar({ view, side, name }: { view: any; side: Side; name: string }) {
         <div class="me-line">
           <Meter value={clicks} max={Math.max(clicks, side === "runner" ? 4 : 3)} anchor={`${side}-clicks`} />
           <span class="label">
-            {clicks} click
-            {extras(p, side).map((x) => ` · ${x}`)}
+            <Stat icon="click" label="Clicks">
+              {clicks}
+            </Stat>
+            {extras(p, side).map((x) => [" · ", x])}
           </span>
         </div>
       </div>
@@ -611,7 +652,14 @@ function Encounter({ view, ice, passed, render, onTap }: { view: any; ice: any; 
           <span class="enc-title">{ice.title}</span>
           <span class="enc-meta">
             {types}
-            {strength != null ? ` · str ${strength}` : ""}
+            {strength != null && (
+              <>
+                {" · "}
+                <Stat icon="strength" label="Strength">
+                  {strength}
+                </Stat>
+              </>
+            )}
           </span>
         </div>
         {subs.length > 0 ? (
