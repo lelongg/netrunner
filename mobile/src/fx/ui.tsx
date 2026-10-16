@@ -38,17 +38,24 @@ export function useLoop(ref: { current: Element | null }, keyframes: any, option
   }, deps);
 }
 
+const BOUNCE = [0.2, 1.25, 0.4, 1] as const;
+const SMOOTH = [0.2, 0.9, 0.3, 1] as const;
+
+function rise(el: Element, from: string, duration: number, ease: readonly number[], delay = 0, fade = true) {
+  animate(el, fade ? { transform: [from, "none"], opacity: [0, 1] } : { transform: [from, "none"] }, { duration, ease: ease as any, delay });
+}
+
 const ENTER: [string, (el: HTMLElement) => void][] = [
-  [".sheet", (el) => animate(el, { y: ["100%", "0%"] }, { type: "spring", visualDuration: 0.42, bounce: 0.18 })],
-  [".sheet-backdrop, .menu-backdrop", (el) => animate(el, { opacity: [0, 1] }, { duration: 0.2 })],
-  [".menu", (el) => animate(el, { scale: [0.85, 1], y: [-14, 0], opacity: [0, 1] }, { type: "spring", visualDuration: 0.3, bounce: 0.3 })],
-  [".card-zoom", (el) => animate(el, { scale: [0.6, 1], opacity: [0, 1], rotate: [-4, 0] }, { type: "spring", visualDuration: 0.38, bounce: 0.3 })],
-  [".update-banner", (el) => animate(el, { y: [60, 0], opacity: [0, 1] }, { type: "spring", visualDuration: 0.4, bounce: 0.35 })],
-  [".toast", (el) => animate(el, { x: [-40, 0], opacity: [0, 1], scale: [0.9, 1] }, { type: "spring", visualDuration: 0.35, bounce: 0.4 })],
-  [".encounter", (el) => animate(el, { y: [24, 0], opacity: [0, 1], scale: [0.96, 1] }, { type: "spring", visualDuration: 0.4, bounce: 0.3 })],
-  [".breakers .brk", (el) => animate(el, { x: [-24, 0], opacity: [0, 1] }, { type: "spring", visualDuration: 0.35, bounce: 0.3, delay: indexIn(el) * 0.05 })],
-  [".actions .buttons > button, .prompt .choices > button, .prompt > button, .prompt .cta", (el) => animate(el, { y: [16, 0], opacity: [0, 1], scale: [0.94, 1] }, { type: "spring", visualDuration: 0.34, bounce: 0.35, delay: indexIn(el) * 0.04 })],
-  [".game-list > *, .home .panel, .lobby .panel", (el) => animate(el, { y: [18, 0], opacity: [0, 1] }, { type: "spring", visualDuration: 0.4, bounce: 0.25, delay: indexIn(el) * 0.05 })],
+  [".sheet", (el) => rise(el, "translateY(100%)", 0.32, SMOOTH, 0, false)],
+  [".sheet-backdrop, .menu-backdrop", (el) => animate(el, { opacity: [0, 1] }, { duration: 0.18 })],
+  [".menu", (el) => rise(el, "translateY(-14px) scale(0.85)", 0.28, BOUNCE)],
+  [".card-zoom", (el) => animate(el, { opacity: [0, 1] }, { duration: 0.15 })],
+  [".update-banner", (el) => rise(el, "translateY(60px)", 0.35, BOUNCE)],
+  [".toast", (el) => rise(el, "translateX(-40px) scale(0.9)", 0.32, BOUNCE)],
+  [".encounter", (el) => rise(el, "translateY(24px) scale(0.96)", 0.34, BOUNCE)],
+  [".breakers .brk", (el) => rise(el, "translateX(-24px)", 0.3, BOUNCE, indexIn(el) * 0.05)],
+  [".actions .buttons > button, .prompt .choices > button, .prompt > button, .prompt .cta", (el) => rise(el, "translateY(16px) scale(0.94)", 0.3, BOUNCE, indexIn(el) * 0.04)],
+  [".game-list > *, .home .panel, .lobby .panel", (el) => rise(el, "translateY(18px)", 0.34, SMOOTH, indexIn(el) * 0.05)],
 ];
 
 function indexIn(el: Element) {
@@ -84,7 +91,7 @@ export function installMotion() {
   let pressed: HTMLElement | null = null;
   const release = () => {
     if (!pressed) return;
-    animate(pressed, { scale: 1 }, { type: "spring", visualDuration: 0.3, bounce: 0.55 });
+    animate(pressed, { transform: "scale(1)" }, { duration: 0.25, ease: [0.2, 1.6, 0.4, 1] });
     pressed = null;
   };
   document.addEventListener(
@@ -94,7 +101,7 @@ export function installMotion() {
       const t = (e.target as Element | null)?.closest?.("button, .tile") as HTMLElement | null;
       if (!t || (t as HTMLButtonElement).disabled || t.closest(".fx-layer")) return;
       pressed = t;
-      animate(t, { scale: t.classList.contains("tile") ? 0.93 : 0.95 }, { duration: 0.08, ease: "easeOut" });
+      animate(t, { transform: `scale(${t.classList.contains("tile") ? 0.93 : 0.95})` }, { duration: 0.08, ease: "easeOut" });
     },
     { passive: true },
   );
