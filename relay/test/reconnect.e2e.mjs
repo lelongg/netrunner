@@ -31,7 +31,7 @@ const publicState = async (page) => {
   await page.locator(".last-log").click();
   const log = await page.locator(".log p").allTextContents();
   await page.locator(".sheet-backdrop").click({ position: { x: 5, y: 5 } });
-  const credits = await page.locator(".big").allTextContents();
+  const credits = await page.locator(".opp .big, .me-bar .big").allTextContents();
   return { log, credits: credits.map((c) => c.replace(/\D/g, "")).sort() };
 };
 
@@ -74,11 +74,12 @@ assert(true, "host kept playing while the guest was away and sees them offline")
 
 const hostBefore = await publicState(host);
 guest = await open(guestCtx, APP);
+await guest.locator(".game-list button").first().click({ timeout: 30000 });
 await guest.waitForSelector(".board", { timeout: 30000 });
 await guest.waitForFunction(() => /Start turn/.test(document.body.textContent), null, { timeout: 30000 });
 const guestAfter = await publicState(guest);
 assert(JSON.stringify(guestAfter.log) === JSON.stringify(hostBefore.log), `guest resumed with the same ${guestAfter.log.length} log lines as the host`);
-assert(JSON.stringify(guestAfter.credits) === JSON.stringify(hostBefore.credits), `same credits on both sides (${guestAfter.credits.join(", ")})`);
+assert(JSON.stringify(guestAfter.credits) === JSON.stringify(hostBefore.credits), `same credits on both sides (${guestAfter.credits.join(", ")} vs ${hostBefore.credits.join(", ")})`);
 
 await click(guest, /Start turn/);
 await click(guest, "Gain credit");
@@ -105,6 +106,7 @@ await click(guest, "Draw");
 await guest.waitForTimeout(800);
 const guestSolo = await publicState(guest);
 const host2 = await open(hostCtx, APP);
+await host2.locator(".game-list button").first().click({ timeout: 30000 });
 await host2.waitForSelector(".board", { timeout: 30000 });
 await host2.waitForTimeout(1500);
 assert(JSON.stringify(await publicState(host2)) === JSON.stringify(guestSolo), "the guest played while the host was away; the host comes back to the same state");

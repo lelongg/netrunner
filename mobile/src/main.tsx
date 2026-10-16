@@ -2,6 +2,7 @@ import { render } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { animate } from "motion";
 import { installMotion, useLoop } from "./fx/ui";
+import { startEngineWorker } from "./game/workerHost";
 import { type CardDb, type EngineApi, type Matchup, type Side, loadEngine } from "./engine";
 import { Board } from "./game/Board";
 import { storeTicket, ticketFromHash } from "./net/relay";
@@ -204,12 +205,12 @@ function App() {
         />
       );
     const view = session.views[localSide];
-    if (!view) return null;
+    if (!view) return <Opening label={lobby.vsBot ? "solo game" : "local game"} ready />;
     return <Board session={session} engine={loaded.engine} db={loaded.db} side={localSide} view={view} handoffLog={handoffLog} onSwitchSide={() => setHandoff(otherSide(localSide))} onLeave={leave} onExit={exit} />;
   }
 
   const view = session.views[lobby.mySide];
-  if (!view) return <p class="status">Syncing…</p>;
+  if (!view) return <Opening label={lobby.code || "game"} ready />;
   return <Board session={session} engine={loaded.engine} db={loaded.db} side={lobby.mySide} view={view} onLeave={leave} onExit={exit} />;
 }
 
@@ -268,6 +269,7 @@ function UpdateBanner() {
 }
 
 installMotion();
+startEngineWorker();
 render(
   <>
     <App />

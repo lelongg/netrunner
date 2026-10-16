@@ -34,28 +34,33 @@ const api = engine as unknown as EngineApi;
 const entries: Entry[] = JSON.parse(read("fixtures/journal-5VB3W.json"));
 
 function corpState(session: Session) {
-  const view = api.view((session as any).game, "corp");
-  return { hand: (view.corp.hand ?? []).length, prompt: view.corp["prompt-state"]?.msg ?? null, discard: (view.corp.discard ?? []).length, active: view["active-player"] };
+  const view = session.views[session.lobby.mySide];
+  return { hand: view.corp["hand-count"] ?? (view.corp.hand ?? []).length, discard: (view.corp.discard ?? []).length, active: view["active-player"] };
 }
 
-const resumed = (role: "host" | "guest") => Session.resume(api, db, { v: 2, role, transport: "relay", code: "TEST1", myName: role, entries, savedAt: 0 } as any);
+const resumed = async (role: "host" | "guest") => {
+  const session = Session.resume(api, db, { v: 2, role, transport: "relay", code: "TEST1", myName: role, entries, savedAt: 0 } as any);
+  await session.settled();
+  return session;
+};
 
-function live(role: "host" | "guest", every: number) {
+async function live(role: "host" | "guest", every: number) {
   const session = Session.resume(api, db, { v: 2, role, transport: "relay", code: "TEST1", myName: role, entries: [], savedAt: 0 } as any);
   for (let i = 0; i < entries.length; i += every) (session as any).receive(entries.slice(i, i + every));
+  await session.settled();
   return session;
 }
 
-const expected = { hand: 5, prompt: null, discard: 1, active: "corp" };
+const expected = { hand: 5, discard: 1, active: "corp" };
 const runs: [string, Session][] = [
-  ["resumed host", resumed("host")],
-  ["resumed guest", resumed("guest")],
-  ["live host, one entry at a time", live("host", 1)],
-  ["live guest, three entries at a time", live("guest", 3)],
+  ["resumed host", await resumed("host")],
+  ["resumed guest", await resumed("guest")],
+  ["live host, one entry at a time", await live("host", 1)],
+  ["live guest, three entries at a time", await live("guest", 3)],
 ];
 for (const [name, session] of runs) {
   assert.deepEqual(corpState(session), expected, `${name}: the Corp's end-of-turn discard must apply`);
-  (session as any).close?.();
+  session.close();
 }
 console.log(`journal ok: ${entries.length} entries replay to the same state ${runs.length} ways`);
 process.exit(0);

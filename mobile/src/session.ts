@@ -1,7 +1,7 @@
-import type { CardDb, Deck, EngineApi, GameHandle, Side } from "./engine";
+import type { CardDb, Deck, EngineApi, Side } from "./engine";
 import { HeuristicBot } from "./bot/heuristic.ts";
 import { type WireDeck, engineDeck, fromWire } from "./decks";
-import { cardRef } from "./game/actions";
+import { type GameHost, type LocalEntry, type Op, makeHost } from "./game/runner";
 import { PeerTransport } from "./net/p2p";
 import { RELAY_URL, RelayTransport, createGame, joinGame, rejoinLink, storedTicket } from "./net/relay";
 import type { Entry, LinkStatus, Payload, Seat, Transport } from "./net/types";
@@ -25,8 +25,6 @@ export interface LobbyState {
   hint?: "unreachable";
   since?: number;
 }
-
-type LocalEntry = { side: Side; kind: "act"; command: string; args: unknown } | { side: Side; kind: "say"; user?: string; text: string } | { side: Side; kind: "concede" };
 
 export type SavedGame =
   | {
@@ -74,22 +72,6 @@ const other = (s: Side): Side => (s === "corp" ? "runner" : "corp");
 export function newRoomCode() {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   return Array.from(crypto.getRandomValues(new Uint32Array(5)), (n) => alphabet[n % alphabet.length]).join("");
-}
-
-function sfc32(a: number, b: number, c: number, d: number) {
-  return () => {
-    a |= 0;
-    b |= 0;
-    c |= 0;
-    d |= 0;
-    const t = (((a + b) | 0) + d) | 0;
-    d = (d + 1) | 0;
-    a = b ^ (b >>> 9);
-    b = (c + (c << 3)) | 0;
-    c = (c << 21) | (c >>> 11);
-    c = (c + t) | 0;
-    return (t >>> 0) / 4294967296;
-  };
 }
 
 const GAME_PREFIX = "nsg.game.";
@@ -196,12 +178,14 @@ export class Session {
   pending = false;
   actionError: string | null = null;
   private listeners = new Set<Listener>();
-  private game?: GameHandle;
+  private host?: GameHost;
+  private booted = false;
+  private staged: { op: Op; done?: (failed: boolean) => void }[] = [];
+  private queue: Promise<void> = Promise.resolve();
   private opponentDeck?: WireDeck;
   private setup?: unknown;
   private deckNames: Partial<Record<Side, string>> = {};
   private seed?: number[];
-  private rng?: () => number;
   private log: LocalEntry[] = [];
   private closed = false;
   private bot?: HeuristicBot;
@@ -242,7 +226,7 @@ export class Session {
     for (const entry of resumeEntries) this.apply(entry);
     this.lobby.myDeck = this.rememberedDeck(this.displaySide());
     this.syncLobby();
-    if (this.game) this.refreshViews();
+    if (this.booted) this.refreshViews();
     void this.connect(code);
   }
 
@@ -326,7 +310,7 @@ export class Session {
     if (!changed) return;
     this.persist();
     this.syncLobby();
-    if (this.game) this.refreshViews();
+    if (this.booted) this.refreshViews();
   }
 
   private sideOf(seat: Seat): Side {
@@ -359,14 +343,18 @@ export class Session {
       case "act":
       case "say":
       case "concede": {
-        if (!this.game) break;
+        if (!this.booted) break;
         const side = this.sideOf(seat);
         const local: LocalEntry = p.k === "act" ? { side, kind: "act", command: p.command, args: p.args ?? null } : p.k === "say" ? { side, kind: "say", user: t.names[seat], text: p.text } : { side, kind: "concede" };
-        const error = this.exec(local);
-        if (seat === this.seat) {
-          this.pending = false;
-          if (error) this.actionError = "That action failed in the engine and was undone.";
-        }
+        this.stage(
+          { k: "exec", entry: local },
+          seat === this.seat
+            ? (failed) => {
+                this.pending = false;
+                if (failed) this.actionError = "That action failed in the engine and was undone.";
+              }
+            : undefined,
+        );
         break;
       }
     }
@@ -414,11 +402,12 @@ export class Session {
   }
 
   private refreshViews() {
-    if (!this.game) return;
-    this.views[this.lobby.mySide] = this.engine.view(this.game, this.lobby.mySide);
-    if (this.autoplay && !this.bot) this.bot = new HeuristicBot(this.lobby.mySide, (title) => this.db.byTitle.get(title) as any);
-    this.emit();
-    this.scheduleBot();
+    if (!this.booted) return;
+    this.commit([this.lobby.mySide], () => {
+      if (this.autoplay && !this.bot) this.bot = new HeuristicBot(this.lobby.mySide, (title) => this.db.byTitle.get(title) as any);
+      this.emit();
+      this.scheduleBot();
+    });
   }
 
   get rejoinUrl(): string | undefined {
@@ -457,7 +446,7 @@ export class Session {
     this.botTimer = window.setTimeout(() => {
       this.botTimer = undefined;
       if (this.closed) return;
-      if (this.online() && this.pending) return;
+      if (this.pending) return;
       const move = bot.decide(this.views[bot.side]);
       if (!move) return;
       if (move.say) this.say(move.say, bot.side);
@@ -563,27 +552,51 @@ export class Session {
 
   // ---------- engine ----------
 
-  private withRng<T>(f: () => T): T {
-    const random = Math.random;
-    Math.random = this.rng!;
-    try {
-      return f();
-    } finally {
-      Math.random = random;
-    }
+  private stage(op: Op, done?: (failed: boolean) => void) {
+    this.staged.push({ op, done });
+  }
+
+  private commit(sides: Side[], after?: () => void) {
+    const batch = this.staged;
+    this.staged = [];
+    const host = this.host;
+    if (!host) return;
+    this.queue = this.queue
+      .then(async () => {
+        const result = await host.run(
+          batch.map((b) => b.op),
+          sides,
+        );
+        if (this.closed) return;
+        const failed = new Set(result.failed);
+        batch.forEach((b, i) => b.done?.(failed.has(i)));
+        Object.assign(this.views, result.views);
+        after?.();
+      })
+      .catch((e) => {
+        console.error(e);
+        this.pending = false;
+        this.actionError = "The game engine stopped responding. Reload the game.";
+        this.emit();
+      });
+  }
+
+  settled() {
+    return this.queue;
   }
 
   private boot(setup: unknown, seed: number[]) {
     this.setup = setup;
     this.seed = seed;
-    this.rng = sfc32(seed[0], seed[1], seed[2], seed[3]);
-    this.game = this.withRng(() => this.engine.createGame(setup));
+    this.host ??= makeHost(this.engine);
+    this.booted = true;
+    this.stage({ k: "boot", setup, seed });
   }
 
   private restore(save: Extract<SavedGame, { v: 1 }>) {
     this.deckNames = save.deckNames ?? {};
     this.boot(save.setup, save.seed);
-    for (const entry of save.log) this.exec(entry);
+    for (const entry of save.log) this.stage({ k: "exec", entry });
     this.log = [...save.log];
     this.lobby = { ...this.lobby, opponentName: save.opponentName, vsBot: save.vsBot, started: true, opponentDeckReady: true };
     this.makeBot();
@@ -653,49 +666,25 @@ export class Session {
     };
   }
 
-  private unbrokenOnPass(game: GameHandle, side: Side) {
-    const enc = this.engine.view(game, "corp")?.encounters;
-    const ice = enc?.ice;
-    const passed = enc?.["no-action"];
-    if (!ice?.rezzed || !passed || passed === side) return null;
-    const live = (ice.subroutines ?? []).some((s: any) => !s.broken && !s.fired && s.resolve !== false);
-    return live ? cardRef(ice) : null;
-  }
-
-  private exec(entry: LocalEntry) {
-    const game = this.game!;
-    try {
-      this.withRng(() => {
-        if (entry.kind === "act") {
-          const ice = entry.command === "continue" ? this.unbrokenOnPass(game, entry.side) : null;
-          if (ice) this.engine.act(game, "corp", "unbroken-subroutines", { card: ice });
-          else this.engine.act(game, entry.side, entry.command, entry.args ?? null);
-        } else if (entry.kind === "say") this.engine.say(game, entry.side, { username: entry.user }, entry.text);
-        else this.engine.concede(game, entry.side);
-      });
-      return null;
-    } catch (e) {
-      console.error(e);
-      return e;
-    }
-  }
-
   private perform(entry: LocalEntry) {
-    if (!this.game) return;
+    if (!this.booted) return;
     const recorded: LocalEntry = JSON.parse(JSON.stringify(entry));
-    const error = this.exec(recorded);
+    this.stage({ k: "exec", entry: recorded }, (failed) => {
+      if (failed) this.actionError = "That action failed in the engine and was undone.";
+    });
     this.log.push(recorded);
     this.persist();
-    if (error) this.actionError = "That action failed in the engine and was undone.";
+    this.pending = true;
     this.broadcast();
   }
 
   private broadcast() {
-    if (!this.game) return;
-    this.views.corp = this.engine.view(this.game, "corp");
-    this.views.runner = this.engine.view(this.game, "runner");
-    this.emit();
-    this.scheduleBot();
+    if (!this.booted) return;
+    this.commit(["corp", "runner"], () => {
+      if (!this.online()) this.pending = false;
+      this.emit();
+      this.scheduleBot();
+    });
   }
 
   // ---------- game actions ----------
@@ -746,5 +735,6 @@ export class Session {
     this.closed = true;
     if (this.botTimer !== undefined) clearTimeout(this.botTimer);
     this.transport?.close();
+    this.host?.dispose();
   }
 }

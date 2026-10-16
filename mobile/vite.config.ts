@@ -5,4 +5,5 @@ export default defineConfig({
   base: "./",
   plugins: [preact()],
   build: { target: "es2020", chunkSizeWarningLimit: 4000 },
+  worker: { format: "es" },
 });
