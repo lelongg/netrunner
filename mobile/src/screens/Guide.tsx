@@ -9,13 +9,14 @@ import { useBackClose } from "../back";
 import { animate } from "../fx/core";
 import { Icon } from "../icons";
 import { motionOff } from "../settings";
-import { Cta, Ticker } from "../ui";
+import { Ticker } from "../ui";
 
 interface Page {
   kicker: string;
   title: string;
   body: string[];
   cards?: string[];
+  choice?: boolean;
 }
 
 const PAGES: Page[] = [
@@ -104,10 +105,26 @@ const PAGES: Page[] = [
     body: [
       "Tap any card to read it and to see what you can do with it. Your main actions are the buttons above your hand.",
       "Tap an icon or an underlined word to see what it means. Tap the line above the buttons to read the full log.",
-      "Ready? Pick a side for a guided game against the bot: tips will walk you through your first turns.",
     ],
   },
+  { kicker: "Your move", title: "Choose your side", body: [], choice: true },
 ];
+
+function SidePick({ side, db, onPick }: { side: Side; db: CardDb; onPick: () => void }) {
+  const corp = side === "corp";
+  const identity = db.byTitle.get(corp ? "The Syndicate: Profit over Principle" : "The Catalyst: Convention Breaker")?.code;
+  return (
+    <button class={`side-pick ${side}`} onClick={onPick}>
+      {identity && <img class="side-art" crossOrigin="anonymous" src={cardImage(identity, "large")} alt="" />}
+      <span class="side-text">
+        <span class="side-kicker">{corp ? "Megacorp" : "Hacker"}</span>
+        <span class="side-name">{corp ? "Corp" : "Runner"}</span>
+        <span class="side-tag">{corp ? "Build. Protect. Score." : "Break in. Steal. Vanish."}</span>
+        <span class="side-go">Play a guided game →</span>
+      </span>
+    </button>
+  );
+}
 
 export function Guide({ db, onClose, onPlay }: { db: CardDb; onClose: () => void; onPlay: (side: Side) => void }) {
   const [index, setIndex] = useState(0);
@@ -146,12 +163,25 @@ export function Guide({ db, onClose, onPlay }: { db: CardDb; onClose: () => void
       () => {},
     );
   }, [index]);
+  useLayoutEffect(() => {
+    if (!PAGES[index].choice || motionOff()) return;
+    const root = body.current;
+    const corp = root?.querySelector<HTMLElement>(".side-pick.corp");
+    const runner = root?.querySelector<HTMLElement>(".side-pick.runner");
+    const vs = root?.querySelector<HTMLElement>(".versus");
+    if (corp) animate(corp, { x: [-innerWidth, 0] }, { type: "spring", visualDuration: 0.5, bounce: 0.2, delay: 0.1 });
+    if (runner) animate(runner, { x: [innerWidth, 0] }, { type: "spring", visualDuration: 0.5, bounce: 0.2, delay: 0.1 });
+    if (vs) animate(vs, { transform: ["translate(-50%, -50%) rotate(-8deg) scale(3)", "translate(-50%, -50%) rotate(-8deg) scale(1)"], opacity: [0, 1] }, { duration: 0.35, delay: 0.5, ease: [0.2, 1.4, 0.4, 1] });
+  }, [index]);
   const p = PAGES[index];
   const last = index === PAGES.length - 1;
   return (
     <>
       <Ticker>
-        How to play <span class="cyan">{index + 1}/{PAGES.length}</span>
+        How to play{" "}
+        <span class="cyan">
+          {index + 1}/{PAGES.length}
+        </span>
       </Ticker>
       <div class="screen guide" ref={body} {...drag}>
         <header class="screen-head">
@@ -161,36 +191,39 @@ export function Guide({ db, onClose, onPlay }: { db: CardDb; onClose: () => void
           <h1>HOW TO PLAY</h1>
         </header>
         <Pager index={index} count={PAGES.length} onStep={go} />
-        <section key={index} class="panel section guide-page">
-          <span class="label cyan">{p.kicker}</span>
-          <h2>{p.title}</h2>
-          {p.cards && (
-            <div class="guide-cards">
-              {p.cards.map((title) => {
-                const code = db.byTitle.get(title)?.code;
-                return code ? <ZoomableCardImage code={code} alt={title} size="small" width="88px" /> : null;
-              })}
-            </div>
-          )}
-          {p.body.map((t) => (
-            <p>{withTerms(iconize(t))}</p>
-          ))}
-        </section>
+        {p.choice ? (
+          <div key={index} class="guide-page guide-choice">
+            <SidePick side="corp" db={db} onPick={() => onPlay("corp")} />
+            <span class="versus" aria-hidden="true">
+              VS
+            </span>
+            <SidePick side="runner" db={db} onPick={() => onPlay("runner")} />
+          </div>
+        ) : (
+          <section key={index} class="panel section guide-page">
+            <span class="label cyan">{p.kicker}</span>
+            <h2>{p.title}</h2>
+            {p.cards && (
+              <div class="guide-cards">
+                {p.cards.map((title) => {
+                  const code = db.byTitle.get(title)?.code;
+                  return code ? <ZoomableCardImage code={code} alt={title} size="small" width="88px" /> : null;
+                })}
+              </div>
+            )}
+            {p.body.map((t) => (
+              <p>{withTerms(iconize(t))}</p>
+            ))}
+          </section>
+        )}
         <div class="guide-dots" aria-hidden="true">
           {PAGES.map((_, i) => (
             <i class={i === index ? "on" : ""} />
           ))}
         </div>
-        {last ? (
-          <div class="guide-play">
-            <Cta onClick={() => onPlay("runner")}>Play as the Runner</Cta>
-            <Cta onClick={() => onPlay("corp")}>Play as the Corp</Cta>
-          </div>
-        ) : (
-          <button class="primary" onClick={() => go(1)}>
-            Next
-          </button>
-        )}
+        <button class="primary guide-next" style={last ? { visibility: "hidden" } : undefined} onClick={() => go(1)}>
+          Next
+        </button>
       </div>
     </>
   );
