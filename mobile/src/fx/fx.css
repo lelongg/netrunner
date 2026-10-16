@@ -221,7 +221,7 @@
 }
 
 .fx-burn {
-  filter: drop-shadow(0 0 10px #ff6a00) sepia(0.6) saturate(2.5) hue-rotate(-20deg) brightness(0.85);
+  filter: drop-shadow(0 0 8px #ff6a00) drop-shadow(0 10px 14px rgb(0 0 0 / 0.6));
 }
 
 .fx-showcase {
