@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "preact/hooks";
-import { animate } from "motion";
 import { useLoop } from "../fx/ui";
 import type { Side } from "../engine";
 import { type Command, cardCommands, cardRef, pendingChoice } from "./actions";
@@ -114,11 +113,6 @@ export function CardSheet({ card, view, side, db, send, onClose, disabled, index
   const installList: unknown[] = view.corp?.["install-list"] ?? [];
   useEffect(() => setInstalling(false), [card.cid]);
   const swipe = useSwipe((dir) => !installing && onStep?.(dir));
-  const head = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!slide || !head.current || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    animate(head.current, { x: [slide * 70, 0], opacity: [0, 1], rotate: [slide * 3, 0] }, { type: "spring", visualDuration: 0.32, bounce: 0.25 });
-  }, [card.cid]);
 
   const run = (c: Command) => {
     pendingChoice.value = c.choose;
@@ -136,7 +130,7 @@ export function CardSheet({ card, view, side, db, send, onClose, disabled, index
     <div class="sheet-backdrop" onClick={onClose}>
       <div class="sheet panel swipeable" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={code ? card.title : "Hidden card"} {...swipe}>
         {onStep && !installing && <Pager index={index} count={count} onStep={onStep} />}
-        <div key={card.cid} ref={head} class="sheet-head">
+        <div key={card.cid} class="sheet-head">
           {code ? <ZoomableCardImage class="sheet-img" code={code} alt={card.title} size="large" /> : <CardBack side={card.side} />}
           <div class="sheet-info">
             {(() => {
