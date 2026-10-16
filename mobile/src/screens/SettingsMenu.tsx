@@ -49,7 +49,6 @@ export function SettingsMenu({ onClose }: { onClose: () => void }) {
             )}
           </span>
         </label>
-        <p class="hint">Online games live on the relay that created them: change it only to play on another server.</p>
       </nav>
     </>
   );
