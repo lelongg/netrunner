@@ -29,17 +29,18 @@ export function Breakers({ view, side, ice, send, onTap, disabled }: { view: any
         .filter((cmd) => cmd.enabled !== false && (cmd.command === "ability" || cmd.command === "dynamic-ability"))
         .map((cmd) => ({ card, cmd })),
     );
-  if (!unbroken.length || (!breakers.length && !others.length)) return null;
-  const rows = breakers.map((card) => {
+  if (!unbroken.length) return null;
+  const all = breakers.map((card) => {
     const cmds = cardCommands(card, view, side);
     const full = cmds.find((c) => c.command === "dynamic-ability" && (c.args as any).dynamic === "auto-pump-and-break");
     const ab = full && (card.abilities ?? []).find((a: any) => a.dynamic === "auto-pump-and-break");
     const manual = cmds.filter((c) => c !== full && c.enabled !== false && (c.command === "ability" || c.command === "dynamic-ability"));
     return { card, full, ab, manual };
   });
-  const price = (r: (typeof rows)[number]) => (r.full ? Number(String(r.ab?.["cost-label"] ?? "").match(/\d+/)?.[0] ?? 0) : Infinity);
-  rows.sort((a, b) => price(a) - price(b));
-  const manual: { card: any; cmd: Command }[] = [...rows.flatMap((r) => r.manual.map((cmd) => ({ card: r.card, cmd }))), ...others];
+  const price = (r: (typeof all)[number]) => Number(String(r.ab?.["cost-label"] ?? "").match(/\d+/)?.[0] ?? 0);
+  const rows = all.filter((r) => r.full).sort((a, b) => price(a) - price(b));
+  const manual: { card: any; cmd: Command }[] = [...all.flatMap((r) => r.manual.map((cmd) => ({ card: r.card, cmd }))), ...others];
+  if (!rows.length && !manual.length) return null;
   const runner = view.runner ?? {};
   const credits = runner.credit ?? 0;
   const badPub = runner["bad-pub-credit"] ?? 0;
@@ -56,13 +57,13 @@ export function Breakers({ view, side, ice, send, onTap, disabled }: { view: any
       {rows.map(({ card, full, ab }) => {
         const label: string = ab?.label ?? "";
         return (
-          <div class={`brk ${full ? "best" : "off"}`}>
+          <div class="brk best">
             <button class="brk-card" onClick={() => onTap(card)} aria-label={card.title}>
               {card.code && <CardImage code={card.code} alt={card.title} size="small" width="34px" />}
             </button>
             <div class="brk-text">
               <span class="brk-name">{card.title}</span>
-              <span class="brk-desc">{full ? (label.startsWith("Match") ? "Match strength, break all" : "Break all") : "No full break available"}</span>
+              <span class="brk-desc">{label.startsWith("Match") ? "Match strength, break all" : "Break all"}</span>
             </div>
             {full && (
               <button class="brk-go" disabled={disabled || full.enabled === false} onClick={() => send(full.command, full.args)}>
