@@ -63,13 +63,12 @@ export function Home({ ready, error, initialJoin, saves, onResume, onDiscard, on
         <section class="panel hero">
           <div class="row">
             <span class="label">For Netrunner</span>
-            <span class="label">Fan made</span>
           </div>
           <h1 style="margin: 0; display: flex; flex-direction: column">
             <span class="big">POCKET</span>
             <span class="big outline">RIG</span>
           </h1>
-          <p>Netrunner on your phone, on the Jinteki rules engine. Host a game, share the code, jack in.</p>
+          <p>Netrunner on your phone, on the Jinteki rules engine. Create a game, share the code, jack in.</p>
         </section>
 
         {error && <p class="error">{error}</p>}
@@ -115,7 +114,7 @@ export function Home({ ready, error, initialJoin, saves, onResume, onDiscard, on
         </label>
 
         <Cta onClick={() => go("host")} disabled={!ready}>
-          Host a game
+          Create a game
         </Cta>
 
         <div class="field">
@@ -147,7 +146,7 @@ export function Home({ ready, error, initialJoin, saves, onResume, onDiscard, on
         <div class="footer">
           <span>Engine: Jinteki · MIT</span>
           <span>Cards: NetrunnerDB</span>
-          <span>Unofficial fan project, not affiliated with Null Signal Games</span>
+          <span>Not affiliated with Null Signal Games</span>
         </div>
       </div>
     </>

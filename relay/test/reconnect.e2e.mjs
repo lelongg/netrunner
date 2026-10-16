@@ -36,8 +36,8 @@ const publicState = async (page) => {
 };
 
 const host = await open(hostCtx, APP);
-await host.waitForFunction(() => [...document.querySelectorAll("button")].some((b) => /Host a game/i.test(b.textContent) && !b.disabled), null, { timeout: 30000 });
-await host.getByRole("button", { name: /Host a game/i }).click();
+await host.waitForFunction(() => [...document.querySelectorAll("button")].some((b) => /Create a game/i.test(b.textContent) && !b.disabled), null, { timeout: 30000 });
+await host.getByRole("button", { name: /Create a game/i }).click();
 await host.waitForFunction(() => /^[A-Z2-9]{5}$/.test(document.querySelector(".invite .code")?.textContent ?? ""), null, { timeout: 20000 });
 const code = (await host.locator(".invite .code").textContent()).trim();
 assert(true, `host created game ${code}`);

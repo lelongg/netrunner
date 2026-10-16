@@ -30,8 +30,8 @@ function shareLink(code: string) {
 }
 
 const STEPS: { key: "relay" | "host"; label: string }[] = [
-  { key: "relay", label: "Reach the matchmaking relays" },
-  { key: "host", label: "Connect to the host's phone" },
+  { key: "relay", label: "Reach the game server" },
+  { key: "host", label: "Link with the other player" },
 ];
 
 function JoinStatus({ lobby }: { lobby: Session["lobby"] }) {
@@ -62,7 +62,7 @@ function JoinStatus({ lobby }: { lobby: Session["lobby"] }) {
           <p class="hint">If it still fails, your networks may block direct links between phones (some mobile carriers do): try with both phones on Wi-Fi, or one on Wi-Fi and the other on mobile data.</p>
         </>
       )}
-      {!lobby.hint && seconds >= 10 && <p class="hint">Still trying. Make sure the host keeps the game open on their screen.</p>}
+      {!lobby.hint && seconds >= 10 && <p class="hint">Still trying. Check your connection.</p>}
     </section>
   );
 }
@@ -251,7 +251,7 @@ export function Lobby({ session, db, matchups, onLeave }: Props) {
             <span class="label">
               Game <span class="cyan">{lobby.code}</span>
             </span>
-            <span class="label">{lobby.status === "connected" ? `Linked with ${opponent}` : lobby.opponentName ? `${opponent} is offline` : "Waiting for the host"}</span>
+            <span class="label">{lobby.status === "connected" ? `Linked with ${opponent}` : lobby.opponentName ? `${opponent} is offline` : "Waiting for the other player"}</span>
           </section>
         )}
 
