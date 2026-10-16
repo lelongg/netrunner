@@ -45,20 +45,8 @@ function actionList(card: any, view: any, side: Side): string[] {
   const z = zone0(card);
   const out: string[] = [];
   const installed = z === "servers" || z === "onhost";
-  if (
-    (card.type === "Agenda" && installed) ||
-    card.advanceable === "always" ||
-    (card.rezzed && card.advanceable === "while-rezzed") ||
-    (!card.rezzed && card.advanceable === "while-unrezzed")
-  )
-    out.push("advance");
-  if (
-    card.type === "Agenda" &&
-    installed &&
-    view["active-player"] === side &&
-    advancement(card) >= (card["current-advancement-requirement"] ?? card.advancementcost ?? Infinity)
-  )
-    out.push("score");
+  if ((card.type === "Agenda" && installed) || card.advanceable === "always" || (card.rezzed && card.advanceable === "while-rezzed") || (!card.rezzed && card.advanceable === "while-unrezzed")) out.push("advance");
+  if (card.type === "Agenda" && installed && view["active-player"] === side && advancement(card) >= (card["current-advancement-requirement"] ?? card.advancementcost ?? Infinity)) out.push("score");
   if (["ICE", "Program"].includes(card.type) && (installed || z === "rig")) out.push("trash");
   if (["Asset", "Upgrade"].includes(card.type) && installed && !card.rezzed) out.push("rez");
   if (card.type === "ICE" && installed && !card.rezzed && view.run?.phase === "approach-ice" && currentIce(view)?.cid === card.cid) out.push("rez");
@@ -134,30 +122,17 @@ export function cardCommands(card: any, view: any, side: Side): Command[] {
       out.push({ label: ACTION_LABELS.trash, command: "trash", args: { card: ref }, kind: "danger" });
     }
     (card.abilities ?? []).forEach((ab: any, i: number) => {
-      out.push(
-        ab.dynamic
-          ? { label: abilityLabel(ab), command: "dynamic-ability", args: { card: ref, dynamic: ab.dynamic, source: ab.source, index: ab.index }, enabled: !!ab.playable }
-          : { label: abilityLabel(ab), command: "ability", args: { card: ref, ability: i }, enabled: !!ab.playable },
-      );
+      out.push(ab.dynamic ? { label: abilityLabel(ab), command: "dynamic-ability", args: { card: ref, dynamic: ab.dynamic, source: ab.source, index: ab.index }, enabled: !!ab.playable } : { label: abilityLabel(ab), command: "ability", args: { card: ref, ability: i }, enabled: !!ab.playable });
     });
   }
 
-  if (!mine && side === "corp")
-    (card["corp-abilities"] ?? []).forEach((ab: any, i: number) =>
-      out.push({ label: abilityLabel(ab), command: "corp-ability", args: { card: ref, ability: i }, enabled: ab.playable !== false }),
-    );
-  if (!mine && side === "runner")
-    (card["runner-abilities"] ?? []).forEach((ab: any, i: number) =>
-      out.push({ label: abilityLabel(ab), command: "runner-ability", args: { card: ref, ability: i }, enabled: ab.playable !== false }),
-    );
+  if (!mine && side === "corp") (card["corp-abilities"] ?? []).forEach((ab: any, i: number) => out.push({ label: abilityLabel(ab), command: "corp-ability", args: { card: ref, ability: i }, enabled: ab.playable !== false }));
+  if (!mine && side === "runner") (card["runner-abilities"] ?? []).forEach((ab: any, i: number) => out.push({ label: abilityLabel(ab), command: "runner-ability", args: { card: ref, ability: i }, enabled: ab.playable !== false }));
 
   const subs: any[] = card.subroutines ?? [];
   if (side === "corp" && mine && subs.length && z === "servers" && runnerPassed(view, card)) {
-    if (card.rezzed && subs.some((s) => !s.fired && !s.broken))
-      out.push({ label: "Fire unbroken subroutines", command: "unbroken-subroutines", args: { card: ref } });
-    subs.forEach((s, i) =>
-      out.push({ label: `${s.label ?? `Subroutine ${i + 1}`}${s.broken ? " (broken)" : ""}`, command: "subroutine", args: { card: ref, subroutine: i } }),
-    );
+    if (card.rezzed && subs.some((s) => !s.fired && !s.broken)) out.push({ label: "Fire unbroken subroutines", command: "unbroken-subroutines", args: { card: ref } });
+    subs.forEach((s, i) => out.push({ label: `${s.label ?? `Subroutine ${i + 1}`}${s.broken ? " (broken)" : ""}`, command: "subroutine", args: { card: ref, subroutine: i } }));
   }
   return out;
 }
@@ -174,11 +149,7 @@ export function basicCommands(view: any, side: Side): Command[] {
 
   if (post) {
     if (myTurn) {
-      out.push(
-        post["requires-consent"]
-          ? { label: "Continue end of turn", command: "post-discard-pass-priority", enabled: !post[side], kind: "primary" }
-          : { label: "Continue end of turn", command: "end-post-discard", kind: "primary" },
-      );
+      out.push(post["requires-consent"] ? { label: "Continue end of turn", command: "post-discard-pass-priority", enabled: !post[side], kind: "primary" } : { label: "Continue end of turn", command: "end-post-discard", kind: "primary" });
     } else if (post["requires-consent"]) {
       out.push({ label: "Allow end of turn", command: "post-discard-pass-priority", enabled: !post[side], kind: "primary" });
     }
@@ -188,11 +159,7 @@ export function basicCommands(view: any, side: Side): Command[] {
   if (p12) {
     const label = view["active-player"] === "corp" ? "Mandatory draw" : "Take clicks";
     if (myTurn) {
-      out.push(
-        p12["requires-consent"]
-          ? { label, command: "phase-12-pass-priority", enabled: !p12[side], kind: "primary" }
-          : { label, command: "end-phase-12", kind: "primary" },
-      );
+      out.push(p12["requires-consent"] ? { label, command: "phase-12-pass-priority", enabled: !p12[side], kind: "primary" } : { label, command: "end-phase-12", kind: "primary" });
     } else if (p12["requires-consent"]) {
       out.push({ label: `Allow ${label.toLowerCase()}`, command: "phase-12-pass-priority", enabled: !p12[side], kind: "primary" });
     }
@@ -265,8 +232,7 @@ export function runCommands(view: any, side: Side, autoContinue = false): Comman
   const out: Command[] = [];
   const ice = currentIce(view);
   if (side === "corp") {
-    if (run?.phase === "approach-ice" && ice && !ice.rezzed)
-      out.push({ label: `Rez ${ice.title ?? "ice"}${ice.cost != null ? ` · ${ice.cost}[credit]` : ""}`, command: "rez", args: { card: cardRef(ice), "press-continue": autoContinue }, kind: "primary" });
+    if (run?.phase === "approach-ice" && ice && !ice.rezzed) out.push({ label: `Rez ${ice.title ?? "ice"}${ice.cost != null ? ` · ${ice.cost}[credit]` : ""}`, command: "rez", args: { card: cardRef(ice), "press-continue": autoContinue }, kind: "primary" });
     if ((run?.phase === "encounter-ice" || enc) && ice) {
       const subs: any[] = ice.subroutines ?? [];
       out.push({
@@ -287,21 +253,19 @@ export function runCommands(view: any, side: Side, autoContinue = false): Comman
         kind: "primary",
       });
     }
-    if (run && (enc?.["encounter-count"] ?? 0) <= 1 && run.phase !== "success")
-      out.push({ label: run["corp-auto-no-action"] ? "Stop auto-passing" : "Auto-pass", command: "toggle-auto-no-action" });
+    if (run && (enc?.["encounter-count"] ?? 0) <= 1 && run.phase !== "success") out.push({ label: run["corp-auto-no-action"] ? "Stop auto-passing" : "Auto-pass", command: "toggle-auto-no-action" });
     return out;
   }
   const waiting = (enc ?? run)?.["no-action"] === "runner";
   const label = (text: string) => (waiting ? "Waiting for Corp…" : text);
   if (enc) {
-    out.push({ label: label("Continue"), command: "continue", enabled: !waiting, kind: "primary" });
+    const live: any[] = ice?.rezzed ? (ice.subroutines ?? []).filter((s: any) => !s.broken && !s.fired && s.resolve !== false) : [];
+    const fire = live.length === 1 ? (live[0].label ?? "1 subroutine") : `${live.length} subroutines`;
+    out.push({ label: label(live.length ? `Let it fire · ${fire}` : "Continue"), command: "continue", enabled: !waiting, kind: live.length ? "danger" : "primary" });
   } else if (run) {
-    if (run["next-phase"] && run.phase !== "initiation")
-      out.push({ label: nextPhaseLabel(view), command: "start-next-phase", enabled: !run["no-action"], kind: "primary" });
-    else if (run.phase === "initiation" || (!run["next-phase"] && run.position !== 0))
-      out.push({ label: label(nextPhaseLabel(view)), command: "continue", enabled: !waiting, kind: "primary" });
-    else if (run.position === 0 && run.phase === "movement")
-      out.push({ label: label("Breach server"), command: "continue", enabled: !waiting, kind: "primary" });
+    if (run["next-phase"] && run.phase !== "initiation") out.push({ label: nextPhaseLabel(view), command: "start-next-phase", enabled: !run["no-action"], kind: "primary" });
+    else if (run.phase === "initiation" || (!run["next-phase"] && run.position !== 0)) out.push({ label: label(nextPhaseLabel(view)), command: "continue", enabled: !waiting, kind: "primary" });
+    else if (run.position === 0 && run.phase === "movement") out.push({ label: label("Breach server"), command: "continue", enabled: !waiting, kind: "primary" });
   }
   if (run && !view["forced-encounter"] && run.phase !== "success")
     out.push({

@@ -12,6 +12,8 @@ import { PHASE_LABELS, byServerOrder, iconize, serverLabel, serverName } from ".
 import { Icon } from "../icons";
 import { glyphs } from "./Glyphs";
 import { EventFx } from "./Fx";
+import { Breakers } from "./Breakers";
+import { CardImage } from "./CardImage";
 
 interface Props {
   session: Session;
@@ -89,7 +91,9 @@ function Opponent({ view, side, name }: { view: any; side: Side; name: string })
           {side} // {name}
         </span>
         <span class="big">
-          <Bump value={p.credit ?? 0} delta>{p.credit ?? 0}</Bump>
+          <Bump value={p.credit ?? 0} delta>
+            {p.credit ?? 0}
+          </Bump>
           <Icon name="credit" class="big-credit" />
         </span>
       </div>
@@ -115,7 +119,9 @@ function MeBar({ view, side, name }: { view: any; side: Side; name: string }) {
   return (
     <div class="me-bar">
       <span class="big yellow">
-        <Bump value={p.credit ?? 0} delta>{p.credit ?? 0}</Bump>
+        <Bump value={p.credit ?? 0} delta>
+          {p.credit ?? 0}
+        </Bump>
         <Icon name="credit" class="big-credit" />
       </span>
       <div class="me-info">
@@ -154,11 +160,7 @@ function Pile({ label, count, cards, owner, side, selectable, onOpen }: { label:
   const top = cards?.[cards.length - 1];
   const target = (cards ?? []).some((c) => selectable.has(c.cid));
   const back = `back ${side === "corp" ? "corp" : "runner"}`;
-  const face = top ? (
-    <CardTile card={top} owner={owner} size="sm" onTap={onOpen} selectable={target} />
-  ) : (
-    <div class={`tile tile-sm ${count ? back : "empty"}`} />
-  );
+  const face = top ? <CardTile card={top} owner={owner} size="sm" onTap={onOpen} selectable={target} /> : <div class={`tile tile-sm ${count ? back : "empty"}`} />;
   return (
     <div class="pile">
       {face}
@@ -239,15 +241,11 @@ function CorpArea({ view, side, mine, onTap, onZone, selectable, runServer }: { 
     if (key === "archives") {
       const top = discard[discard.length - 1];
       const target = discard.some((c) => selectable.has(c.cid));
-      return top ? (
-        <CardTile card={top} owner={owner} onTap={() => onZone({ owner: "corp", key: "discard" })} selectable={target} />
-      ) : (
-        <div class="tile empty" />
-      );
+      return top ? <CardTile card={top} owner={owner} onTap={() => onZone({ owner: "corp", key: "discard" })} selectable={target} /> : <div class="tile empty" />;
     }
     return null;
   };
-  const count = (key: string) => (key === "hq" ? corp["hand-count"] ?? (corp.hand ?? []).length : key === "rd" ? corp["deck-count"] ?? 0 : key === "archives" ? discard.length : null);
+  const count = (key: string) => (key === "hq" ? (corp["hand-count"] ?? (corp.hand ?? []).length) : key === "rd" ? (corp["deck-count"] ?? 0) : key === "archives" ? discard.length : null);
   const name = (key: string) => {
     const n = count(key);
     return (
@@ -458,7 +456,7 @@ function useLastIce(view: any, ice: any) {
   const last = useRef<any>(null);
   if (!view.run) last.current = null;
   else if (ice?.rezzed && (view.encounters || view.run.phase === "encounter-ice")) {
-    const prev = last.current?.cid === ice.cid ? last.current.subroutines ?? [] : [];
+    const prev = last.current?.cid === ice.cid ? (last.current.subroutines ?? []) : [];
     const subroutines = (ice.subroutines ?? []).map((sub: any, i: number) => {
       const was = prev[i] ?? {};
       return { ...sub, broken: sub.broken || was.broken, breaker: sub.broken ? sub.breaker : was.broken ? was.breaker : sub.breaker, fired: sub.fired || was.fired };
@@ -479,7 +477,7 @@ function breakAllFromLog(view: any, title: string, render: (m: unknown) => strin
   return undefined;
 }
 
-function Encounter({ view, ice, passed, render }: { view: any; ice: any; passed?: boolean; render: (m: unknown) => string }) {
+function Encounter({ view, ice, passed, render, onTap }: { view: any; ice: any; passed?: boolean; render: (m: unknown) => string; onTap: (card: any) => void }) {
   const allBy = passed ? breakAllFromLog(view, ice.title, render) : undefined;
   const subs: any[] = (ice.subroutines ?? []).map((sub: any) => (allBy && !sub.broken && !sub.fired ? { ...sub, broken: true, breakerTitle: allBy } : sub));
   const encountering = !passed && (!!view.encounters || view.run?.phase === "encounter-ice");
@@ -487,33 +485,38 @@ function Encounter({ view, ice, passed, render }: { view: any; ice: any; passed?
   const types = (ice.subtypes ?? []).join(" · ");
   return (
     <div class={`encounter ${encountering ? "live" : ""} ${passed ? "passed" : ""}`}>
-      <div class="enc-head">
-        <span class="enc-phase">{passed ? "Passed" : encountering ? "Encounter" : "Approach"}</span>
-        <span class="enc-title">{ice.title}</span>
-        <span class="enc-meta">
-          {types}
-          {strength != null ? ` · str ${strength}` : ""}
-        </span>
-      </div>
-      {subs.length > 0 ? (
-        <ol class="enc-subs">
-          {subs.map((sub) => {
-            const breaker = sub.breakerTitle ?? (sub.breaker != null ? findCard(view, sub.breaker)?.title : undefined);
-            const state = sub.broken ? "broken" : sub.fired ? "fired" : sub.resolve === false ? "skipped" : "live";
-            return (
-              <li class={`enc-sub ${state}`}>
-                <Icon name="sub" />
-                <span class="enc-label">{glyphs(iconize(sub.label ?? "Subroutine"))}</span>
-                <span class="enc-state">
-                  {state === "broken" ? (breaker ? `Broken · ${breaker}` : "Broken") : state === "fired" ? "Fired" : state === "skipped" ? "Won't fire" : encountering ? "Unbroken" : ""}
-                </span>
-              </li>
-            );
-          })}
-        </ol>
-      ) : (
-        <p class="enc-none">No subroutines</p>
+      {ice.code && (
+        <button class="enc-card" onClick={() => onTap(findCard(view, ice.cid) ?? ice)} aria-label={ice.title}>
+          <CardImage code={ice.code} alt={ice.title} size="small" width="48px" />
+        </button>
       )}
+      <div class="enc-body">
+        <div class="enc-head">
+          <span class="enc-phase">{passed ? "Passed" : encountering ? "Encounter" : "Approach"}</span>
+          <span class="enc-title">{ice.title}</span>
+          <span class="enc-meta">
+            {types}
+            {strength != null ? ` · str ${strength}` : ""}
+          </span>
+        </div>
+        {subs.length > 0 ? (
+          <ol class="enc-subs">
+            {subs.map((sub) => {
+              const breaker = sub.breakerTitle ?? (sub.breaker != null ? findCard(view, sub.breaker)?.title : undefined);
+              const state = sub.broken ? "broken" : sub.fired ? "fired" : sub.resolve === false ? "skipped" : "live";
+              return (
+                <li class={`enc-sub ${state}`}>
+                  <Icon name="sub" />
+                  <span class="enc-label">{glyphs(iconize(sub.label ?? "Subroutine"))}</span>
+                  <span class="enc-state">{state === "broken" ? (breaker ? `Broken · ${breaker}` : "Broken") : state === "fired" ? "Fired" : state === "skipped" ? "Won't fire" : encountering ? "Unbroken" : ""}</span>
+                </li>
+              );
+            })}
+          </ol>
+        ) : (
+          <p class="enc-none">No subroutines</p>
+        )}
+      </div>
     </div>
   );
 }
@@ -591,7 +594,11 @@ function Toasts({ toasts, render, dismiss }: { toasts: any[]; render: (m: unknow
   useEffect(() => {
     const live = new Set(toasts.map((t) => t.id));
     for (const t of toasts) {
-      if (!timers.current.has(t.id)) timers.current.set(t.id, window.setTimeout(() => dismiss(t.id), TOAST_MS));
+      if (!timers.current.has(t.id))
+        timers.current.set(
+          t.id,
+          window.setTimeout(() => dismiss(t.id), TOAST_MS),
+        );
     }
     for (const [id, handle] of timers.current) {
       if (!live.has(id)) {
@@ -795,18 +802,8 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
     );
   }
 
-  const theirArea =
-    opp === "corp" ? (
-      <CorpArea view={view} side={side} mine={false} onTap={tap} onZone={setZone} selectable={selectable} runServer={runServer} />
-    ) : (
-      <RunnerArea view={view} side={side} onTap={tap} onZone={setZone} selectable={selectable} />
-    );
-  const myArea =
-    side === "corp" ? (
-      <CorpArea view={view} side={side} mine onTap={tap} onZone={setZone} selectable={selectable} runServer={runServer} />
-    ) : (
-      <RunnerArea view={view} side={side} onTap={tap} onZone={setZone} selectable={selectable} />
-    );
+  const theirArea = opp === "corp" ? <CorpArea view={view} side={side} mine={false} onTap={tap} onZone={setZone} selectable={selectable} runServer={runServer} /> : <RunnerArea view={view} side={side} onTap={tap} onZone={setZone} selectable={selectable} />;
+  const myArea = side === "corp" ? <CorpArea view={view} side={side} mine onTap={tap} onZone={setZone} selectable={selectable} runServer={runServer} /> : <RunnerArea view={view} side={side} onTap={tap} onZone={setZone} selectable={selectable} />;
   const hand: any[] = [...(me.hand ?? []), ...(me.discard ?? []).filter((c: any) => c["flashback-playable"])];
 
   return (
@@ -920,11 +917,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
           </button>
         </nav>
       )}
-      <Toasts
-        toasts={session.actionError ? [...toasts, { id: ACTION_ERROR, type: "error", msg: session.actionError }] : toasts}
-        render={render}
-        dismiss={(id) => (id === ACTION_ERROR ? session.clearActionError() : send("toast", { id }))}
-      />
+      <Toasts toasts={session.actionError ? [...toasts, { id: ACTION_ERROR, type: "error", msg: session.actionError }] : toasts} render={render} dismiss={(id) => (id === ACTION_ERROR ? session.clearActionError() : send("toast", { id }))} />
       <main class="playfield">
         <Opponent view={view} side={opp} name={names[opp]} />
         {theirArea}
@@ -935,7 +928,10 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
         <button class="last-log" onClick={() => setShowLog(true)}>
           {lastLog ? glyphs(iconize(render(lastLog.text)).slice(0, 140)) : "Log"}
         </button>
-        {!view.winner && (ice?.rezzed ? <Encounter view={view} render={render} ice={lastIce?.cid === ice.cid && (view.encounters || view.run?.phase === "encounter-ice") ? lastIce : ice} /> : lastIce && <Encounter view={view} render={render} ice={lastIce} passed />)}
+        <div class="enc-zone">
+        {!view.winner && (ice?.rezzed ? <Encounter view={view} render={render} onTap={tap} ice={lastIce?.cid === ice.cid && (view.encounters || view.run?.phase === "encounter-ice") ? lastIce : ice} /> : lastIce && <Encounter view={view} render={render} onTap={tap} ice={lastIce} passed />)}
+        {!view.winner && side === "runner" && view.encounters && ice?.rezzed && !(prompt && ptype !== "run") && <Breakers view={view} side={side} ice={ice} send={send} onTap={tap} disabled={disabled} />}
+        </div>
         {panel}
         <MeBar view={view} side={side} name={names[side]} />
         <div class="hand">
@@ -959,21 +955,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
           }}
         />
       )}
-      {current && (
-        <CardSheet
-          card={current}
-          view={view}
-          side={side}
-          db={db}
-          send={send}
-          disabled={disabled}
-          index={Math.max(0, position)}
-          count={siblings.length}
-          slide={slide}
-          onStep={step}
-          onClose={closeCard}
-        />
-      )}
+      {current && <CardSheet card={current} view={view} side={side} db={db} send={send} disabled={disabled} index={Math.max(0, position)} count={siblings.length} slide={slide} onStep={step} onClose={closeCard} />}
       {showLog && <Log view={view} render={render} names={names} onSay={(t) => session.say(t, side)} onClose={() => setShowLog(false)} />}
     </div>
   );
