@@ -1,6 +1,6 @@
-# Netrunner mobile
+# Pocket Rig
 
-Play Netrunner online from your phone with the [Jinteki.net](https://github.com/mtgred/netrunner)
+Pocket Rig lets you play Netrunner online from your phone with the [Jinteki.net](https://github.com/mtgred/netrunner)
 rules engine running entirely in the browser. Both phones replay the same list of actions,
 relayed by a tiny Cloudflare Durable Object on the free plan, so either player can leave and
 come back. Solo against a bot and two-players-one-phone also work.

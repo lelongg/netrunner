@@ -1,6 +1,6 @@
 {
-  "name": "Null Signal Mobile",
-  "short_name": "Null Signal",
+  "name": "Pocket Rig",
+  "short_name": "Pocket Rig",
   "description": "Netrunner on mobile with the Jinteki engine, no server needed.",
   "id": "./",
   "start_url": "./",

@@ -1,4 +1,4 @@
-# Netrunner mobile
+# Pocket Rig
 
 A phone-first way to play Netrunner online, built on the [Jinteki.net](https://github.com/mtgred/netrunner)
 rules engine and running entirely in the browser. Both phones run the engine and replay the

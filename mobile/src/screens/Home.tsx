@@ -62,14 +62,14 @@ export function Home({ ready, error, initialJoin, saves, onResume, onDiscard, on
       <div class="screen home">
         <section class="panel hero">
           <div class="row">
-            <span class="label">Netrunner // mobile</span>
-            <span class="label">P2P</span>
+            <span class="label">For Netrunner</span>
+            <span class="label">Fan made</span>
           </div>
           <h1 style="margin: 0; display: flex; flex-direction: column">
-            <span class="big">NULL</span>
-            <span class="big outline">SIGNAL</span>
+            <span class="big">POCKET</span>
+            <span class="big outline">RIG</span>
           </h1>
-          <p>The Jinteki engine in your pocket. No server: one player hosts, the other connects.</p>
+          <p>Netrunner on your phone, on the Jinteki rules engine. Host a game, share the code, jack in.</p>
         </section>
 
         {error && <p class="error">{error}</p>}
@@ -147,6 +147,7 @@ export function Home({ ready, error, initialJoin, saves, onResume, onDiscard, on
         <div class="footer">
           <span>Engine: Jinteki · MIT</span>
           <span>Cards: NetrunnerDB</span>
+          <span>Unofficial fan project, not affiliated with Null Signal Games</span>
         </div>
       </div>
     </>

@@ -533,6 +533,8 @@ textarea:focus {
 
 .footer {
   display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
   justify-content: space-between;
   border-top: 1px solid var(--line);
   padding-top: 12px;
@@ -3189,4 +3191,9 @@ button:active:not(:disabled) {
 
 .encounter.passed {
   opacity: 0.7;
+}
+
+.footer span:last-child {
+  flex-basis: 100%;
+  letter-spacing: 0.12em;
 }
