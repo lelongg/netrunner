@@ -257,7 +257,12 @@ function Piles({ view, zoneOwner, viewer, onTap, onZone, selectable, centrals = 
   if (!centrals && !extras) return null;
   return (
     <div class="piles">
-      {centrals && p.identity && <CardTile card={p.identity} owner={owner} onTap={onTap} size="sm" selectable={selectable.has(p.identity.cid)} />}
+      {centrals && p.identity && (
+        <div class="pile">
+          <CardTile card={p.identity} owner={owner} onTap={onTap} size="sm" selectable={selectable.has(p.identity.cid)} />
+          {zoneOwner === "runner" && <span>Grip {p["hand-count"] ?? (p.hand ?? []).length}</span>}
+        </div>
+      )}
       {centrals && <Pile label={zoneOwner === "corp" ? "R&D" : "Stack"} count={p["deck-count"] ?? 0} owner={owner} side={zoneOwner} selectable={selectable} anchor={`${zoneOwner}-deck`} />}
       {centrals && zone("discard")}
       {zone("play-area")}
