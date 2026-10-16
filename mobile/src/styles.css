@@ -2901,3 +2901,8 @@ button:active:not(:disabled) {
   text-underline-offset: 0.2em;
   cursor: help;
 }
+
+.prompt-input input::placeholder {
+  color: color-mix(in srgb, var(--cyan) 55%, transparent);
+  font-variant-numeric: tabular-nums;
+}

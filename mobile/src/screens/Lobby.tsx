@@ -274,7 +274,7 @@ export function Lobby({ session, db, matchups, onLeave }: Props) {
                 </button>
               </div>
             </div>
-            <p class="hint">{RELAY_URL ? "Your opponent can join even if you leave this screen: the game waits on the relay." : "Keep this screen open until your opponent joins: switching apps pauses the game."}</p>
+            {!RELAY_URL && <p class="hint">Keep this screen open until your opponent joins: switching apps pauses the game.</p>}
           </section>
         )}
 

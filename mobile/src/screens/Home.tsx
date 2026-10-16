@@ -1,4 +1,4 @@
-import { useState } from "preact/hooks";
+import { useEffect, useRef, useState } from "preact/hooks";
 import { type Role, type SavedGame, saveId } from "../session";
 import { Cta, Ticker } from "../ui";
 import { Icon } from "../icons";
@@ -34,6 +34,25 @@ function ago(ms: number) {
   return h < 24 ? `${h} h` : `${Math.round(h / 24)} d`;
 }
 const NAME_KEY = "nsg.name";
+const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const randomChar = () => CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)];
+
+function useScramble(input: { current: HTMLInputElement | null }, active: boolean) {
+  useEffect(() => {
+    const el = input.current;
+    if (!el) return;
+    if (!active || matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      el.placeholder = "·····";
+      return;
+    }
+    let chars = Array.from({ length: 5 }, randomChar);
+    const timer = setInterval(() => {
+      chars = chars.map((c) => (Math.random() < 0.45 ? randomChar() : c));
+      el.placeholder = chars.join("");
+    }, 70);
+    return () => clearInterval(timer);
+  }, [active]);
+}
 
 function storedName() {
   try {
@@ -46,6 +65,8 @@ function storedName() {
 export function Home({ ready, error, initialJoin, saves, onResume, onDiscard, onStart }: Props) {
   const [name, setName] = useState(storedName() || "Player");
   const [code, setCode] = useState(initialJoin ?? "");
+  const codeInput = useRef<HTMLInputElement>(null);
+  useScramble(codeInput, !code);
   const go = (role: Role, c?: string, vsBot?: boolean) => {
     try {
       localStorage.setItem(NAME_KEY, name);
@@ -122,7 +143,8 @@ export function Home({ ready, error, initialJoin, saves, onResume, onDiscard, on
             <label class="prompt-input">
               <input
                 aria-label="Game code"
-                placeholder="game code"
+                ref={codeInput}
+                placeholder="·····"
                 value={code}
                 maxLength={5}
                 onInput={(e) => setCode((e.target as HTMLInputElement).value.toUpperCase())}
