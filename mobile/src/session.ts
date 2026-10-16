@@ -466,9 +466,9 @@ export class Session {
     if (!held) this.scheduleBot();
   }
 
-  startTutorial(runner: WireDeck, corp: WireDeck) {
-    this.lobby = { ...this.lobby, vsBot: true, opponentName: "Bot", tutorial: true, mySide: "runner", myDeck: runner };
-    this.opponentDeck = corp;
+  startTutorial(side: Side, mine: WireDeck, theirs: WireDeck) {
+    this.lobby = { ...this.lobby, vsBot: true, opponentName: "Bot", tutorial: true, mySide: side, myDeck: mine };
+    this.opponentDeck = theirs;
     this.lobby.opponentDeckReady = true;
     this.start();
   }

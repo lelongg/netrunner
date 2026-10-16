@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
-import { type CardDb, cardImage } from "../engine";
+import { type CardDb, type Side, cardImage } from "../engine";
 import { ZoomableCardImage } from "../game/CardImage";
 import { Pager } from "../game/Pager";
 import { withTerms } from "../game/RichText";
@@ -104,12 +104,12 @@ const PAGES: Page[] = [
     body: [
       "Tap any card to read it and to see what you can do with it. Your main actions are the buttons above your hand.",
       "Tap an icon or an underlined word to see what it means. Tap the line above the buttons to read the full log.",
-      "Ready? A guided game against the bot will walk you through your first turns as the Runner.",
+      "Ready? Pick a side for a guided game against the bot: tips will walk you through your first turns.",
     ],
   },
 ];
 
-export function Guide({ db, onClose, onPlay }: { db: CardDb; onClose: () => void; onPlay: () => void }) {
+export function Guide({ db, onClose, onPlay }: { db: CardDb; onClose: () => void; onPlay: (side: Side) => void }) {
   const [index, setIndex] = useState(0);
   const body = useRef<HTMLDivElement>(null);
   const entering = useRef<-1 | 1 | 0>(0);
@@ -182,7 +182,10 @@ export function Guide({ db, onClose, onPlay }: { db: CardDb; onClose: () => void
           ))}
         </div>
         {last ? (
-          <Cta onClick={onPlay}>Play a guided game</Cta>
+          <div class="guide-play">
+            <Cta onClick={() => onPlay("runner")}>Play as the Runner</Cta>
+            <Cta onClick={() => onPlay("corp")}>Play as the Corp</Cta>
+          </div>
         ) : (
           <button class="primary" onClick={() => go(1)}>
             Next

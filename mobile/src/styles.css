@@ -3122,3 +3122,9 @@ button:active:not(:disabled) {
 .coach-actions button {
   flex: 1;
 }
+
+.guide-play {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}

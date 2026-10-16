@@ -175,7 +175,7 @@ function App() {
       <Guide
         db={loaded.db}
         onClose={() => setGuide(false)}
-        onPlay={() => {
+        onPlay={(side) => {
           setGuide(false);
           setOpening("tutorial");
           afterPaint(() => {
@@ -184,10 +184,11 @@ function App() {
             try {
               name = localStorage.getItem("nsg.name")?.trim() || name;
             } catch {}
-            const next = new Session(loaded.engine, loaded.db, "local", newRoomCode(), name, "runner");
-            next.startTutorial(toWire(fromPrecon(m.runner, loaded.db)), toWire(fromPrecon(m.corp, loaded.db)));
+            const next = new Session(loaded.engine, loaded.db, "local", newRoomCode(), name, side);
+            const deck = (s: "corp" | "runner") => toWire(fromPrecon(m[s], loaded.db));
+            next.startTutorial(side, deck(side), deck(side === "corp" ? "runner" : "corp"));
             setSession(next);
-            setLocalSide("runner");
+            setLocalSide(side);
             setOpening(null);
           });
         }}

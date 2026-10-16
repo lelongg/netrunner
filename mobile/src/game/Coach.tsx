@@ -21,7 +21,7 @@ const accessing = (view: any, side: Side) => {
   return !!p && p["prompt-type"] !== "run" && /access/i.test(JSON.stringify(p.msg ?? ""));
 };
 
-const STEPS: Step[] = [
+const RUNNER: Step[] = [
   { id: "welcome", anchor: ".me-bar", text: "You are the Runner, a hacker. Steal 7 agenda points from the Corp before it scores 7 of its own. This bar shows your credits, clicks and stats.", when: () => true },
   { id: "corp", anchor: ".opp", text: "This is the Corp, played by the bot: its credits, the cards in its hand (HQ) and its clicks while it plays.", when: () => true },
   { id: "servers", anchor: ".servers.theirs", text: "The Corp's servers. HQ is its hand, R&D its deck, Archives its discard. Each card it installs face down opens a remote server, and ice in front of a server protects it.", when: () => true },
@@ -34,6 +34,27 @@ const STEPS: Step[] = [
   { id: "encounter", anchor: ".encounter", text: "Encounter! Each subroutine fires unless you break it. The Break it panel lists what your icebreakers can do; their strength must reach the ice's.", when: (v) => !!v.encounters },
   { id: "access", anchor: ".prompt", text: "You are accessing a card. An agenda is stolen for its points; other cards can be trashed by paying their trash cost.", when: accessing },
   { id: "end-turn", anchor: ".actions .buttons", text: "No clicks left: end your turn and the Corp plays again.", when: (v, s) => (v.turn ?? 0) > 0 && basicCommands(v, s).some((c) => c.command === "end-turn") },
+];
+
+const hasAgenda = (view: any, side: Side) => {
+  const servers = view[side]?.servers ?? {};
+  return Object.entries<any>(servers).some(([k, s]) => k.startsWith("remote") && (s.content ?? []).some((c: any) => c.type === "Agenda"));
+};
+
+const CORP: Step[] = [
+  { id: "welcome", anchor: ".me-bar", text: "You are the Corp, a megacorporation. Score 7 agenda points before the Runner steals 7 from you. This bar shows your credits and clicks.", when: () => true },
+  { id: "runner", anchor: ".opp", text: "This is the Runner, played by the bot: its credits, the cards in its grip, its memory and its tags.", when: () => true },
+  { id: "servers", anchor: ".servers.mine", text: "Your servers. HQ is your hand, R&D your deck, Archives your discard. Installing an agenda or an asset in a new remote server creates one; ice in front of a server protects it.", when: () => true },
+  { id: "turn", anchor: '[data-anchor="corp-clicks"]', text: "Your turn! You drew a card and have 3 clicks [click]. Every action spends one; when they run out, you end your turn.", when: myTurn },
+  { id: "hand", anchor: ".dock .hand", text: "Your HQ. Tap a card to read it: install agendas and assets in a remote server, ice in front of a server, or play operations. Installed cards stay face down until you rez them.", when: myTurn },
+  { id: "actions", anchor: ".actions .buttons", text: "Basic actions: gain 1[credit] or draw a card. Protect your servers with ice before you put an agenda in one.", when: myTurn },
+  { id: "help", anchor: ".me-bar .stat", text: "Tap any icon, or any underlined word in a card's text, to see what it means.", when: myTurn },
+  { id: "advance", anchor: ".servers.mine", text: "Tap your installed agenda to advance it: 1[click] and 1[credit] per counter. Once it has as many counters as its requirement, score it from the same card.", when: (v, s) => myTurn(v, s) && hasAgenda(v, s) },
+  { id: "runner-turn", anchor: ".last-log", text: "The Runner is playing. Follow its moves here, and tap this line to read the whole log.", when: (v, s) => (v.turn ?? 0) > 0 && v["active-player"] !== s && !v.run },
+  { id: "run", anchor: ".server.running", text: "The Runner is running this server! It passes your ice one piece at a time, from the outermost.", when: (v) => !!v.run && !v.encounters },
+  { id: "rez", anchor: ".actions .buttons", text: "The Runner approaches face-down ice. Rez it now, paying its rez cost, to make it fight; or save your credits and let the Runner pass.", when: (v) => v.run?.phase === "approach-ice" && !!document.querySelector(".actions .buttons") },
+  { id: "encounter", anchor: ".encounter", text: "Your ice is encountered. Every subroutine the Runner does not break fires: ending the run, doing damage...", when: (v) => !!v.encounters },
+  { id: "end-turn", anchor: ".actions .buttons", text: "No clicks left: end your turn and the Runner plays.", when: (v, s) => (v.turn ?? 0) > 0 && basicCommands(v, s).some((c) => c.command === "end-turn") },
 ];
 
 const key = (id: string) => `nsg.coach.${id}`;
@@ -51,6 +72,7 @@ export function Coach({ session, view, side }: { session: Session; view: any; si
   const [seen, setSeen] = useState(() => loadSeen(id));
   const [box, setBox] = useState<DOMRect | null>(null);
   const bubble = useRef<HTMLDivElement>(null);
+  const STEPS = side === "corp" ? CORP : RUNNER;
   const step = view.winner ? undefined : STEPS.find((s) => !seen.has(s.id) && s.when(view, side) && document.querySelector(s.anchor));
 
   const done = (ids: string[]) => {

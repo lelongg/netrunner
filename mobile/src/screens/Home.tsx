@@ -175,16 +175,16 @@ export function Home({ ready, error, initialJoin, saves, onResume, onDiscard, on
           </button>
         </div>
 
-        <button class="primary" disabled={!ready} onClick={() => go("local", undefined, true)}>
-          Solo · play vs the bot
+        <button class="primary" disabled={!ready} onClick={onGuide}>
+          How to play
         </button>
 
-        <button disabled={!ready} onClick={onGuide}>
-          How to play · tutorial
+        <button disabled={!ready} onClick={() => go("local", undefined, true)}>
+          Solo
         </button>
 
         <button disabled={!ready} onClick={() => go("local")}>
-          Local game · 2 players, 1 device
+          Local game
         </button>
 
         <div class="footer">
