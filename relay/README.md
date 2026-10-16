@@ -27,8 +27,13 @@ One `GameRoom` Durable Object per game (`idFromName(code)`), on the SQLite backe
   (the sender uses it as its acknowledgement). `{ "t": "sync", "since": N }` replays again.
 - `{ "t": "release" }` from the host deletes the guest's seat key and disconnects it (close
   code 4002), so someone else can join with the code and continue the game.
-- Messages over 4 KB are rejected, rooms hold at most two seats and 20 000 entries, and a
-  newer connection for a seat replaces the older one.
+- Messages over 4 KB are rejected, rooms hold at most two seats and 20 000 entries, a seat
+  may append at most 60 entries per 10 seconds, and a newer connection for a seat replaces
+  the older one.
+- Rooms only create their tables when a game is created, so probing unknown codes stores
+  nothing.
+- The Workers rate limiter caps each IP address at 10 new games and 60 join or seat checks per
+  minute (`CREATE_LIMIT` and `JOIN_LIMIT` in `wrangler.toml`).
 - Every write pushes an alarm `EXPIRY_DAYS` (14 by default) ahead; when it fires the game is
   deleted.
 
@@ -53,7 +58,7 @@ back to peer-to-peer links, where the host's app must stay open. To deploy the r
 
 ```sh
 npm run dev                # local relay on http://127.0.0.1:8787
-npm test                   # protocol: seats, ordering, 4 KB limit, presence, resync
+npm test                   # protocol: seats, ordering, 4 KB limit, presence, resync, limits
 EXPIRY_TEST=9000 RELAY=http://127.0.0.1:8788 npm test   # with a relay started using --var EXPIRY_DAYS:0.00005
 npm run test:e2e           # two browsers: a player leaves mid-game and comes back
 ```

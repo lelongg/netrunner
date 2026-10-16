@@ -2,6 +2,8 @@ import { DurableObject } from "cloudflare:workers";
 
 export interface Env {
   GAME_ROOM: DurableObjectNamespace<GameRoom>;
+  CREATE_LIMIT?: RateLimit;
+  JOIN_LIMIT?: RateLimit;
   ALLOWED_ORIGINS?: string;
   EXPIRY_DAYS?: string;
 }
@@ -10,6 +12,8 @@ type Seat = 0 | 1;
 
 const MAX_MESSAGE_BYTES = 4096;
 const MAX_ENTRIES = 20000;
+const BURST_WINDOW_MS = 10000;
+const BURST_MAX = 60;
 const RESYNC_CHUNK = 400;
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const CODE_RE = /^[A-HJ-NP-Z2-9]{5}$/;
@@ -30,6 +34,12 @@ function json(body: unknown, status: number, origin: string | null) {
   return new Response(JSON.stringify(body), { status, headers });
 }
 
+async function limited(limiter: RateLimit | undefined, request: Request) {
+  if (!limiter) return false;
+  const key = request.headers.get("CF-Connecting-IP") ?? "unknown";
+  return !(await limiter.limit({ key })).success;
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
@@ -47,6 +57,7 @@ export default {
       });
 
     if (request.method === "POST" && url.pathname === "/games") {
+      if (await limited(env.CREATE_LIMIT, request)) return json({ error: "Too many new games, try again in a minute" }, 429, origin);
       for (let attempt = 0; attempt < 5; attempt++) {
         const code = newCode();
         const seat = await env.GAME_ROOM.get(env.GAME_ROOM.idFromName(code)).create();
@@ -57,6 +68,7 @@ export default {
 
     const match = url.pathname.match(/^\/games\/([^/]+)\/(join|ws|seat)$/);
     if (!match || !CODE_RE.test(match[1])) return json({ error: "Not found" }, 404, origin);
+    if (match[2] !== "ws" && (await limited(env.JOIN_LIMIT, request))) return json({ error: "Too many requests, try again in a minute" }, 429, origin);
     const room = env.GAME_ROOM.get(env.GAME_ROOM.idFromName(match[1]));
 
     if (match[2] === "join" && request.method === "POST") {
@@ -75,12 +87,16 @@ export default {
 
 export class GameRoom extends DurableObject<Env> {
   private sql: SqlStorage;
+  private bursts = new Map<number, { start: number; n: number }>();
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
     this.sql = ctx.storage.sql;
-    this.init();
     ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair("ping", "pong"));
+  }
+
+  private exists() {
+    return this.sql.exec("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'seats'").toArray().length > 0;
   }
 
   private init() {
@@ -89,6 +105,7 @@ export class GameRoom extends DurableObject<Env> {
   }
 
   async create(): Promise<{ seat: Seat; token: string } | null> {
+    this.init();
     if (this.sql.exec("SELECT COUNT(*) AS n FROM seats").one().n) return null;
     const t = token();
     this.sql.exec("INSERT INTO seats (seat, token) VALUES (0, ?)", t);
@@ -97,6 +114,7 @@ export class GameRoom extends DurableObject<Env> {
   }
 
   async join(): Promise<{ seat: Seat; token: string } | { error: "unknown" | "full" }> {
+    if (!this.exists()) return { error: "unknown" };
     const taken = this.sql.exec<{ seat: number }>("SELECT seat FROM seats").toArray().map((r) => r.seat);
     if (!taken.includes(0)) return { error: "unknown" };
     if (taken.includes(1)) return { error: "full" };
@@ -107,12 +125,14 @@ export class GameRoom extends DurableObject<Env> {
   }
 
   async seatOf(token: string): Promise<Seat | null> {
+    if (!this.exists()) return null;
     const row = this.sql.exec<{ seat: number }>("SELECT seat FROM seats WHERE token = ?", token).toArray()[0];
     return row ? (row.seat as Seat) : null;
   }
 
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
+    if (!this.exists()) return new Response("Unknown seat", { status: 403 });
     const row = this.sql.exec<{ seat: number }>("SELECT seat FROM seats WHERE token = ?", url.searchParams.get("token") ?? "").toArray()[0];
     if (!row) return new Response("Unknown seat", { status: 403 });
     const seat = row.seat as Seat;
@@ -151,6 +171,10 @@ export class GameRoom extends DurableObject<Env> {
       return;
     }
     if (msg.t !== "append" || !msg.p || typeof msg.p !== "object") return this.reject(ws, "Unknown message");
+    const now = Date.now();
+    const burst = this.bursts.get(seat);
+    if (!burst || now - burst.start > BURST_WINDOW_MS) this.bursts.set(seat, { start: now, n: 1 });
+    else if (++burst.n > BURST_MAX) return this.reject(ws, "Too many messages, slow down");
     if (this.lastSeq() >= MAX_ENTRIES) return this.reject(ws, "This game has reached its size limit");
     const body = JSON.stringify(msg.p);
     const { seq } = this.sql.exec<{ seq: number }>("INSERT INTO entries (seat, body, at) VALUES (?, ?, ?) RETURNING seq", seat, body, Date.now()).one();
@@ -177,10 +201,10 @@ export class GameRoom extends DurableObject<Env> {
   async alarm() {
     for (const socket of this.ctx.getWebSockets()) socket.close(4001, "Game expired");
     await this.ctx.storage.deleteAll();
-    this.init();
   }
 
   private lastSeq(): number {
+    if (!this.exists()) return 0;
     return this.sql.exec<{ seq: number | null }>("SELECT MAX(seq) AS seq FROM entries").one().seq ?? 0;
   }
 
