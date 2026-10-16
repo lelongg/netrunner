@@ -491,13 +491,19 @@
   font-variant-numeric: tabular-nums;
 }
 
+.big .count {
+  background: inherit;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
 .count.counting-up {
-  color: #fff6b0;
-  text-shadow: 0 0 14px var(--yellow);
+  filter: brightness(1.45) drop-shadow(0 0 6px rgb(246 224 58 / 0.7));
 }
 
 .count.counting-down {
-  filter: brightness(0.75);
+  filter: brightness(0.7);
 }
 
 .encounter[data-kind="barrier"] {

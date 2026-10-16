@@ -88,21 +88,22 @@ function Opponent({ view, side, name }: { view: any; side: Side; name: string })
   const req = p["agenda-point-req"] ?? 7;
   return (
     <section class="panel opp" data-anchor={`${side}-panel`}>
-      <div style="display: flex; flex-direction: column; gap: 4px">
-        <span class={`label who-${side}`}>
-          {side} // {name}
-        </span>
-        <span class="big">
-          <Count value={p.credit ?? 0} anchor={`${side}-credits`} />
-          <Icon name="credit" class="big-credit" />
-        </span>
-      </div>
+      <span class="big">
+        <Count value={p.credit ?? 0} anchor={`${side}-credits`} />
+        <Icon name="credit" class="big-credit" />
+      </span>
       <div class="opp-info">
-        <TurnState active={active} />
-        <span class="label" style="color: var(--text)" data-anchor={side === "runner" ? "runner-hand" : undefined}>
-          {side === "runner" ? "Grip" : "HQ"} {p["hand-count"] ?? 0} · {p.click ?? 0} click
-        </span>
+        <div class="opp-line">
+          <span class={`label opp-name who-${side}`}>
+            {side} // {name}
+          </span>
+          <TurnState active={active} />
+        </div>
         <span class="label stats">
+          <span data-anchor={side === "runner" ? "runner-hand" : undefined}>
+            {side === "runner" ? "Grip" : "HQ"} {p["hand-count"] ?? 0}
+          </span>
+          {` · ${p.click ?? 0} click · `}
           <Count value={points} anchor={`${side}-points`} />/{req} pts
           {extras(p, side).map((x) => ` · ${x}`)}
         </span>

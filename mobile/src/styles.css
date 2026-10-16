@@ -862,15 +862,35 @@ textarea:focus {
 }
 
 .opp .big {
-  font-size: 52px;
+  font-size: 44px;
+  flex: none;
 }
 
 .opp-info {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   flex: 1;
   min-width: 0;
+}
+
+.opp-line {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+
+.opp-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.opp-line .turn-state {
+  margin-left: auto;
+  flex: none;
 }
 
 .who-corp {
