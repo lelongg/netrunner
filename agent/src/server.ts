@@ -8,7 +8,8 @@ const NAME = process.env.POCKET_RIG_NAME ?? "Claude";
 
 const INSTRUCTIONS = `Pocket Rig lets you play Netrunner (the Jinteki rules engine) against a human on their phone.
 Flow: join_game with the code the human gives you (or host_game and give them the code), then list_decks and choose_deck. The host starts the game with start_game.
-During the game: get_state shows the board from your seat only and a numbered list of legal actions; act performs one of them by id. When nothing is yours to decide, call wait_for_turn and repeat until the game is over.
+During the game: get_state shows the whole board from your seat only and a numbered list of legal actions; act performs one of them by id. When nothing is yours to decide, call wait_for_turn and repeat until the game is over.
+To save context, act and wait_for_turn only return what changed since your last look (new log lines, changed lines, the current run and prompt) plus the fresh action list. Call get_state again whenever you need the full picture, for example after your context was summarized.
 Use card_info to read a card's full text. Decide every move yourself and explain your reasoning briefly to the user. You only ever see what your seat may see.`;
 
 let agent: Agent | undefined;
@@ -45,18 +46,18 @@ server.registerTool(
 );
 server.registerTool("set_side", { description: "Host only: switch the side you play before the game starts.", inputSchema: { side } }, ({ side }) => run((a) => a.setSide(side)));
 server.registerTool("start_game", { description: "Host only: start the game once both decks are ready." }, () => run((a) => a.start()));
-server.registerTool("get_state", { description: "Show the lobby or the board from your seat, with the numbered list of legal actions." }, () => run((a) => a.describe()));
+server.registerTool("get_state", { description: "Show the lobby, or the whole board from your seat with the recent log and the numbered list of legal actions." }, () => run((a) => a.describe()));
 server.registerTool(
   "act",
   {
-    description: "Perform one action from the latest get_state list, by id. Some actions need an amount or a text value.",
+    description: "Perform one action from the latest action list, by id. Some actions need an amount or a text value. Returns only what changed, plus the new action list.",
     inputSchema: { action: z.number().int().describe("Action id"), amount: z.number().int().optional(), text: z.string().optional() },
   },
   ({ action, amount, text }) => run((a) => a.act(action, amount, text)),
 );
 server.registerTool(
   "wait_for_turn",
-  { description: "Wait until you have a decision to make (or the game ends, or the lobby changes), then return the state.", inputSchema: { seconds: z.number().int().optional().describe("Maximum wait, default 50, max 600") } },
+  { description: "Wait until you have a decision to make (or the game ends, or the lobby changes), then return what changed since your last look and the action list.", inputSchema: { seconds: z.number().int().optional().describe("Maximum wait, default 50, max 600") } },
   ({ seconds }) => run((a) => a.wait(seconds ?? 50)),
 );
 server.registerTool("card_info", { description: "Full text and stats of a card by name.", inputSchema: { name: z.string() } }, ({ name }) => run((a) => a.card(name)));

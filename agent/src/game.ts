@@ -34,6 +34,8 @@ export async function loadEngine(base: string): Promise<Loaded> {
 interface Action {
   id: number;
   label: string;
+  group?: string;
+  short?: string;
   command: string;
   args?: unknown;
   amount?: { min: number; max: number };
@@ -237,18 +239,15 @@ export class Agent {
     return `${c.title}${bits.length ? ` [${bits.join(", ")}]` : ""}`;
   }
 
-  private gameText() {
+  private gameLines(): [string, string][] {
     const s = this.session!;
     const side = s.lobby.mySide;
     const opp = other(side);
     const view = s.views[side];
-    if (!view) return "The game is starting…";
-    const me = view[side] ?? {};
-    const them = view[opp] ?? {};
-    const L: string[] = [];
+    const L: [string, string][] = [];
     const name = (sd: Side) => view[sd]?.user?.username ?? sd;
-    if (view.winner) L.push(`GAME OVER: ${view.winner} (${name(view.winner)}) wins${view.reason ? ` by ${view.reason}` : ""}.`);
-    L.push(`Turn ${view.turn ?? 0} · active: ${view["active-player"]} · you are the ${side.toUpperCase()} (${name(side)}) vs ${name(opp)}`);
+    if (view.winner) L.push(["over", `GAME OVER: ${view.winner} (${name(view.winner)}) wins${view.reason ? ` by ${view.reason}` : ""}.`]);
+    L.push(["turn", `Turn ${view.turn ?? 0} · active: ${view["active-player"]} · you are the ${side.toUpperCase()} (${name(side)}) vs ${name(opp)}`]);
     const pts = (p: any) => `${p["agenda-point"] ?? 0}/${p["agenda-point-req"] ?? 7} points`;
     const stats = (p: any, sd: Side) => {
       const out = [`${p.credit ?? 0} credits`, `${p.click ?? 0} clicks`, pts(p), `${p["hand-count"] ?? (p.hand ?? []).length} cards in ${sd === "corp" ? "HQ" : "grip"}`, `${p["deck-count"] ?? 0} in ${sd === "corp" ? "R&D" : "stack"}`];
@@ -263,13 +262,10 @@ export class Agent {
       }
       return out.join(" · ");
     };
-    L.push(`\nYOU (${side}): ${stats(me, side)}`);
-    if (me.identity?.title) L.push(`Identity: ${me.identity.title}`);
-    const hand: any[] = me.hand ?? [];
-    L.push(`Hand: ${hand.length ? hand.map((c) => `${c.title} [${c.type}${c.cost != null ? `, cost ${c.cost}` : ""}]`).join("; ") : "empty"}`);
-    const area = (sd: Side) => {
+    const area = (sd: Side, who: string, prefix: string) => {
       const p = view[sd] ?? {};
-      const out: string[] = [];
+      const out: [string, string][] = [];
+      if (p.identity?.title) out.push([`${prefix}.id`, `${who} identity: ${p.identity.title}`]);
       if (sd === "corp") {
         for (const key of ["hq", "rd", "archives", ...remoteKeys(p.servers)]) {
           const srv = p.servers?.[key];
@@ -278,55 +274,57 @@ export class Agent {
           const content: any[] = srv.content ?? [];
           if (!ices.length && !content.length && key.startsWith("remote")) continue;
           const iceText = ices.length ? `ice (outermost first) ${[...ices].reverse().map((c) => this.cardLine(c, side)).join(" > ")}` : "no ice";
-          out.push(`  ${serverName(key)}: ${iceText}${content.length ? ` | in root: ${content.map((c) => this.cardLine(c, side)).join(", ")}` : ""}`);
+          out.push([`${prefix}.${key}`, `${who} ${serverName(key)}: ${iceText}${content.length ? ` | in root: ${content.map((c) => this.cardLine(c, side)).join(", ")}` : ""}`]);
         }
       } else {
+        let any = false;
         for (const k of ["program", "hardware", "resource", "facedown"]) {
           const cards: any[] = p.rig?.[k] ?? [];
-          if (cards.length) out.push(`  ${k}s: ${cards.map((c) => this.cardLine(c, side)).join(", ")}`);
+          if (cards.length) any = true;
+          out.push([`${prefix}.${k}`, cards.length ? `${who} ${k}s: ${cards.map((c) => this.cardLine(c, side)).join(", ")}` : ""]);
         }
-        if (!out.length) out.push("  nothing installed");
+        if (!any) out.push([`${prefix}.rig`, `${who} rig: nothing installed`]);
       }
       const scored: any[] = p.scored ?? [];
-      if (scored.length) out.push(`  scored: ${scored.map((c) => `${c.title} (${c["agendapoints"] ?? "?"} pts)`).join(", ")}`);
+      out.push([`${prefix}.scored`, scored.length ? `${who} scored agendas: ${scored.map((c) => `${c.title} (${c["agendapoints"] ?? "?"} pts)`).join(", ")}` : ""]);
       const discard: any[] = p.discard ?? [];
       const total = Math.max(discard.length, Number(p["discard-count"] ?? 0));
-      if (total) {
-        const titles = discard.filter((c) => c.title).map((c) => c.title);
-        const hidden = total - titles.length;
-        out.push(`  ${sd === "corp" ? "Archives" : "heap"}: ${[...titles, ...(hidden ? [`${hidden} facedown`] : [])].join(", ")}`);
-      }
+      const titles = discard.filter((c) => c.title).map((c) => c.title);
+      const hidden = total - titles.length;
+      out.push([`${prefix}.discard`, total ? `${who} ${sd === "corp" ? "Archives discard pile" : "heap"}: ${[...titles, ...(hidden ? [`${hidden} facedown`] : [])].join(", ")}` : ""]);
       const current: any[] = p.current ?? [];
-      if (current.length) out.push(`  current: ${current.map((c) => c.title).join(", ")}`);
+      out.push([`${prefix}.current`, current.length ? `${who} current: ${current.map((c) => c.title).join(", ")}` : ""]);
       return out;
     };
-    L.push(`Your board:`, ...area(side));
-    L.push(`\nOPPONENT (${opp}): ${stats(them, opp)}`);
-    if (them.identity?.title) L.push(`Identity: ${them.identity.title}`);
-    L.push(`Their board:`, ...area(opp));
+    const me = view[side] ?? {};
+    L.push(["me", `You (${side}): ${stats(me, side)}`]);
+    const hand: any[] = me.hand ?? [];
+    L.push(["hand", `Your hand: ${hand.length ? hand.map((c) => `${c.title} [${c.type}${c.cost != null ? `, cost ${c.cost}` : ""}]`).join("; ") : "empty"}`]);
+    L.push(...area(side, "Your", "mine"));
+    L.push(["opp", `Opponent (${opp}): ${stats(view[opp] ?? {}, opp)}`]);
+    L.push(...area(opp, "Their", "theirs"));
     if (view.run) {
       const run = view.run;
-      L.push(`\nRUN on ${serverName(run.server?.[0] ?? "")} · phase ${run.phase} · position ${run.position}`);
+      L.push(["run", `RUN on ${serverName(run.server?.[0] ?? "")} · phase ${run.phase} · position ${run.position}`]);
       const ice = currentIce(view);
       if (ice) {
-        L.push(`Current ice: ${this.cardLine(ice, side)}`);
+        L.push(["run.ice", `Current ice: ${this.cardLine(ice, side)}`]);
         if (ice.rezzed)
-          for (const sub of ice.subroutines ?? []) {
+          (ice.subroutines ?? []).forEach((sub: any, i: number) => {
             const by = sub.broken && sub.breaker != null ? findCard(view, sub.breaker)?.title : undefined;
-            L.push(`  sub: ${this.render(sub.label)} — ${sub.broken ? `broken${by ? ` by ${by}` : ""}` : sub.fired ? "fired" : sub.resolve === false ? "will not fire" : "unbroken"}`);
-          }
+            L.push([`run.sub${i}`, `  subroutine: ${this.render(sub.label)} — ${sub.broken ? `broken${by ? ` by ${by}` : ""}` : sub.fired ? "fired" : sub.resolve === false ? "will not fire" : "unbroken"}`]);
+          });
       }
     }
     const prompt = promptOf(view, side);
-    if (prompt) L.push(`\nPROMPT (${prompt["prompt-type"] ?? "other"}): ${this.render(prompt.msg)}${prompt.card?.title ? ` — from ${prompt.card.title}` : ""}`);
-    if (s.actionError) L.push(`\nLAST ACTION FAILED: ${s.actionError}`);
-    const log: any[] = view.log ?? [];
-    const recent = log
-      .map((e) => (e.user === "__system__" ? this.render(e.text) : `${e.user?.username ?? "?"} says: ${this.render(e.text)}`))
-      .filter((t) => t && !/^\s*\[hr\]\s*$/i.test(t))
-      .slice(-12);
-    L.push(`\nRecent log:\n${recent.map((t) => `  ${t}`).join("\n")}`);
-    return L.join("\n");
+    if (prompt) L.push(["prompt", `PROMPT (${prompt["prompt-type"] ?? "other"}): ${this.render(prompt.msg)}${prompt.card?.title ? ` — from ${prompt.card.title}` : ""}`]);
+    if (s.actionError) L.push(["error", `LAST ACTION FAILED: ${s.actionError}`]);
+    return L.filter(([, t]) => t);
+  }
+
+  private logLines(): string[] {
+    const view = this.session!.views[this.session!.lobby.mySide];
+    return (view?.log ?? []).map((e: any) => (e.user === "__system__" ? this.render(e.text) : `${e.user?.username ?? "?"} says: ${this.render(e.text)}`));
   }
 
   private buildActions(): Action[] {
@@ -376,7 +374,7 @@ export class Agent {
       if (c.enabled === false || c.command === "toggle-auto-no-action") continue;
       if (c.command === "generate-runnable-zones") {
         const corp = view.corp ?? {};
-        for (const key of ["hq", "rd", "archives", ...remoteKeys(corp.servers)]) push({ label: `Run on ${serverName(key)}`, command: "run", args: { server: serverName(key) } });
+        for (const key of ["hq", "rd", "archives", ...remoteKeys(corp.servers)]) push({ label: `Run on ${serverName(key)}`, group: "Run on", short: serverName(key), command: "run", args: { server: serverName(key) } });
         continue;
       }
       push({ label: this.render(c.label), command: c.command, args: c.args });
@@ -398,7 +396,7 @@ export class Agent {
           const servers = view.corp?.servers ?? {};
           const remotes = remoteKeys(servers).map(serverName);
           const targets = card.type === "ICE" || card.type === "Upgrade" ? ["HQ", "R&D", "Archives", ...remotes, "New remote"] : [...remotes, "New remote"];
-          for (const t of targets) push({ label: `Install ${card.title} in ${t}`, command: "play", args: { card: cardRef(card), server: t } });
+          for (const t of targets) push({ label: `Install ${card.title} in ${t}`, group: `Install ${card.title} in`, short: t, command: "play", args: { card: cardRef(card), server: t } });
           continue;
         }
         push({ label: `${card.title}: ${this.render(c.label)}`, command: c.command, args: c.args });
@@ -407,20 +405,61 @@ export class Agent {
     return out.map((a, id) => ({ ...a, id }));
   }
 
+  private seen = new Map<string, string>();
+  private logSeen = 0;
+
+  private actionsText() {
+    const s = this.session!;
+    const view = s.views[s.lobby.mySide];
+    this.actions = this.buildActions();
+    this.stamp = this.stampOf();
+    const rows: string[] = [];
+    for (let i = 0; i < this.actions.length; i++) {
+      const a = this.actions[i];
+      if (a.group) {
+        const same = [a];
+        while (this.actions[i + 1]?.group === a.group) same.push(this.actions[++i]);
+        rows.push(`  ${a.group}: ${same.map((x) => `${x.id} ${x.short}`).join(" · ")}`);
+      } else rows.push(`  ${a.id}. ${a.label}${a.amount ? ` (amount ${a.amount.min}-${a.amount.max})` : ""}${a.text ? " (text)" : ""}`);
+    }
+    const list = rows.length ? rows.join("\n") : "  (none)";
+    const status = view.winner ? "" : canAct(view, s.lobby.mySide) ? "\n\nIt is your decision. Pick one action id with act." : "\n\nNothing to decide right now: call wait_for_turn.";
+    return `ACTIONS:\n${list}${status}`;
+  }
+
+  private remember(lines: [string, string][]) {
+    this.seen = new Map(lines);
+    this.logSeen = this.logLines().length;
+  }
+
   describe() {
     const s = this.session;
     if (!s) return "Not in a game. Use join_game with a game code, or host_game.";
     if (!s.lobby.started || !s.views[s.lobby.mySide]) return this.lobbyText();
-    const view = s.views[s.lobby.mySide];
-    this.actions = this.buildActions();
-    this.stamp = this.stampOf();
-    const head = this.gameText();
-    const decide = canAct(view, s.lobby.mySide);
-    const list = this.actions.length
-      ? this.actions.map((a) => `  ${a.id}. ${a.label}${a.amount ? ` (amount ${a.amount.min}-${a.amount.max})` : ""}${a.text ? " (text)" : ""}`).join("\n")
-      : "  (none)";
-    const status = view.winner ? "" : decide ? "\n\nIt is your decision. Pick one action id with act." : "\n\nNothing to decide right now: call wait_for_turn.";
-    return `${head}\n\nACTIONS:\n${list}${status}`;
+    const lines = this.gameLines();
+    const recent = this.logLines()
+      .filter((t) => t && !/^\s*\[hr\]\s*$/i.test(t))
+      .slice(-12);
+    this.remember(lines);
+    return `${lines.map(([, t]) => t).join("\n")}\n\nRecent log:\n${recent.map((t) => `  ${t}`).join("\n")}\n\n${this.actionsText()}`;
+  }
+
+  update() {
+    const s = this.session;
+    if (!s || !s.lobby.started || !s.views[s.lobby.mySide] || !this.seen.size) return this.describe();
+    const lines = this.gameLines();
+    const log = this.logLines();
+    const fresh = log.slice(this.logSeen).filter((t) => t && !/^\s*\[hr\]\s*$/i.test(t));
+    const sticky = (k: string) => k === "turn" || k === "over" || k === "prompt" || k === "error" || k.startsWith("run");
+    const now = new Map(lines);
+    const changed = lines.filter(([k, t]) => sticky(k) || this.seen.get(k) !== t).map(([, t]) => t);
+    const gone = [...this.seen.keys()].filter((k) => !now.has(k) && !k.startsWith("run") && k !== "prompt" && k !== "error").map((k) => `${this.seen.get(k)!.split(":")[0]}: (now empty)`);
+    this.remember(lines);
+    const parts = [];
+    if (fresh.length) parts.push(`New in the log:\n${fresh.slice(-30).map((t) => `  ${t}`).join("\n")}`);
+    parts.push(`Now (only what changed; get_state shows everything):\n${[...changed, ...gone].join("\n")}`);
+    parts.push(this.actionsText());
+    return parts.join("\n\n");
   }
 
   private stampOf() {
@@ -433,7 +472,7 @@ export class Agent {
     const s = this.requireSession();
     if (!s.lobby.started) throw new Error("The game has not started.");
     if (this.stampOf() !== this.stamp) {
-      return `The game changed since you listed actions; nothing was done.\n\n${this.describe()}`;
+      return `The game changed since you listed actions; nothing was done.\n\n${this.update()}`;
     }
     const a = this.actions.find((x) => x.id === id);
     if (!a) throw new Error(`No action ${id}. Call get_state to list actions.`);
@@ -455,7 +494,7 @@ export class Agent {
     await sleep(150);
     while (s.pending && Date.now() < end) await sleep(100);
     await sleep(250);
-    return this.describe();
+    return this.update();
   }
 
   async say(text: string) {
@@ -479,11 +518,11 @@ export class Agent {
     while (Date.now() < end) {
       const view = s.views[s.lobby.mySide];
       if (s.lobby.started && view) {
-        if (view.winner || (!s.pending && canAct(view, s.lobby.mySide))) return this.describe();
+        if (view.winner || (!s.pending && canAct(view, s.lobby.mySide))) return this.update();
       } else if (this.lobbyText() !== lobbyBefore) return this.describe();
       await sleep(400);
     }
-    return `Still waiting (the opponent has not given you a decision yet).\n\n${this.describe()}`;
+    return `Still waiting (the opponent has not given you a decision yet).\n\n${this.update()}`;
   }
 
   card(name: string) {

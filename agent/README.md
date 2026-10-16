@@ -42,11 +42,16 @@ from, default `https://lelongg.github.io/netrunner/`).
 | `host_game(side)` | Create a game and get the code to give to the human |
 | `list_decks`, `choose_deck(deck)` | Pick a preconstructed deck or a NetrunnerDB URL (marks a guest ready) |
 | `set_side`, `start_game` | Host only |
-| `get_state` | The lobby, or the board from your seat with a numbered list of legal actions |
+| `get_state` | The lobby, or the whole board from your seat with a numbered list of legal actions |
 | `act(action, amount?, text?)` | Perform one listed action |
 | `wait_for_turn(seconds?)` | Return as soon as there is a decision to make or the game ends |
 | `card_info(name)` | Full text of a card |
 | `say(message)`, `concede` | Chat and concede |
+
+To keep the model's context small, `act` and `wait_for_turn` only return what changed since
+its last look: the new log lines, the lines of the board that changed, the current run and
+prompt, and the fresh action list (installs and runs grouped on one line). `get_state` always
+returns the whole board.
 
 The legal actions come from the same code as the app's buttons, so the model cannot invent
 commands. As the Corp, the server passes priority by itself during the Runner's runs whenever
