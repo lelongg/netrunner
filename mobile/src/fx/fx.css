@@ -574,3 +574,15 @@
 .tile-wrap.fx-focus {
   z-index: 2;
 }
+
+.fx-comet {
+  position: absolute;
+  width: 38px;
+  height: 6px;
+  margin-left: -36px;
+  margin-top: -3px;
+  border-radius: 6px;
+  transform-origin: 100% 50%;
+  background: linear-gradient(90deg, transparent, var(--tone) 60%, #fff);
+  box-shadow: 0 0 14px var(--tone);
+}

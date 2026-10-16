@@ -1,6 +1,6 @@
 import { cardImage } from "../engine";
 import type { Side } from "../engine";
-import { anchor, animate, scoreSegment, banner, burst, buzz, coins, done, flash, layer, mid, node, place, punch, rays, rectOf, reduced, ring, shake, tileEl, visible, type Point, type Tone } from "./core";
+import { anchor, animate, points, scoreSegments, banner, burst, buzz, done, flash, layer, mid, node, place, punch, rays, rectOf, reduced, ring, shake, tileEl, visible, type Point, type Tone } from "./core";
 
 interface Info {
   cid: unknown;
@@ -11,6 +11,7 @@ interface Info {
   type?: string;
   title?: string;
   facedown: boolean;
+  points: number;
 }
 
 interface Move {
@@ -44,6 +45,7 @@ export function collect(view: any): Map<unknown, Info> {
           type: x.type,
           title: x.title,
           facedown: !!x.facedown,
+          points: Number(x.agendapoints) || 0,
         });
         walk(x.hosted);
         return;
@@ -237,11 +239,10 @@ async function showcase(m: Move, kind: Kind, me: Side) {
   if (kind === "steal" && (m.to?.holder ?? m.from?.holder) === me) {
     const seen = rectOf(document.querySelector(".prompt img"));
     const from = visible(seen) ? mid(seen) : visible(src) ? mid(src) : ([innerWidth / 2, innerHeight / 2] as Point);
-    const pr = rectOf(scoreSegment("runner"));
     banner("Stolen", info?.title ?? "", "red", { size: "lg", hold: 0.4 });
     ring(from, "red", 160);
     burst(from, "red", 24, 90, { size: 6, gravity: 0, shards: true });
-    if (visible(pr)) for (let i = 0; i < 3; i++) setTimeout(() => coins(from, mid(pr), 6, "red"), 90 * i);
+    points(from, scoreSegments("runner", info?.points ?? 1), "red");
     buzz([40, 40, 120]);
     return;
   }
@@ -268,21 +269,14 @@ async function showcase(m: Move, kind: Kind, me: Side) {
     flash(kind === "steal" ? "red" : "gold", 0.35);
     shake(0.6);
     buzz([40, 40, 40, 40, 120]);
-    const points = info?.title ?? "";
-    banner(kind === "steal" ? "Stolen" : "Scored", points, kind === "steal" ? "red" : "gold", { size: "xl", hold: hold + 0.2 });
+    banner(kind === "steal" ? "Stolen" : "Scored", info?.title ?? "", kind === "steal" ? "red" : "gold", { size: "xl", hold: hold + 0.2 });
   }
   const glow = node(`fx-glow tone-${tone}`, ghost);
   animate(glow, { opacity: [0, 1, 0.6] }, { duration: 0.5 });
   await animate(ghost, { scaleX: [1, 1.04], scaleY: [1, 1.04] }, { duration: hold, ease: "easeInOut" }).finished;
   glow.remove();
   if (kind === "score" || kind === "steal") {
-    const points = scoreSegment(m.to?.holder ?? "corp");
-    const pr = rectOf(points);
-    const to = visible(pr) ? mid(pr) : null;
-    if (to) {
-      coins(center, to, 8, kind === "steal" ? "red" : "gold");
-      for (let i = 0; i < 3; i++) setTimeout(() => coins(center, to, 6, kind === "steal" ? "red" : "gold"), 90 * (i + 1));
-    }
+    points(center, scoreSegments(m.to?.holder ?? "corp", info?.points ?? 1), kind === "steal" ? "red" : "gold");
     burst(center, tone, 36, big.width * 0.9, { size: 6, gravity: 0, shards: true });
     await animate(ghost, { scaleX: [1.04, 1.5], scaleY: [1.04, 1.5], opacity: [1, 0], filter: ["brightness(1)", "brightness(3)"] }, { duration: 0.35, ease: "easeOut" }).finished;
     ghost.remove();

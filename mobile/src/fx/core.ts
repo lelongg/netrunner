@@ -102,6 +102,36 @@ export function scoreSegment(side: string): Element | null {
   return lit?.length ? lit[lit.length - 1] : anchor(`${side}-points`);
 }
 
+export function scoreSegments(side: string, n: number): Element[] {
+  const lit = [...(anchor(`${side}-points`)?.querySelectorAll("i.on") ?? [])];
+  return lit.slice(-Math.max(1, n));
+}
+
+export function points(from: Point, segments: Element[], tone: Tone = "gold") {
+  if (reduced()) return;
+  segments.forEach((seg, i) => {
+    const r = rectOf(seg);
+    if (!visible(r)) return;
+    const to = mid(r);
+    const dx = to[0] - from[0];
+    const dy = to[1] - from[1];
+    const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
+    const el = node(`fx-comet tone-${tone}`);
+    el.style.left = `${from[0]}px`;
+    el.style.top = `${from[1]}px`;
+    const delay = i * 0.14;
+    animate(el, { x: [0, dx], y: [0, dy], rotate: [angle, angle], scaleX: [0.4, 1.8, 0.9], opacity: [0, 1, 1] }, { duration: 0.6, delay, ease: [0.55, 0, 0.85, 0.45] }).finished.then(
+      () => {
+        el.remove();
+        ring(to, tone, 70);
+        burst(to, tone, 10, 40, { size: 4, gravity: 0 });
+        animate(seg, { scaleY: [1, 3, 1], filter: ["brightness(1)", "brightness(2.5)", "brightness(1)"] }, { duration: 0.5, ease: "easeOut" });
+      },
+      () => el.remove(),
+    );
+  });
+}
+
 export function tileEl(cid: unknown): HTMLElement | null {
   return document.querySelector(`.tile[data-cid="${String(cid)}"]`) as HTMLElement | null;
 }
