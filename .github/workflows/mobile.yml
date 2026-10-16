@@ -19,6 +19,8 @@ jobs:
   build:
     name: 'Build engine and mobile app'
     runs-on: ubuntu-latest
+    env:
+      HAS_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -68,6 +70,16 @@ jobs:
 
       - name: Build the agent server
         run: npm ci --prefix agent && npm run build --prefix agent
+
+      - name: Typecheck the hosted MCP worker
+        run: npm run worker:typecheck --prefix agent
+
+      - name: Deploy the hosted MCP worker
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master' && env.HAS_TOKEN == 'true'
+        run: npm run worker:deploy --prefix agent
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
       - uses: actions/upload-pages-artifact@v3
         with:

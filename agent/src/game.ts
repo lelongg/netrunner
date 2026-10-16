@@ -1,6 +1,6 @@
-import "./env";
 import type { Card, CardDb, EngineApi, Side } from "../../mobile/src/engine";
 import { Session, loadSave } from "../../mobile/src/session";
+import { type Store, browserStore } from "../../mobile/src/store";
 import { basicCommands, cardCommands, cardRef, currentIce, findCard, promptOf, runCommands } from "../../mobile/src/game/actions";
 import { type WireDeck, fromPrecon, importNrdb, toWire } from "../../mobile/src/decks";
 
@@ -9,8 +9,8 @@ export interface Loaded {
   db: CardDb;
 }
 
-export async function loadEngine(base: string): Promise<Loaded> {
-  const engine: EngineApi = await import(new URL("./engine.mjs", import.meta.url).href);
+export async function loadEngine(base: string, preloaded?: EngineApi): Promise<Loaded> {
+  const engine: EngineApi = preloaded ?? (await import(new URL("./engine.mjs", import.meta.url).href));
   const get = async (path: string) => {
     const res = await fetch(new URL(path, base));
     if (!res.ok) throw new Error(`${path}: HTTP ${res.status}`);
@@ -84,7 +84,10 @@ export class Agent {
   private installing?: any;
   private unsubscribe?: () => void;
 
-  constructor(private loaded: Loaded) {}
+  constructor(
+    private loaded: Loaded,
+    private store: Store = browserStore(),
+  ) {}
 
   private get engine() {
     return this.loaded.engine;
@@ -158,8 +161,8 @@ export class Agent {
 
   async join(code: string, name: string, deck?: string) {
     const upper = code.trim().toUpperCase();
-    const save = loadSave(upper);
-    this.attach(save ? Session.resume(this.engine, this.db, save) : new Session(this.engine, this.db, "guest", upper, name));
+    const save = loadSave(upper, this.store);
+    this.attach(save ? Session.resume(this.engine, this.db, save, this.store) : new Session(this.engine, this.db, "guest", upper, name, undefined, [], this.store));
     if (!save) this.session!.setName(name);
     await this.settleLobby();
     const s = this.session!;
@@ -173,7 +176,7 @@ export class Agent {
 
   async host(name: string, side: Side, deck: string) {
     const wire = await this.resolveDeck(deck, side);
-    this.attach(new Session(this.engine, this.db, "host", undefined, name, side));
+    this.attach(new Session(this.engine, this.db, "host", undefined, name, side, [], this.store));
     await this.settleLobby();
     const s = this.session!;
     s.setSide(side);

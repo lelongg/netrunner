@@ -1,5 +1,3 @@
-import { MotionGlobalConfig } from "motion";
-
 export interface Settings {
   animations: boolean;
   glossary: boolean;
@@ -25,7 +23,6 @@ export function setSetting<K extends keyof Settings>(key: K, value: Settings[K])
   try {
     localStorage.setItem(KEY, JSON.stringify(settings));
   } catch {}
-  applySettings();
   for (const fn of listeners) fn();
 }
 
@@ -37,6 +34,5 @@ export function onSettings(fn: () => void) {
 export const motionOff = () => !settings.animations || matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 export function applySettings() {
-  MotionGlobalConfig.skipAnimations = !settings.animations;
   document.documentElement.classList.toggle("no-motion", !settings.animations);
 }

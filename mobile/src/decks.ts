@@ -59,7 +59,7 @@ export async function importNrdb(url: string, side: Side, db: CardDb): Promise<D
   for (const kind of kinds) {
     const res = await fetch(`https://netrunnerdb.com/api/2.0/public/${kind}/${id}`);
     if (!res.ok) continue;
-    const json = await res.json();
+    const json: any = await res.json();
     const data = json.data?.[0];
     if (!data) continue;
     const found = new Map<Card, number>();

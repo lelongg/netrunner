@@ -2,9 +2,9 @@ import type { CardDb, Deck, EngineApi, Side } from "./engine";
 import { HeuristicBot } from "./bot/heuristic.ts";
 import { type WireDeck, engineDeck, fromWire } from "./decks";
 import { type GameHost, type LocalEntry, type Op, type Seat as ViewSeat, makeHost } from "./game/runner";
-import { PeerTransport } from "./net/p2p";
 import { RelayTransport, relayUrl, createGame, joinGame, rejoinLink, storedTicket, watchLink } from "./net/relay";
 import type { Entry, LinkStatus, Payload, Seat, Transport } from "./net/types";
+import { type Store, browserStore } from "./store";
 
 export type Role = "host" | "guest" | "local" | "spectator";
 
@@ -90,61 +90,61 @@ function parseSave(raw: string | null): SavedGame | null {
   return null;
 }
 
-function migrateLegacy() {
+function migrateLegacy(store: Store) {
   for (const key of Object.values(SAVE_KEYS)) {
     try {
-      const legacy = parseSave(localStorage.getItem(key));
-      if (legacy && !localStorage.getItem(GAME_PREFIX + saveId(legacy))) localStorage.setItem(GAME_PREFIX + saveId(legacy), JSON.stringify(legacy));
-      localStorage.removeItem(key);
+      const legacy = parseSave(store.getItem(key));
+      if (legacy && !store.getItem(GAME_PREFIX + saveId(legacy))) store.setItem(GAME_PREFIX + saveId(legacy), JSON.stringify(legacy));
+      store.removeItem(key);
     } catch {}
   }
 }
 
-export function listSaves(): SavedGame[] {
-  migrateLegacy();
+export function listSaves(store: Store = browserStore()): SavedGame[] {
+  migrateLegacy(store);
   const out: SavedGame[] = [];
   try {
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
+    for (let i = 0; i < store.length; i++) {
+      const key = store.key(i);
       if (!key?.startsWith(GAME_PREFIX)) continue;
-      const save = parseSave(localStorage.getItem(key));
+      const save = parseSave(store.getItem(key));
       if (save) out.push(save);
     }
   } catch {}
   return out.sort((a, b) => b.savedAt - a.savedAt);
 }
 
-export function loadSave(id: string): SavedGame | null {
-  migrateLegacy();
+export function loadSave(id: string, store: Store = browserStore()): SavedGame | null {
+  migrateLegacy(store);
   try {
-    return parseSave(localStorage.getItem(GAME_PREFIX + id));
+    return parseSave(store.getItem(GAME_PREFIX + id));
   } catch {
     return null;
   }
 }
 
-function writeSave(id: string, save: SavedGame | null) {
+function writeSave(id: string, save: SavedGame | null, store: Store) {
   const key = GAME_PREFIX + id;
   try {
-    if (!save) return localStorage.removeItem(key);
-    const fresh = !localStorage.getItem(key);
-    const others = () => listSaves().filter((g) => saveId(g) !== id);
-    if (fresh) for (const old of others().slice(MAX_GAMES - 1)) localStorage.removeItem(GAME_PREFIX + saveId(old));
+    if (!save) return store.removeItem(key);
+    const fresh = !store.getItem(key);
+    const others = () => listSaves(store).filter((g) => saveId(g) !== id);
+    if (fresh) for (const old of others().slice(MAX_GAMES - 1)) store.removeItem(GAME_PREFIX + saveId(old));
     const raw = JSON.stringify(save);
     for (;;) {
       try {
-        return localStorage.setItem(key, raw);
+        return store.setItem(key, raw);
       } catch {
         const oldest = others().pop();
         if (!oldest) return;
-        localStorage.removeItem(GAME_PREFIX + saveId(oldest));
+        store.removeItem(GAME_PREFIX + saveId(oldest));
       }
     }
   } catch {}
 }
 
-export function clearSave(save: SavedGame) {
-  writeSave(saveId(save), null);
+export function clearSave(save: SavedGame, store: Store = browserStore()) {
+  writeSave(saveId(save), null, store);
 }
 
 const deckSide = (db: CardDb, deck: WireDeck): Side | undefined => db.byTitle.get(deck.identity)?.side.toLowerCase() as Side | undefined;
@@ -152,17 +152,17 @@ const deckSide = (db: CardDb, deck: WireDeck): Side | undefined => db.byTitle.ge
 const LAST_DECK = (side: Side) => `nsg.lastDeck.${side}`;
 const LAST_SIDE = "nsg.lastSide";
 
-function rememberedSide(): Side {
+function rememberedSide(store: Store): Side {
   try {
-    return localStorage.getItem(LAST_SIDE) === "runner" ? "runner" : "corp";
+    return store.getItem(LAST_SIDE) === "runner" ? "runner" : "corp";
   } catch {
     return "corp";
   }
 }
 
-function remember(key: string, value: string) {
+function remember(key: string, value: string, store: Store) {
   try {
-    localStorage.setItem(key, value);
+    store.setItem(key, value);
   } catch {}
 }
 
@@ -208,9 +208,11 @@ export class Session {
     role: Role,
     code: string | undefined,
     myName: string,
-    mySide: Side = rememberedSide(),
+    side?: Side,
     resumeEntries: Entry[] = [],
+    private store: Store = browserStore(),
   ) {
+    const mySide = side ?? rememberedSide(store);
     this.lobby = {
       code: code ?? "",
       role,
@@ -234,13 +236,13 @@ export class Session {
     void this.connect(code);
   }
 
-  static resume(engine: EngineApi, db: CardDb, save: SavedGame): Session {
+  static resume(engine: EngineApi, db: CardDb, save: SavedGame, store: Store = browserStore()): Session {
     if (save.v === 2) {
-      const session = new Session(engine, db, save.role, save.code, save.myName, rememberedSide(), save.entries);
+      const session = new Session(engine, db, save.role, save.code, save.myName, undefined, save.entries, store);
       if (save.myDeck && !session.lobby.started) session.lobby = { ...session.lobby, myDeck: save.myDeck };
       return session;
     }
-    const session = new Session(engine, db, "local", save.code, save.myName, save.mySide);
+    const session = new Session(engine, db, "local", save.code, save.myName, save.mySide, [], store);
     session.restore(save);
     return session;
   }
@@ -270,15 +272,17 @@ export class Session {
         return;
       }
       if (relayUrl()) {
-        const ticket = this.seat === 0 && !code ? await createGame() : this.seat === 0 ? storedTicket(code!) : await joinGame(code!);
+        const ticket = this.seat === 0 && !code ? await createGame(this.store) : this.seat === 0 ? storedTicket(code!, this.store) : await joinGame(code!, this.store);
         if (!ticket) throw new Error("This game was created on another device.");
         if (this.closed) return;
         this.seat = ticket.seat;
         this.patch({ code: ticket.code, role: ticket.seat === 0 ? "host" : "guest" });
-        this.transport = new RelayTransport(ticket, this.lastSeq(), handlers);
+        this.transport = new RelayTransport(ticket, this.lastSeq(), handlers, this.store);
       } else {
         const room = code ?? newRoomCode();
         this.patch({ code: room });
+        const { PeerTransport } = await import("./net/p2p");
+        if (this.closed) return;
         this.transport = new PeerTransport(room, this.seat, [...this.entries], handlers);
       }
       this.persist();
@@ -479,7 +483,7 @@ export class Session {
 
   private rememberedDeck(side: Side): WireDeck | undefined {
     try {
-      const deck: WireDeck = JSON.parse(localStorage.getItem(LAST_DECK(side)) ?? "null");
+      const deck: WireDeck = JSON.parse(this.store.getItem(LAST_DECK(side)) ?? "null");
       if (!deck || deckSide(this.db, deck) !== side) return undefined;
       fromWire(deck, this.db);
       return deck;
@@ -502,7 +506,7 @@ export class Session {
 
   setSide(side: Side) {
     if (this.lobby.role === "guest" || side === this.lobby.mySide || this.lobby.started) return;
-    remember(LAST_SIDE, side);
+    remember(LAST_SIDE, side, this.store);
     if (this.lobby.role === "local") {
       this.lobby = { ...this.lobby, mySide: side };
       this.restoreDecks();
@@ -514,7 +518,7 @@ export class Session {
   }
 
   setDeck(deck: WireDeck, side?: Side) {
-    remember(LAST_DECK(side ?? this.lobby.mySide), JSON.stringify(deck));
+    remember(LAST_DECK(side ?? this.lobby.mySide), JSON.stringify(deck), this.store);
     if (this.lobby.role === "local") {
       if (side && side !== this.lobby.mySide) {
         this.opponentDeck = deck;
@@ -530,7 +534,7 @@ export class Session {
   setName(name: string) {
     const myName = name.trim().slice(0, 24) || "Player";
     if (myName === this.lobby.myName || this.lobby.started) return;
-    remember("nsg.name", myName);
+    remember("nsg.name", myName, this.store);
     this.patch({ myName });
     if (this.lobby.role !== "local") {
       this.push({ k: "name", name: myName });
@@ -661,7 +665,7 @@ export class Session {
 
   private persist() {
     const save = this.snapshot();
-    if (save) writeSave(this.saveId!, save);
+    if (save) writeSave(this.saveId!, save, this.store);
   }
 
   journal(): string | undefined {
@@ -754,7 +758,7 @@ export class Session {
   }
 
   forget() {
-    if (this.saveId) writeSave(this.saveId, null);
+    if (this.saveId) writeSave(this.saveId, null, this.store);
   }
 
   close() {

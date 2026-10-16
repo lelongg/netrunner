@@ -1,4 +1,5 @@
 import { settings } from "../settings";
+import { type Store, browserStore } from "../store";
 import { type Entry, type LinkStatus, Outbox, type Payload, type Seat, type Transport, type TransportHandlers } from "./types";
 
 export const DEFAULT_RELAY: string | undefined = import.meta.env.VITE_RELAY_URL?.replace(/\/$/, "") || undefined;
@@ -23,23 +24,23 @@ const PONG_TIMEOUT_MS = 8000;
 const UNREACHABLE_MS = 20000;
 const SLOW_DOWN_MS = 10500;
 
-function tickets(): Record<string, SeatTicket> {
+function tickets(store: Store): Record<string, SeatTicket> {
   try {
-    return JSON.parse(localStorage.getItem(TICKETS) ?? "{}");
+    return JSON.parse(store.getItem(TICKETS) ?? "{}");
   } catch {
     return {};
   }
 }
 
-export function storedTicket(code: string): SeatTicket | undefined {
-  return tickets()[code];
+export function storedTicket(code: string, store: Store = browserStore()): SeatTicket | undefined {
+  return tickets(store)[code];
 }
 
-export function forgetTicket(code: string) {
+export function forgetTicket(code: string, store: Store = browserStore()) {
   try {
-    const all = tickets();
+    const all = tickets(store);
     delete all[code];
-    localStorage.setItem(TICKETS, JSON.stringify(all));
+    store.setItem(TICKETS, JSON.stringify(all));
   } catch {}
 }
 
@@ -52,12 +53,12 @@ export function ticketFromHash(code: string, hash: string): SeatTicket | undefin
   return m ? { code, seat: Number(m[1]) as Seat, token: m[2] } : undefined;
 }
 
-export function storeTicket(ticket: SeatTicket) {
+export function storeTicket(ticket: SeatTicket, store: Store = browserStore()) {
   try {
-    const all = tickets();
+    const all = tickets(store);
     all[ticket.code] = ticket;
     const recent = Object.fromEntries(Object.entries(all).slice(-20));
-    localStorage.setItem(TICKETS, JSON.stringify(recent));
+    store.setItem(TICKETS, JSON.stringify(recent));
   } catch {}
 }
 
@@ -73,23 +74,23 @@ async function call(path: string): Promise<{ status: number; body: any }> {
   }
 }
 
-export async function createGame(): Promise<SeatTicket> {
+export async function createGame(store: Store = browserStore()): Promise<SeatTicket> {
   const { status, body } = await call("/games");
   if (status !== 201) throw new Error(body.error ?? `The relay answered ${status}`);
   const ticket = { code: body.code, seat: body.seat, token: body.token };
-  storeTicket(ticket);
+  storeTicket(ticket, store);
   return ticket;
 }
 
-export async function joinGame(code: string): Promise<SeatTicket> {
-  const known = storedTicket(code);
+export async function joinGame(code: string, store: Store = browserStore()): Promise<SeatTicket> {
+  const known = storedTicket(code, store);
   if (known) return known;
   const { status, body } = await call(`/games/${code}/join`);
   if (status === 404) throw new Error("No game with this code. Check the code with the host.");
   if (status === 409) throw new Error("This game already has two players.");
   if (status !== 200) throw new Error(body.error ?? `The relay answered ${status}`);
   const ticket = { code, seat: body.seat, token: body.token };
-  storeTicket(ticket);
+  storeTicket(ticket, store);
   return ticket;
 }
 
@@ -112,6 +113,7 @@ export class RelayTransport implements Transport {
     private ticket: Ticket,
     since: number,
     private handlers: TransportHandlers,
+    private store: Store = browserStore(),
   ) {
     this.last = since;
     this.connect();
@@ -209,7 +211,7 @@ export class RelayTransport implements Transport {
 
   private die(error: string) {
     this.dead = true;
-    if (this.ticket.seat !== null) forgetTicket(this.ticket.code);
+    if (this.ticket.seat !== null) forgetTicket(this.ticket.code, this.store);
     this.setStatus({ link: "connecting", peer: false, error });
   }
 

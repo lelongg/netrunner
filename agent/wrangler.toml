@@ -1,0 +1,32 @@
+name = "pocket-rig-mcp"
+main = "worker/index.ts"
+compatibility_date = "2026-09-01"
+compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]
+
+[[durable_objects.bindings]]
+name = "SESSION"
+class_name = "McpSession"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["McpSession"]
+
+[vars]
+SITE = "https://lelongg.github.io/netrunner/"
+NAME = "Claude"
+IDLE_HOURS = "24"
+
+[define]
+"import.meta.env.VITE_RELAY_URL" = "\"https://netrunner-relay.lelong-gerald.workers.dev\""
+"import.meta.env.VITE_ICE_SERVERS" = "undefined"
+"import.meta.env.PROD" = "true"
+
+[[ratelimits]]
+name = "SESSION_LIMIT"
+namespace_id = "2001"
+simple = { limit = 10, period = 60 }
+
+[[ratelimits]]
+name = "SESSION_LIMIT_ALL"
+namespace_id = "2002"
+simple = { limit = 60, period = 60 }

@@ -14,7 +14,8 @@ import { Lobby } from "./screens/Lobby";
 import { type Role, type SavedGame, Session, clearSave, listSaves, loadSave, newRoomCode, saveId } from "./session";
 import "./styles.css";
 import "./fx/fx.css";
-import { applySettings, motionOff } from "./settings";
+import { applySettings, motionOff, onSettings, settings } from "./settings";
+import { MotionGlobalConfig } from "motion";
 
 const joinParam = new URLSearchParams(location.search).get("join")?.toUpperCase() ?? undefined;
 const gameParam = new URLSearchParams(location.search).get("game") ?? undefined;
@@ -284,7 +285,12 @@ function UpdateBanner() {
   );
 }
 
-applySettings();
+const syncSettings = () => {
+  applySettings();
+  MotionGlobalConfig.skipAnimations = !settings.animations;
+};
+syncSettings();
+onSettings(syncSettings);
 installTips();
 installMotion();
 startEngineWorker();

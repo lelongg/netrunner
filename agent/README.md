@@ -11,6 +11,14 @@ seat.
 
 ## Use it
 
+### Hosted (no install)
+
+Add `https://pocket-rig-mcp.lelong-gerald.workers.dev/mcp` as a remote MCP server (Streamable HTTP),
+for example as a custom connector in claude.ai. Each MCP session gets its own Cloudflare Durable
+Object: its game, seat tickets and saves are kept apart from every other session, and are deleted
+after 24 hours without activity. The worker lives in [`worker/`](worker) and is deployed by the
+mobile app workflow; `npm run worker:dev` runs it locally.
+
 ### From this repository (Claude Code, including cloud sessions from your phone)
 
 The repository's [`.mcp.json`](../.mcp.json) declares the server, so any Claude Code session
