@@ -1,6 +1,56 @@
-import { animate } from "motion";
+import { animate as motion } from "motion";
 
-export { animate };
+const TRANSFORMS = ["transformPerspective", "x", "y", "rotate", "rotateY", "skewX", "scale", "scaleX", "scaleY"] as const;
+
+const unit = (key: string, v: unknown) => {
+  if (typeof v === "string") return v;
+  if (key === "x" || key === "y") return `${v}px`;
+  if (key === "rotate" || key === "rotateY" || key === "skewX") return `${v}deg`;
+  return String(v);
+};
+
+const part = (key: string, v: unknown) => (key === "transformPerspective" ? `perspective(${unit(key, v)}px)` : key === "x" ? `translateX(${unit(key, v)})` : key === "y" ? `translateY(${unit(key, v)})` : `${key}(${unit(key, v)})`);
+
+function resample(values: unknown[], n: number): unknown[] {
+  if (values.length === n) return values;
+  if (values.length === 1) return Array(n).fill(values[0]);
+  const numeric = values.every((v) => typeof v === "number");
+  return Array.from({ length: n }, (_, i) => {
+    const t = (i / (n - 1)) * (values.length - 1);
+    const lo = Math.floor(t);
+    const hi = Math.min(values.length - 1, lo + 1);
+    if (!numeric) return values[Math.round(t)];
+    return (values[lo] as number) + ((values[hi] as number) - (values[lo] as number)) * (t - lo);
+  });
+}
+
+function composited(keyframes: Record<string, any>) {
+  const keys = TRANSFORMS.filter((k) => k in keyframes);
+  if (!keys.length) return keyframes;
+  const rest: Record<string, any> = {};
+  for (const [k, v] of Object.entries(keyframes)) if (!(TRANSFORMS as readonly string[]).includes(k)) rest[k] = v;
+  const arrays = keys.map((k) => (Array.isArray(keyframes[k]) ? keyframes[k] : [keyframes[k]]));
+  const n = Math.max(...arrays.map((a) => a.length));
+  const sampled = arrays.map((a) => resample(a, n));
+  rest.transform = Array.from({ length: n }, (_, i) => keys.map((k, j) => part(k, sampled[j][i])).join(" "));
+  if (n === 1) rest.transform = rest.transform[0];
+  return rest;
+}
+
+export function animate(target: any, keyframes: Record<string, any>, options: Record<string, any> = {}) {
+  const anim = motion(target, composited(keyframes) as any, options as any);
+  if (options.repeat !== Infinity) {
+    const els: Element[] = Array.isArray(target) ? target : [target];
+    anim.finished.then(
+      () =>
+        requestAnimationFrame(() => {
+          for (const el of els) if (el instanceof HTMLElement && el.isConnected && !el.closest(".fx-layer")) el.style.transform = "";
+        }),
+      () => {},
+    );
+  }
+  return anim;
+}
 
 export type Point = [number, number];
 

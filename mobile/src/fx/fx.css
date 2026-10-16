@@ -528,19 +528,10 @@
     0 0 18px color-mix(in srgb, var(--ice, var(--red)) 45%, transparent);
 }
 
-.enc-text {
-  position: relative;
-}
-
-.enc-strike {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 52%;
-  height: 2px;
-  transform-origin: 0 50%;
-  background: var(--cyan);
-  box-shadow: 0 0 8px var(--cyan);
+.enc-sub.broken .enc-text {
+  background: linear-gradient(var(--cyan), var(--cyan)) 0 58% / 100% 2px no-repeat;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
 }
 
 .enc-sub.broken .enc-label {

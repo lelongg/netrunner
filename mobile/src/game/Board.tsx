@@ -4,7 +4,7 @@ import type { Session } from "../session";
 import { Cta, Meter, Ticker } from "../ui";
 import { useFx, iceKind } from "../fx/director";
 import { Count, useLoop } from "../fx/ui";
-import { animate } from "motion";
+import { animate } from "../fx/core";
 import { type Command, pendingChoice, basicCommands, cardRef, currentIce, findCard, otherSide, promptOf, runCommands, siblingsOf } from "./actions";
 import { DeckViewer } from "../screens/DeckViewer";
 import { CardSheet } from "./CardSheet";
@@ -525,8 +525,8 @@ function Encounter({ view, ice, passed, render, onTap }: { view: any; ice: any; 
       if (st === before[i] || !rows[i]) return;
       if (st === "broken") {
         animate(rows[i], { x: [0, 10, 0], backgroundColor: ["rgba(34,211,238,0.45)", "rgba(34,211,238,0)"] }, { duration: 0.5, delay: 0.25 + i * 0.08 });
-        const strike = rows[i].querySelector(".enc-strike");
-        if (strike) animate(strike, { scaleX: [0, 1] }, { duration: 0.3, delay: 0.3 + i * 0.08, ease: [0.3, 0.9, 0.3, 1] });
+        const text = rows[i].querySelector(".enc-text");
+        if (text) animate(text, { backgroundSize: ["0% 2px", "100% 2px"] }, { duration: 0.3, delay: 0.3 + i * 0.08, ease: [0.3, 0.9, 0.3, 1] });
       } else if (st === "fired") animate(rows[i], { x: [0, -8, 8, -5, 0], backgroundColor: ["rgba(255,59,48,0.5)", "rgba(255,59,48,0)"] }, { duration: 0.55, delay: 0.3 });
     });
   }, [ice.cid, states.join()]);
@@ -555,10 +555,7 @@ function Encounter({ view, ice, passed, render, onTap }: { view: any; ice: any; 
                 <li class={`enc-sub ${state}`}>
                   <Icon name="sub" />
                   <span class="enc-label">
-                    <span class="enc-text">
-                      {state === "broken" ? <Decrypt text={sub.label ?? "Subroutine"} /> : glyphs(iconize(sub.label ?? "Subroutine"))}
-                      {state === "broken" && <i class="enc-strike" />}
-                    </span>
+                    <span class="enc-text">{state === "broken" ? <Decrypt text={sub.label ?? "Subroutine"} /> : glyphs(iconize(sub.label ?? "Subroutine"))}</span>
                   </span>
                   <span class="enc-state">{state === "broken" ? (breaker ? `Broken · ${breaker}` : "Broken") : state === "fired" ? "Fired" : state === "skipped" ? "Won't fire" : encountering ? "Unbroken" : ""}</span>
                 </li>
