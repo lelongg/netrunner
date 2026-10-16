@@ -1,6 +1,6 @@
 import { cardImage } from "../engine";
 import type { Side } from "../engine";
-import { anchor, animate, scoreSegment, banner, burst, buzz, coins, done, flash, layer, mid, node, place, punch, rays, rectOf, reduced, ring, shake, tileEl, visible, type Tone } from "./core";
+import { anchor, animate, scoreSegment, banner, burst, buzz, coins, done, flash, layer, mid, node, place, punch, rays, rectOf, reduced, ring, shake, tileEl, visible, type Point, type Tone } from "./core";
 
 interface Info {
   cid: unknown;
@@ -234,6 +234,17 @@ async function showcase(m: Move, kind: Kind, me: Side) {
   const target = rectOf(destEl);
   const dest = visible(target) ? target : rectOf(zoneAnchor(m.to));
   const src = m.src ?? new DOMRect(innerWidth / 2 - 30, innerHeight + 20, 60, 84);
+  if (kind === "steal" && (m.to?.holder ?? m.from?.holder) === me) {
+    const seen = rectOf(document.querySelector(".prompt img"));
+    const from = visible(seen) ? mid(seen) : visible(src) ? mid(src) : ([innerWidth / 2, innerHeight / 2] as Point);
+    const pr = rectOf(scoreSegment("runner"));
+    banner("Stolen", info?.title ?? "", "red", { size: "lg", hold: 0.4 });
+    ring(from, "red", 160);
+    burst(from, "red", 24, 90, { size: 6, gravity: 0, shards: true });
+    if (visible(pr)) for (let i = 0; i < 3; i++) setTimeout(() => coins(from, mid(pr), 6, "red"), 90 * i);
+    buzz([40, 40, 120]);
+    return;
+  }
   const big = stage(260);
   hide(destEl);
   const ghost = ghostFrom(bigFace(info, m.clone ?? synth(info, true)), big, "fx-showcase");

@@ -111,9 +111,11 @@ function decorate(key: string, host: HTMLElement | null, build: (host: HTMLEleme
   if (cur) {
     cur.stop();
     cur.el.remove();
+    cur.host?.classList.remove("fx-focus");
     decorations.delete(key);
   }
   if (!host) return;
+  if (key !== "server") host.classList.add("fx-focus");
   decorations.set(key, { ...build(host), host });
 }
 
@@ -121,6 +123,7 @@ function clearDecorations() {
   for (const [key, d] of decorations) {
     d.stop();
     d.el.remove();
+    d.host?.classList.remove("fx-focus");
     decorations.delete(key);
   }
 }
@@ -638,14 +641,6 @@ function showdown(ice: any) {
   t2.textContent = ice.title ?? "";
   label.append(t1, t2);
   label.style.top = `${big.bottom + 14}px`;
-  const subs = node("fx-showdown-subs", stageEl);
-  subs.style.top = `${big.bottom + 64}px`;
-  const rows = (ice.subroutines ?? []).slice(0, 4).map((s: any) => {
-    const row = document.createElement("span");
-    row.textContent = `↳ ${String(s.label ?? "Subroutine").replace(/\[[^\]]+\]/g, "")}`;
-    subs.appendChild(row);
-    return row;
-  });
   const sx = r.width / big.width;
   const sy = r.height / big.height;
   ghost.style.transformOrigin = "0 0";
@@ -655,16 +650,15 @@ function showdown(ice: any) {
   animate(aura, { opacity: [0, 1, 0.7], scale: [0.8, 1.08, 1] }, { duration: 0.6 });
   animate(t1, { opacity: [0, 1], letterSpacing: ["0.8em", "0.28em"] }, { duration: 0.5, delay: 0.15 });
   animate(t2, { opacity: [0, 1], y: [20, 0], scale: [1.4, 1] }, { type: "spring", visualDuration: 0.4, bounce: 0.4, delay: 0.2 });
-  rows.forEach((row: HTMLElement, i: number) => animate(row, { opacity: [0, 1], x: [-30, 0] }, { type: "spring", visualDuration: 0.35, bounce: 0.3, delay: 0.35 + i * 0.08 }));
   setTimeout(() => {
     ring(mid(big), tone, w * 1.9);
     burst(mid(big), tone, 18, w * 0.8, { size: 5, gravity: 0 });
     shake(0.5);
     buzz([40, 30, 40]);
   }, 300);
-  const hold = 0.95 + rows.length * 0.12;
+  const hold = 1.1;
   setTimeout(() => {
-    animate([label, subs], { opacity: 0 }, { duration: 0.2 });
+    animate(label, { opacity: 0 }, { duration: 0.2 });
     animate(aura, { opacity: 0 }, { duration: 0.2 });
     const back = rectOf(tileEl(ice.cid)) ?? r;
     animate(ghost, { x: back.left - big.left, y: back.top - big.top, scaleX: back.width / big.width, scaleY: back.height / big.height, rotate: 0 }, { duration: 0.38, ease: [0.5, 0, 0.3, 1] }).finished.then(
