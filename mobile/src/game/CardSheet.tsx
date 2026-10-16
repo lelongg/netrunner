@@ -118,7 +118,7 @@ export function CardSheet({ card, view, side, db, send, onClose, disabled, index
     pendingChoice.value = c.choose;
     send(c.command, c.args);
     if (c.then === "install-list") setInstalling(true);
-    else if (!c.choose) onClose();
+    else if (!c.choose && c.command !== "select") onClose();
   };
 
   const install = (server: unknown) => {

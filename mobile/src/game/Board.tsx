@@ -5,7 +5,7 @@ import { Cta, Meter, Ticker } from "../ui";
 import { useFx, iceKind } from "../fx/director";
 import { Count, useLoop } from "../fx/ui";
 import { animate } from "../fx/core";
-import { type Command, pendingChoice, basicCommands, cardRef, currentIce, findCard, otherSide, promptOf, runCommands, siblingsOf } from "./actions";
+import { type Command, pendingChoice, basicCommands, currentIce, findCard, otherSide, promptOf, runCommands, siblingsOf } from "./actions";
 import { DeckViewer } from "../screens/DeckViewer";
 import { CardSheet } from "./CardSheet";
 import { CardTile } from "./CardTile";
@@ -711,10 +711,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
   const prompt = promptOf(view, side);
   const ptype = prompt?.["prompt-type"];
   const selectable = useMemo(() => new Set<unknown>(prompt?.selectable ?? []), [prompt]);
-  const tap = (card: any) => {
-    if (ptype === "select" && (selectable.has(card.cid) || card.selected)) send("select", { card: cardRef(card), eid: prompt.eid });
-    else setSelected(card);
-  };
+  const tap = (card: any) => setSelected(card);
   const current = selected ? findCard(view, selected.cid) : null;
   const siblings = current ? siblingsOf(view, current.cid) : [];
   const position = siblings.findIndex((c) => c.cid === current?.cid);
@@ -747,6 +744,11 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
   const closePrompt = () => session.say("/close-prompt", side);
 
   useEffect(() => setPicking(false), [!!view.run, promptId, view["active-player"], side]);
+  const wasSelecting = useRef(false);
+  useEffect(() => {
+    if (wasSelecting.current) closeCard();
+    wasSelecting.current = ptype === "select";
+  }, [promptId]);
   useEffect(() => {
     const want = pendingChoice.value;
     if (!want || !prompt) return;

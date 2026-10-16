@@ -136,7 +136,7 @@ export function PromptPanel({ view, side, prompt, render, send, closePrompt, dis
   } else if (Array.isArray(choices)) {
     body = (
       <>
-        {ptype === "select" && <p class="hint">Tap the highlighted cards to select them.</p>}
+        {ptype === "select" && <p class="hint">Tap a highlighted card to look at it and select it.</p>}
         <div class="choices">
           {byServerOrder(choices, (c: any) => c.value)
             .filter((c: any) => c.value !== "Hide")

@@ -57,16 +57,17 @@ assert(true, "game started on both phones");
 await click(host, /^Keep/);
 await click(guest, /^Keep/);
 await click(host, /Start turn/);
-await click(host, "Gain 1");
-await click(host, "Gain 1");
+await click(host, /^Gain 1/);
+await click(host, /^Gain 1/);
 await guest.waitForTimeout(800);
 
 await guest.close();
 assert(true, "guest closed the app mid-game");
-await click(host, "Gain 1");
+await click(host, /^Gain 1/);
 await click(host, /End turn/);
 if (await host.locator(".board.selecting").count()) {
   await host.locator(".dock .hand .tile").first().click();
+  await host.locator(".sheet button", { hasText: /^Select$/ }).click();
   await host.waitForTimeout(500);
 }
 await host.waitForFunction(() => /offline/i.test(document.querySelector(".ticker .feed")?.textContent ?? ""), null, { timeout: 20000 });
@@ -82,7 +83,7 @@ assert(JSON.stringify(guestAfter.log) === JSON.stringify(hostBefore.log), `guest
 assert(JSON.stringify(guestAfter.credits) === JSON.stringify(hostBefore.credits), `same credits on both sides (${guestAfter.credits.join(", ")} vs ${hostBefore.credits.join(", ")})`);
 
 await click(guest, /Start turn/);
-await click(guest, "Gain 1");
+await click(guest, /^Gain 1/);
 await host.waitForTimeout(1500);
 const hostFinal = await publicState(host);
 const guestFinal = await publicState(guest);
@@ -101,7 +102,7 @@ if (process.env.P2P) {
 }
 await host.close();
 assert(true, "host closed the app");
-await click(guest, "Gain 1");
+await click(guest, /^Gain 1/);
 await click(guest, "Draw");
 await guest.waitForTimeout(800);
 const guestSolo = await publicState(guest);
