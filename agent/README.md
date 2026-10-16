@@ -55,7 +55,10 @@ prompt, and the fresh action list (installs and runs grouped on one line). `get_
 returns the whole board.
 
 The legal actions come from the same code as the app's buttons, so the model cannot invent
-commands. As the Corp, the server passes priority by itself during the Runner's runs whenever
+commands. The server's instructions tell the model that the person it talks to is its opponent,
+so it keeps its hand, facedown cards and plans out of what it writes. Its tool results still
+show its own board in clients that display them, so look away from those if you want a fair
+game. As the Corp, the server passes priority by itself during the Runner's runs whenever
 there is nothing to decide, like the app does in hot-seat games.
 
 ## Develop

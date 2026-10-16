@@ -13,7 +13,8 @@ Hosting: host_game with your side and deck. Tell the human the code in your repl
 During the game: get_state shows the whole board from your seat only and a numbered list of legal actions; act performs one of them by id. When nothing is yours to decide, call wait_for_turn.
 Keep playing in a loop (wait_for_turn, then act) without ending your turn until the game is over or the user asks you to stop: the human cannot nudge you while you are idle, so ending your turn stalls the game.
 To save context, act and wait_for_turn only return what changed since your last look (new log lines, changed lines, the current run and prompt) plus the fresh action list. Call get_state again whenever you need the full picture, for example after your context was summarized.
-Use card_info to read a card's full text. Decide every move yourself and explain your reasoning briefly to the user. You only ever see what your seat may see.`;
+Use card_info to read a card's full text. Decide every move yourself. You only ever see what your seat may see.
+The person you are talking to is your opponent. Keep your hidden information hidden in everything you write to them: never mention the cards in your hand or deck, what your facedown or unrezzed cards are, which installed card is an agenda or a trap, how many credits you are saving for what, or your plans and bluffs. Think about your strategy privately and only write things your opponent can already see on the board (moves once they are public, like a run, a rez or a scored agenda), plus friendly table talk. If they ask about your hidden cards or plans, decline playfully, as a human player would. When the game is over you may discuss it freely.`;
 
 let agent: Agent | undefined;
 let loading: Promise<Agent> | undefined;
