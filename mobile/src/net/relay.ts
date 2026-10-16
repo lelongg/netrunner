@@ -12,6 +12,7 @@ const TICKETS = "nsg.seats";
 const PING_MS = 15000;
 const PONG_TIMEOUT_MS = 8000;
 const UNREACHABLE_MS = 20000;
+const SLOW_DOWN_MS = 10500;
 
 function tickets(): Record<string, SeatTicket> {
   try {
@@ -51,9 +52,16 @@ export function storeTicket(ticket: SeatTicket) {
   } catch {}
 }
 
+const BUSY = "The relay is busy right now. Try again in a minute.";
+
 async function call(path: string): Promise<{ status: number; body: any }> {
-  const res = await fetch(`${RELAY_URL}${path}`, { method: "POST" });
-  return { status: res.status, body: await res.json().catch(() => ({})) };
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch(`${RELAY_URL}${path}`, { method: "POST" });
+    if (res.status !== 429) return { status: res.status, body: await res.json().catch(() => ({})) };
+    if (attempt >= 4) return { status: 429, body: { error: BUSY } };
+    const hinted = Number(res.headers.get("Retry-After")) * 1000;
+    await new Promise((r) => setTimeout(r, Math.min(hinted > 0 ? hinted : Infinity, 2000 * 2 ** attempt)));
+  }
 }
 
 export async function createGame(): Promise<SeatTicket> {
@@ -84,6 +92,7 @@ export class RelayTransport implements Transport {
   private closed = false;
   private attempt = 0;
   private retryTimer?: number;
+  private resendTimer?: number;
   private pingTimer?: number;
   private pongTimer?: number;
   private status: LinkStatus = { link: "connecting", peer: false, step: "relay", since: Date.now() };
@@ -117,6 +126,7 @@ export class RelayTransport implements Transport {
   close() {
     this.closed = true;
     clearTimeout(this.retryTimer);
+    clearTimeout(this.resendTimer);
     clearInterval(this.pingTimer);
     clearTimeout(this.pongTimer);
     document.removeEventListener("visibilitychange", this.wake);
@@ -155,6 +165,11 @@ export class RelayTransport implements Transport {
         for (const p of this.outbox.pending) ws.send(JSON.stringify({ t: "append", p }));
       } else if (msg.t === "presence") {
         this.setStatus({ peer: !!msg.seats?.[1 - this.ticket.seat] });
+      } else if (msg.t === "error" && /slow down/i.test(String(msg.error))) {
+        clearTimeout(this.resendTimer);
+        this.resendTimer = window.setTimeout(() => {
+          if (this.ws === ws && ws.readyState === WebSocket.OPEN) for (const p of this.outbox.pending) ws.send(JSON.stringify({ t: "append", p }));
+        }, SLOW_DOWN_MS);
       } else if (msg.t === "error") {
         this.setStatus({ error: msg.error });
       }

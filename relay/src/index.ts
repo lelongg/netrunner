@@ -31,7 +31,8 @@ function allowedOrigin(request: Request, env: Env): string | null {
 
 function json(body: unknown, status: number, origin: string | null) {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (origin) Object.assign(headers, { "Access-Control-Allow-Origin": origin, Vary: "Origin" });
+  if (status === 429) headers["Retry-After"] = "20";
+  if (origin) Object.assign(headers, { "Access-Control-Allow-Origin": origin, "Access-Control-Expose-Headers": "Retry-After", Vary: "Origin" });
   return new Response(JSON.stringify(body), { status, headers });
 }
 
