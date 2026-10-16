@@ -33,7 +33,9 @@ One `GameRoom` Durable Object per game (`idFromName(code)`), on the SQLite backe
 - Rooms only create their tables when a game is created, so probing unknown codes stores
   nothing.
 - The Workers rate limiter caps each IP address at 10 new games and 60 join or seat checks per
-  minute (`CREATE_LIMIT` and `JOIN_LIMIT` in `wrangler.toml`).
+  minute, and all clients together at 120 new games per minute (`CREATE_LIMIT`, `JOIN_LIMIT`
+  and `CREATE_LIMIT_ALL` in `wrangler.toml`). The limiter counts per Cloudflare location and
+  is approximate, so it stops floods rather than enforcing exact numbers.
 - Every write pushes an alarm `EXPIRY_DAYS` (14 by default) ahead; when it fires the game is
   deleted.
 

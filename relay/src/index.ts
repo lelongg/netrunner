@@ -3,6 +3,7 @@ import { DurableObject } from "cloudflare:workers";
 export interface Env {
   GAME_ROOM: DurableObjectNamespace<GameRoom>;
   CREATE_LIMIT?: RateLimit;
+  CREATE_LIMIT_ALL?: RateLimit;
   JOIN_LIMIT?: RateLimit;
   ALLOWED_ORIGINS?: string;
   EXPIRY_DAYS?: string;
@@ -34,9 +35,9 @@ function json(body: unknown, status: number, origin: string | null) {
   return new Response(JSON.stringify(body), { status, headers });
 }
 
-async function limited(limiter: RateLimit | undefined, request: Request) {
+async function limited(limiter: RateLimit | undefined, request: Request | null) {
   if (!limiter) return false;
-  const key = request.headers.get("CF-Connecting-IP") ?? "unknown";
+  const key = request ? request.headers.get("CF-Connecting-IP") ?? "unknown" : "all";
   return !(await limiter.limit({ key })).success;
 }
 
@@ -57,7 +58,7 @@ export default {
       });
 
     if (request.method === "POST" && url.pathname === "/games") {
-      if (await limited(env.CREATE_LIMIT, request)) return json({ error: "Too many new games, try again in a minute" }, 429, origin);
+      if ((await limited(env.CREATE_LIMIT, request)) || (await limited(env.CREATE_LIMIT_ALL, null))) return json({ error: "Too many new games, try again in a minute" }, 429, origin);
       for (let attempt = 0; attempt < 5; attempt++) {
         const code = newCode();
         const seat = await env.GAME_ROOM.get(env.GAME_ROOM.idFromName(code)).create();
