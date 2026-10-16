@@ -86,12 +86,16 @@
   "Full privatized state for a side: \"corp\", \"runner\" or \"spectator\"."
   [game side]
   (let [state (.-state game)
-        states (or (:public-states @state) (diffs/public-states state))]
+        states (or (:public-states @state)
+                   (let [fresh (diffs/public-states state)]
+                     (swap! state assoc :public-states fresh)
+                     fresh))]
     (->js (get (views states) (side-kw side)))))
 
 (defn- apply-and-diff
-  "Runs f on the game state and refreshes the cached views. Like the Jinteki
-  server, an action that throws is rolled back before the error propagates."
+  "Runs f on the game state and drops the cached views, which view rebuilds on
+  demand. Like the Jinteki server, an action that throws is rolled back before
+  the error propagates."
   [game f]
   (let [state (.-state game)
         old-state @state
@@ -100,15 +104,11 @@
               (catch :default e
                 (reset! state old-state)
                 (throw e)))
-        d (diffs/public-diffs old-state state true false false)]
-    (swap! state assoc :public-states (:public-states d))
-    (->js {:ok (boolean ret)
-           :diffs {:corp (:corp-diff d)
-                   :runner (:runner-diff d)
-                   :spectator (:spect-diff d)}})))
+        _ (swap! state #(-> % (update :sequence inc) (dissoc :public-states)))]
+    (->js {:ok (boolean ret)})))
 
 (defn act
-  "Applies a command for a side. Returns {ok, diffs: {corp, runner, spectator}}."
+  "Applies a command for a side. Returns {ok}."
   [game side command args]
   (let [side (side-kw side)
         args (normalize-args command (->clj args))]

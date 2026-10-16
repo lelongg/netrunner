@@ -72,7 +72,7 @@ function CardBack({ side }: { side: string }) {
   const corp = side === "Corp";
   const scan = useRef<HTMLSpanElement>(null);
   const name = useRef<HTMLSpanElement>(null);
-  useLoop(scan, { y: ["-30%", "1100%"] }, { duration: 3.2, ease: "linear" });
+  useLoop(scan, { transform: ["translateY(-30%)", "translateY(1100%)"] }, { duration: 3.2, ease: "linear" });
   useLoop(name, { x: [0, 0, -3, 4, 0, 0], opacity: [1, 1, 0.55, 1, 0.8, 1] }, { duration: 4, times: [0, 0.86, 0.88, 0.9, 0.93, 1], ease: "linear" });
   return (
     <div class={`sheet-img card-back ${corp ? "corp" : "runner"}`} aria-label="Hidden card">
@@ -124,7 +124,7 @@ export function CardSheet({ card, view, side, db, send, onClose, disabled, index
     pendingChoice.value = c.choose;
     send(c.command, c.args);
     if (c.then === "install-list") setInstalling(true);
-    else onClose();
+    else if (!c.choose) onClose();
   };
 
   const install = (server: unknown) => {

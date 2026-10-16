@@ -238,7 +238,7 @@ function ZoneSheet({ zone, view, viewer, selectable, onTap, onClose }: { zone: Z
   );
 }
 
-function CorpArea({ view, side, mine, onTap, onZone, selectable, runServer, runTargets, onRun }: { view: any; side: Side; mine: boolean; onTap: (c: any) => void; onZone: (z: ZoneRef) => void; selectable: Set<unknown>; runServer?: string; runTargets?: Set<string>; onRun?: (server: string, now: boolean) => void }) {
+function CorpArea({ view, side, mine, onTap, onZone, selectable, runServer }: { view: any; side: Side; mine: boolean; onTap: (c: any) => void; onZone: (z: ZoneRef) => void; selectable: Set<unknown>; runServer?: string }) {
   const corp = view.corp ?? {};
   const servers = corp.servers ?? {};
   const owner = side === "corp";
@@ -257,18 +257,11 @@ function CorpArea({ view, side, mine, onTap, onZone, selectable, runServer, runT
   const count = (key: string) => (key === "hq" ? (corp["hand-count"] ?? (corp.hand ?? []).length) : key === "rd" ? (corp["deck-count"] ?? 0) : key === "archives" ? discard.length : null);
   const name = (key: string) => {
     const n = count(key);
-    const label = (
-      <>
+    return (
+      <span class="server-name">
         {serverName(key)}
         {n != null && <b> {n}</b>}
-      </>
-    );
-    return onRun && !runTargets?.size ? (
-      <button class="server-name run-link" onClick={() => onRun(serverName(key), false)}>
-        {label}
-      </button>
-    ) : (
-      <span class="server-name">{label}</span>
+      </span>
     );
   };
   return (
@@ -283,19 +276,7 @@ function CorpArea({ view, side, mine, onTap, onZone, selectable, runServer, runT
           const s = servers[key] ?? { content: [], ices: [] };
           const ices = [...(s.ices ?? [])];
           return (
-            <div
-              class={`server ${runServer === key ? "running" : ""} ${runTargets?.has(serverName(key)) ? "run-target" : ""}`}
-              data-server={key}
-              onClickCapture={
-                runTargets?.has(serverName(key))
-                  ? (e) => {
-                      e.stopPropagation();
-                      e.preventDefault();
-                      onRun?.(serverName(key), true);
-                    }
-                  : undefined
-              }
-            >
+            <div class={`server ${runServer === key ? "running" : ""}`} data-server={key}>
               {mine ? (
                 <>
                   <div class="ices">{[...ices].reverse().map(tile)}</div>
@@ -652,7 +633,6 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
   const [selected, setSelected] = useState<any>(null);
   const [showLog, setShowLog] = useState(false);
   const [picking, setPicking] = useState(false);
-  const [preferred, setPreferred] = useState<string>();
   const [menu, setMenu] = useState(false);
   const [zone, setZone] = useState<ZoneRef | null>(null);
   const [deckOpen, setDeckOpen] = useState(false);
@@ -702,16 +682,6 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
   const closePrompt = () => session.say("/close-prompt", side);
 
   useEffect(() => setPicking(false), [!!view.run, promptId, view["active-player"], side]);
-  useEffect(() => {
-    if (!picking) setPreferred(undefined);
-  }, [picking]);
-  useEffect(() => {
-    if (!picking || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const els = [...document.querySelectorAll(".server.run-target")];
-    if (!els.length) return;
-    const anim = animate(els, { boxShadow: ["0 0 0 1px rgba(246,224,58,0.5), 0 0 8px rgba(246,224,58,0.2)", "0 0 0 2px rgba(246,224,58,1), 0 0 22px rgba(246,224,58,0.55)"] }, { duration: 0.8, repeat: Infinity, repeatType: "reverse", ease: "easeInOut" });
-    return () => anim.stop();
-  }, [picking, (me["runnable-list"] ?? []).length]);
   useEffect(() => {
     const want = pendingChoice.value;
     if (!want || !prompt) return;
@@ -763,36 +733,22 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
     panel = <PromptPanel key={promptId} view={view} side={side} prompt={prompt} render={render} send={send} closePrompt={closePrompt} disabled={disabled} db={db} />;
   } else if (picking && side === "runner") {
     const list: string[] = byServerOrder(me["runnable-list"] ?? [], (x) => x);
-    const chosen = preferred && list.includes(preferred) ? preferred : undefined;
     panel = (
       <section class="prompt">
-        <span class="label">{chosen ? "Run on" : "Run on… · or tap a server"}</span>
-        {chosen && (
-          <Cta
-            disabled={disabled}
-            onClick={() => {
-              send("run", { server: chosen });
-              setPicking(false);
-            }}
-          >
-            {chosen}
-          </Cta>
-        )}
+        <span class="label">Run on…</span>
         <div class="choices">
-          {list
-            .filter((s) => s !== chosen)
-            .map((s) => (
-              <button
-                class="primary"
-                disabled={disabled}
-                onClick={() => {
-                  send("run", { server: s });
-                  setPicking(false);
-                }}
-              >
-                {serverLabel(s)}
-              </button>
-            ))}
+          {list.map((s) => (
+            <button
+              class="primary"
+              disabled={disabled}
+              onClick={() => {
+                send("run", { server: s });
+                setPicking(false);
+              }}
+            >
+              {serverLabel(s)}
+            </button>
+          ))}
           <button class="ghost" onClick={() => setPicking(false)}>
             Cancel
           </button>
@@ -842,19 +798,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
     );
   }
 
-  const canRun = side === "runner" && !view.run && !view.winner && !(prompt && ptype !== "run") && basicCommands(view, side).some((c) => c.command === "generate-runnable-zones" && c.enabled !== false);
-  const runTargets = picking && side === "runner" ? new Set<string>((me["runnable-list"] ?? []).filter((x: unknown) => typeof x === "string")) : undefined;
-  const runAt = (server: string, now: boolean) => {
-    if (now) {
-      send("run", { server });
-      setPicking(false);
-      return;
-    }
-    send("generate-runnable-zones");
-    setPreferred(server);
-    setPicking(true);
-  };
-  const theirArea = opp === "corp" ? <CorpArea view={view} side={side} mine={false} onTap={tap} onZone={setZone} selectable={selectable} runServer={runServer} runTargets={runTargets} onRun={canRun ? runAt : undefined} /> : <RunnerArea view={view} side={side} onTap={tap} onZone={setZone} selectable={selectable} />;
+  const theirArea = opp === "corp" ? <CorpArea view={view} side={side} mine={false} onTap={tap} onZone={setZone} selectable={selectable} runServer={runServer} /> : <RunnerArea view={view} side={side} onTap={tap} onZone={setZone} selectable={selectable} />;
   const myArea = side === "corp" ? <CorpArea view={view} side={side} mine onTap={tap} onZone={setZone} selectable={selectable} runServer={runServer} /> : <RunnerArea view={view} side={side} onTap={tap} onZone={setZone} selectable={selectable} />;
   const hand: any[] = [...(me.hand ?? []), ...(me.discard ?? []).filter((c: any) => c["flashback-playable"])];
 

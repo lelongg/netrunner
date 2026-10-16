@@ -218,9 +218,9 @@ function Opening({ label, ready }: { label: string; ready: boolean }) {
   const bar = useRef<HTMLElement>(null);
   useEffect(() => {
     if (!title.current || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    animate(title.current, { x: [-60, 0], skewX: [-20, 0], opacity: [0, 1], letterSpacing: ["0.5em", "0.02em"] }, { type: "spring", visualDuration: 0.5, bounce: 0.25 });
+    animate(title.current, { transform: ["translateX(-60px) skewX(-20deg)", "translateX(0) skewX(0deg)"], opacity: [0, 1] }, { duration: 0.45, ease: [0.2, 0.9, 0.3, 1.1] });
   }, []);
-  useLoop(bar, { x: ["-100%", "250%"] }, { duration: 0.9, ease: [0.6, 0, 0.4, 1] });
+  useLoop(bar, { transform: ["translateX(-100%)", "translateX(250%)"] }, { duration: 0.9, ease: [0.6, 0, 0.4, 1] });
   return (
     <div class="opening" role="status" aria-live="polite">
       <span class="label">{ready ? "Opening" : "Loading engine"}</span>

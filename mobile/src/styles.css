@@ -2740,27 +2740,3 @@ button:active:not(:disabled) {
     0 0 0 1px var(--ice, var(--line-2)),
     0 0 18px color-mix(in srgb, var(--ice, var(--red)) 45%, transparent);
 }
-
-.server.run-target {
-  cursor: pointer;
-  border-color: var(--yellow);
-  background: rgb(246 224 58 / 0.06);
-}
-
-.server.run-target .server-name {
-  color: var(--yellow);
-}
-
-.server-name.run-link {
-  min-height: 0;
-  padding: 4px 6px;
-  border: 0;
-  background: none;
-  font: inherit;
-  font-size: 9px;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--muted);
-  text-decoration: underline dotted rgb(246 224 58 / 0.5);
-  text-underline-offset: 3px;
-}

@@ -136,7 +136,7 @@ function lockOn(host: HTMLElement, tone: Tone) {
   host.appendChild(el);
   if (reduced()) return { el, stop: () => {} };
   animate(el, { scale: [1.9, 1], opacity: [0, 1], rotate: [45, 0] }, { type: "spring", visualDuration: 0.4, bounce: 0.3 });
-  const loop = animate(el, { scale: [1, 1.1, 1] }, { duration: 1.1, repeat: Infinity, ease: "easeInOut", delay: 0.45 });
+  const loop = animate(el, { transform: ["scale(1)", "scale(1.1)", "scale(1)"] }, { duration: 1.1, repeat: Infinity, ease: "easeInOut", delay: 0.45 });
   return { el, stop: () => loop.stop() };
 }
 
@@ -148,7 +148,7 @@ function firewall(host: HTMLElement, tone: Tone) {
   host.appendChild(el);
   if (reduced()) return { el, stop: () => {} };
   animate(el, { opacity: [0, 1] }, { duration: 0.3 });
-  const a = animate(scan, { y: ["-120%", "320%"] }, { duration: 1.5, repeat: Infinity, ease: "linear" });
+  const a = animate(scan, { transform: ["translateY(-120%)", "translateY(320%)"] }, { duration: 1.5, repeat: Infinity, ease: "linear" });
   const b = animate(el, { opacity: [1, 0.65, 1] }, { duration: 0.9, repeat: Infinity, ease: "easeInOut" });
   return {
     el,
@@ -164,7 +164,7 @@ function serverScan(host: HTMLElement) {
   el.className = "fx-server-scan";
   host.appendChild(el);
   if (reduced()) return { el, stop: () => {} };
-  const a = animate(el, { y: ["-100%", "900%"] }, { duration: 1.8, repeat: Infinity, ease: "linear" });
+  const a = animate(el, { transform: ["translateY(-100%)", "translateY(900%)"] }, { duration: 1.8, repeat: Infinity, ease: "linear" });
   return { el, stop: () => a.stop() };
 }
 

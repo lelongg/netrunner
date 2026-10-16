@@ -21,7 +21,7 @@ export function Ticker({ children, action }: { children: ComponentChildren; acti
   const track = useRef<HTMLSpanElement>(null);
   useEffect(() => {
     if (!width || !track.current || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const anim = animate(track.current, { x: ["0%", "-50%"] }, { duration: Math.max(6, width / 40), repeat: Infinity, ease: "linear" });
+    const anim = animate(track.current, { transform: ["translateX(0%)", "translateX(-50%)"] }, { duration: Math.max(6, width / 40), repeat: Infinity, ease: "linear" });
     return () => anim.stop();
   }, [width]);
   useLayoutEffect(() => {
@@ -84,7 +84,7 @@ function Sheen({ off }: { off?: boolean }) {
   const el = useRef<HTMLElement>(null);
   useEffect(() => {
     if (off || !el.current || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const anim = animate(el.current, { x: ["-150%", "450%"] }, { duration: 1.1, repeat: Infinity, repeatDelay: 2.2, ease: [0.6, 0, 0.3, 1] });
+    const anim = animate(el.current, { transform: ["translateX(-150%)", "translateX(450%)"] }, { duration: 1.1, repeat: Infinity, repeatDelay: 2.2, ease: [0.6, 0, 0.3, 1] });
     return () => anim.stop();
   }, [off]);
   return <i ref={el} class="cta-sheen" aria-hidden="true" />;
