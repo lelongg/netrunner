@@ -127,15 +127,27 @@ export class Agent {
 
 
 
-  private autoPass() {
+  private passTimer?: ReturnType<typeof setTimeout>;
+
+  private passKey() {
     const s = this.session;
-    if (!s || s.pending || s.lobby.mySide !== "corp") return;
-    const view = s.views.corp;
-    if (!view || view.winner || !(view.run || view.encounters) || !runnerPassed(view) || corpDecision(view)) return;
-    if ((promptOf(view, "corp")?.["prompt-type"] ?? "run") !== "run") return;
-    const cont = runCommands(view, "corp").find((c) => c.command === "continue" && c.enabled !== false);
-    if (cont) setTimeout(() => s.lobby.mySide === "corp" && !s.pending && s.send("continue"), 50);
+    const view = s?.views.corp;
+    if (!s || s.pending || s.lobby.mySide !== "corp" || !view || view.winner || !(view.run || view.encounters) || !runnerPassed(view) || corpDecision(view)) return null;
+    if ((promptOf(view, "corp")?.["prompt-type"] ?? "run") !== "run") return null;
+    if (!runCommands(view, "corp").some((c) => c.command === "continue" && c.enabled !== false)) return null;
+    return `${(view.log ?? []).length}:${view.run?.phase}:${view.run?.position}:${view.encounters ? 1 : 0}`;
   }
+
+  private autoPass() {
+    if (this.passTimer) return;
+    const key = this.passKey();
+    if (!key) return;
+    this.passTimer = setTimeout(() => {
+      this.passTimer = undefined;
+      if (this.passKey() === key) this.session!.send("continue");
+    }, 50);
+  }
+
 
   private async settleLobby(ms = 15000) {
     const s = this.session!;
