@@ -110,6 +110,7 @@ export class Agent {
     this.session?.close();
     this.session = session;
     this.installing = undefined;
+    this.ids.clear();
     this.unsubscribe = session.subscribe(() => {
       this.autoPass();
       this.autoStart();
@@ -406,7 +407,7 @@ export class Agent {
         }
         if (ptype === "select" && !(prompt.selectable ?? []).length && choices.every((c: any) => c.value === "Hide")) push({ label: "Close the prompt (no valid target)", command: "say", say: "/close-prompt" });
       }
-      return out.map((a, id) => ({ ...a, id }));
+      return out.map((a) => ({ ...a, id: this.idFor(a) }));
     }
     const inRun = !!(view.run || view.encounters);
     const base = inRun ? runCommands(view, side) : basicCommands(view, side);
@@ -442,7 +443,19 @@ export class Agent {
         push({ label: `${card.title}: ${this.render(c.label)}`, command: c.command, args: c.args });
       }
     }
-    return out.map((a, id) => ({ ...a, id }));
+    return out.map((a) => ({ ...a, id: this.idFor(a) }));
+  }
+
+  private ids = new Map<string, number>();
+
+  private idFor(a: Omit<Action, "id">) {
+    const key = JSON.stringify([a.label, a.command, a.args ?? null, a.say ?? null]);
+    let id = this.ids.get(key);
+    if (id === undefined) {
+      id = this.ids.size + 1;
+      this.ids.set(key, id);
+    }
+    return id;
   }
 
   private seen = new Map<string, string>();
@@ -515,7 +528,7 @@ export class Agent {
       return `The game changed since you listed actions; nothing was done.\n\n${this.update()}`;
     }
     const a = this.actions.find((x) => x.id === id);
-    if (!a) throw new Error(`No action ${id}. Call get_state to list actions.`);
+    if (!a) return `Action ${id} is not available any more; nothing was done.\n\n${this.update()}`;
     s.clearActionError();
     if (a.say) s.say(a.say);
     else {

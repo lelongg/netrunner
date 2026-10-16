@@ -57,7 +57,7 @@ export function registerTools(server: McpServer, agent: () => Promise<Agent>, NA
   server.registerTool(
     "act",
     {
-      description: "Perform one action from the latest action list, by id. Some actions need an amount or a text value. Returns only what changed, plus the new action list.",
+      description: "Perform one action by id. An action keeps its id from one list to the next and an id is never reused for another action, so an id that is no longer listed is refused. Some actions need an amount or a text value. Returns only what changed, plus the new action list.",
       inputSchema: { action: z.number().int().describe("Action id"), amount: z.number().int().optional(), text: z.string().optional() },
     },
     ({ action, amount, text }) => run((a) => a.act(action, amount, text)),
