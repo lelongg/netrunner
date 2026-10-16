@@ -159,6 +159,15 @@ function firewall(host: HTMLElement, tone: Tone) {
   };
 }
 
+function serverScan(host: HTMLElement) {
+  const el = document.createElement("div");
+  el.className = "fx-server-scan";
+  host.appendChild(el);
+  if (reduced()) return { el, stop: () => {} };
+  const a = animate(el, { transform: ["translateY(-100%)", "translateY(900%)"] }, { duration: 1.8, repeat: Infinity, ease: "linear" });
+  return { el, stop: () => a.stop() };
+}
+
 let camera: { stop: () => void } | null = null;
 
 function cameraTo(target: Element | null, zoom: number) {
@@ -669,6 +678,7 @@ function persistent(view: any) {
   const tone: Tone = ice?.rezzed ? KIND_TONE[iceKind(ice)] : "cyan";
   decorate("lock", phase === "approach" ? host : null, (h) => lockOn(h, tone));
   decorate("firewall", phase === "encounter" ? host : null, (h) => firewall(h, tone));
+  decorate("server", view.run ? (document.querySelector(".server.running") as HTMLElement | null) : null, serverScan);
 }
 
 function focusPoint(plan: Plan | null, prev: Snap | null, now: Snap): Point | null {

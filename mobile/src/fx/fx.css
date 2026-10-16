@@ -441,6 +441,16 @@
   background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--tone) 50%, transparent), transparent);
 }
 
+.fx-server-scan {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 40px;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent, rgb(34 211 238 / 0.2), transparent);
+}
+
 .fx-glint {
   position: absolute;
   inset: 0;
