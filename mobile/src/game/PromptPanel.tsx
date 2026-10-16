@@ -1,6 +1,6 @@
-import { useEffect, useState } from "preact/hooks";
+import { useEffect, useRef, useState } from "preact/hooks";
 import type { Side } from "../engine";
-import { findCard } from "./actions";
+import { cardRef, findCard } from "./actions";
 import { ZoomableCardImage } from "./CardImage";
 import { Icon } from "../icons";
 import { RichText } from "./RichText";
@@ -23,11 +23,17 @@ function NumberPicker({ min, max, initial, onSubmit, disabled, extra }: { min: n
   useEffect(() => setN(initial), [initial, min, max]);
   return (
     <div class="number-picker">
-      <button aria-label="Decrease" onClick={() => setN(Math.max(min, n - 1))} disabled={disabled || n <= min}><Icon name="minus" /></button>
+      <button aria-label="Decrease" onClick={() => setN(Math.max(min, n - 1))} disabled={disabled || n <= min}>
+        <Icon name="minus" />
+      </button>
       <output>{n}</output>
-      <button aria-label="Increase" onClick={() => setN(Math.min(max, n + 1))} disabled={disabled || n >= max}><Icon name="plus" /></button>
+      <button aria-label="Increase" onClick={() => setN(Math.min(max, n + 1))} disabled={disabled || n >= max}>
+        <Icon name="plus" />
+      </button>
       {extra}
-      <button class="primary submit" onClick={() => onSubmit(n)} disabled={disabled}>Confirm</button>
+      <button class="primary submit" onClick={() => onSubmit(n)} disabled={disabled}>
+        Confirm
+      </button>
     </div>
   );
 }
@@ -44,6 +50,19 @@ export function PromptPanel({ view, side, prompt, render, send, closePrompt, dis
   const msg = iconize(render(prompt.msg));
   const answer = (choice: unknown) => send("choice", { eid, choice });
   const [title, setTitle] = useState("");
+  const pay = ptype === "select" ? render(prompt.msg).match(/^Choose a credit providing card \((\d+)(?: of (\d+))?/) : null;
+  const sources: any[] = pay ? (prompt.selectable ?? []).map((cid: unknown) => findCard(view, cid)).filter(Boolean) : [];
+  const owed = pay?.[2] != null ? Math.max(0, Number(pay[2]) - Number(pay[1])) : undefined;
+  const pool = Number(view[side]?.credit ?? 0);
+  const poolOk = owed != null && pool >= owed;
+  const useSource = (card: any) => send("select", { card: cardRef(card), eid, "shift-key-held": true });
+  const auto = useRef<unknown>(null);
+  const only = pay && sources.length === 1 && !poolOk && !prompt["offer-bad-pub?"] ? sources[0] : null;
+  useEffect(() => {
+    if (!only || disabled || auto.current === eid?.eid) return;
+    auto.current = eid?.eid;
+    useSource(only);
+  }, [eid?.eid, !!only, disabled]);
   let body: preact.ComponentChildren = null;
 
   if (ptype === "waiting") {
@@ -54,12 +73,7 @@ export function PromptPanel({ view, side, prompt, render, send, closePrompt, dis
     body = <NumberPicker min={min} max={max} initial={Number(choices.default ?? min)} onSubmit={answer} disabled={disabled} />;
   } else if (ptype === "trace") {
     const max = Number(choices ?? 0);
-    const info =
-      prompt.strength != null
-        ? `Strength to beat: ${prompt.strength}`
-        : prompt.player === "corp"
-          ? `Trace ${prompt.base}${prompt.bonus ? `+${prompt.bonus}` : ""} · Runner link ${prompt.link}`
-          : `Trace ${prompt.base}${prompt.bonus ? `+${prompt.bonus}` : ""} + Corp credits · your link ${prompt.link}`;
+    const info = prompt.strength != null ? `Strength to beat: ${prompt.strength}` : prompt.player === "corp" ? `Trace ${prompt.base}${prompt.bonus ? `+${prompt.bonus}` : ""} · Runner link ${prompt.link}` : `Trace ${prompt.base}${prompt.bonus ? `+${prompt.bonus}` : ""} + Corp credits · your link ${prompt.link}`;
     body = (
       <>
         <p class="hint">{info}</p>
@@ -78,36 +92,70 @@ export function PromptPanel({ view, side, prompt, render, send, closePrompt, dis
             <option value={o} />
           ))}
         </datalist>
-        <button class="primary" disabled={disabled || !title} onClick={() => answer(title)}>Confirm</button>
+        <button class="primary" disabled={disabled || !title} onClick={() => answer(title)}>
+          Confirm
+        </button>
       </div>
     );
   } else if (choices && typeof choices === "object" && !Array.isArray(choices) && choices.counter) {
     const card = findCard(view, prompt.card?.cid);
     const max = Number(card?.counter?.[choices.counter] ?? 0);
     body = <NumberPicker min={0} max={max} initial={0} onSubmit={answer} disabled={disabled} />;
+  } else if (pay && Array.isArray(choices)) {
+    const done = choices.find((c: any) => c.value === "Done");
+    body = (
+      <>
+        {owed != null && (
+          <p class="hint">
+            {owed ? `${owed} credits left to pay` : "Paid"}
+            {only ? ` · using ${only.title}` : ""}
+          </p>
+        )}
+        <div class="choices">
+          {sources.map((card) => {
+            const left = (card.counter?.credit ?? 0) + (card.counter?.recurring ?? 0) + (card["rec-counter"] ?? 0);
+            return (
+              <button class="primary wide" disabled={disabled} onClick={() => useSource(card)}>
+                {glyphs(iconize(`Use ${card.title}${left ? ` · ${left}[credit]` : ""}`))}
+              </button>
+            );
+          })}
+          {prompt["offer-bad-pub?"] && (
+            <button disabled={disabled} onClick={() => send("bad-pub-choice", { eid })}>
+              Bad publicity ({view.runner?.["bad-pub-credit"] ?? "?"} available)
+            </button>
+          )}
+          {done && (
+            <button class="wide" disabled={disabled || (owed != null && !poolOk)} onClick={() => answer({ uuid: done.uuid })}>
+              {glyphs(iconize(owed ? `Pay ${owed}[credit] from your pool` : "Done"))}
+            </button>
+          )}
+        </div>
+      </>
+    );
   } else if (Array.isArray(choices)) {
     body = (
       <>
-      {ptype === "select" && <p class="hint">Tap the highlighted cards to select them.</p>}
-      <div class="choices">
-        {byServerOrder(choices, (c: any) => c.value)
-          .filter((c: any) => c.value !== "Hide")
-          .map((c: any) => (
-            <button class={ptype === "select" ? "primary wide" : ""} disabled={disabled} onClick={() => answer({ uuid: c.uuid })}>
-              {glyphs(iconize(choiceLabel(c.value, render)))}
+        {ptype === "select" && <p class="hint">Tap the highlighted cards to select them.</p>}
+        <div class="choices">
+          {byServerOrder(choices, (c: any) => c.value)
+            .filter((c: any) => c.value !== "Hide")
+            .map((c: any) => (
+              <button class={ptype === "select" ? "primary wide" : ""} disabled={disabled} onClick={() => answer({ uuid: c.uuid })}>
+                {glyphs(iconize(choiceLabel(c.value, render)))}
+              </button>
+            ))}
+          {prompt["offer-bad-pub?"] && (
+            <button disabled={disabled} onClick={() => send("bad-pub-choice", { eid })}>
+              Bad publicity ({view.runner?.["bad-pub-credit"] ?? "?"} available)
             </button>
-          ))}
-        {prompt["offer-bad-pub?"] && (
-          <button disabled={disabled} onClick={() => send("bad-pub-choice", { eid })}>
-            Bad publicity ({view.runner?.["bad-pub-credit"] ?? "?"} available)
-          </button>
-        )}
-        {ptype === "select" && !(prompt.selectable ?? []).length && choices.every((c: any) => c.value === "Hide") && (
-          <button class="primary" disabled={disabled} onClick={closePrompt}>
-            Skip · no valid target
-          </button>
-        )}
-      </div>
+          )}
+          {ptype === "select" && !(prompt.selectable ?? []).length && choices.every((c: any) => c.value === "Hide") && (
+            <button class="primary" disabled={disabled} onClick={closePrompt}>
+              Skip · no valid target
+            </button>
+          )}
+        </div>
       </>
     );
   }
