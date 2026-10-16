@@ -113,28 +113,18 @@ export function installMotion() {
   });
   observer.observe(document.body, { childList: true, subtree: true });
 
-  let pressed: HTMLElement | null = null;
-  const release = () => {
-    if (!pressed) return;
-    const el = pressed;
-    animate(el, { transform: "scale(1)" }, { duration: 0.25, ease: [0.2, 1.6, 0.4, 1] }).finished.then(
-      () => requestAnimationFrame(() => (el.style.transform = "")),
-      () => requestAnimationFrame(() => (el.style.transform = "")),
-    );
-    pressed = null;
-  };
   document.addEventListener(
-    "pointerdown",
+    "click",
     (e) => {
       if (still()) return;
       const t = (e.target as Element | null)?.closest?.("button, .tile") as HTMLElement | null;
       if (!t || (t as HTMLButtonElement).disabled || t.closest(".fx-layer")) return;
-      pressed = t;
-      animate(t, { transform: `scale(${t.classList.contains("tile") ? 0.93 : 0.95})` }, { duration: 0.08, ease: "easeOut" });
+      const from = t.classList.contains("tile") ? 0.92 : 0.94;
+      animate(t, { transform: [`scale(${from})`, "scale(1)"] }, { duration: 0.3, ease: [0.2, 1.6, 0.4, 1] }).finished.then(
+        () => requestAnimationFrame(() => (t.style.transform = "")),
+        () => requestAnimationFrame(() => (t.style.transform = "")),
+      );
     },
-    { passive: true },
+    { capture: true, passive: true },
   );
-  document.addEventListener("pointerup", release, { passive: true });
-  document.addEventListener("pointercancel", release, { passive: true });
-  document.addEventListener("pointerleave", release, { passive: true });
 }
