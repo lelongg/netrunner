@@ -731,14 +731,14 @@ function Toasts({ toasts, render, dismiss }: { toasts: any[]; render: (m: unknow
   );
 }
 
-function feedText(view: any, side: Side, names: Record<Side, string>) {
+function feedText(view: any, side: Side, names: Record<Side, string>, watching = false) {
   if (view.winner) return `${names[view.winner as Side] ?? view.winner} wins`;
   if (view.run) {
     const ice = currentIce(view);
     return `Run · ${serverName(view.run.server?.[0] ?? "")} · ${PHASE_LABELS[view.run.phase] ?? view.run.phase}${ice ? ` · ${ice.title ?? "unrezzed ice"}` : ""}`;
   }
   const active = view["active-player"] as Side;
-  return `Turn ${view.turn ?? 0} · ${active === side ? "your move" : `${names[active] ?? active} to play`}`;
+  return `Turn ${view.turn ?? 0} · ${active === side && !watching ? "your move" : `${names[active] ?? active} to play`}`;
 }
 
 export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, onExit, handoffLog }: Props) {
@@ -752,10 +752,11 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
   const render = (m: unknown) => engine.renderMessage(m);
   useFx(view, side, render);
   const send = (command: string, args?: unknown) => session.send(command, args, side);
-  const disabled = session.pending;
+  const watching = session.lobby.role === "spectator";
+  const disabled = session.pending || watching;
   const me = view[side] ?? {};
   const opp = otherSide(side);
-  const prompt = promptOf(view, side);
+  const prompt = watching ? undefined : promptOf(view, side);
   const ptype = prompt?.["prompt-type"];
   const selectable = useMemo(() => new Set<unknown>(prompt?.selectable ?? []), [prompt]);
   const tap = (card: any) => setSelected(card);
@@ -775,7 +776,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
   };
   const myMove = !view.winner && (ptype ? ptype !== "waiting" && ptype !== "run" : view["active-player"] === side && !view.run && (me.click ?? 0) > 0);
   const remote = session.lobby.role !== "local" || session.lobby.vsBot;
-  const canUndo = undoAllowed(session, view, side, render, handoffLog);
+  const canUndo = !watching && undoAllowed(session, view, side, render, handoffLog);
   useEffect(() => {
     if (myMove && remote) navigator.vibrate?.(40);
   }, [myMove]);
@@ -833,7 +834,23 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
   const link = session.lobby.role === "local" ? null : session.lobby.status;
 
   let panel: preact.ComponentChildren;
-  if (view.winner) {
+  if (watching) {
+    panel = (
+      <section class="actions watching">
+        {view.winner ? (
+          <span class="big yellow" style="font-size: 40px">
+            {names[view.winner as Side] ?? view.winner} wins
+          </span>
+        ) : (
+          <p class="run-status">
+            Spectating
+            {view.run ? ` · run on ${serverName(runServer ?? "")} · ${PHASE_LABELS[view.run?.phase] ?? view.run?.phase}` : ` · ${names[view["active-player"] as Side] ?? "…"} to play`}
+          </p>
+        )}
+        {view.reason && view.winner && <span class="label">{view.reason}</span>}
+      </section>
+    );
+  } else if (view.winner) {
     panel = (
       <section class="prompt">
         <span class={`big ${view.winner === side ? "yellow" : ""}`} style="font-size: 56px">
@@ -927,7 +944,8 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
           </button>
         }
       >
-        {feedText(view, side, names)}
+        {feedText(view, side, names, watching)}
+        {!!session.lobby.watchers && <span class="cyan"> · {session.lobby.watchers} watching</span>}
         {link && link !== "connected" && <span class="yellow"> · {link === "waiting" ? "opponent offline" : "reconnecting"}</span>}
       </Ticker>
       {menu && <div class="menu-backdrop" onClick={() => setMenu(false)} />}
@@ -948,7 +966,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
                 setMenu(false);
               }}
             >
-              <Icon name="swap" /> Switch to {opp}
+              <Icon name="swap" /> {watching ? `View from the ${opp} side` : `Switch to ${opp}`}
             </button>
           )}
           {canUndo && (
@@ -969,7 +987,24 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
           >
             Deck list
           </button>
-          <button
+          {session.watchUrl && (
+            <button
+              onClick={async () => {
+                const url = session.watchUrl!;
+                try {
+                  if (navigator.share) await navigator.share({ title: "Watch this Netrunner game", url });
+                  else {
+                    await navigator.clipboard.writeText(url);
+                    alert("Spectator link copied.");
+                  }
+                } catch {}
+                setMenu(false);
+              }}
+            >
+              Spectator link
+            </button>
+          )}
+          {!watching && <button
             onClick={async () => {
               setMenu(false);
               const text = session.journal();
@@ -993,7 +1028,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
             }}
           >
             Export game journal
-          </button>
+          </button>}
           {session.rejoinUrl && (
             <button
               onClick={async () => {
@@ -1031,24 +1066,28 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
               Close stuck prompt
             </button>
           )}
-          <button
-            class="danger"
-            onClick={() => {
-              if (confirm("Concede this game?")) session.concede(side);
-              setMenu(false);
-            }}
-          >
-            Concede
-          </button>
-          <button
-            class="ghost"
-            onClick={() => {
-              if (confirm("Delete this game from this device? You will not be able to come back to it.")) onLeave();
-              setMenu(false);
-            }}
-          >
-            Delete game
-          </button>
+          {!watching && (
+            <button
+              class="danger"
+              onClick={() => {
+                if (confirm("Concede this game?")) session.concede(side);
+                setMenu(false);
+              }}
+            >
+              Concede
+            </button>
+          )}
+          {!watching && (
+            <button
+              class="ghost"
+              onClick={() => {
+                if (confirm("Delete this game from this device? You will not be able to come back to it.")) onLeave();
+                setMenu(false);
+              }}
+            >
+              Delete game
+            </button>
+          )}
         </nav>
       )}
       <Toasts toasts={session.actionError ? [...toasts, { id: ACTION_ERROR, type: "error", msg: session.actionError }] : toasts} render={render} dismiss={(id) => (id === ACTION_ERROR ? session.clearActionError() : send("toast", { id }))} />
@@ -1064,7 +1103,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
         </button>
         <div class="enc-zone">
           {!view.winner && (ice?.rezzed ? <Encounter view={view} render={render} onTap={tap} ice={lastIce?.cid === ice.cid && (view.encounters || view.run?.phase === "encounter-ice") ? lastIce : ice} /> : lastIce && <Encounter view={view} render={render} onTap={tap} ice={lastIce} passed />)}
-          {!view.winner && side === "runner" && view.encounters && ice?.rezzed && !(prompt && ptype !== "run") && <Breakers view={view} side={side} ice={ice} send={send} onTap={tap} disabled={disabled} />}
+          {!view.winner && !watching && side === "runner" && view.encounters && ice?.rezzed && !(prompt && ptype !== "run") && <Breakers view={view} side={side} ice={ice} send={send} onTap={tap} disabled={disabled} />}
         </div>
         {panel}
         <MeBar view={view} side={side} name={names[side]} />
@@ -1072,7 +1111,8 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
           {hand.map((c) => (
             <CardTile key={c.cid} card={c} owner onTap={tap} selectable={selectable.has(c.cid)} />
           ))}
-          {hand.length === 0 && <span class="hint">{side === "runner" ? "Empty grip" : "HQ is empty"}</span>}
+          {watching && hand.length === 0 && Array.from({ length: me["hand-count"] ?? 0 }, () => <div class={`tile back ${side}`}><span class="back-label">{side === "corp" ? "CORP" : "RUN"}</span></div>)}
+          {hand.length === 0 && !(watching && me["hand-count"]) && <span class="hint">{side === "runner" ? "Empty grip" : "HQ is empty"}</span>}
         </div>
       </footer>
       {deckOpen && session.deckFor(side) && <DeckViewer deck={session.deckFor(side)!} onClose={() => setDeckOpen(false)} />}
@@ -1089,7 +1129,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
           }}
         />
       )}
-      {current && <CardSheet card={current} view={view} side={side} db={db} send={send} disabled={disabled} index={Math.max(0, position)} count={siblings.length} slide={slide} onStep={step} onClose={closeCard} />}
+      {current && <CardSheet card={current} view={view} side={side} db={db} send={send} disabled={disabled} readOnly={watching} index={Math.max(0, position)} count={siblings.length} slide={slide} onStep={step} onClose={closeCard} />}
       {showLog && <Log view={view} render={render} names={names} onSay={(t) => session.say(t, side)} onClose={() => setShowLog(false)} />}
     </div>
   );

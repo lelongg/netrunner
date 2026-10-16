@@ -3,7 +3,7 @@ const WS = BASE.replace(/^http/, "ws");
 const assert = (c, m) => { if (!c) { console.error("FAIL:", m); process.exit(1); } else console.log("ok:", m); };
 const post = async (path) => { const r = await fetch(BASE + path, { method: "POST", headers: { Origin: "http://localhost:4178" } }); return { status: r.status, body: await r.json() }; };
 function connect(code, tok, since = 0) {
-  const ws = new WebSocket(`${WS}/games/${code}/ws?token=${tok}&since=${since}`, { headers: { Origin: "http://localhost:4178" } });
+  const ws = new WebSocket(`${WS}/games/${code}/ws?${tok === null ? "watch=1" : `token=${tok}`}&since=${since}`, { headers: { Origin: "http://localhost:4178" } });
   const inbox = [];
   ws.onmessage = (m) => inbox.push(m.data === "pong" ? "pong" : JSON.parse(m.data));
   return new Promise((res, rej) => { ws.onopen = () => res({ ws, inbox }); ws.onerror = rej; });
@@ -58,6 +58,19 @@ const b3 = await connect(code, joined.body.token, 0);
 await wait(400);
 assert(b2.inbox.some(() => true) && b2.ws.readyState >= 2, "a newer connection for the same seat replaces the old one");
 assert(entries(b3.inbox).length === 11, "since=0 returns the full log");
+const watcher = await connect(code, null);
+await wait(400);
+assert(entries(watcher.inbox).length === 11 && watcher.inbox[0].seat === null, "a spectator connects without a seat and receives the full log");
+watcher.ws.send(JSON.stringify({ t: "append", p: { k: "act", n: "spectator" } }));
+await wait(300);
+assert(watcher.inbox.some((m) => m.t === "error") && entries(watcher.inbox).length === 11, "a spectator cannot append");
+a.ws.send(JSON.stringify({ t: "append", p: { k: "act", n: "watched" } }));
+await wait(300);
+assert(entries(watcher.inbox).pop()?.p.n === "watched", "a spectator receives new entries live");
+assert(a.inbox.filter((m) => m.t === "presence").pop().watchers === 1, "players see how many spectators are watching");
+const unknownWatch = await connect("ZZZZZ", null).then(() => "open", () => "refused");
+assert(unknownWatch === "refused", "watching an unknown game is refused");
+watcher.ws.close();
 a.ws.close(); b3.ws.close();
 console.log("all protocol checks passed");
 

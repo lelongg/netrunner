@@ -10,12 +10,14 @@ export interface Env {
 }
 
 type Seat = 0 | 1;
+type Seated = { seat: Seat | null };
 
 const MAX_MESSAGE_BYTES = 4096;
 const MAX_ENTRIES = 20000;
 const BURST_WINDOW_MS = 10000;
 const BURST_MAX = 60;
 const RESYNC_CHUNK = 400;
+const MAX_WATCHERS = 20;
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const CODE_RE = /^[A-HJ-NP-Z2-9]{5}$/;
 
@@ -134,16 +136,22 @@ export class GameRoom extends DurableObject<Env> {
 
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
-    if (!this.exists()) return new Response("Unknown seat", { status: 403 });
-    const row = this.sql.exec<{ seat: number }>("SELECT seat FROM seats WHERE token = ?", url.searchParams.get("token") ?? "").toArray()[0];
-    if (!row) return new Response("Unknown seat", { status: 403 });
-    const seat = row.seat as Seat;
+    if (!this.exists()) return new Response("Unknown game", { status: 403 });
     const since = Math.max(0, Number(url.searchParams.get("since") ?? 0) || 0);
+    let seat: Seat | null = null;
+    if (url.searchParams.has("watch")) {
+      if (!this.sql.exec("SELECT seat FROM seats WHERE seat = 0").toArray().length) return new Response("Unknown game", { status: 403 });
+      if (this.ctx.getWebSockets("watch").length >= MAX_WATCHERS) return new Response("Too many spectators", { status: 403 });
+    } else {
+      const row = this.sql.exec<{ seat: number }>("SELECT seat FROM seats WHERE token = ?", url.searchParams.get("token") ?? "").toArray()[0];
+      if (!row) return new Response("Unknown seat", { status: 403 });
+      seat = row.seat as Seat;
+      for (const old of this.ctx.getWebSockets(String(seat))) old.close(4000, "Replaced by a newer connection");
+    }
 
-    for (const old of this.ctx.getWebSockets(String(seat))) old.close(4000, "Replaced by a newer connection");
     const { 0: client, 1: server } = new WebSocketPair();
-    this.ctx.acceptWebSocket(server, [String(seat)]);
-    server.serializeAttachment({ seat });
+    this.ctx.acceptWebSocket(server, [seat === null ? "watch" : String(seat)]);
+    server.serializeAttachment({ seat } satisfies Seated);
     server.send(JSON.stringify({ t: "welcome", seat, last: this.lastSeq() }));
     this.sendSince(server, since);
     server.send(JSON.stringify({ t: "synced", last: this.lastSeq() }));
@@ -160,11 +168,12 @@ export class GameRoom extends DurableObject<Env> {
     } catch {
       return this.reject(ws, "Malformed message");
     }
-    const { seat } = ws.deserializeAttachment() as { seat: Seat };
+    const { seat } = ws.deserializeAttachment() as Seated;
     if (msg.t === "sync") {
       this.sendSince(ws, Math.max(0, Number(msg.since) || 0));
       return ws.send(JSON.stringify({ t: "synced", last: this.lastSeq() }));
     }
+    if (seat === null) return this.reject(ws, "Spectators cannot play");
     if (msg.t === "release") {
       if (seat !== 0) return this.reject(ws, "Only the host can free a seat");
       this.sql.exec("DELETE FROM seats WHERE seat = 1");
@@ -225,8 +234,9 @@ export class GameRoom extends DurableObject<Env> {
 
   private broadcastPresence(leaving?: WebSocket) {
     const open = this.ctx.getWebSockets().filter((s) => s !== leaving && s.readyState === WebSocket.OPEN);
-    const seats = [0, 1].map((seat) => open.some((s) => (s.deserializeAttachment() as { seat: Seat }).seat === seat));
-    const out = JSON.stringify({ t: "presence", seats });
+    const seats = [0, 1].map((seat) => open.some((s) => (s.deserializeAttachment() as Seated).seat === seat));
+    const watchers = open.filter((s) => (s.deserializeAttachment() as Seated).seat === null).length;
+    const out = JSON.stringify({ t: "presence", seats, watchers });
     for (const socket of open) {
       try {
         socket.send(out);

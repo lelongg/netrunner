@@ -28,6 +28,7 @@ export interface LinkStatus {
   hint?: "unreachable";
   since?: number;
   error?: string;
+  watchers?: number;
 }
 
 export interface TransportHandlers {

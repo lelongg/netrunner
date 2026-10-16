@@ -7,7 +7,7 @@
     "deploy": "wrangler deploy",
     "typecheck": "tsc --noEmit",
     "test": "node test/protocol.mjs && node test/limits.mjs",
-    "test:e2e": "node test/reconnect.e2e.mjs && node test/seat.e2e.mjs"
+    "test:e2e": "node test/reconnect.e2e.mjs && node test/seat.e2e.mjs && node test/watch.e2e.mjs"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "5.20260929.1",

@@ -1,12 +1,12 @@
 import type { CardDb, Deck, EngineApi, Side } from "./engine";
 import { HeuristicBot } from "./bot/heuristic.ts";
 import { type WireDeck, engineDeck, fromWire } from "./decks";
-import { type GameHost, type LocalEntry, type Op, makeHost } from "./game/runner";
+import { type GameHost, type LocalEntry, type Op, type Seat as ViewSeat, makeHost } from "./game/runner";
 import { PeerTransport } from "./net/p2p";
-import { RELAY_URL, RelayTransport, createGame, joinGame, rejoinLink, storedTicket } from "./net/relay";
+import { RELAY_URL, RelayTransport, createGame, joinGame, rejoinLink, storedTicket, watchLink } from "./net/relay";
 import type { Entry, LinkStatus, Payload, Seat, Transport } from "./net/types";
 
-export type Role = "host" | "guest" | "local";
+export type Role = "host" | "guest" | "local" | "spectator";
 
 export interface LobbyState {
   code: string;
@@ -24,6 +24,8 @@ export interface LobbyState {
   step?: "relay" | "host";
   hint?: "unreachable";
   since?: number;
+  players?: Partial<Record<Side, string>>;
+  watchers?: number;
 }
 
 export type SavedGame =
@@ -174,7 +176,7 @@ interface Table {
 
 export class Session {
   lobby: LobbyState;
-  views: Partial<Record<Side, any>> = {};
+  views: Partial<Record<Side | "spectator", any>> = {};
   pending = false;
   actionError: string | null = null;
   private listeners = new Set<Listener>();
@@ -198,6 +200,7 @@ export class Session {
   private link: LinkStatus = { link: "connecting", peer: false };
   private announced = false;
   private autoplay = false;
+  private watching = false;
 
   constructor(
     private engine: EngineApi,
@@ -222,6 +225,7 @@ export class Session {
       return;
     }
     this.seat = role === "host" ? 0 : 1;
+    this.watching = role === "spectator";
     this.wantedSide = mySide;
     for (const entry of resumeEntries) this.apply(entry);
     this.lobby.myDeck = this.rememberedDeck(this.displaySide());
@@ -260,6 +264,11 @@ export class Session {
   private async connect(code: string | undefined) {
     const handlers = { onEntries: (list: Entry[]) => this.receive(list), onStatus: (s: LinkStatus) => this.linkChanged(s) };
     try {
+      if (this.watching) {
+        if (!RELAY_URL || !code) throw new Error("Watching a game needs the online relay.");
+        this.transport = new RelayTransport({ code, seat: null }, this.lastSeq(), handlers);
+        return;
+      }
       if (RELAY_URL) {
         const ticket = this.seat === 0 && !code ? await createGame() : this.seat === 0 ? storedTicket(code!) : await joinGame(code!);
         if (!ticket) throw new Error("This game was created on another device.");
@@ -288,7 +297,7 @@ export class Session {
       if (/seat|no longer exists|expired/.test(status.error)) this.forget();
     }
     this.link = status;
-    if (status.link === "open" && !this.announced) {
+    if (status.link === "open" && !this.announced && !this.watching) {
       this.announced = true;
       if (this.table.names[this.seat] !== this.lobby.myName) this.push({ k: "join", name: this.lobby.myName });
       if (this.seat === 0 && !this.table.sideSet) this.push({ k: "side", side: this.wantedSide });
@@ -348,7 +357,7 @@ export class Session {
         const local: LocalEntry = p.k === "act" ? { side, kind: "act", command: p.command, args: p.args ?? null } : p.k === "say" ? { side, kind: "say", user: t.names[seat], text: p.text } : { side, kind: "concede" };
         this.stage(
           { k: "exec", entry: local },
-          seat === this.seat
+          seat === this.seat && !this.watching
             ? (failed) => {
                 this.pending = false;
                 if (failed) this.actionError = "That action failed in the engine and was undone.";
@@ -373,6 +382,7 @@ export class Session {
   }
 
   private displaySide(): Side {
+    if (this.watching) return this.lobby.mySide;
     return this.seat === 0 && !this.table.sideSet ? this.wantedSide : this.sideOf(this.seat);
   }
 
@@ -393,6 +403,8 @@ export class Session {
       ready: this.seat === 1 && !!t.decks[1],
       opponentDeckReady: this.seat === 0 && !!t.decks[1],
       started: t.started,
+      players: { [this.sideOf(0)]: t.names[0], [this.sideOf(1)]: t.names[1] },
+      watchers: this.link.watchers,
       step: this.link.step,
       hint: this.link.hint,
       since: this.link.since,
@@ -403,6 +415,7 @@ export class Session {
 
   private refreshViews() {
     if (!this.booted) return;
+    if (this.watching) return this.commit(["spectator"], () => this.emit());
     this.commit([this.lobby.mySide], () => {
       if (this.autoplay && !this.bot) this.bot = new HeuristicBot(this.lobby.mySide, (title) => this.db.byTitle.get(title) as any);
       this.emit();
@@ -411,7 +424,16 @@ export class Session {
   }
 
   get rejoinUrl(): string | undefined {
-    return this.transport instanceof RelayTransport ? rejoinLink(this.transport.seatTicket) : undefined;
+    const ticket = this.transport instanceof RelayTransport ? this.transport.seatTicket : undefined;
+    return ticket && rejoinLink(ticket);
+  }
+
+  get watchUrl(): string | undefined {
+    return this.transport instanceof RelayTransport && this.lobby.code ? watchLink(this.lobby.code) : undefined;
+  }
+
+  watchAs(side: Side) {
+    if (this.watching) this.patch({ mySide: side });
   }
 
   get canFreeSeat() {
@@ -556,7 +578,7 @@ export class Session {
     this.staged.push({ op, done });
   }
 
-  private commit(sides: Side[], after?: () => void) {
+  private commit(sides: ViewSeat[], after?: () => void) {
     const batch = this.staged;
     this.staged = [];
     const host = this.host;
@@ -604,6 +626,7 @@ export class Session {
   }
 
   private snapshot(): SavedGame | undefined {
+    if (this.watching) return;
     if (this.lobby.role === "local") {
       if (!this.setup || !this.seed) return;
       return {
@@ -625,7 +648,7 @@ export class Session {
     if (!this.lobby.code || !this.transport) return;
     return {
       v: 2,
-      role: this.lobby.role,
+      role: this.lobby.role as "host" | "guest",
       transport: this.transport.kind,
       code: this.lobby.code,
       myName: this.lobby.myName,
@@ -694,6 +717,7 @@ export class Session {
   }
 
   send(command: string, args?: unknown, side: Side = this.lobby.mySide) {
+    if (this.watching) return;
     if (this.online()) {
       this.pending = true;
       this.push({ k: "act", command, args: JSON.parse(JSON.stringify(args ?? null)) });
@@ -702,12 +726,14 @@ export class Session {
   }
 
   say(text: string, side: Side = this.lobby.mySide) {
+    if (this.watching) return;
     if (this.online()) return this.push({ k: "say", text });
     const user = side === this.lobby.mySide ? this.lobby.myName : this.lobby.opponentName;
     this.perform({ side, kind: "say", user, text });
   }
 
   concede(side: Side = this.lobby.mySide) {
+    if (this.watching) return;
     if (this.online()) return this.push({ k: "concede" });
     this.perform({ side, kind: "concede" });
   }

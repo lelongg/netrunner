@@ -133,6 +133,9 @@ export function Home({ ready, error, initialJoin, saves, onResume, onDiscard, on
               <Icon name="arrow-right" />
             </button>
           </div>
+          <button class="ghost watch-btn" disabled={!ready || code.trim().length < 5} onClick={() => go("spectator", code.trim())}>
+            Watch this game instead
+          </button>
         </div>
 
         <button class="primary" disabled={!ready} onClick={() => go("local", undefined, true)}>

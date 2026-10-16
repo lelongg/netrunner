@@ -2875,3 +2875,8 @@ button:active:not(:disabled) {
   gap: 8px;
   min-width: 0;
 }
+
+.watch-btn {
+  width: 100%;
+  margin-top: 8px;
+}

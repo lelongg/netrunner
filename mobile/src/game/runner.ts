@@ -1,4 +1,6 @@
 import type { EngineApi, GameHandle, Side } from "../engine";
+
+export type Seat = Side | "spectator";
 import { cardRef } from "./actions";
 
 export type LocalEntry = { side: Side; kind: "act"; command: string; args: unknown } | { side: Side; kind: "say"; user?: string; text: string } | { side: Side; kind: "concede" };
@@ -7,11 +9,11 @@ export type Op = { k: "boot"; setup: unknown; seed: number[] } | { k: "exec"; en
 
 export interface RunResult {
   failed: number[];
-  views: Partial<Record<Side, any>>;
+  views: Partial<Record<Seat, any>>;
 }
 
 export interface GameHost {
-  run(ops: Op[], sides: Side[]): Promise<RunResult>;
+  run(ops: Op[], sides: Seat[]): Promise<RunResult>;
   dispose(): void;
 }
 
@@ -75,7 +77,7 @@ export class GameRunner {
     }
   }
 
-  run(ops: Op[], sides: Side[]): RunResult {
+  run(ops: Op[], sides: Seat[]): RunResult {
     const failed: number[] = [];
     ops.forEach((op, i) => {
       if (op.k === "boot") {
@@ -83,7 +85,7 @@ export class GameRunner {
         this.game = this.withRng(() => this.engine.createGame(op.setup));
       } else if (!this.exec(op.entry)) failed.push(i);
     });
-    const views: Partial<Record<Side, any>> = {};
+    const views: Partial<Record<Seat, any>> = {};
     if (this.game) for (const side of sides) views[side] = this.engine.view(this.game, side);
     return { failed, views };
   }
@@ -96,7 +98,7 @@ export class DirectHost implements GameHost {
     this.runner = new GameRunner(engine);
   }
 
-  run(ops: Op[], sides: Side[]) {
+  run(ops: Op[], sides: Seat[]) {
     return Promise.resolve(this.runner.run(ops, sides));
   }
 

@@ -1,5 +1,5 @@
 import type { Side } from "../engine";
-import { type GameHost, type Op, type RunResult, setHostFactory } from "./runner";
+import { type GameHost, type Op, type RunResult, type Seat, setHostFactory } from "./runner";
 
 let worker: Worker | null = null;
 let nextGame = 1;
@@ -24,7 +24,7 @@ function start() {
 class WorkerHost implements GameHost {
   private game = nextGame++;
 
-  run(ops: Op[], sides: Side[]) {
+  run(ops: Op[], sides: Seat[]) {
     const id = nextId++;
     return new Promise<RunResult>((resolve, reject) => {
       waiting.set(id, { resolve, reject });

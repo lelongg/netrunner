@@ -1,7 +1,7 @@
 import { type Card, type EngineApi, importEngine } from "../engine";
 import { GameRunner, type Op } from "./runner";
 
-type Request = { k: "init"; base: string } | { k: "run"; id: number; game: number; ops: Op[]; sides: ("corp" | "runner")[] } | { k: "drop"; game: number };
+type Request = { k: "init"; base: string } | { k: "run"; id: number; game: number; ops: Op[]; sides: ("corp" | "runner" | "spectator")[] } | { k: "drop"; game: number };
 
 let engine: Promise<EngineApi> | null = null;
 const games = new Map<number, GameRunner>();

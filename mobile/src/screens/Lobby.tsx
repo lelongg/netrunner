@@ -206,6 +206,34 @@ export function Lobby({ session, db, matchups, onLeave }: Props) {
     }
   };
 
+  if (lobby.role === "spectator") {
+    const names = [lobby.players?.corp, lobby.players?.runner];
+    return (
+      <>
+        <Ticker>
+          Watching <span class="cyan">{lobby.code}</span> <span class={lobby.status === "connecting" ? "yellow" : "cyan"}>{lobby.status === "connecting" ? "connecting" : "linked"}</span>
+        </Ticker>
+        <div class="screen lobby">
+          <header class="screen-head">
+            <button class="ghost" onClick={onLeave} aria-label="Back to home">
+              <Icon name="arrow-left" />
+            </button>
+            <h1>WATCH</h1>
+          </header>
+          <section class="panel section lobby-link">
+            <span class="label">
+              Game <span class="cyan">{lobby.code}</span>
+            </span>
+            <span class="label">
+              {names[0] ?? "Corp seat open"} <span class="cyan">vs</span> {names[1] ?? "Runner seat open"}
+            </span>
+          </section>
+          {lobby.error ? <p class="error">{lobby.error}</p> : <p class="status">{lobby.status === "connecting" ? "Reaching the game…" : "Waiting for the players to start. The board appears as soon as they do."}</p>}
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
       <Ticker>

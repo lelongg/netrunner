@@ -16,12 +16,13 @@ import "./fx/fx.css";
 
 const joinParam = new URLSearchParams(location.search).get("join")?.toUpperCase() ?? undefined;
 const gameParam = new URLSearchParams(location.search).get("game") ?? undefined;
+const watchParam = new URLSearchParams(location.search).get("watch")?.toUpperCase() ?? undefined;
 const seatFromLink = joinParam ? ticketFromHash(joinParam, location.hash) : undefined;
 if (seatFromLink) storeTicket(seatFromLink);
 const autopilotParam = new URLSearchParams(location.search).has("autopilot");
 const agentParam = new URLSearchParams(location.search).has("agent") || sessionStorage.getItem("nsg.agent") === "1";
 if (agentParam) sessionStorage.setItem("nsg.agent", "1");
-if (joinParam) history.replaceState(null, "", location.pathname);
+if (joinParam || watchParam) history.replaceState(null, "", location.pathname);
 
 function useSession(session: Session | null) {
   const [, setTick] = useState(0);
@@ -88,7 +89,7 @@ function App() {
     if (autoPass) session!.send("continue", null, "corp");
   }, [autoPass, corpView?.log?.length, corpView?.run?.phase, corpView?.run?.position]);
 
-  const [opening, setOpening] = useState<string | null>(joinParam ?? gameParam?.replace(/^local:.*/, "local game") ?? null);
+  const [opening, setOpening] = useState<string | null>(joinParam ?? watchParam ?? gameParam?.replace(/^local:.*/, "local game") ?? null);
   const afterPaint = (fn: () => void) => requestAnimationFrame(() => setTimeout(fn, 0));
 
   const resume = (from: SavedGame) => {
@@ -118,6 +119,13 @@ function App() {
 
   useEffect(() => {
     if (!loaded || session) return;
+    if (watchParam) {
+      afterPaint(() => {
+        setSession(new Session(loaded.engine, loaded.db, "spectator", watchParam, "Spectator", "runner"));
+        setOpening(null);
+      });
+      return;
+    }
     const existing = joinParam ? loadSave(joinParam) : gameParam ? loadSave(gameParam) : null;
     if (existing) resume(existing);
     else if (!joinParam) setOpening(null);
@@ -172,9 +180,9 @@ function App() {
           if (!loaded) return;
           const existing = role === "guest" && code ? loadSave(code) : null;
           if (existing) return resume(existing);
-          setOpening(role === "guest" && code ? code : role === "host" ? "new game" : vsBot ? "solo game" : "local game");
+          setOpening((role === "guest" || role === "spectator") && code ? code : role === "host" ? "new game" : vsBot ? "solo game" : "local game");
           afterPaint(() => {
-            const next = new Session(loaded.engine, loaded.db, role, role === "local" ? newRoomCode() : code, name);
+            const next = new Session(loaded.engine, loaded.db, role, role === "local" ? newRoomCode() : code, name, role === "spectator" ? "runner" : undefined);
             if (vsBot) next.enableBot();
             setSession(next);
             setLocalSide("corp");
@@ -207,6 +215,12 @@ function App() {
     const view = session.views[localSide];
     if (!view) return <Opening label={lobby.vsBot ? "solo game" : "local game"} ready />;
     return <Board session={session} engine={loaded.engine} db={loaded.db} side={localSide} view={view} handoffLog={handoffLog} onSwitchSide={() => setHandoff(otherSide(localSide))} onLeave={leave} onExit={exit} />;
+  }
+
+  if (lobby.role === "spectator") {
+    const view = session.views.spectator;
+    if (!view) return <Opening label={lobby.code || "game"} ready />;
+    return <Board session={session} engine={loaded.engine} db={loaded.db} side={lobby.mySide} view={view} onSwitchSide={() => session.watchAs(otherSide(lobby.mySide))} onLeave={exit} onExit={exit} />;
   }
 
   const view = session.views[lobby.mySide];

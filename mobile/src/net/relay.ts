@@ -8,6 +8,12 @@ export interface SeatTicket {
   token: string;
 }
 
+export type Ticket = SeatTicket | { code: string; seat: null; token?: undefined };
+
+export function watchLink(code: string) {
+  return `${location.origin}${location.pathname}?watch=${code}`;
+}
+
 const TICKETS = "nsg.seats";
 const PING_MS = 15000;
 const PONG_TIMEOUT_MS = 8000;
@@ -100,7 +106,7 @@ export class RelayTransport implements Transport {
   private dead = false;
 
   constructor(
-    private ticket: SeatTicket,
+    private ticket: Ticket,
     since: number,
     private handlers: TransportHandlers,
   ) {
@@ -111,6 +117,7 @@ export class RelayTransport implements Transport {
   }
 
   send(p: Payload) {
+    if (this.ticket.seat === null) return;
     const tagged = this.outbox.add(p);
     if (this.status.link === "open" && this.ws?.readyState === WebSocket.OPEN) this.ws.send(JSON.stringify({ t: "append", p: tagged }));
   }
@@ -119,8 +126,8 @@ export class RelayTransport implements Transport {
     if (this.ticket.seat === 0 && this.ws?.readyState === WebSocket.OPEN) this.ws.send(JSON.stringify({ t: "release" }));
   }
 
-  get seatTicket() {
-    return this.ticket;
+  get seatTicket(): SeatTicket | undefined {
+    return this.ticket.seat === null ? undefined : this.ticket;
   }
 
   close() {
@@ -142,7 +149,8 @@ export class RelayTransport implements Transport {
   private connect() {
     if (this.closed) return;
     clearTimeout(this.retryTimer);
-    const url = `${RELAY_URL!.replace(/^http/, "ws")}/games/${this.ticket.code}/ws?token=${this.ticket.token}&since=${this.last}`;
+    const auth = this.ticket.seat === null ? "watch=1" : `token=${this.ticket.token}`;
+    const url = `${RELAY_URL!.replace(/^http/, "ws")}/games/${this.ticket.code}/ws?${auth}&since=${this.last}`;
     const ws = new WebSocket(url);
     this.ws = ws;
     ws.onmessage = (event) => {
@@ -164,7 +172,8 @@ export class RelayTransport implements Transport {
         this.setStatus({ link: "open", step: undefined, hint: undefined, since: undefined, error: undefined });
         for (const p of this.outbox.pending) ws.send(JSON.stringify({ t: "append", p }));
       } else if (msg.t === "presence") {
-        this.setStatus({ peer: !!msg.seats?.[1 - this.ticket.seat] });
+        const seat = this.ticket.seat;
+        this.setStatus({ peer: seat === null ? !!(msg.seats?.[0] || msg.seats?.[1]) : !!msg.seats?.[1 - seat], watchers: Number(msg.watchers) || 0 });
       } else if (msg.t === "error" && /slow down/i.test(String(msg.error))) {
         clearTimeout(this.resendTimer);
         this.resendTimer = window.setTimeout(() => {
@@ -197,11 +206,12 @@ export class RelayTransport implements Transport {
 
   private die(error: string) {
     this.dead = true;
-    forgetTicket(this.ticket.code);
+    if (this.ticket.seat !== null) forgetTicket(this.ticket.code);
     this.setStatus({ link: "connecting", peer: false, error });
   }
 
   private async checkSeat() {
+    if (this.ticket.seat === null) return;
     try {
       const res = await fetch(`${RELAY_URL}/games/${this.ticket.code}/seat?token=${this.ticket.token}`);
       if (res.status === 404) this.die("This game no longer exists, or your seat was given to someone else.");

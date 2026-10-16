@@ -102,14 +102,15 @@ interface Props {
   count?: number;
   slide?: -1 | 1;
   onStep?: (dir: -1 | 1) => void;
+  readOnly?: boolean;
 }
 
-export function CardSheet({ card, view, side, db, send, onClose, disabled, index = 0, count = 1, slide, onStep }: Props) {
+export function CardSheet({ card, view, side, db, send, onClose, disabled, index = 0, count = 1, slide, onStep, readOnly }: Props) {
   const [installing, setInstalling] = useState(false);
   const owner = card.side === (side === "corp" ? "Corp" : "Runner");
   const code = visibleCode(card, owner);
   const full = code ? db.byTitle.get(card.title) : undefined;
-  const commands = cardCommands(card, view, side);
+  const commands = readOnly ? [] : cardCommands(card, view, side);
   const installList: unknown[] = view.corp?.["install-list"] ?? [];
   useEffect(() => setInstalling(false), [card.cid]);
   const swipe = useSwipe((dir) => !installing && onStep?.(dir));
