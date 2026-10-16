@@ -104,6 +104,7 @@ function synth(info: Info | undefined, faceUp: boolean): HTMLElement {
   if (faceUp && info?.code) {
     el.className = `tile ${side}`;
     const img = document.createElement("img");
+    img.crossOrigin = "anonymous";
     img.src = cardImage(info.code, "small")!;
     img.alt = "";
     img.className = "fx-card-img";
@@ -128,16 +129,17 @@ function ghostFrom(face: HTMLElement, r: DOMRect, cls = ""): HTMLElement {
   return ghost;
 }
 
-function twoSided(front: HTMLElement, info: Info | undefined, r: DOMRect): HTMLElement {
-  const ghost = node("fx-ghost fx-flip");
+function twoSided(front: HTMLElement, info: Info | undefined, r: DOMRect): { ghost: HTMLElement; flip: HTMLElement } {
+  const ghost = node("fx-ghost");
   place(ghost, r);
-  const a = node("fx-face fx-front", ghost);
-  const b = node("fx-face fx-back", ghost);
+  const flip = node("fx-flip", ghost);
+  const a = node("fx-face fx-front", flip);
+  const b = node("fx-face fx-back", flip);
   front.removeAttribute("data-cid");
   front.style.opacity = "";
   a.appendChild(front);
   b.appendChild(synth(info, false));
-  return ghost;
+  return { ghost, flip };
 }
 
 type Kind = "play" | "score" | "steal" | "trash" | "draw" | "install" | "move";
@@ -216,8 +218,10 @@ function bigFace(info: Info | undefined, fallback: HTMLElement): HTMLElement {
   const img = document.createElement("img");
   img.alt = "";
   img.className = "fx-card-img";
+  img.crossOrigin = "anonymous";
   img.src = cardImage(info.code, "small")!;
   const hi = new Image();
+  hi.crossOrigin = "anonymous";
   hi.onload = () => (img.src = hi.src);
   hi.src = cardImage(info.code, "large")!;
   el.appendChild(img);
@@ -313,11 +317,10 @@ export function play(plan: Plan, me: Side) {
     const delay = i++ * 0.07;
     if (kind === "draw") {
       const face = synth(info, !!info?.code);
-      const ghost = twoSided(face, info, src);
+      const { ghost, flip } = twoSided(face, info, src);
       ghost.style.transformOrigin = "0 0";
       hide(destEl);
-      const inner = ghost;
-      animate(inner, { rotateY: [180, 0] }, { duration: 0.45, delay: delay + 0.08, ease: [0.3, 0.6, 0.3, 1] });
+      animate(flip, { transformPerspective: 600, rotateY: [180, 0] }, { duration: 0.45, delay: delay + 0.08, ease: [0.3, 0.6, 0.3, 1], keep: true });
       flyTo(ghost, src, dest, { delay, duration: 0.5, lift: 50, tilt: 0 }).finished.then(() => {
         ghost.remove();
         show(destEl);

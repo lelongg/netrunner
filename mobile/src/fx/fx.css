@@ -203,6 +203,9 @@
 }
 
 .fx-flip {
+  position: absolute;
+  inset: 0;
+  transform: rotateY(180deg);
   transform-style: preserve-3d;
   perspective: 600px;
 }

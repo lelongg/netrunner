@@ -37,9 +37,9 @@ function composited(keyframes: Record<string, any>) {
   return rest;
 }
 
-export function animate(target: any, keyframes: Record<string, any>, options: Record<string, any> = {}) {
+export function animate(target: any, keyframes: Record<string, any>, { keep, ...options }: Record<string, any> = {}) {
   const anim = motion(target, composited(keyframes) as any, options as any);
-  if (options.repeat !== Infinity) {
+  if (options.repeat !== Infinity && !keep) {
     const els: Element[] = Array.isArray(target) ? target : [target];
     anim.finished.then(
       () =>

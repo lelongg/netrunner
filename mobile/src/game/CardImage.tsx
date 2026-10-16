@@ -26,7 +26,7 @@ export function CardImage({ code, alt, size, class: className, lazy, width }: Pr
   }, [src]);
 
   return (
-    <span class={`card-image ${state} ${className ?? ""}`}>
+    <span class={`card-image ${state} ${className ?? ""}`} style={size !== "small" && state === "loading" ? { backgroundImage: `url(${cardImage(code, "small")})`, backgroundSize: "cover" } : undefined}>
       <img
         ref={img}
         crossOrigin="anonymous"

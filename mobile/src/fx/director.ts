@@ -174,8 +174,11 @@ function cameraTo(target: Element | null, zoom: number) {
   const field = document.querySelector(".playfield") as HTMLElement | null;
   if (!field || reduced()) return;
   camera?.stop();
+  const m = getComputedStyle(field).transform;
+  const from = m && m !== "none" ? new DOMMatrixReadOnly(m).a : 1;
   if (!target || zoom === 1) {
-    camera = animate(field, { scale: 1 }, { type: "spring", visualDuration: 0.5, bounce: 0.15 });
+    if (from === 1) return;
+    camera = animate(field, { scale: [from, 1] }, { type: "spring", visualDuration: 0.5, bounce: 0.15 });
     return;
   }
   const f = field.getBoundingClientRect();
@@ -183,7 +186,7 @@ function cameraTo(target: Element | null, zoom: number) {
   const ox = ((t.left + t.width / 2 - f.left) / f.width) * 100;
   const oy = ((t.top + t.height / 2 - f.top) / f.height) * 100;
   field.style.transformOrigin = `${ox.toFixed(1)}% ${oy.toFixed(1)}%`;
-  camera = animate(field, { scale: zoom }, { type: "spring", visualDuration: 0.6, bounce: 0.2 });
+  camera = animate(field, { scale: [from, zoom] }, { type: "spring", visualDuration: 0.6, bounce: 0.2, keep: true });
 }
 
 function kick(power = 1) {
