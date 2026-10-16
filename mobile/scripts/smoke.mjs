@@ -99,9 +99,12 @@ act("runner", "run", { server: "HQ" });
 assert.ok(view("runner").run, "run started");
 for (let i = 0; i < 20 && view("runner").run; i++) {
   const p = prompt("runner");
-  if (p?.choices?.length && p["prompt-type"] !== "run") choose("runner", p.choices.at(-1).value);
+  const c = prompt("corp");
+  if (c?.choices?.length && c["prompt-type"] !== "run") choose("corp", c.choices.at(-1).value);
+  else if (c?.["prompt-type"] === "select") act("corp", "select", { card: null, eid: c.eid });
+  else if (p?.choices?.length && p["prompt-type"] !== "run") choose("runner", p.choices.at(-1).value);
   else act("runner", "continue", null);
-  if (view("corp").run) act("corp", "continue", null);
+  if (view("corp").run && !prompt("corp")?.choices?.length && prompt("runner")?.["prompt-type"] === "run") act("corp", "continue", null);
 }
 assert.equal(view("runner").run, undefined, "run finished");
 assert.equal(view("runner").runner.click, 3);
