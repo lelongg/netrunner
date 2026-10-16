@@ -54,7 +54,7 @@ jobs:
          java-version: '17'
 
      - name: Install clojure tools
-       uses: DeLaGuardo/setup-clojure@13.0
+       uses: DeLaGuardo/setup-clojure@94d767dbb80ae5c637d0f1ad70b75fa2b00495cd # 13.0
        with:
          lein: 2.9.1
 
@@ -100,7 +100,7 @@ jobs:
           java-version: '17'
 
       - name: Install clojure tools
-        uses: DeLaGuardo/setup-clojure@13.0
+        uses: DeLaGuardo/setup-clojure@94d767dbb80ae5c637d0f1ad70b75fa2b00495cd # 13.0
         with:
           lein: 2.9.1
 
