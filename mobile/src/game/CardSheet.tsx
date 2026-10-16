@@ -131,7 +131,13 @@ export function CardSheet({ card, view, side, db, send, onClose, disabled, index
     entering.current = 0;
     const el = head();
     if (!dir || !el || motionOff()) return;
-    animate(el, { x: [dir * el.getBoundingClientRect().width * 0.6, 0], opacity: [0.3, 1] }, { type: "spring", visualDuration: 0.3, bounce: 0.15 });
+    const from = dir * el.getBoundingClientRect().width * 0.6;
+    el.style.transform = `translateX(${from}px)`;
+    el.style.opacity = "0.3";
+    animate(el, { x: [from, 0], opacity: [0.3, 1] }, { type: "spring", visualDuration: 0.3, bounce: 0.15 }).finished.then(
+      () => (el.style.opacity = ""),
+      () => {},
+    );
   }, [card.cid]);
 
   const run = (c: Command) => {

@@ -1,5 +1,5 @@
-import { useLayoutEffect, useRef, useState } from "preact/hooks";
-import type { CardDb } from "../engine";
+import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
+import { type CardDb, cardImage } from "../engine";
 import { ZoomableCardImage } from "../game/CardImage";
 import { Pager } from "../game/Pager";
 import { withTerms } from "../game/RichText";
@@ -114,6 +114,17 @@ export function Guide({ db, onClose, onPlay }: { db: CardDb; onClose: () => void
   const body = useRef<HTMLDivElement>(null);
   const entering = useRef<-1 | 1 | 0>(0);
   useBackClose(true, onClose);
+  useEffect(() => {
+    for (const page of PAGES)
+      for (const title of page.cards ?? []) {
+        const code = db.byTitle.get(title)?.code;
+        if (!code) continue;
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.sizes = "88px";
+        img.srcset = `${cardImage(code, "small")} 116w, ${cardImage(code, "medium")} 165w, ${cardImage(code, "large")} 300w`;
+      }
+  }, []);
   const go = (dir: -1 | 1) => {
     const next = index + dir;
     if (next < 0 || next >= PAGES.length) return;
@@ -127,7 +138,13 @@ export function Guide({ db, onClose, onPlay }: { db: CardDb; onClose: () => void
     entering.current = 0;
     const el = page();
     if (!dir || !el || motionOff()) return;
-    animate(el, { x: [dir * el.getBoundingClientRect().width * 0.6, 0], opacity: [0.3, 1] }, { type: "spring", visualDuration: 0.3, bounce: 0.15 });
+    const from = dir * el.getBoundingClientRect().width * 0.6;
+    el.style.transform = `translateX(${from}px)`;
+    el.style.opacity = "0.3";
+    animate(el, { x: [from, 0], opacity: [0.3, 1] }, { type: "spring", visualDuration: 0.3, bounce: 0.15 }).finished.then(
+      () => (el.style.opacity = ""),
+      () => {},
+    );
   }, [index]);
   const p = PAGES[index];
   const last = index === PAGES.length - 1;
@@ -151,7 +168,7 @@ export function Guide({ db, onClose, onPlay }: { db: CardDb; onClose: () => void
             <div class="guide-cards">
               {p.cards.map((title) => {
                 const code = db.byTitle.get(title)?.code;
-                return code ? <ZoomableCardImage code={code} alt={title} size="small" /> : null;
+                return code ? <ZoomableCardImage code={code} alt={title} size="small" width="88px" /> : null;
               })}
             </div>
           )}
