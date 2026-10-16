@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "preact/hooks";
+import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { useLoop } from "../fx/ui";
 import type { Side } from "../engine";
 import { type Command, cardCommands, cardRef, pendingChoice } from "./actions";
@@ -6,7 +6,9 @@ import { CardImage, ZoomableCardImage } from "./CardImage";
 import { visibleCode } from "./CardTile";
 import { Pager } from "./Pager";
 import { RichText } from "./RichText";
-import { useSwipe } from "./swipe";
+import { useDragPager } from "./swipe";
+import { animate } from "../fx/core";
+import { motionOff } from "../settings";
 import { iconize, serverLabel, serverName } from "./text";
 import { Icon, type IconName } from "../icons";
 import { glyphs } from "./Glyphs";
@@ -113,7 +115,24 @@ export function CardSheet({ card, view, side, db, send, onClose, disabled, index
   const commands = readOnly ? [] : cardCommands(card, view, side);
   const installList: unknown[] = view.corp?.["install-list"] ?? [];
   useEffect(() => setInstalling(false), [card.cid]);
-  const swipe = useSwipe((dir) => !installing && onStep?.(dir));
+  const sheet = useRef<HTMLDivElement>(null);
+  const entering = useRef<-1 | 1 | 0>(0);
+  const head = () => sheet.current?.querySelector<HTMLElement>(".sheet-head");
+  const swipe = useDragPager(
+    head,
+    (dir) => !installing && !!onStep && (dir === 1 ? index < count - 1 : index > 0),
+    (dir) => {
+      entering.current = dir;
+      onStep?.(dir);
+    },
+  );
+  useLayoutEffect(() => {
+    const dir = entering.current;
+    entering.current = 0;
+    const el = head();
+    if (!dir || !el || motionOff()) return;
+    animate(el, { x: [dir * el.getBoundingClientRect().width * 0.6, 0], opacity: [0.3, 1] }, { type: "spring", visualDuration: 0.3, bounce: 0.15 });
+  }, [card.cid]);
 
   const run = (c: Command) => {
     pendingChoice.value = c.choose;
@@ -129,7 +148,7 @@ export function CardSheet({ card, view, side, db, send, onClose, disabled, index
 
   return (
     <div class="sheet-backdrop" onClick={onClose}>
-      <div class="sheet panel swipeable" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={code ? card.title : "Hidden card"} {...swipe}>
+      <div ref={sheet} class="sheet panel swipeable" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={code ? card.title : "Hidden card"} {...swipe}>
         {onStep && !installing && <Pager index={index} count={count} onStep={onStep} />}
         <div key={card.cid} class="sheet-head">
           {code ? <ZoomableCardImage class="sheet-img" code={code} alt={card.title} size="large" /> : <CardBack side={card.side} />}

@@ -3028,3 +3028,13 @@ button:active:not(:disabled) {
   content: "> ";
   color: var(--cyan);
 }
+
+.card-image .card-image-low {
+  position: absolute;
+  inset: 0;
+  opacity: 1;
+}
+
+.card-image .card-image-low + img {
+  position: relative;
+}
