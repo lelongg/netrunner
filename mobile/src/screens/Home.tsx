@@ -68,7 +68,6 @@ export function Home({ ready, error, initialJoin, saves, onResume, onDiscard, on
             <span class="big">POCKET</span>
             <span class="big outline">RIG</span>
           </h1>
-          <p>Netrunner on your phone, on the Jinteki rules engine. Create a game, share the code, jack in.</p>
         </section>
 
         {error && <p class="error">{error}</p>}

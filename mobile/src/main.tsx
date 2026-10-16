@@ -283,8 +283,8 @@ function UpdateBanner() {
   );
 }
 
-installMotion();
 installTips();
+installMotion();
 startEngineWorker();
 render(
   <>
