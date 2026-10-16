@@ -941,6 +941,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
             <Cta
               disabled={disabled || lead.enabled === false}
               onClick={() => {
+                if (lead.confirm && !confirm(lead.confirm)) return;
                 send(lead.command, lead.args);
                 if (lead.then === "install-list") setPicking(true);
               }}
@@ -953,6 +954,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
               class={c.kind === "danger" ? "danger" : c.kind === "primary" ? "primary" : ""}
               disabled={disabled || c.enabled === false}
               onClick={() => {
+                if (c.confirm && !confirm(c.confirm)) return;
                 send(c.command, c.args);
                 if (c.then === "install-list") setPicking(true);
               }}

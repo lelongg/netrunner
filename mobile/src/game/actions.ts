@@ -9,6 +9,7 @@ export interface Command {
   kind?: "primary" | "danger" | "normal";
   then?: "install-list";
   choose?: string;
+  confirm?: string;
 }
 
 export const pendingChoice: { value?: string } = {};
@@ -190,7 +191,7 @@ export function basicCommands(view: any, side: Side): Command[] {
     if (!phaseLocked && me.click > 0) out.push({ label: "Run", command: "generate-runnable-zones", then: "install-list" });
     if (!phaseLocked && playable(5) && (me.tag?.base ?? 0) > 0) out.push({ label: "Remove tag · 1[click] 2[credit]", command: "remove-tag" });
   } else {
-    if (playable(6)) out.push({ label: "Purge · 3[click]", command: "purge" });
+    if (playable(6)) out.push({ label: "Purge · 3[click]", command: "purge", confirm: "Purge every virus counter? It uses your 3 clicks and cannot be undone." });
     const tagged = view.runner?.tag?.["is-tagged"] || (view.runner?.tag?.total ?? 0) > 0;
     if (playable(5) && tagged) out.push({ label: "Trash resource · 1[click] 2[credit]", command: "trash-resource" });
   }
