@@ -5,7 +5,7 @@ import type { Agent } from "./game";
 export const INSTRUCTIONS = `Pocket Rig lets you play Netrunner (the Jinteki rules engine) against a human on their phone.
 Decks: list_decks shows the preconstructed decks of a side; NetrunnerDB deck URLs work too. Pick one that suits you.
 Joining: join_game with the code the human gives you and your deck; the host starts the game.
-Hosting: host_game with your side and deck. Tell the human the code in your reply, then in the same turn call wait_for_turn: the game starts by itself once they join, pick a deck and press Ready.
+Hosting: host_game with your side and deck, then reply to the human with the code and the join link and end your turn, so they can read it. The game starts by itself once they join, pick a deck and press Ready; call wait_for_turn when they tell you they are in.
 During the game: get_state shows the whole board from your seat only and a numbered list of legal actions; act performs one of them by id. When nothing is yours to decide, call wait_for_turn.
 Keep playing in a loop (wait_for_turn, then act) without ending your turn until the game is over or the user asks you to stop: the human cannot nudge you while you are idle, so ending your turn stalls the game.
 To save context, act and wait_for_turn only return what changed since your last look (new log lines, changed lines, the current run and prompt) plus the fresh action list. Call get_state again whenever you need the full picture, for example after your context was summarized.
@@ -38,7 +38,7 @@ export function registerTools(server: McpServer, agent: () => Promise<Agent>, NA
     "host_game",
     {
       description:
-        "Create a new game with your side and deck, and get the code to give to the human. Call list_decks first to pick a deck. The game starts by itself once they are ready: give them the code, then call wait_for_turn.",
+        "Create a new game with your side and deck, and get the code and join link to give to the human. Call list_decks first to pick a deck. Then reply to the human with the code and link and end your turn; the game starts by itself once they are ready.",
       inputSchema: { side: side.describe("The side you will play"), deck: deckArg, name: z.string().optional() },
     },
     ({ side, deck, name }) => run((a) => a.host(name ?? NAME, side, deck)),
@@ -66,9 +66,9 @@ export function registerTools(server: McpServer, agent: () => Promise<Agent>, NA
     "wait_for_turn",
     {
       description: "Wait until you have a decision to make (in the lobby: until the game starts), then return what changed since your last look and the action list.",
-      inputSchema: { seconds: z.number().int().optional().describe("Maximum wait, default 300, max 900") },
+      inputSchema: { seconds: z.number().int().optional().describe("Maximum wait, default 90, max 900") },
     },
-    ({ seconds }) => run((a) => a.wait(seconds ?? 300)),
+    ({ seconds }) => run((a) => a.wait(seconds ?? 90)),
   );
   server.registerTool("card_info", { description: "Full text and stats of a card by name.", inputSchema: { name: z.string() } }, ({ name }) => run((a) => a.card(name)));
   server.registerTool("say", { description: "Send a chat message to your opponent's game log.", inputSchema: { message: z.string() } }, ({ message }) => run((a) => a.say(message)));

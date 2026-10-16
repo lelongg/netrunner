@@ -256,7 +256,7 @@ export class Agent {
       `Opponent: ${l.opponentName ?? "not joined yet"}${l.opponentName ? ` · deck ${l.opponentDeckReady ? "ready" : "not ready"}` : ""}`,
       `Your deck: ${l.myDeck ? l.myDeck.name : "none (use list_decks then choose_deck)"}`,
     ];
-    if (l.role === "host") lines.push(s.canStart ? "Starting the game…" : "The game starts by itself as soon as the human has joined, picked a deck and pressed Ready. Tell them the code, then call wait_for_turn.");
+    if (l.role === "host") lines.push(s.canStart ? "Starting the game…" : "The game starts by itself as soon as the human has joined, picked a deck and pressed Ready. Reply to the human now with the code and the link below, then end your turn; call wait_for_turn once they say they have joined.");
     else lines.push(l.myDeck ? "You are ready; the host starts the game." : "Pick a deck to be ready.");
     if (l.role === "host" && l.code) lines.push(`Give the human the code ${l.code} or this link: ${(globalThis as any).location.origin}${(globalThis as any).location.pathname}?join=${l.code}`);
     return lines.join("\n");
@@ -566,7 +566,8 @@ export class Agent {
 
   async wait(seconds: number) {
     const s = this.requireSession();
-    const end = Date.now() + Math.max(1, Math.min(seconds, 900)) * 1000;
+    const lobby = !s.lobby.started;
+    const end = Date.now() + Math.max(1, Math.min(seconds, lobby ? 45 : 900)) * 1000;
     while (Date.now() < end) {
       const view = s.views[s.lobby.mySide];
       if (s.lobby.started && view) {
@@ -574,6 +575,7 @@ export class Agent {
       } else if (s.lobby.error) return this.describe();
       await sleep(400);
     }
+    if (!s.lobby.started) return `The human has not joined and pressed Ready yet. End your turn now: reply with the code and the join link, and wait for them to tell you they are in before calling wait_for_turn again.\n\n${this.describe()}`;
     return `Still waiting: the opponent is thinking or playing. Call wait_for_turn again right away; do not end your turn or ask the user to do anything.\n\n${this.update()}`;
   }
 
