@@ -29,21 +29,24 @@ export function SettingsMenu({ onClose }: { onClose: () => void }) {
           <span class="label">Relay server</span>
           <span class="relay-field">
             <input value={relay} placeholder={DEFAULT_RELAY ?? "https://…"} spellcheck={false} autocapitalize="off" onInput={(e) => setRelay((e.target as HTMLInputElement).value)} onKeyDown={(e) => e.key === "Enter" && dirty && valid && setSetting("relay", relay.trim())} />
-            <button class="ghost" aria-label="Save relay" title="Save relay" disabled={!dirty || !valid} onClick={() => setSetting("relay", relay.trim())}>
-              <Icon name="check" />
-            </button>
-            <button
-              class="ghost"
-              aria-label="Use the default relay"
-              title="Use the default relay"
-              disabled={!settings.relay && !relay}
-              onClick={() => {
-                setRelay("");
-                setSetting("relay", "");
-              }}
-            >
-              <Icon name="undo" />
-            </button>
+            {dirty && (
+              <button class="ghost" aria-label="Save relay" title="Save relay" disabled={!valid} onClick={() => setSetting("relay", relay.trim())}>
+                <Icon name="check" />
+              </button>
+            )}
+            {!!settings.relay && settings.relay !== DEFAULT_RELAY && (
+              <button
+                class="ghost"
+                aria-label="Use the default relay"
+                title="Use the default relay"
+                onClick={() => {
+                  setRelay("");
+                  setSetting("relay", "");
+                }}
+              >
+                <Icon name="undo" />
+              </button>
+            )}
           </span>
         </label>
         <p class="hint">Online games live on the relay that created them: change it only to play on another server.</p>
