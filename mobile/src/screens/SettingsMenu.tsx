@@ -16,6 +16,13 @@ export function SettingsMenu({ onClose }: { onClose: () => void }) {
   const [, setTick] = useState(0);
   useEffect(() => onSettings(() => setTick((t) => t + 1)), []);
   const [relay, setRelay] = useState(settings.relay);
+  const [name, setName] = useState(() => {
+    try {
+      return localStorage.getItem("nsg.name") ?? "Player";
+    } catch {
+      return "Player";
+    }
+  });
   const dirty = relay.trim() !== settings.relay;
   const valid = !relay.trim() || /^https?:\/\/[^\s/]+/.test(relay.trim());
   return (
@@ -23,8 +30,22 @@ export function SettingsMenu({ onClose }: { onClose: () => void }) {
       <div class="menu-backdrop" onClick={onClose} />
       <nav class="menu panel settings-menu">
         <span class="label">Settings</span>
+        <label class="setting-field">
+          <span class="label">Your name</span>
+          <input
+            value={name}
+            maxLength={24}
+            onInput={(e) => {
+              const value = (e.target as HTMLInputElement).value;
+              setName(value);
+              try {
+                localStorage.setItem("nsg.name", value.trim() || "Player");
+              } catch {}
+            }}
+          />
+        </label>
         <Toggle label="Animations" on={settings.animations} onChange={(v) => setSetting("animations", v)} />
-        <Toggle label="Glossary in card text" on={settings.glossary} onChange={(v) => setSetting("glossary", v)} />
+        <Toggle label="Glossary" on={settings.glossary} onChange={(v) => setSetting("glossary", v)} />
         <label class="setting-field">
           <span class="label">Relay server</span>
           <span class="relay-field">

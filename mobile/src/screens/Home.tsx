@@ -68,7 +68,6 @@ function storedName() {
 }
 
 export function Home({ ready, error, initialJoin, saves, onResume, onDiscard, onStart, onGuide }: Props) {
-  const [name, setName] = useState(storedName() || "Player");
   const [code, setCode] = useState(initialJoin ?? "");
   const codeRest = useRef<HTMLSpanElement>(null);
   const [animations, setAnimations] = useState(settings.animations);
@@ -77,12 +76,7 @@ export function Home({ ready, error, initialJoin, saves, onResume, onDiscard, on
   const [menu, setMenu] = useState(false);
   useBackClose(menu, () => setMenu(false));
   const go = (role: Role, c?: string, vsBot?: boolean) => {
-    try {
-      localStorage.setItem(NAME_KEY, name);
-    } catch {
-      /* storage unavailable */
-    }
-    onStart(role, name.trim() || "Player", c, vsBot);
+    onStart(role, storedName().trim() || "Player", c, vsBot);
   };
   return (
     <>
@@ -145,11 +139,6 @@ export function Home({ ready, error, initialJoin, saves, onResume, onDiscard, on
           </section>
         )}
 
-        <label class="field">
-          <span class="label">Handle</span>
-          <input value={name} onInput={(e) => setName((e.target as HTMLInputElement).value)} maxLength={24} />
-        </label>
-
         <Cta onClick={() => go("host")} disabled={!ready}>
           Create a game
         </Cta>
@@ -166,26 +155,27 @@ export function Home({ ready, error, initialJoin, saves, onResume, onDiscard, on
                 </span>
               </span>
             </label>
+            <button class="watch" aria-label="Watch this game" title="Watch this game" disabled={!ready || code.trim().length < 5} onClick={() => go("spectator", code.trim())}>
+              <Icon name="eye" />
+            </button>
             <button aria-label="Join game" disabled={!ready || code.trim().length < 5} onClick={() => go("guest", code.trim())}>
               <Icon name="arrow-right" />
             </button>
           </div>
-          <button class="ghost watch-btn" disabled={!ready || code.trim().length < 5} onClick={() => go("spectator", code.trim())}>
-            Watch this game instead
-          </button>
         </div>
 
         <button class="primary" disabled={!ready} onClick={onGuide}>
           How to play
         </button>
 
-        <button disabled={!ready} onClick={() => go("local", undefined, true)}>
-          Solo
-        </button>
-
-        <button disabled={!ready} onClick={() => go("local")}>
-          Local game
-        </button>
+        <div class="home-modes">
+          <button disabled={!ready} onClick={() => go("local", undefined, true)}>
+            Solo
+          </button>
+          <button disabled={!ready} onClick={() => go("local")}>
+            Local game
+          </button>
+        </div>
 
         <div class="footer">
           <span>Engine: Jinteki · MIT</span>

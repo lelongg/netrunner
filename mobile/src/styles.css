@@ -3128,3 +3128,58 @@ button:active:not(:disabled) {
   flex-direction: column;
   gap: 10px;
 }
+
+.screen.home {
+  height: calc(100dvh - 23px - env(safe-area-inset-top));
+  overflow: hidden;
+  gap: clamp(8px, 1.6vh, 16px);
+  padding-top: clamp(10px, 2vh, 18px);
+  padding-bottom: calc(clamp(10px, 2vh, 20px) + env(safe-area-inset-bottom));
+}
+
+.screen.home .hero {
+  flex: none;
+  padding: clamp(10px, 1.8vh, 18px) 16px;
+}
+
+.screen.home .hero .big {
+  font-size: clamp(34px, 7.5vh, 92px);
+}
+
+.screen.home .games {
+  flex: 0 1 auto;
+  min-height: 112px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.screen.home .game-list {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.screen.home > button,
+.screen.home .cta {
+  flex: none;
+}
+
+.screen.home .footer {
+  margin-top: auto;
+  flex: none;
+}
+
+.join-row button.watch {
+  border-color: var(--line-2);
+  color: var(--text-2);
+}
+
+.home-modes {
+  display: flex;
+  gap: 8px;
+  flex: none;
+}
+
+.home-modes button {
+  flex: 1 1 0;
+}
