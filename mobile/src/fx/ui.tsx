@@ -50,7 +50,8 @@ function settle(el: Element) {
 }
 
 function rise(el: Element, from: string, duration: number, ease: readonly number[], delay = 0, fade = true) {
-  animate(el, fade ? { transform: [from, "none"], opacity: [0, 1] } : { transform: [from, "none"] }, { duration, ease: ease as any, delay }).finished.then(
+  const to = from.replace(/translate([XY])\([^)]*\)/g, "translate$1(0px)").replace(/scale\([^)]*\)/g, "scale(1)");
+  animate(el, fade ? { transform: [from, to], opacity: [0, 1] } : { transform: [from, to] }, { duration, ease: ease as any, delay }).finished.then(
     () => settle(el),
     () => settle(el),
   );
