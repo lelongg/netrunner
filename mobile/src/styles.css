@@ -2998,3 +2998,33 @@ button:active:not(:disabled) {
   animation: none !important;
   transition: none !important;
 }
+
+.game-over-cards {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin: 4px 0;
+}
+
+.game-over-cards .card-image {
+  width: 72px;
+}
+
+.game-over-log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--text-2);
+  text-align: left;
+  width: 100%;
+}
+
+.game-over-log li::before {
+  content: "> ";
+  color: var(--cyan);
+}

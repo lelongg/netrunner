@@ -16,7 +16,7 @@ import { PHASE_LABELS, byServerOrder, iconize, serverLabel, serverName } from ".
 import { Icon, type IconName } from "../icons";
 import { glyphs } from "./Glyphs";
 import { Breakers } from "./Breakers";
-import { CardImage } from "./CardImage";
+import { CardImage, ZoomableCardImage } from "./CardImage";
 import { withTerms } from "./RichText";
 import { motionOff } from "../settings";
 
@@ -733,6 +733,44 @@ function Toasts({ toasts, render, dismiss }: { toasts: any[]; render: (m: unknow
   );
 }
 
+function GameOver({ view, side, db, render, onLeave }: { view: any; side: Side; db: CardDb; render: (m: unknown) => string; onLeave: () => void }) {
+  const logLength = (view.log ?? []).length;
+  const { lines, cards } = useMemo(() => {
+    const lines = (view.log ?? [])
+      .map((e: any) => iconize(render(e.text)))
+      .filter((t: string) => t && !/^\s*\[hr\]\s*$/i.test(t))
+      .slice(-5);
+    const found = new Map<string, { code: string; title: string; at: number }>();
+    lines.forEach((line: string, i: number) => {
+      for (const [title, card] of db.byTitle) if (title.length > 3 && card.code && line.includes(title)) found.set(title, { code: card.code, title, at: i });
+    });
+    const cards = [...found.values()].filter((c) => ![...found.keys()].some((t) => t !== c.title && t.includes(c.title))).sort((a, b) => b.at - a.at).slice(0, 4);
+    return { lines, cards };
+  }, [logLength]);
+  const won = view.winner === side;
+  return (
+    <section class="prompt game-over">
+      <span class={`big ${won ? "yellow" : ""}`} style="font-size: 56px">
+        {won ? "VICTORY" : "DEFEAT"}
+      </span>
+      {view.reason && <span class="label">{view.reason}</span>}
+      {cards.length > 0 && (
+        <div class="game-over-cards">
+          {cards.map((c) => (
+            <ZoomableCardImage code={c.code} alt={c.title} size="small" />
+          ))}
+        </div>
+      )}
+      <ol class="game-over-log">
+        {lines.map((l: string) => (
+          <li>{glyphs(l)}</li>
+        ))}
+      </ol>
+      <Cta onClick={onLeave}>Back to home</Cta>
+    </section>
+  );
+}
+
 function feedText(view: any, side: Side, names: Record<Side, string>, watching = false) {
   if (view.winner) return `${names[view.winner as Side] ?? view.winner} wins`;
   if (view.run) {
@@ -853,15 +891,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
       </section>
     );
   } else if (view.winner) {
-    panel = (
-      <section class="prompt">
-        <span class={`big ${view.winner === side ? "yellow" : ""}`} style="font-size: 56px">
-          {view.winner === side ? "VICTORY" : "DEFEAT"}
-        </span>
-        {view.reason && <span class="label">{view.reason}</span>}
-        <Cta onClick={onLeave}>Back to home</Cta>
-      </section>
-    );
+    panel = <GameOver view={view} side={side} db={db} render={render} onLeave={onLeave} />;
   } else if (prompt && ptype !== "run") {
     panel = <PromptPanel key={promptId} view={view} side={side} prompt={prompt} render={render} send={send} closePrompt={closePrompt} disabled={disabled} db={db} />;
   } else if (picking && side === "runner") {

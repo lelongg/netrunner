@@ -310,8 +310,6 @@ function finale(won: boolean) {
       flash("red", 0.45, 0.9);
       shake(1.4);
       buzz([200, 80, 300]);
-      const field = document.querySelector(".board") as HTMLElement | null;
-      if (field) animate(field, { filter: ["grayscale(0)", "grayscale(0.85) brightness(0.7)"] }, { duration: 1.4 });
     }, 650);
   }
   done(animate(el, { opacity: [1, 1, 0] }, { duration: 3.6, times: [0, 0.85, 1] }), el);
@@ -357,10 +355,7 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
   if (reduced()) return;
   let busy = 0;
 
-  if (now.winner && !prev.winner) {
-    finale(now.winner === me);
-    return;
-  }
+  if (now.winner && !prev.winner) setTimeout(() => finale(now.winner === me), 1600);
 
   if (now.active && prev.active && now.active !== prev.active) {
     const mine = now.active === me;
@@ -742,7 +737,8 @@ export function useFx(view: any, me: Side, render: (m: unknown) => string) {
     if (prev && p && !document.hidden) {
       const moved = new Set(p.moves.map((m) => String(m.cid)));
       flipSiblings(rects.current, moved);
-      play(p, me);
+      const lines: string[] = (view.log ?? []).slice(prev.log).map((e: any) => render(e.text));
+      play(p, me, lines);
       events(prev, now, view, me, render, focusPoint(p, prev, now));
     }
     persistent(view);

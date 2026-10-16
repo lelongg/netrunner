@@ -146,12 +146,14 @@ function twoSided(front: HTMLElement, info: Info | undefined, r: DOMRect): { gho
 
 type Kind = "play" | "score" | "steal" | "trash" | "draw" | "install" | "move";
 
-function kindOf(m: Move, me: Side): Kind {
+function kindOf(m: Move, me: Side, lines: string[]): Kind {
   const from = head(m.from?.zone);
   const to = head(m.to?.zone);
   const type = m.to?.type ?? m.from?.type;
   if (to === "scored") return m.to?.holder === "runner" && m.to.owner === "corp" ? "steal" : "score";
-  if ((type === "Event" || type === "Operation") && (from === "hand" || (!m.from && m.to?.holder !== me)) && to !== "hand") return "play";
+  const title = m.to?.title ?? m.from?.title;
+  const played = !!title && lines.some((l) => l.includes(title) && /\bplays?\b/i.test(l));
+  if ((type === "Event" || type === "Operation") && (from === "hand" || (!m.from && m.to?.holder !== me)) && to !== "hand" && played) return "play";
   if (to === "discard") return "trash";
   if (to === "hand" && (!m.from || from === "deck")) return "draw";
   if ((to === "servers" || to === "rig") && (from === "hand" || !m.from)) return "install";
@@ -300,12 +302,12 @@ async function showcase(m: Move, kind: Kind, me: Side) {
   } else land(destEl, info, true);
 }
 
-export function play(plan: Plan, me: Side) {
+export function play(plan: Plan, me: Side, lines: string[] = []) {
   if (!plan.moves.length) return;
   if (reduced()) return;
   let i = 0;
   for (const m of plan.moves) {
-    const kind = kindOf(m, me);
+    const kind = kindOf(m, me, lines);
     const info = m.to ?? m.from;
     if (kind === "play" || kind === "score" || kind === "steal") {
       queue(() => showcase(m, kind, me));
