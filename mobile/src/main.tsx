@@ -14,6 +14,7 @@ import { Lobby } from "./screens/Lobby";
 import { type Role, type SavedGame, Session, clearSave, listSaves, loadSave, newRoomCode, saveId } from "./session";
 import "./styles.css";
 import "./fx/fx.css";
+import { applySettings, motionOff } from "./settings";
 
 const joinParam = new URLSearchParams(location.search).get("join")?.toUpperCase() ?? undefined;
 const gameParam = new URLSearchParams(location.search).get("game") ?? undefined;
@@ -233,7 +234,7 @@ function Opening({ label, ready }: { label: string; ready: boolean }) {
   const title = useRef<HTMLSpanElement>(null);
   const bar = useRef<HTMLElement>(null);
   useEffect(() => {
-    if (!title.current || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (!title.current || motionOff()) return;
     animate(title.current, { transform: ["translateX(-60px) skewX(-20deg)", "translateX(0) skewX(0deg)"], opacity: [0, 1] }, { duration: 0.45, ease: [0.2, 0.9, 0.3, 1.1] });
   }, []);
   useLoop(bar, { transform: ["translateX(-100%)", "translateX(250%)"] }, { duration: 0.9, ease: [0.6, 0, 0.4, 1] });
@@ -283,6 +284,7 @@ function UpdateBanner() {
   );
 }
 
+applySettings();
 installTips();
 installMotion();
 startEngineWorker();

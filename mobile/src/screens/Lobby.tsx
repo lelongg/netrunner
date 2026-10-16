@@ -4,7 +4,7 @@ import type { CardDb, Matchup, Side } from "../engine";
 import { type WireDeck, deckSize, fromWire } from "../decks";
 import type { Session } from "../session";
 import { QrCode } from "../QrCode";
-import { RELAY_URL } from "../net/relay";
+import { relayUrl } from "../net/relay";
 import { Cta, Ticker } from "../ui";
 import { DeckPicker } from "./DeckPicker";
 import { DeckViewer } from "./DeckViewer";
@@ -274,7 +274,7 @@ export function Lobby({ session, db, matchups, onLeave }: Props) {
                 </button>
               </div>
             </div>
-            {!RELAY_URL && <p class="hint">Keep this screen open until your opponent joins: switching apps pauses the game.</p>}
+            {!relayUrl() && <p class="hint">Keep this screen open until your opponent joins: switching apps pauses the game.</p>}
           </section>
         )}
 

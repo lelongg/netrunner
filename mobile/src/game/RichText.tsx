@@ -2,8 +2,10 @@ import { type ComponentChildren, h } from "preact";
 import { iconize } from "./text";
 import { glyphs } from "./Glyphs";
 import { TERMS, termKey } from "../tips";
+import { settings } from "../settings";
 
 export function withTerms(text: string): ComponentChildren {
+  if (!settings.glossary) return glyphs(text);
   return text.split(TERMS).map((part, i) => {
     const key = i % 2 ? termKey(part) : undefined;
     return key ? (

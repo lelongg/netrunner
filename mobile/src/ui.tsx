@@ -2,6 +2,7 @@ import type { ComponentChildren } from "preact";
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { animate } from "motion";
 import { Icon } from "./icons";
+import { motionOff } from "./settings";
 
 export function Meter({ value, max, tone = "cyan", small, anchor }: { value: number; max: number; tone?: "cyan" | "red" | "yellow"; small?: boolean; anchor?: string }) {
   const count = Math.max(0, Math.min(max, 12));
@@ -21,7 +22,7 @@ export function Ticker({ children, action }: { children: ComponentChildren; acti
   const track = useRef<HTMLSpanElement>(null);
   useEffect(() => {
     const el = track.current;
-    if (!width || !el || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (!width || !el || motionOff()) return;
     const anim = animate(el, { transform: ["translateX(0%)", "translateX(-50%)"] }, { duration: Math.max(6, width / 40), repeat: Infinity, ease: "linear" });
     return () => {
       anim.cancel();
@@ -93,7 +94,7 @@ export function Cta({ children, onClick, disabled }: { children: ComponentChildr
 function Sheen({ off }: { off?: boolean }) {
   const el = useRef<HTMLElement>(null);
   useEffect(() => {
-    if (off || !el.current || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (off || !el.current || motionOff()) return;
     const anim = animate(el.current, { transform: ["translateX(-150%)", "translateX(450%)"] }, { duration: 1.1, repeat: Infinity, repeatDelay: 2.2, ease: [0.6, 0, 0.3, 1] });
     return () => anim.stop();
   }, [off]);

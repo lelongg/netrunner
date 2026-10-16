@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import { type Role, type SavedGame, saveId } from "../session";
 import { Cta, Ticker } from "../ui";
 import { Icon } from "../icons";
+import { useBackClose } from "../back";
+import { SettingsMenu } from "./SettingsMenu";
+import { motionOff, onSettings, settings } from "../settings";
 
 interface Props {
   ready: boolean;
@@ -41,7 +44,7 @@ function useScramble(input: { current: HTMLInputElement | null }, active: boolea
   useEffect(() => {
     const el = input.current;
     if (!el) return;
-    if (!active || matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    if (!active || motionOff()) {
       el.placeholder = "·····";
       return;
     }
@@ -66,7 +69,11 @@ export function Home({ ready, error, initialJoin, saves, onResume, onDiscard, on
   const [name, setName] = useState(storedName() || "Player");
   const [code, setCode] = useState(initialJoin ?? "");
   const codeInput = useRef<HTMLInputElement>(null);
-  useScramble(codeInput, !code);
+  const [animations, setAnimations] = useState(settings.animations);
+  useEffect(() => onSettings(() => setAnimations(settings.animations)), []);
+  useScramble(codeInput, !code && animations);
+  const [menu, setMenu] = useState(false);
+  useBackClose(menu, () => setMenu(false));
   const go = (role: Role, c?: string, vsBot?: boolean) => {
     try {
       localStorage.setItem(NAME_KEY, name);
@@ -77,9 +84,17 @@ export function Home({ ready, error, initialJoin, saves, onResume, onDiscard, on
   };
   return (
     <>
-      <Ticker>
+      <Ticker
+        action={
+          <button class="ticker-menu" onClick={() => setMenu(!menu)} aria-label="Menu" aria-expanded={menu}>
+            <Icon name={menu ? "close" : "menu"} />
+            <span>{menu ? "Close" : "Menu"}</span>
+          </button>
+        }
+      >
         Engine <span class={ready ? "cyan" : "yellow"}>{ready ? "ready" : error ? "offline" : "loading"}</span>
       </Ticker>
+      {menu && <SettingsMenu onClose={() => setMenu(false)} />}
       <div class="screen home">
         <section class="panel hero">
           <div class="row">

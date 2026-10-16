@@ -1,3 +1,4 @@
+import { settings } from "./settings";
 import { animate } from "motion";
 
 const MEANINGS: Record<string, string> = {
@@ -61,6 +62,7 @@ const ZONES = ".sheet, .log, .encounter, .prompt, .opp, .me-bar, .fact-chips";
 
 function keyOf(target: Element): { key: string; anchor: Element } | null {
   const tagged = target.closest<HTMLElement>("[data-tip]");
+  if (tagged?.classList.contains("term") && !settings.glossary) return null;
   if (tagged) return { key: tagged.dataset.tip!, anchor: tagged };
   const icon = target.closest(".sym, .icon");
   if (!icon || icon.closest("button") || !icon.closest(ZONES)) return null;

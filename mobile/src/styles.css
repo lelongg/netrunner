@@ -2749,6 +2749,7 @@ button:active:not(:disabled) {
 .footer span:last-child {
   flex-basis: 100%;
   letter-spacing: 0.12em;
+  text-align: center;
 }
 
 .encounter.live {
@@ -2905,4 +2906,54 @@ button:active:not(:disabled) {
 .prompt-input input::placeholder {
   color: color-mix(in srgb, var(--cyan) 55%, transparent);
   font-variant-numeric: tabular-nums;
+}
+
+.settings-menu {
+  width: min(320px, calc(100vw - 12px));
+}
+
+.setting {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+}
+
+.setting-state {
+  color: var(--muted);
+  letter-spacing: 0.2em;
+}
+
+.setting-state.on {
+  color: var(--cyan);
+}
+
+.setting-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.setting-field input {
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+
+.setting-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.setting-actions button {
+  flex: 1;
+}
+
+.no-motion *,
+.no-motion *::before,
+.no-motion *::after {
+  animation: none !important;
+  transition: none !important;
 }

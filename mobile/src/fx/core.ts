@@ -1,4 +1,5 @@
 import { animate as motion } from "motion";
+import { motionOff } from "../settings";
 
 const TRANSFORMS = ["transformPerspective", "x", "y", "rotate", "rotateY", "skewX", "scale", "scaleX", "scaleY"] as const;
 
@@ -54,7 +55,7 @@ export function animate(target: any, keyframes: Record<string, any>, { keep, ...
 
 export type Point = [number, number];
 
-export const reduced = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+export const reduced = motionOff;
 
 let root: HTMLElement | null = null;
 

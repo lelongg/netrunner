@@ -3,7 +3,7 @@ import { HeuristicBot } from "./bot/heuristic.ts";
 import { type WireDeck, engineDeck, fromWire } from "./decks";
 import { type GameHost, type LocalEntry, type Op, type Seat as ViewSeat, makeHost } from "./game/runner";
 import { PeerTransport } from "./net/p2p";
-import { RELAY_URL, RelayTransport, createGame, joinGame, rejoinLink, storedTicket, watchLink } from "./net/relay";
+import { RelayTransport, relayUrl, createGame, joinGame, rejoinLink, storedTicket, watchLink } from "./net/relay";
 import type { Entry, LinkStatus, Payload, Seat, Transport } from "./net/types";
 
 export type Role = "host" | "guest" | "local" | "spectator";
@@ -265,11 +265,11 @@ export class Session {
     const handlers = { onEntries: (list: Entry[]) => this.receive(list), onStatus: (s: LinkStatus) => this.linkChanged(s) };
     try {
       if (this.watching) {
-        if (!RELAY_URL || !code) throw new Error("Watching a game needs the online relay.");
+        if (!relayUrl() || !code) throw new Error("Watching a game needs the online relay.");
         this.transport = new RelayTransport({ code, seat: null }, this.lastSeq(), handlers);
         return;
       }
-      if (RELAY_URL) {
+      if (relayUrl()) {
         const ticket = this.seat === 0 && !code ? await createGame() : this.seat === 0 ? storedTicket(code!) : await joinGame(code!);
         if (!ticket) throw new Error("This game was created on another device.");
         if (this.closed) return;

@@ -1,6 +1,9 @@
+import { settings } from "../settings";
 import { type Entry, type LinkStatus, Outbox, type Payload, type Seat, type Transport, type TransportHandlers } from "./types";
 
-export const RELAY_URL: string | undefined = import.meta.env.VITE_RELAY_URL?.replace(/\/$/, "") || undefined;
+export const DEFAULT_RELAY: string | undefined = import.meta.env.VITE_RELAY_URL?.replace(/\/$/, "") || undefined;
+
+export const relayUrl = (): string | undefined => settings.relay.trim().replace(/\/$/, "") || DEFAULT_RELAY;
 
 export interface SeatTicket {
   code: string;
@@ -62,7 +65,7 @@ const BUSY = "The relay is busy right now. Try again in a minute.";
 
 async function call(path: string): Promise<{ status: number; body: any }> {
   for (let attempt = 0; ; attempt++) {
-    const res = await fetch(`${RELAY_URL}${path}`, { method: "POST" });
+    const res = await fetch(`${relayUrl()}${path}`, { method: "POST" });
     if (res.status !== 429) return { status: res.status, body: await res.json().catch(() => ({})) };
     if (attempt >= 4) return { status: 429, body: { error: BUSY } };
     const hinted = Number(res.headers.get("Retry-After")) * 1000;
@@ -150,7 +153,7 @@ export class RelayTransport implements Transport {
     if (this.closed) return;
     clearTimeout(this.retryTimer);
     const auth = this.ticket.seat === null ? "watch=1" : `token=${this.ticket.token}`;
-    const url = `${RELAY_URL!.replace(/^http/, "ws")}/games/${this.ticket.code}/ws?${auth}&since=${this.last}`;
+    const url = `${relayUrl()!.replace(/^http/, "ws")}/games/${this.ticket.code}/ws?${auth}&since=${this.last}`;
     const ws = new WebSocket(url);
     this.ws = ws;
     ws.onmessage = (event) => {
@@ -213,7 +216,7 @@ export class RelayTransport implements Transport {
   private async checkSeat() {
     if (this.ticket.seat === null) return;
     try {
-      const res = await fetch(`${RELAY_URL}/games/${this.ticket.code}/seat?token=${this.ticket.token}`);
+      const res = await fetch(`${relayUrl()}/games/${this.ticket.code}/seat?token=${this.ticket.token}`);
       if (res.status === 404) this.die("This game no longer exists, or your seat was given to someone else.");
     } catch {}
   }

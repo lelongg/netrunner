@@ -1,7 +1,8 @@
 import { useEffect, useLayoutEffect, useRef } from "preact/hooks";
 import { animate } from "motion";
+import { motionOff } from "../settings";
 
-const still = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+const still = motionOff;
 
 export function Count({ value, anchor }: { value: number; anchor?: string }) {
   const el = useRef<HTMLSpanElement>(null);

@@ -18,6 +18,7 @@ import { glyphs } from "./Glyphs";
 import { Breakers } from "./Breakers";
 import { CardImage } from "./CardImage";
 import { withTerms } from "./RichText";
+import { motionOff } from "../settings";
 
 interface Props {
   session: Session;
@@ -154,7 +155,7 @@ function ScoreHalf({ side, points, req }: { side: Side; points: number; req: num
   useEffect(() => {
     const before = shown.current;
     shown.current = points;
-    if (points <= before || !row.current || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (points <= before || !row.current || motionOff()) return;
     const segs = [...row.current.children].slice(before, points);
     segs.forEach((seg, i) => animate(seg, { scaleY: [4, 1], opacity: [0, 1] }, { duration: 0.5, delay: 1.2 + i * 0.12, ease: [0.2, 1.4, 0.4, 1] }));
   }, [points]);
@@ -600,7 +601,7 @@ const NOISE = "01#$%&*+=<>/\\|{}[]?ABCDEFX";
 function Decrypt({ text }: { text: string }) {
   const [shown, setShown] = useState(text);
   useEffect(() => {
-    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (motionOff()) return;
     const start = performance.now();
     const id = setInterval(() => {
       const t = (performance.now() - start) / 520;
@@ -629,7 +630,7 @@ function Encounter({ view, ice, passed, render, onTap }: { view: any; ice: any; 
     const before = seen.current.cid === ice.cid ? seen.current.states : states;
     seen.current = { cid: ice.cid, states };
     const rows = list.current ? [...list.current.children] : [];
-    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (motionOff()) return;
     states.forEach((st, i) => {
       if (st === before[i] || !rows[i]) return;
       if (st === "broken") {
