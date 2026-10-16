@@ -14,6 +14,7 @@ interface Props {
   onResume: (save: SavedGame) => void;
   onDiscard: (save: SavedGame) => void;
   onStart: (role: Role, name: string, code?: string, vsBot?: boolean) => void;
+  onGuide: () => void;
 }
 
 function describe(save: SavedGame) {
@@ -66,7 +67,7 @@ function storedName() {
   }
 }
 
-export function Home({ ready, error, initialJoin, saves, onResume, onDiscard, onStart }: Props) {
+export function Home({ ready, error, initialJoin, saves, onResume, onDiscard, onStart, onGuide }: Props) {
   const [name, setName] = useState(storedName() || "Player");
   const [code, setCode] = useState(initialJoin ?? "");
   const codeRest = useRef<HTMLSpanElement>(null);
@@ -176,6 +177,10 @@ export function Home({ ready, error, initialJoin, saves, onResume, onDiscard, on
 
         <button class="primary" disabled={!ready} onClick={() => go("local", undefined, true)}>
           Solo · play vs the bot
+        </button>
+
+        <button disabled={!ready} onClick={onGuide}>
+          How to play · tutorial
         </button>
 
         <button disabled={!ready} onClick={() => go("local")}>

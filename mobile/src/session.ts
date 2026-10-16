@@ -20,6 +20,7 @@ export interface LobbyState {
   opponentDeckReady: boolean;
   started: boolean;
   vsBot?: boolean;
+  tutorial?: boolean;
   error?: string;
   step?: "relay" | "host";
   hint?: "unreachable";
@@ -37,6 +38,7 @@ export type SavedGame =
       mySide: Side;
       opponentName?: string;
       vsBot?: boolean;
+      tutorial?: boolean;
       setup: unknown;
       deckNames?: Partial<Record<Side, string>>;
       seed: number[];
@@ -456,6 +458,21 @@ export class Session {
 
   // ---------- local and bot games ----------
 
+  private held = false;
+
+  holdBot(held: boolean) {
+    if (held === this.held) return;
+    this.held = held;
+    if (!held) this.scheduleBot();
+  }
+
+  startTutorial(runner: WireDeck, corp: WireDeck) {
+    this.lobby = { ...this.lobby, vsBot: true, opponentName: "Bot", tutorial: true, mySide: "runner", myDeck: runner };
+    this.opponentDeck = corp;
+    this.lobby.opponentDeckReady = true;
+    this.start();
+  }
+
   enableBot() {
     this.patch({ vsBot: true, opponentName: "Bot" });
   }
@@ -467,11 +484,11 @@ export class Session {
 
   private scheduleBot() {
     const bot = this.bot;
-    if (!bot || this.botTimer !== undefined || this.closed) return;
+    if (!bot || this.botTimer !== undefined || this.closed || this.held) return;
     if (!this.views[bot.side] || this.views[bot.side].winner) return;
     this.botTimer = window.setTimeout(() => {
       this.botTimer = undefined;
-      if (this.closed) return;
+      if (this.closed || this.held) return;
       if (this.pending) return;
       const move = bot.decide(this.views[bot.side]);
       if (!move) return;
@@ -624,7 +641,7 @@ export class Session {
     this.boot(save.setup, save.seed);
     for (const entry of save.log) this.stage({ k: "exec", entry });
     this.log = [...save.log];
-    this.lobby = { ...this.lobby, opponentName: save.opponentName, vsBot: save.vsBot, started: true, opponentDeckReady: true };
+    this.lobby = { ...this.lobby, opponentName: save.opponentName, vsBot: save.vsBot, tutorial: save.tutorial, started: true, opponentDeckReady: true };
     this.makeBot();
     this.broadcast();
   }
@@ -641,6 +658,7 @@ export class Session {
         mySide: this.lobby.mySide,
         opponentName: this.lobby.opponentName,
         vsBot: this.lobby.vsBot,
+        tutorial: this.lobby.tutorial,
         setup: this.setup,
         deckNames: this.deckNames,
         seed: this.seed,

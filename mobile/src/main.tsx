@@ -11,6 +11,8 @@ import { basicCommands, promptOf, runCommands } from "./game/actions";
 import { Handoff } from "./screens/Handoff";
 import { Home } from "./screens/Home";
 import { Lobby } from "./screens/Lobby";
+import { Guide } from "./screens/Guide";
+import { fromPrecon, toWire } from "./decks";
 import { type Role, type SavedGame, Session, clearSave, listSaves, loadSave, newRoomCode, saveId } from "./session";
 import "./styles.css";
 import "./fx/fx.css";
@@ -92,6 +94,7 @@ function App() {
     if (autoPass) session!.send("continue", null, "corp");
   }, [autoPass, corpView?.log?.length, corpView?.run?.phase, corpView?.run?.position]);
 
+  const [guide, setGuide] = useState(false);
   const [opening, setOpening] = useState<string | null>(joinParam ?? watchParam ?? gameParam?.replace(/^local:.*/, "local game") ?? null);
   const afterPaint = (fn: () => void) => requestAnimationFrame(() => setTimeout(fn, 0));
 
@@ -167,9 +170,34 @@ function App() {
 
   if (opening && !session && !error) return <Opening label={opening} ready={!!loaded} />;
 
+  if (guide && loaded && !session)
+    return (
+      <Guide
+        db={loaded.db}
+        onClose={() => setGuide(false)}
+        onPlay={() => {
+          setGuide(false);
+          setOpening("tutorial");
+          afterPaint(() => {
+            const m = loaded.matchups.find((x) => x.key === "beginner") ?? loaded.matchups[0];
+            let name = "Player";
+            try {
+              name = localStorage.getItem("nsg.name")?.trim() || name;
+            } catch {}
+            const next = new Session(loaded.engine, loaded.db, "local", newRoomCode(), name, "runner");
+            next.startTutorial(toWire(fromPrecon(m.runner, loaded.db)), toWire(fromPrecon(m.corp, loaded.db)));
+            setSession(next);
+            setLocalSide("runner");
+            setOpening(null);
+          });
+        }}
+      />
+    );
+
   if (!session || !loaded) {
     return (
       <Home
+        onGuide={() => setGuide(true)}
         ready={!!loaded}
         error={error}
         initialJoin={joinParam}
