@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "preact/hooks";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { CardDb, EngineApi, Side } from "../engine";
 import type { Session } from "../session";
 import { Cta, Meter, Ticker } from "../ui";
@@ -260,6 +260,52 @@ function ZoneSheet({ zone, view, viewer, selectable, onTap, onClose }: { zone: Z
   );
 }
 
+function Overflow({ class: cls, children }: { class: string; children: preact.ComponentChildren }) {
+  const row = useRef<HTMLDivElement>(null);
+  const [hidden, setHidden] = useState<[number, number]>([0, 0]);
+  useLayoutEffect(() => {
+    const el = row.current;
+    if (!el) return;
+    const measure = () => {
+      const box = el.getBoundingClientRect();
+      let left = 0;
+      let right = 0;
+      for (const child of el.children) {
+        const r = child.getBoundingClientRect();
+        if (r.right > box.right + 4) right++;
+        else if (r.left < box.left - 4) left++;
+      }
+      setHidden((h) => (h[0] === left && h[1] === right ? h : [left, right]));
+    };
+    measure();
+    el.addEventListener("scroll", measure, { passive: true });
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => {
+      el.removeEventListener("scroll", measure);
+      observer.disconnect();
+    };
+  });
+  const go = (dir: -1 | 1) => row.current?.scrollBy({ left: dir * row.current.clientWidth * 0.8, behavior: "smooth" });
+  return (
+    <div class="overflow-wrap">
+      <div ref={row} class={`${cls} ${hidden[0] ? "fade-left" : ""} ${hidden[1] ? "fade-right" : ""}`}>
+        {children}
+      </div>
+      {hidden[0] > 0 && (
+        <button class="more-hint left" onClick={() => go(-1)} aria-label={`${hidden[0]} more to the left`}>
+          ‹ +{hidden[0]}
+        </button>
+      )}
+      {hidden[1] > 0 && (
+        <button class="more-hint right" onClick={() => go(1)} aria-label={`${hidden[1]} more to the right`}>
+          +{hidden[1]} ›
+        </button>
+      )}
+    </div>
+  );
+}
+
 function CorpArea({ view, side, mine, onTap, onZone, selectable, runServer }: { view: any; side: Side; mine: boolean; onTap: (c: any) => void; onZone: (z: ZoneRef) => void; selectable: Set<unknown>; runServer?: string }) {
   const corp = view.corp ?? {};
   const servers = corp.servers ?? {};
@@ -293,7 +339,7 @@ function CorpArea({ view, side, mine, onTap, onZone, selectable, runServer }: { 
         <span class="label">サーバー</span>
       </div>
       {!mine && <Piles view={view} zoneOwner="corp" viewer={side} onTap={onTap} onZone={onZone} selectable={selectable} centrals={false} />}
-      <div class={`servers ${mine ? "mine" : "theirs"}`}>
+      <Overflow class={`servers ${mine ? "mine" : "theirs"}`}>
         {serverOrder(servers).map((key) => {
           const s = servers[key] ?? { content: [], ices: [] };
           const ices = [...(s.ices ?? [])];
@@ -321,7 +367,7 @@ function CorpArea({ view, side, mine, onTap, onZone, selectable, runServer }: { 
             </div>
           );
         })}
-      </div>
+      </Overflow>
       {mine && <Piles view={view} zoneOwner="corp" viewer={side} onTap={onTap} onZone={onZone} selectable={selectable} centrals={false} />}
     </div>
   );

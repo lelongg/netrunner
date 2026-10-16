@@ -2802,3 +2802,45 @@ button:active:not(:disabled) {
   background: var(--seat);
   box-shadow: 0 0 6px var(--seat);
 }
+
+.overflow-wrap {
+  position: relative;
+}
+
+.servers.fade-right {
+  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 44px), transparent);
+  mask-image: linear-gradient(90deg, #000 calc(100% - 44px), transparent);
+}
+
+.servers.fade-left {
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 44px);
+  mask-image: linear-gradient(90deg, transparent, #000 44px);
+}
+
+.servers.fade-left.fade-right {
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 44px, #000 calc(100% - 44px), transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 44px, #000 calc(100% - 44px), transparent);
+}
+
+.more-hint {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  translate: 0 -50%;
+  min-height: 0;
+  padding: 8px 9px;
+  border: 1px solid var(--yellow);
+  background: rgb(6 7 8 / 0.9);
+  color: var(--yellow);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  box-shadow: 0 0 14px rgb(246 224 58 / 0.25);
+}
+
+.more-hint.right {
+  right: 0;
+}
+
+.more-hint.left {
+  left: 0;
+}
