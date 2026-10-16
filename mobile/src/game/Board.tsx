@@ -13,6 +13,7 @@ import { Icon } from "../icons";
 import { glyphs } from "./Glyphs";
 import { EventFx } from "./Fx";
 import { Breakers } from "./Breakers";
+import { RunTrace, iceKind } from "./RunTrace";
 import { CardImage } from "./CardImage";
 
 interface Props {
@@ -477,6 +478,27 @@ function breakAllFromLog(view: any, title: string, render: (m: unknown) => strin
   return undefined;
 }
 
+const NOISE = "01#$%&*+=<>/\\|{}[]?ABCDEFX";
+
+function Decrypt({ text }: { text: string }) {
+  const [shown, setShown] = useState(text);
+  useEffect(() => {
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const start = performance.now();
+    const id = setInterval(() => {
+      const t = (performance.now() - start) / 520;
+      if (t >= 1) {
+        setShown(text);
+        clearInterval(id);
+        return;
+      }
+      setShown([...text].map((ch, i) => (ch === " " || i / text.length < t ? ch : NOISE[(Math.random() * NOISE.length) | 0])).join(""));
+    }, 40);
+    return () => clearInterval(id);
+  }, [text]);
+  return <>{shown === text ? glyphs(iconize(text)) : shown}</>;
+}
+
 function Encounter({ view, ice, passed, render, onTap }: { view: any; ice: any; passed?: boolean; render: (m: unknown) => string; onTap: (card: any) => void }) {
   const allBy = passed ? breakAllFromLog(view, ice.title, render) : undefined;
   const subs: any[] = (ice.subroutines ?? []).map((sub: any) => (allBy && !sub.broken && !sub.fired ? { ...sub, broken: true, breakerTitle: allBy } : sub));
@@ -484,7 +506,7 @@ function Encounter({ view, ice, passed, render, onTap }: { view: any; ice: any; 
   const strength = ice["current-strength"] ?? ice.strength;
   const types = (ice.subtypes ?? []).join(" · ");
   return (
-    <div class={`encounter ${encountering ? "live" : ""} ${passed ? "passed" : ""}`}>
+    <div class={`encounter ${encountering ? "live" : ""} ${passed ? "passed" : ""}`} data-kind={iceKind(ice)}>
       {ice.code && (
         <button class="enc-card" onClick={() => onTap(findCard(view, ice.cid) ?? ice)} aria-label={ice.title}>
           <CardImage code={ice.code} alt={ice.title} size="small" width="48px" />
@@ -507,7 +529,7 @@ function Encounter({ view, ice, passed, render, onTap }: { view: any; ice: any; 
               return (
                 <li class={`enc-sub ${state}`}>
                   <Icon name="sub" />
-                  <span class="enc-label">{glyphs(iconize(sub.label ?? "Subroutine"))}</span>
+                  <span class="enc-label">{state === "broken" ? <Decrypt text={sub.label ?? "Subroutine"} /> : glyphs(iconize(sub.label ?? "Subroutine"))}</span>
                   <span class="enc-state">{state === "broken" ? (breaker ? `Broken · ${breaker}` : "Broken") : state === "fired" ? "Fired" : state === "skipped" ? "Won't fire" : encountering ? "Unbroken" : ""}</span>
                 </li>
               );
@@ -810,6 +832,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
     <div class={`board side-${side} ${ptype === "select" ? "selecting" : ""} ${view.run ? "in-run" : ""}`}>
       <RunFx view={view} render={render} side={side} />
       <EventFx view={view} render={render} db={db} opponent={names[opp]} />
+      <RunTrace view={view} render={render} />
       <Ticker
         action={
           <button class="ticker-menu" onClick={() => setMenu(!menu)} aria-label="Menu" aria-expanded={menu}>
@@ -929,8 +952,8 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
           {lastLog ? glyphs(iconize(render(lastLog.text)).slice(0, 140)) : "Log"}
         </button>
         <div class="enc-zone">
-        {!view.winner && (ice?.rezzed ? <Encounter view={view} render={render} onTap={tap} ice={lastIce?.cid === ice.cid && (view.encounters || view.run?.phase === "encounter-ice") ? lastIce : ice} /> : lastIce && <Encounter view={view} render={render} onTap={tap} ice={lastIce} passed />)}
-        {!view.winner && side === "runner" && view.encounters && ice?.rezzed && !(prompt && ptype !== "run") && <Breakers view={view} side={side} ice={ice} send={send} onTap={tap} disabled={disabled} />}
+          {!view.winner && (ice?.rezzed ? <Encounter view={view} render={render} onTap={tap} ice={lastIce?.cid === ice.cid && (view.encounters || view.run?.phase === "encounter-ice") ? lastIce : ice} /> : lastIce && <Encounter view={view} render={render} onTap={tap} ice={lastIce} passed />)}
+          {!view.winner && side === "runner" && view.encounters && ice?.rezzed && !(prompt && ptype !== "run") && <Breakers view={view} side={side} ice={ice} send={send} onTap={tap} disabled={disabled} />}
         </div>
         {panel}
         <MeBar view={view} side={side} name={names[side]} />

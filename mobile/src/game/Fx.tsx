@@ -71,7 +71,7 @@ function classify(text: string, ice: Set<string>, opponent: string): Effect[] {
   if ((m = text.match(/to play (.+?)\.?$/i))) return [{ chip: { kind: "play", text: m[1] }, reveal: text.startsWith(opponent) ? m[1] : undefined }];
   if ((m = text.match(/advancement counters? on (.+?)\.?$/i)) || (m = text.match(/to advance (.+?)\.?$/i))) return [{ chip: { kind: "advance", text: m[1].replace(/^an? (?:card|installed card) in /i, "") } }];
   if (/purges? virus counters/i.test(text)) return [{ chip: { kind: "purge", text: "Virus counters purged" } }];
-  if ((m = text.match(/\btrash(?:es)? (.+?)(?: at no cost| from | for |\.?$)/i)) && !/\binstall/i.test(text)) return [{ chip: { kind: "trash", text: m[1] } }];
+  if ((m = text.match(/\btrash(?:es)? (.+?)(?: at no cost| from | for |\.?$)/i)) && !/\binstall/i.test(text) && !/^itself\b/i.test(m[1])) return [{ chip: { kind: "trash", text: m[1] } }];
   return [];
 }
 
