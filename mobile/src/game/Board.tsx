@@ -131,18 +131,17 @@ function Opponent({ view, side, name }: { view: any; side: Side; name: string })
           </span>
           <TurnState active={active} />
         </div>
-        <span class="label stats">
-          <span data-anchor={side === "runner" ? "runner-hand" : undefined}>
-            <Stat icon="hand" label={side === "runner" ? "Grip" : "HQ"}>
-              {p["hand-count"] ?? 0}
-            </Stat>
+        <div class="opp-stats">
+          {active && <Meter value={p.click ?? 0} max={Math.max(p.click ?? 0, side === "runner" ? 4 : 3)} anchor={`${side}-clicks`} />}
+          <span class="label stats">
+            <span data-anchor={side === "runner" ? "runner-hand" : undefined}>
+              <Stat icon="hand" label={side === "runner" ? "Grip" : "HQ"}>
+                {p["hand-count"] ?? 0}
+              </Stat>
+            </span>
+            {extras(p, side).map((x) => [" · ", x])}
           </span>
-          {" · "}
-          <Stat icon="click" label="Clicks">
-            {p.click ?? 0}
-          </Stat>
-          {extras(p, side).map((x) => [" · ", x])}
-        </span>
+        </div>
       </div>
     </section>
   );

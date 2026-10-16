@@ -2846,10 +2846,17 @@ button:active:not(:disabled) {
 }
 
 .stat {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35em;
+  white-space: nowrap;
   letter-spacing: 0.08em;
+}
+
+.stat .icon,
+.stat .sym {
+  margin-right: 0.35em;
+}
+
+.stat .sym {
+  vertical-align: -0.03em;
 }
 
 .stat .icon,
@@ -2859,4 +2866,12 @@ button:active:not(:disabled) {
 
 .stat .icon {
   stroke-width: 2.2;
+  vertical-align: -0.17em;
+}
+
+.opp-stats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
 }
