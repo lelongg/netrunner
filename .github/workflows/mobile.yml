@@ -63,6 +63,9 @@ jobs:
         env:
           VITE_ICE_SERVERS: ${{ secrets.ICE_SERVERS }}
 
+      - name: Build the agent server
+        run: npm ci --prefix agent && npm run build --prefix agent
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: mobile/dist

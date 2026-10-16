@@ -3,14 +3,16 @@
 Pocket Rig lets you play Netrunner online from your phone with the [Jinteki.net](https://github.com/mtgred/netrunner)
 rules engine running entirely in the browser. Both phones replay the same list of actions,
 relayed by a tiny Cloudflare Durable Object on the free plan, so either player can leave and
-come back. Solo against a bot and two-players-one-phone also work.
+come back. Solo against a bot and two-players-one-phone also work, and an
+[MCP server](agent) lets a language model such as Claude join your game from its code and play
+against you.
 
 **Play: <https://lelongg.github.io/netrunner/>** · [How it works, features and limitations](mobile/README.md)
 
 ![Home, board, access and card screens](mobile/docs/banner.jpg)
 
-This repository is a fork of Jinteki.net. The mobile app lives in [`mobile/`](mobile) and
-the relay in [`relay/`](relay); the
+This repository is a fork of Jinteki.net. The mobile app lives in [`mobile/`](mobile), the
+relay in [`relay/`](relay) and the MCP server in [`agent/`](agent); the
 engine sources under `src/clj/game` were converted to `.cljc` so they compile to JavaScript
 while the original JVM build and tests keep working. Unofficial fan project, not affiliated
 with or endorsed by Null Signal Games or the Jinteki.net team.
