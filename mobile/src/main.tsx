@@ -1,5 +1,7 @@
 import { render } from "preact";
-import { useEffect, useState } from "preact/hooks";
+import { useEffect, useRef, useState } from "preact/hooks";
+import { animate } from "motion";
+import { installMotion, useLoop } from "./fx/ui";
 import { type CardDb, type EngineApi, type Matchup, type Side, loadEngine } from "./engine";
 import { Board } from "./game/Board";
 import { storeTicket, ticketFromHash } from "./net/relay";
@@ -9,6 +11,7 @@ import { Home } from "./screens/Home";
 import { Lobby } from "./screens/Lobby";
 import { type Role, type SavedGame, Session, clearSave, listSaves, loadSave, newRoomCode, saveId } from "./session";
 import "./styles.css";
+import "./fx/fx.css";
 
 const joinParam = new URLSearchParams(location.search).get("join")?.toUpperCase() ?? undefined;
 const gameParam = new URLSearchParams(location.search).get("game") ?? undefined;
@@ -198,19 +201,7 @@ function App() {
       );
     const view = session.views[localSide];
     if (!view) return null;
-    return (
-      <Board
-        session={session}
-        engine={loaded.engine}
-        db={loaded.db}
-        side={localSide}
-        view={view}
-        handoffLog={handoffLog}
-        onSwitchSide={() => setHandoff(otherSide(localSide))}
-        onLeave={leave}
-        onExit={exit}
-      />
-    );
+    return <Board session={session} engine={loaded.engine} db={loaded.db} side={localSide} view={view} handoffLog={handoffLog} onSwitchSide={() => setHandoff(otherSide(localSide))} onLeave={leave} onExit={exit} />;
   }
 
   const view = session.views[lobby.mySide];
@@ -219,14 +210,21 @@ function App() {
 }
 
 function Opening({ label, ready }: { label: string; ready: boolean }) {
+  const title = useRef<HTMLSpanElement>(null);
+  const bar = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (!title.current || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    animate(title.current, { x: [-60, 0], skewX: [-20, 0], opacity: [0, 1], letterSpacing: ["0.5em", "0.02em"] }, { type: "spring", visualDuration: 0.5, bounce: 0.25 });
+  }, []);
+  useLoop(bar, { x: ["-100%", "250%"] }, { duration: 0.9, ease: [0.6, 0, 0.4, 1] });
   return (
     <div class="opening" role="status" aria-live="polite">
       <span class="label">{ready ? "Opening" : "Loading engine"}</span>
-      <span class="opening-title" data-text={label}>
+      <span class="opening-title" ref={title} data-text={label}>
         {label}
       </span>
       <span class="opening-bar">
-        <i />
+        <i ref={bar} />
       </span>
     </div>
   );
@@ -265,6 +263,7 @@ function UpdateBanner() {
   );
 }
 
+installMotion();
 render(
   <>
     <App />

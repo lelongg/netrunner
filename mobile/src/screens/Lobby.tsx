@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "preact/hooks";
+import { useEffect, useMemo, useRef, useState } from "preact/hooks";
+import { useLoop } from "../fx/ui";
 import type { CardDb, Matchup, Side } from "../engine";
 import { type WireDeck, deckSize, fromWire } from "../decks";
 import type { Session } from "../session";
@@ -50,7 +51,7 @@ function JoinStatus({ lobby }: { lobby: Session["lobby"] }) {
       <ol class="steps">
         {STEPS.map((s, i) => (
           <li class={i < current ? "done" : i === current ? "active" : ""}>
-            <span class="step-mark" aria-hidden="true" />
+            {i === current ? <BlinkMark /> : <span class="step-mark" aria-hidden="true" />}
             {s.label}
           </li>
         ))}
@@ -127,31 +128,7 @@ function NameField({ name, onSave }: { name: string; onSave: (name: string) => v
   );
 }
 
-function Seat({
-  label,
-  side,
-  deck,
-  db,
-  matchups,
-  onPick,
-  onSide,
-  locked,
-  inline,
-  name,
-  onName,
-}: {
-  label: string;
-  inline?: boolean;
-  name?: string;
-  onName?: (name: string) => void;
-  side: Side;
-  deck?: WireDeck;
-  db: CardDb;
-  matchups: Matchup[];
-  onPick: (d: WireDeck) => void;
-  onSide?: (s: Side) => void;
-  locked?: boolean;
-}) {
+function Seat({ label, side, deck, db, matchups, onPick, onSide, locked, inline, name, onName }: { label: string; inline?: boolean; name?: string; onName?: (name: string) => void; side: Side; deck?: WireDeck; db: CardDb; matchups: Matchup[]; onPick: (d: WireDeck) => void; onSide?: (s: Side) => void; locked?: boolean }) {
   const [choosing, setChoosing] = useState(false);
   const [viewing, setViewing] = useState(false);
   const current = useMemo(() => (deck ? fromWire(deck, db) : undefined), [deck]);
@@ -265,11 +242,7 @@ export function Lobby({ session, db, matchups, onLeave }: Props) {
                 </button>
               </div>
             </div>
-            <p class="hint">
-              {RELAY_URL
-                ? "Your opponent can join even if you leave this screen: the game waits on the relay."
-                : "Keep this screen open until your opponent joins: switching apps pauses the game."}
-            </p>
+            <p class="hint">{RELAY_URL ? "Your opponent can join even if you leave this screen: the game waits on the relay." : "Keep this screen open until your opponent joins: switching apps pauses the game."}</p>
           </section>
         )}
 
@@ -286,44 +259,12 @@ export function Lobby({ session, db, matchups, onLeave }: Props) {
         {lobby.role === "guest" && !inLobby && lobby.status !== "closed" && <JoinStatus lobby={lobby} />}
         {lobby.error && <p class="error">{lobby.error}</p>}
 
-        {inLobby && (
-          <Seat
-            key={lobby.mySide}
-            label={lobby.role === "local" && !lobby.vsBot ? "Player 1" : "You"}
-            name={lobby.myName}
-            onName={(n) => session.setName(n)}
-            inline={lobby.role !== "local" && !inviting}
-            side={lobby.mySide}
-            deck={lobby.myDeck}
-            db={db}
-            matchups={matchups}
-            onPick={(d) => session.setDeck(d)}
-            onSide={
-              lobby.role !== "guest"
-                ? (s) => session.setSide(s)
-                : undefined
-            }
-          />
-        )}
+        {inLobby && <Seat key={lobby.mySide} label={lobby.role === "local" && !lobby.vsBot ? "Player 1" : "You"} name={lobby.myName} onName={(n) => session.setName(n)} inline={lobby.role !== "local" && !inviting} side={lobby.mySide} deck={lobby.myDeck} db={db} matchups={matchups} onPick={(d) => session.setDeck(d)} onSide={lobby.role !== "guest" ? (s) => session.setSide(s) : undefined} />}
 
-        {lobby.role === "local" && (
-          <Seat
-            key={other(lobby.mySide)}
-            label={lobby.vsBot ? "Bot" : "Player 2"}
-            side={other(lobby.mySide)}
-            deck={session.localOpponentDeck}
-            db={db}
-            matchups={matchups}
-            onPick={(d) => session.setDeck(d, other(lobby.mySide))}
-          />
-        )}
+        {lobby.role === "local" && <Seat key={other(lobby.mySide)} label={lobby.vsBot ? "Bot" : "Player 2"} side={other(lobby.mySide)} deck={session.localOpponentDeck} db={db} matchups={matchups} onPick={(d) => session.setDeck(d, other(lobby.mySide))} />}
 
         <div class="lobby-footer">
-          {lobby.role === "host" && !inviting && (
-            <p class={`status ${lobby.opponentDeckReady ? "connected" : ""}`}>
-              {lobby.opponentDeckReady ? `${opponent} is ready` : `Waiting for ${opponent} to pick a deck…`}
-            </p>
-          )}
+          {lobby.role === "host" && !inviting && <p class={`status ${lobby.opponentDeckReady ? "connected" : ""}`}>{lobby.opponentDeckReady ? `${opponent} is ready` : `Waiting for ${opponent} to pick a deck…`}</p>}
           {lobby.role === "guest" ? (
             inLobby &&
             (lobby.ready ? (
@@ -347,4 +288,10 @@ export function Lobby({ session, db, matchups, onLeave }: Props) {
       </div>
     </>
   );
+}
+
+function BlinkMark() {
+  const el = useRef<HTMLSpanElement>(null);
+  useLoop(el, { opacity: [1, 0.15, 1], scale: [1, 0.7, 1] }, { duration: 1, ease: "easeInOut" });
+  return <span ref={el} class="step-mark" aria-hidden="true" />;
 }

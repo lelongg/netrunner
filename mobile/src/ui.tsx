@@ -1,37 +1,15 @@
 import type { ComponentChildren } from "preact";
-import { useLayoutEffect, useRef, useState } from "preact/hooks";
+import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
+import { animate } from "motion";
 import { Icon } from "./icons";
 
-export function Meter({ value, max, tone = "cyan", small }: { value: number; max: number; tone?: "cyan" | "red" | "yellow"; small?: boolean }) {
+export function Meter({ value, max, tone = "cyan", small, anchor }: { value: number; max: number; tone?: "cyan" | "red" | "yellow"; small?: boolean; anchor?: string }) {
   const count = Math.max(0, Math.min(max, 12));
   return (
-    <span class={`meter ${tone} ${small ? "sm" : ""}`} role="img" aria-label={`${value} of ${max}`}>
+    <span class={`meter ${tone} ${small ? "sm" : ""}`} role="img" aria-label={`${value} of ${max}`} data-anchor={anchor}>
       {Array.from({ length: count }, (_, i) => (
         <i class={i < value ? "on" : ""} />
       ))}
-    </span>
-  );
-}
-
-export function Bump({ value, children, delta }: { value: unknown; children: ComponentChildren; delta?: boolean }) {
-  const prev = useRef(value);
-  const dir = useRef<string>();
-  const diff = useRef(0);
-  if (prev.current !== value) {
-    diff.current = Number(value) - Number(prev.current);
-    dir.current = diff.current > 0 ? "bump-up" : "bump-down";
-    prev.current = value;
-  }
-  return (
-    <span class="bump-wrap">
-      <span key={String(value)} class={dir.current ? `bump ${dir.current}` : undefined}>
-        {children}
-      </span>
-      {delta && diff.current !== 0 && Number.isFinite(diff.current) && (
-        <span key={`d${String(value)}`} class={`delta ${diff.current > 0 ? "up" : "down"}`} aria-hidden="true">
-          {diff.current > 0 ? `+${diff.current}` : `\u2212${-diff.current}`}
-        </span>
-      )}
     </span>
   );
 }
@@ -40,9 +18,16 @@ export function Ticker({ children, action }: { children: ComponentChildren; acti
   const feed = useRef<HTMLSpanElement>(null);
   const text = useRef<HTMLSpanElement>(null);
   const [width, setWidth] = useState(0);
+  const track = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    if (!width || !track.current || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const anim = animate(track.current, { x: ["0%", "-50%"] }, { duration: Math.max(6, width / 40), repeat: Infinity, ease: "linear" });
+    return () => anim.stop();
+  }, [width]);
   useLayoutEffect(() => {
     const measure = () => {
-      const box = feed.current, inner = text.current;
+      const box = feed.current,
+        inner = text.current;
       if (!box || !inner) return;
       setWidth(inner.scrollWidth > box.clientWidth + 1 ? inner.scrollWidth : 0);
     };
@@ -57,7 +42,7 @@ export function Ticker({ children, action }: { children: ComponentChildren; acti
     <div class="ticker">
       <span class="live">LIVE FEED</span>
       <span class={`feed ${width ? "scrolling" : ""}`} ref={feed}>
-        <span class="feed-track" style={width ? `animation-duration: ${Math.max(6, width / 40)}s` : undefined}>
+        <span class="feed-track" ref={track}>
           <span class="feed-text" ref={text}>
             {children}
           </span>
@@ -86,10 +71,21 @@ export function LogoMark() {
 export function Cta({ children, onClick, disabled }: { children: ComponentChildren; onClick?: () => void; disabled?: boolean }) {
   return (
     <button class="cta" onClick={onClick} disabled={disabled}>
+      <Sheen off={disabled} />
       <span>
         <span class="cta-label">{children}</span>
         <Icon name="arrow-right" class="cta-arrow" />
       </span>
     </button>
   );
+}
+
+function Sheen({ off }: { off?: boolean }) {
+  const el = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (off || !el.current || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const anim = animate(el.current, { x: ["-150%", "450%"] }, { duration: 1.1, repeat: Infinity, repeatDelay: 2.2, ease: [0.6, 0, 0.3, 1] });
+    return () => anim.stop();
+  }, [off]);
+  return <i ref={el} class="cta-sheen" aria-hidden="true" />;
 }

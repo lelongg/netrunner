@@ -1,0 +1,548 @@
+.fx-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+  overflow: hidden;
+  contain: strict;
+}
+
+.fx-layer > * {
+  position: absolute;
+  pointer-events: none;
+}
+
+.tone-cyan {
+  --tone: #22d3ee;
+}
+.tone-red {
+  --tone: #ff3b30;
+}
+.tone-gold {
+  --tone: #f6e03a;
+}
+.tone-violet {
+  --tone: #c792ff;
+}
+.tone-orange {
+  --tone: #ff9f1c;
+}
+.tone-blue {
+  --tone: #7fb0ff;
+}
+.tone-white {
+  --tone: #f1ede4;
+}
+
+.fx-flash {
+  inset: 0;
+  background: var(--tone);
+  mix-blend-mode: screen;
+}
+
+.fx-vignette {
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 45%, color-mix(in srgb, var(--tone) 55%, transparent) 100%);
+  mix-blend-mode: screen;
+}
+
+.fx-spark,
+.fx-shard {
+  border-radius: 50%;
+  margin: -3px 0 0 -3px;
+  box-shadow: 0 0 10px currentColor;
+}
+
+.fx-shard {
+  border-radius: 1px;
+}
+
+.fx-ring {
+  border-radius: 50%;
+  border: 3px solid var(--tone);
+  box-shadow:
+    0 0 18px var(--tone),
+    inset 0 0 18px var(--tone);
+}
+
+.fx-rays {
+  border-radius: 50%;
+  background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--tone) 70%, transparent) 0deg 6deg, transparent 6deg 22deg);
+  -webkit-mask: radial-gradient(circle, #000 0 18%, transparent 70%);
+  mask: radial-gradient(circle, #000 0 18%, transparent 70%);
+  mix-blend-mode: screen;
+}
+
+.fx-floater {
+  translate: -50% -50%;
+  white-space: nowrap;
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 20px;
+  text-transform: uppercase;
+  color: var(--tone);
+  text-shadow:
+    0 0 12px var(--tone),
+    0 2px 0 #000,
+    0 0 2px #000;
+}
+
+.fx-floater.big {
+  font-size: 30px;
+}
+
+.fx-banner {
+  left: 0;
+  right: 0;
+  top: 32%;
+  display: flex;
+  justify-content: center;
+  overflow: hidden;
+  padding: 20px 0;
+}
+
+.fx-banner-band {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 16px 12px;
+  background: linear-gradient(90deg, transparent, rgb(6 7 8 / 0.92) 12%, rgb(6 7 8 / 0.92) 88%, transparent);
+  border-top: 2px solid var(--tone);
+  border-bottom: 2px solid var(--tone);
+  box-shadow: 0 0 40px color-mix(in srgb, var(--tone) 35%, transparent);
+}
+
+.fx-banner-title {
+  position: relative;
+  font-family: var(--display);
+  font-weight: 900;
+  line-height: 0.9;
+  text-transform: uppercase;
+  color: var(--tone);
+  text-shadow:
+    0 0 22px var(--tone),
+    3px 0 0 rgb(255 59 48 / 0.6),
+    -3px 0 0 rgb(34 211 238 / 0.6);
+  white-space: nowrap;
+}
+
+.size-xl .fx-banner-title {
+  font-size: 68px;
+}
+.size-lg .fx-banner-title {
+  font-size: 52px;
+}
+.size-md .fx-banner-title {
+  font-size: 34px;
+}
+
+.fx-banner-sub {
+  font-size: 11px;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+.fx-stamp {
+  translate: -50% -50%;
+  padding: 4px 14px;
+  border: 3px solid var(--tone);
+  color: var(--tone);
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 34px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background: rgb(6 7 8 / 0.7);
+  box-shadow: 0 0 24px color-mix(in srgb, var(--tone) 50%, transparent);
+}
+
+.fx-glitch {
+  inset: 0;
+}
+
+.fx-glitch-bar {
+  position: absolute;
+  left: -10%;
+  right: -10%;
+  mix-blend-mode: screen;
+}
+
+.fx-coin {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff8c4, var(--tone) 45%, #a07800);
+  box-shadow: 0 0 10px var(--tone);
+}
+
+.fx-ghost {
+  position: absolute;
+  transform-origin: 0 0;
+  z-index: 2;
+  filter: drop-shadow(0 14px 18px rgb(0 0 0 / 0.6));
+}
+
+.fx-ghost > .tile,
+.fx-face > .tile {
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0;
+  animation: none;
+}
+
+.fx-ghost .tile img,
+.fx-card-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.fx-flip {
+  transform-style: preserve-3d;
+  perspective: 600px;
+}
+
+.fx-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+}
+
+.fx-back {
+  transform: rotateY(180deg);
+}
+
+.fx-burn {
+  filter: drop-shadow(0 0 10px #ff6a00) sepia(0.6) saturate(2.5) hue-rotate(-20deg) brightness(0.85);
+}
+
+.fx-showcase {
+  z-index: 4;
+}
+
+.fx-big {
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.fx-glow,
+.fx-aura {
+  position: absolute;
+  inset: -10px;
+  border-radius: 14px;
+  box-shadow:
+    0 0 0 2px var(--tone),
+    0 0 40px 6px var(--tone),
+    0 0 120px 20px color-mix(in srgb, var(--tone) 45%, transparent);
+  pointer-events: none;
+}
+
+.fx-lunge {
+  z-index: 3;
+  filter: drop-shadow(0 0 14px rgb(34 211 238 / 0.7)) drop-shadow(0 18px 18px rgb(0 0 0 / 0.6));
+}
+
+.fx-slash {
+  height: 4px;
+  border-radius: 4px;
+  transform-origin: 0 50%;
+  background: linear-gradient(90deg, transparent, var(--tone) 20%, #fff 50%, var(--tone) 80%, transparent);
+  box-shadow:
+    0 0 16px var(--tone),
+    0 0 4px #fff;
+}
+
+.fx-streak {
+  width: 70px;
+  height: 2px;
+  margin-top: -1px;
+  transform-origin: 0 50%;
+  background: linear-gradient(90deg, transparent, var(--tone), #fff);
+  box-shadow: 0 0 8px var(--tone);
+}
+
+.fx-reticle {
+  width: 120px;
+  height: 120px;
+  margin: -60px 0 0 -60px;
+  border-radius: 50%;
+  border: 2px solid #ff3b30;
+  box-shadow:
+    0 0 20px rgb(255 59 48 / 0.6),
+    inset 0 0 20px rgb(255 59 48 / 0.4);
+  background:
+    linear-gradient(#ff3b30, #ff3b30) center / 2px 100% no-repeat,
+    linear-gradient(#ff3b30, #ff3b30) center / 100% 2px no-repeat;
+  -webkit-mask: radial-gradient(circle, transparent 0 14px, #000 15px);
+  mask: radial-gradient(circle, transparent 0 14px, #000 15px);
+}
+
+.fx-crack {
+  height: 2px;
+  transform-origin: 0 50%;
+  background: linear-gradient(90deg, #fff, rgb(255 59 48 / 0.8) 30%, transparent);
+  box-shadow: 0 0 6px #ff3b30;
+}
+
+.fx-confetti {
+  width: 8px;
+  height: 12px;
+  border-radius: 1px;
+}
+
+.fx-finale {
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(ellipse at center, rgb(6 7 8 / 0.55), rgb(6 7 8 / 0.85));
+  z-index: 5;
+}
+
+.fx-finale-word {
+  display: flex;
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: min(22vw, 120px);
+  line-height: 1;
+}
+
+.fx-finale-word span {
+  display: inline-block;
+}
+
+.fx-finale.won .fx-finale-word {
+  color: #f6e03a;
+  text-shadow:
+    0 0 40px #f6e03a,
+    4px 0 0 rgb(255 59 48 / 0.6),
+    -4px 0 0 rgb(34 211 238 / 0.6);
+}
+
+.fx-finale.lost .fx-finale-word {
+  color: #ff3b30;
+  text-shadow:
+    0 0 40px #ff3b30,
+    5px 0 0 rgb(34 211 238 / 0.5);
+}
+
+.fx-showdown {
+  inset: 0;
+  background: rgb(0 0 0 / 0.55);
+  z-index: 4;
+}
+
+.fx-showdown-label {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.fx-showdown-kind {
+  font-size: 10px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--tone);
+}
+
+.fx-showdown-title {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 40px;
+  line-height: 1;
+  text-transform: uppercase;
+  color: var(--text);
+  text-shadow: 0 0 24px var(--tone);
+}
+
+.fx-showdown-subs {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.fx-showdown-subs span {
+  padding: 2px 10px;
+  border-left: 2px solid var(--tone);
+  background: rgb(6 7 8 / 0.7);
+}
+
+.fx-lock {
+  position: absolute;
+  inset: -7px;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.fx-lock i {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border: 0 solid var(--tone);
+  filter: drop-shadow(0 0 4px var(--tone));
+}
+
+.fx-lock .tl {
+  top: 0;
+  left: 0;
+  border-width: 2px 0 0 2px;
+}
+.fx-lock .tr {
+  top: 0;
+  right: 0;
+  border-width: 2px 2px 0 0;
+}
+.fx-lock .bl {
+  bottom: 0;
+  left: 0;
+  border-width: 0 0 2px 2px;
+}
+.fx-lock .br {
+  bottom: 0;
+  right: 0;
+  border-width: 0 2px 2px 0;
+}
+
+.fx-firewall {
+  position: absolute;
+  inset: -4px;
+  z-index: 3;
+  pointer-events: none;
+  overflow: hidden;
+  border: 1px solid var(--tone);
+  border-radius: 4px;
+  box-shadow:
+    0 0 16px color-mix(in srgb, var(--tone) 70%, transparent),
+    inset 0 0 18px color-mix(in srgb, var(--tone) 45%, transparent);
+  background: repeating-linear-gradient(0deg, transparent 0 3px, color-mix(in srgb, var(--tone) 18%, transparent) 3px 4px);
+  mix-blend-mode: screen;
+}
+
+.fx-firewall i {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 30%;
+  background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--tone) 50%, transparent), transparent);
+}
+
+.fx-server-scan {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 40px;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent, rgb(34 211 238 / 0.2), transparent);
+}
+
+.fx-glint {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 30%, rgb(255 255 255 / 0.75) 48%, transparent 66%);
+  mix-blend-mode: screen;
+}
+
+.server.running {
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 0 18px color-mix(in srgb, var(--cyan) 40%, transparent);
+}
+
+.playfield {
+  will-change: transform;
+}
+
+.cta {
+  position: relative;
+  overflow: hidden;
+}
+
+.cta-sheen {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 30%;
+  pointer-events: none;
+  background: linear-gradient(100deg, transparent, rgb(255 255 255 / 0.55), transparent);
+  mix-blend-mode: overlay;
+}
+
+.count {
+  display: inline-block;
+  font-variant-numeric: tabular-nums;
+}
+
+.count.counting-up {
+  color: #fff6b0;
+  text-shadow: 0 0 14px var(--yellow);
+}
+
+.count.counting-down {
+  filter: brightness(0.75);
+}
+
+.encounter[data-kind="barrier"] {
+  --ice: #ff9f1c;
+}
+.encounter[data-kind="gate"] {
+  --ice: #7fb0ff;
+}
+.encounter[data-kind="sentry"] {
+  --ice: #ff3b30;
+}
+.encounter[data-kind="other"] {
+  --ice: #c792ff;
+}
+
+.encounter.live {
+  border-left-color: var(--ice, var(--red));
+  background: repeating-linear-gradient(90deg, transparent 0 22px, color-mix(in srgb, var(--ice, var(--red)) 7%, transparent) 22px 23px), repeating-linear-gradient(0deg, transparent 0 22px, color-mix(in srgb, var(--ice, var(--red)) 7%, transparent) 22px 23px), var(--panel-2);
+}
+
+.encounter.live .enc-phase {
+  color: var(--ice, var(--red));
+}
+
+.encounter.live .enc-card .card-image {
+  box-shadow:
+    0 0 0 1px var(--ice, var(--line-2)),
+    0 0 18px color-mix(in srgb, var(--ice, var(--red)) 45%, transparent);
+}
+
+.enc-text {
+  position: relative;
+}
+
+.enc-strike {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 52%;
+  height: 2px;
+  transform-origin: 0 50%;
+  background: var(--cyan);
+  box-shadow: 0 0 8px var(--cyan);
+}
+
+.enc-sub.broken .enc-label {
+  text-decoration: none;
+}

@@ -21,6 +21,7 @@
   "dependencies": {
     "@fontsource/big-shoulders-display": "^5.2.5",
     "@fontsource/space-mono": "^5.2.5",
+    "motion": "13.4.6",
     "preact": "^10.24.3",
     "trystero": "0.25.4",
     "uqr": "0.1.3"

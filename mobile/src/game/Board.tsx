@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { CardDb, EngineApi, Side } from "../engine";
 import type { Session } from "../session";
-import { Bump, Cta, Meter, Ticker } from "../ui";
-import { type Command, basicCommands, cardRef, currentIce, findCard, otherSide, promptOf, runCommands, siblingsOf } from "./actions";
+import { Cta, Meter, Ticker } from "../ui";
+import { useFx, iceKind } from "../fx/director";
+import { Count, useLoop } from "../fx/ui";
+import { animate } from "motion";
+import { type Command, pendingChoice, basicCommands, cardRef, currentIce, findCard, otherSide, promptOf, runCommands, siblingsOf } from "./actions";
 import { DeckViewer } from "../screens/DeckViewer";
 import { CardSheet } from "./CardSheet";
 import { CardTile } from "./CardTile";
@@ -11,9 +14,7 @@ import { useBackClose } from "../back";
 import { PHASE_LABELS, byServerOrder, iconize, serverLabel, serverName } from "./text";
 import { Icon } from "../icons";
 import { glyphs } from "./Glyphs";
-import { EventFx } from "./Fx";
 import { Breakers } from "./Breakers";
-import { RunTrace, iceKind } from "./RunTrace";
 import { CardImage } from "./CardImage";
 
 interface Props {
@@ -86,29 +87,38 @@ function Opponent({ view, side, name }: { view: any; side: Side; name: string })
   const points = p["agenda-point"] ?? 0;
   const req = p["agenda-point-req"] ?? 7;
   return (
-    <section class="panel opp">
+    <section class="panel opp" data-anchor={`${side}-panel`}>
       <div style="display: flex; flex-direction: column; gap: 4px">
         <span class={`label who-${side}`}>
           {side} // {name}
         </span>
         <span class="big">
-          <Bump value={p.credit ?? 0} delta>
-            {p.credit ?? 0}
-          </Bump>
+          <Count value={p.credit ?? 0} anchor={`${side}-credits`} />
           <Icon name="credit" class="big-credit" />
         </span>
       </div>
       <div class="opp-info">
-        <span class={`label turn-state ${active ? "active" : ""}`}>{active ? "Their turn" : "Waiting"}</span>
-        <span class="label" style="color: var(--text)">
+        <TurnState active={active} />
+        <span class="label" style="color: var(--text)" data-anchor={side === "runner" ? "runner-hand" : undefined}>
           {side === "runner" ? "Grip" : "HQ"} {p["hand-count"] ?? 0} · {p.click ?? 0} click
         </span>
         <span class="label stats">
-          <Bump value={points}>{points}</Bump>/{req} pts
+          <Count value={points} anchor={`${side}-points`} />/{req} pts
           {extras(p, side).map((x) => ` · ${x}`)}
         </span>
       </div>
     </section>
+  );
+}
+
+function TurnState({ active }: { active: boolean }) {
+  const dot = useRef<HTMLElement>(null);
+  useLoop(dot, { opacity: [1, 0.25, 1], scale: [1, 0.6, 1] }, { duration: 1.2, ease: "easeInOut" }, [active]);
+  return (
+    <span class={`label turn-state ${active ? "active" : ""}`}>
+      {active && <i ref={dot} class="turn-dot" />}
+      {active ? "Their turn" : "Waiting"}
+    </span>
   );
 }
 
@@ -118,11 +128,9 @@ function MeBar({ view, side, name }: { view: any; side: Side; name: string }) {
   const req = p["agenda-point-req"] ?? 7;
   const clicks = p.click ?? 0;
   return (
-    <div class="me-bar">
+    <div class="me-bar" data-anchor={`${side}-panel`}>
       <span class="big yellow">
-        <Bump value={p.credit ?? 0} delta>
-          {p.credit ?? 0}
-        </Bump>
+        <Count value={p.credit ?? 0} anchor={`${side}-credits`} />
         <Icon name="credit" class="big-credit" />
       </span>
       <div class="me-info">
@@ -131,11 +139,11 @@ function MeBar({ view, side, name }: { view: any; side: Side; name: string }) {
             {side} // {name}
           </span>
           <span class="label me-points">
-            <Bump value={points}>{points}</Bump>/{req} pts
+            <Count value={points} anchor={`${side}-points`} />/{req} pts
           </span>
         </div>
         <div class="me-line">
-          <Meter value={clicks} max={Math.max(clicks, side === "runner" ? 4 : 3)} />
+          <Meter value={clicks} max={Math.max(clicks, side === "runner" ? 4 : 3)} anchor={`${side}-clicks`} />
           <span class="label">
             {clicks} click
             {extras(p, side).map((x) => ` · ${x}`)}
@@ -157,13 +165,13 @@ const ZONE_LABELS: Record<Side, Record<ZoneKey, string>> = {
   runner: { discard: "Heap", "play-area": "Play area", rfg: "Removed", "set-aside": "Set aside" },
 };
 
-function Pile({ label, count, cards, owner, side, selectable, onOpen }: { label: string; count: number; cards?: any[]; owner: boolean; side: Side; selectable: Set<unknown>; onOpen?: () => void }) {
+function Pile({ label, count, cards, owner, side, selectable, onOpen, anchor }: { label: string; count: number; cards?: any[]; owner: boolean; side: Side; selectable: Set<unknown>; onOpen?: () => void; anchor?: string }) {
   const top = cards?.[cards.length - 1];
   const target = (cards ?? []).some((c) => selectable.has(c.cid));
   const back = `back ${side === "corp" ? "corp" : "runner"}`;
   const face = top ? <CardTile card={top} owner={owner} size="sm" onTap={onOpen} selectable={target} /> : <div class={`tile tile-sm ${count ? back : "empty"}`} />;
   return (
-    <div class="pile">
+    <div class="pile" data-anchor={anchor}>
       {face}
       <span class={target ? "yellow" : ""}>
         {label} {count}
@@ -179,14 +187,14 @@ function Piles({ view, zoneOwner, viewer, onTap, onZone, selectable, centrals = 
   const zone = (key: ZoneKey) => {
     const cards: any[] = p[key] ?? [];
     if (key !== "discard" && !cards.length) return null;
-    return <Pile label={labels[key]} count={cards.length} cards={cards} owner={owner} side={zoneOwner} selectable={selectable} onOpen={cards.length ? () => onZone({ owner: zoneOwner, key }) : undefined} />;
+    return <Pile label={labels[key]} count={cards.length} cards={cards} owner={owner} side={zoneOwner} selectable={selectable} anchor={key === "discard" ? `${zoneOwner}-discard` : undefined} onOpen={cards.length ? () => onZone({ owner: zoneOwner, key }) : undefined} />;
   };
   const extras = ["play-area", "rfg", "set-aside"].some((k) => (p[k] ?? []).length) || (p.scored ?? []).length || (p.current ?? []).length;
   if (!centrals && !extras) return null;
   return (
     <div class="piles">
       {centrals && p.identity && <CardTile card={p.identity} owner={owner} onTap={onTap} size="sm" selectable={selectable.has(p.identity.cid)} />}
-      {centrals && <Pile label={zoneOwner === "corp" ? "R&D" : "Stack"} count={p["deck-count"] ?? 0} owner={owner} side={zoneOwner} selectable={selectable} />}
+      {centrals && <Pile label={zoneOwner === "corp" ? "R&D" : "Stack"} count={p["deck-count"] ?? 0} owner={owner} side={zoneOwner} selectable={selectable} anchor={`${zoneOwner}-deck`} />}
       {centrals && zone("discard")}
       {zone("play-area")}
       {zone("rfg")}
@@ -268,19 +276,19 @@ function CorpArea({ view, side, mine, onTap, onZone, selectable, runServer }: { 
           const s = servers[key] ?? { content: [], ices: [] };
           const ices = [...(s.ices ?? [])];
           return (
-            <div class={`server ${runServer === key ? "running" : ""}`}>
+            <div class={`server ${runServer === key ? "running" : ""}`} data-server={key}>
               {mine ? (
                 <>
                   <div class="ices">{[...ices].reverse().map(tile)}</div>
                   {name(key)}
-                  <div class="content">
+                  <div class="content" data-anchor={key === "rd" ? "corp-deck" : key === "archives" ? "corp-discard" : undefined}>
                     {central(key)}
                     {(s.content ?? []).map(tile)}
                   </div>
                 </>
               ) : (
                 <>
-                  <div class="content">
+                  <div class="content" data-anchor={key === "rd" ? "corp-deck" : key === "archives" ? "corp-discard" : key === "hq" ? "corp-hand" : undefined}>
                     {central(key)}
                     {(s.content ?? []).map(tile)}
                   </div>
@@ -505,6 +513,23 @@ function Encounter({ view, ice, passed, render, onTap }: { view: any; ice: any; 
   const encountering = !passed && (!!view.encounters || view.run?.phase === "encounter-ice");
   const strength = ice["current-strength"] ?? ice.strength;
   const types = (ice.subtypes ?? []).join(" · ");
+  const states = subs.map((sub) => (sub.broken ? "broken" : sub.fired ? "fired" : sub.resolve === false ? "skipped" : "live"));
+  const list = useRef<HTMLOListElement>(null);
+  const seen = useRef<{ cid: unknown; states: string[] }>({ cid: ice.cid, states });
+  useEffect(() => {
+    const before = seen.current.cid === ice.cid ? seen.current.states : states;
+    seen.current = { cid: ice.cid, states };
+    const rows = list.current ? [...list.current.children] : [];
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    states.forEach((st, i) => {
+      if (st === before[i] || !rows[i]) return;
+      if (st === "broken") {
+        animate(rows[i], { x: [0, 10, 0], backgroundColor: ["rgba(34,211,238,0.45)", "rgba(34,211,238,0)"] }, { duration: 0.5, delay: 0.25 + i * 0.08 });
+        const strike = rows[i].querySelector(".enc-strike");
+        if (strike) animate(strike, { scaleX: [0, 1] }, { duration: 0.3, delay: 0.3 + i * 0.08, ease: [0.3, 0.9, 0.3, 1] });
+      } else if (st === "fired") animate(rows[i], { x: [0, -8, 8, -5, 0], backgroundColor: ["rgba(255,59,48,0.5)", "rgba(255,59,48,0)"] }, { duration: 0.55, delay: 0.3 });
+    });
+  }, [ice.cid, states.join()]);
   return (
     <div class={`encounter ${encountering ? "live" : ""} ${passed ? "passed" : ""}`} data-kind={iceKind(ice)}>
       {ice.code && (
@@ -522,14 +547,19 @@ function Encounter({ view, ice, passed, render, onTap }: { view: any; ice: any; 
           </span>
         </div>
         {subs.length > 0 ? (
-          <ol class="enc-subs">
-            {subs.map((sub) => {
+          <ol class="enc-subs" ref={list}>
+            {subs.map((sub, i) => {
               const breaker = sub.breakerTitle ?? (sub.breaker != null ? findCard(view, sub.breaker)?.title : undefined);
-              const state = sub.broken ? "broken" : sub.fired ? "fired" : sub.resolve === false ? "skipped" : "live";
+              const state = states[i];
               return (
                 <li class={`enc-sub ${state}`}>
                   <Icon name="sub" />
-                  <span class="enc-label">{state === "broken" ? <Decrypt text={sub.label ?? "Subroutine"} /> : glyphs(iconize(sub.label ?? "Subroutine"))}</span>
+                  <span class="enc-label">
+                    <span class="enc-text">
+                      {state === "broken" ? <Decrypt text={sub.label ?? "Subroutine"} /> : glyphs(iconize(sub.label ?? "Subroutine"))}
+                      {state === "broken" && <i class="enc-strike" />}
+                    </span>
+                  </span>
                   <span class="enc-state">{state === "broken" ? (breaker ? `Broken · ${breaker}` : "Broken") : state === "fired" ? "Fired" : state === "skipped" ? "Won't fire" : encountering ? "Unbroken" : ""}</span>
                 </li>
               );
@@ -544,70 +574,6 @@ function Encounter({ view, ice, passed, render, onTap }: { view: any; ice: any; 
 }
 
 const TOAST_MS = 4000;
-interface Fx {
-  key: number;
-  kind: "start" | "encounter" | "success" | "end" | "turn";
-  title: string;
-  sub: string;
-}
-
-function RunFx({ view, render, side }: { view: any; render: (m: unknown) => string; side: Side }) {
-  const [fx, setFx] = useState<Fx | null>(null);
-  const seen = useRef<{ server?: string; ice?: unknown; log: number }>({ log: 0 });
-  const server: string | undefined = view.run?.server?.[0];
-  const ice = currentIce(view);
-  const encountering = !!view.encounters || view.run?.phase === "encounter-ice";
-  const iceKey = encountering && ice?.rezzed ? `${server}:${ice.cid}:${view.run?.position}` : undefined;
-  const show = (kind: Fx["kind"], title: string, sub: string, buzz: number[]) => {
-    setFx({ key: Date.now(), kind, title, sub });
-    navigator.vibrate?.(buzz);
-  };
-  useEffect(() => {
-    const prev = seen.current;
-    const log: any[] = view.log ?? [];
-    if (server && !prev.server) {
-      show("start", "Run", `${serverName(server)} // initiated`, [20, 40, 60]);
-      prev.log = log.length;
-    } else if (!server && prev.server) {
-      const lines = log.slice(prev.log).map((e) => render(e.text));
-      const breached = lines.some((l) => /\bbreach(es)?\b/i.test(l));
-      const jacked = lines.some((l) => /jacks? out/i.test(l));
-      const stole = lines.some((l) => /\bsteals .+ agenda points?/i.test(l));
-      if (breached && !stole) show("success", "Breach", `${serverName(prev.server)} // run successful`, [30, 30, 30, 30, 80]);
-      else if (!breached) show("end", jacked ? "Jack out" : "Run ended", serverName(prev.server), [120]);
-    }
-    prev.server = server;
-  }, [server]);
-  useEffect(() => {
-    if (!iceKey || iceKey === seen.current.ice) return;
-    seen.current.ice = iceKey;
-    const types = (ice?.subtypes ?? []).slice(0, 2).join(" · ");
-    show("encounter", ice?.title ?? "Ice", `Encounter${types ? ` // ${types}` : ""}`, [50]);
-  }, [iceKey]);
-  const myTurn = !view.winner && view["active-player"] === side && Number(view.turn ?? 0) > 0;
-  const mounted = useRef(false);
-  useEffect(() => {
-    if (myTurn && mounted.current) show("turn", "Your turn", `Turn ${view.turn}`, [30, 60, 30]);
-    mounted.current = true;
-  }, [myTurn, view.turn]);
-  useEffect(() => {
-    if (!fx) return;
-    const t = setTimeout(() => setFx(null), fx.kind === "encounter" || fx.kind === "turn" ? 1100 : 1500);
-    return () => clearTimeout(t);
-  }, [fx?.key]);
-  if (!fx) return null;
-  return (
-    <div class={`run-fx fx-${fx.kind} from-${side}`} key={fx.key} aria-live="polite">
-      <div class="fx-band">
-        <span class="fx-title" data-text={fx.title}>
-          {fx.title}
-        </span>
-        <span class="fx-sub">{fx.sub}</span>
-      </div>
-    </div>
-  );
-}
-
 const ACTION_ERROR = "action-error";
 const TOAST_MAX = 3;
 
@@ -672,6 +638,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
   const [deckOpen, setDeckOpen] = useState(false);
   const autoZone = useRef(false);
   const render = (m: unknown) => engine.renderMessage(m);
+  useFx(view, side, render);
   const send = (command: string, args?: unknown) => session.send(command, args, side);
   const disabled = session.pending;
   const me = view[side] ?? {};
@@ -715,6 +682,13 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
   const closePrompt = () => session.say("/close-prompt", side);
 
   useEffect(() => setPicking(false), [!!view.run, promptId, view["active-player"], side]);
+  useEffect(() => {
+    const want = pendingChoice.value;
+    if (!want || !prompt) return;
+    pendingChoice.value = undefined;
+    const choice = (prompt.choices ?? []).find?.((c: any) => c?.value === want);
+    if (choice) send("choice", { eid: prompt.eid, choice: { uuid: choice.uuid } });
+  }, [promptId]);
 
   useEffect(() => {
     const wanted: Side | null = prompt?.["show-discard"] ? side : prompt?.["show-opponent-discard"] ? opp : null;
@@ -830,9 +804,6 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
 
   return (
     <div class={`board side-${side} ${ptype === "select" ? "selecting" : ""} ${view.run ? "in-run" : ""}`}>
-      <RunFx view={view} render={render} side={side} />
-      <EventFx view={view} render={render} db={db} opponent={names[opp]} />
-      <RunTrace view={view} render={render} />
       <Ticker
         action={
           <button class="ticker-menu" onClick={() => setMenu(!menu)} aria-label="Menu" aria-expanded={menu}>
@@ -957,7 +928,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
         </div>
         {panel}
         <MeBar view={view} side={side} name={names[side]} />
-        <div class="hand">
+        <div class="hand" data-anchor={`${side}-hand`}>
           {hand.map((c) => (
             <CardTile key={c.cid} card={c} owner onTap={tap} selectable={selectable.has(c.cid)} />
           ))}

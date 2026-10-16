@@ -1,6 +1,8 @@
-import { useEffect, useState } from "preact/hooks";
+import { useEffect, useRef, useState } from "preact/hooks";
+import { animate } from "motion";
+import { useLoop } from "../fx/ui";
 import type { Side } from "../engine";
-import { type Command, cardCommands, cardRef } from "./actions";
+import { type Command, cardCommands, cardRef, pendingChoice } from "./actions";
 import { CardImage, ZoomableCardImage } from "./CardImage";
 import { visibleCode } from "./CardTile";
 import { Pager } from "./Pager";
@@ -68,10 +70,14 @@ function cardFacts(card: any, viewer: Side, view: any, known: boolean): Facts {
 
 function CardBack({ side }: { side: string }) {
   const corp = side === "Corp";
+  const scan = useRef<HTMLSpanElement>(null);
+  const name = useRef<HTMLSpanElement>(null);
+  useLoop(scan, { y: ["-30%", "1100%"] }, { duration: 3.2, ease: "linear" });
+  useLoop(name, { x: [0, 0, -3, 4, 0, 0], opacity: [1, 1, 0.55, 1, 0.8, 1] }, { duration: 4, times: [0, 0.86, 0.88, 0.9, 0.93, 1], ease: "linear" });
   return (
     <div class={`sheet-img card-back ${corp ? "corp" : "runner"}`} aria-label="Hidden card">
       <span class="back-frame" />
-      <span class="back-name" data-text={corp ? "CORP" : "RUNNER"}>
+      <span class="back-name" ref={name} data-text={corp ? "CORP" : "RUNNER"}>
         {corp ? "CORP" : "RUNNER"}
       </span>
       <span class="back-stamp">Classified</span>
@@ -80,7 +86,7 @@ function CardBack({ side }: { side: string }) {
         <i />
         <i />
       </span>
-      <span class="back-scan" />
+      <span class="back-scan" ref={scan} />
     </div>
   );
 }
@@ -108,8 +114,14 @@ export function CardSheet({ card, view, side, db, send, onClose, disabled, index
   const installList: unknown[] = view.corp?.["install-list"] ?? [];
   useEffect(() => setInstalling(false), [card.cid]);
   const swipe = useSwipe((dir) => !installing && onStep?.(dir));
+  const head = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!slide || !head.current || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    animate(head.current, { x: [slide * 70, 0], opacity: [0, 1], rotate: [slide * 3, 0] }, { type: "spring", visualDuration: 0.32, bounce: 0.25 });
+  }, [card.cid]);
 
   const run = (c: Command) => {
+    pendingChoice.value = c.choose;
     send(c.command, c.args);
     if (c.then === "install-list") setInstalling(true);
     else onClose();
@@ -124,20 +136,14 @@ export function CardSheet({ card, view, side, db, send, onClose, disabled, index
     <div class="sheet-backdrop" onClick={onClose}>
       <div class="sheet panel swipeable" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={code ? card.title : "Hidden card"} {...swipe}>
         {onStep && !installing && <Pager index={index} count={count} onStep={onStep} />}
-        <div key={card.cid} class={`sheet-head ${slide ? `slide-${slide < 0 ? "prev" : "next"}` : ""}`}>
-          {code ? (
-            <ZoomableCardImage class="sheet-img" code={code} alt={card.title} size="large" />
-          ) : (
-            <CardBack side={card.side} />
-          )}
+        <div key={card.cid} ref={head} class="sheet-head">
+          {code ? <ZoomableCardImage class="sheet-img" code={code} alt={card.title} size="large" /> : <CardBack side={card.side} />}
           <div class="sheet-info">
             {(() => {
               const facts = cardFacts(card, side, view, !!code);
               return (
                 <>
-                  <span class="label">
-                    {[code ? card.type : card.side, ...(code && card.subtypes?.length ? card.subtypes : []), ...facts.where].join(" · ")}
-                  </span>
+                  <span class="label">{[code ? card.type : card.side, ...(code && card.subtypes?.length ? card.subtypes : []), ...facts.where].join(" · ")}</span>
                   <h2>{code ? card.title : "Classified"}</h2>
                   {facts.chips.length > 0 && (
                     <div class="fact-chips">
@@ -157,7 +163,9 @@ export function CardSheet({ card, view, side, db, send, onClose, disabled, index
             {(card.subroutines ?? []).length > 0 && side === "runner" && (
               <ul class="subs">
                 {card.subroutines.map((s: any) => (
-                  <li class={s.broken ? "broken" : s.fired ? "fired" : ""}><Icon name="sub" /> {glyphs(iconize(s.label))}</li>
+                  <li class={s.broken ? "broken" : s.fired ? "fired" : ""}>
+                    <Icon name="sub" /> {glyphs(iconize(s.label))}
+                  </li>
                 ))}
               </ul>
             )}

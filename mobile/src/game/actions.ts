@@ -8,7 +8,10 @@ export interface Command {
   hint?: string;
   kind?: "primary" | "danger" | "normal";
   then?: "install-list";
+  choose?: string;
 }
+
+export const pendingChoice: { value?: string } = {};
 
 export const sideName = (s: Side) => (s === "corp" ? "Corp" : "Runner");
 export const otherSide = (s: Side): Side => (s === "corp" ? "runner" : "corp");
@@ -65,7 +68,18 @@ const ACTION_LABELS: Record<string, string> = {
   rez: "Rez",
 };
 
-export function abilityLabel(ab: any): string {
+const RESOLVE: Record<string, string> = { always: "Always", never: "Never", ask: "Ask" };
+
+const CYCLE: Record<string, string> = { ask: "Always", always: "Never", never: "Ask" };
+
+function autoSetting(card: any): string {
+  return Object.values<string>(card?.autoresolve ?? {})[0] ?? "ask";
+}
+
+export function abilityLabel(ab: any, card?: any): string {
+  if (typeof ab.label === "string" && ab.label.startsWith("Toggle auto-resolve")) {
+    return `Auto-resolve: ${RESOLVE[autoSetting(card)] ?? "Ask"}`;
+  }
   const base = ab.label ?? (typeof ab.msg === "string" ? ab.msg.charAt(0).toUpperCase() + ab.msg.slice(1) : "Ability");
   return ab["cost-label"] ? `${ab["cost-label"]} : ${base}` : base;
 }
@@ -122,7 +136,7 @@ export function cardCommands(card: any, view: any, side: Side): Command[] {
       out.push({ label: ACTION_LABELS.trash, command: "trash", args: { card: ref }, kind: "danger" });
     }
     (card.abilities ?? []).forEach((ab: any, i: number) => {
-      out.push(ab.dynamic ? { label: abilityLabel(ab), command: "dynamic-ability", args: { card: ref, dynamic: ab.dynamic, source: ab.source, index: ab.index }, enabled: !!ab.playable } : { label: abilityLabel(ab), command: "ability", args: { card: ref, ability: i }, enabled: !!ab.playable });
+      out.push(ab.dynamic ? { label: abilityLabel(ab, card), command: "dynamic-ability", args: { card: ref, dynamic: ab.dynamic, source: ab.source, index: ab.index }, enabled: !!ab.playable } : { label: abilityLabel(ab, card), command: "ability", args: { card: ref, ability: i }, enabled: !!ab.playable, choose: typeof ab.label === "string" && ab.label.startsWith("Toggle auto-resolve") ? CYCLE[autoSetting(card)] : undefined });
     });
   }
 

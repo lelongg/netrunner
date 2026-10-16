@@ -137,6 +137,7 @@
 
 (def card-keys
   [:abilities
+   :autoresolve
    :advance-counter
    :advanceable
    :advancementcost
@@ -202,6 +203,12 @@
 
 (declare cards-summary)
 
+(defn autoresolve-summary [card side]
+  (let [settings (into {} (filter (fn [[_ v]] (#{:always :never :ask} v)) (:special card)))]
+    (cond-> card
+      (and (seq settings) (= (name side) (some-> (:side card) .toLowerCase)))
+      (assoc :autoresolve settings))))
+
 (defn card-summary [card state side]
   (if (is-public? card side)
     (-> (cond-> card
@@ -212,6 +219,7 @@
         (flashback-playable? state side)
         (playable-as-if-in-hand? state side)
         (card-abilities-summary state side)
+        (autoresolve-summary side)
         (icon-summary state)
         (select-non-nil-keys card-keys))
     (-> (cond-> card
