@@ -155,9 +155,6 @@ export function Home({ ready, error, initialJoin, saves, onResume, onDiscard, on
                 </span>
               </span>
             </label>
-            <button class="watch" aria-label="Watch this game" title="Watch this game" disabled={!ready || code.trim().length < 5} onClick={() => go("spectator", code.trim())}>
-              <Icon name="eye" />
-            </button>
             <button aria-label="Join game" disabled={!ready || code.trim().length < 5} onClick={() => go("guest", code.trim())}>
               <Icon name="arrow-right" />
             </button>

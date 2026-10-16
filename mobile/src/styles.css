@@ -2878,10 +2878,7 @@ button:active:not(:disabled) {
   min-width: 0;
 }
 
-.watch-btn {
-  width: 100%;
-  margin-top: 8px;
-}
+
 
 .tip {
   position: fixed;
@@ -3169,10 +3166,7 @@ button:active:not(:disabled) {
   flex: none;
 }
 
-.join-row button.watch {
-  border-color: var(--line-2);
-  color: var(--text-2);
-}
+
 
 .home-modes {
   display: flex;
