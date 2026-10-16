@@ -97,6 +97,11 @@ export function anchor(name: string): Element | null {
   return document.querySelector(`[data-anchor="${name}"]`);
 }
 
+export function scoreSegment(side: string): Element | null {
+  const lit = anchor(`${side}-points`)?.querySelectorAll("i.on");
+  return lit?.length ? lit[lit.length - 1] : anchor(`${side}-points`);
+}
+
 export function tileEl(cid: unknown): HTMLElement | null {
   return document.querySelector(`.tile[data-cid="${String(cid)}"]`) as HTMLElement | null;
 }

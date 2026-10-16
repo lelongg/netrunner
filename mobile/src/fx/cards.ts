@@ -1,6 +1,6 @@
 import { cardImage } from "../engine";
 import type { Side } from "../engine";
-import { anchor, animate, banner, burst, buzz, coins, done, flash, layer, mid, node, place, punch, rays, rectOf, reduced, ring, shake, tileEl, visible, type Tone } from "./core";
+import { anchor, animate, scoreSegment, banner, burst, buzz, coins, done, flash, layer, mid, node, place, punch, rays, rectOf, reduced, ring, shake, tileEl, visible, type Tone } from "./core";
 
 interface Info {
   cid: unknown;
@@ -261,7 +261,7 @@ async function showcase(m: Move, kind: Kind, me: Side) {
   await animate(ghost, { scaleX: [1, 1.04], scaleY: [1, 1.04] }, { duration: hold, ease: "easeInOut" }).finished;
   glow.remove();
   if (kind === "score" || kind === "steal") {
-    const points = anchor(`${m.to?.holder ?? "corp"}-points`);
+    const points = scoreSegment(m.to?.holder ?? "corp");
     const pr = rectOf(points);
     const to = visible(pr) ? mid(pr) : null;
     if (to) {

@@ -2760,3 +2760,40 @@ button:active:not(:disabled) {
     0 0 0 1px var(--ice, var(--line-2)),
     0 0 18px color-mix(in srgb, var(--ice, var(--red)) 45%, transparent);
 }
+
+.score-bar {
+  display: flex;
+  gap: 6px;
+  padding: calc(3px + env(safe-area-inset-top)) 4px 3px;
+  background: #0b0c0e;
+}
+
+.score-bar + .ticker {
+  padding-top: 0;
+}
+
+.score-half {
+  flex: 1;
+  display: flex;
+  gap: 3px;
+}
+
+.score-half.score-corp {
+  flex-direction: row-reverse;
+  --seat: var(--corp);
+}
+
+.score-half.score-runner {
+  --seat: var(--runner);
+}
+
+.score-half i {
+  flex: 1;
+  height: 3px;
+  background: color-mix(in srgb, var(--seat) 24%, transparent);
+}
+
+.score-half i.on {
+  background: var(--seat);
+  box-shadow: 0 0 6px var(--seat);
+}

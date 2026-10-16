@@ -84,8 +84,6 @@ function extras(p: any, side: Side): string[] {
 function Opponent({ view, side, name }: { view: any; side: Side; name: string }) {
   const p = view[side] ?? {};
   const active = view["active-player"] === side;
-  const points = p["agenda-point"] ?? 0;
-  const req = p["agenda-point-req"] ?? 7;
   return (
     <section class="panel opp" data-anchor={`${side}-panel`}>
       <span class="big">
@@ -103,12 +101,40 @@ function Opponent({ view, side, name }: { view: any; side: Side; name: string })
           <span data-anchor={side === "runner" ? "runner-hand" : undefined}>
             {side === "runner" ? "Grip" : "HQ"} {p["hand-count"] ?? 0}
           </span>
-          {` · ${p.click ?? 0} click · `}
-          <Count value={points} anchor={`${side}-points`} />/{req} pts
+          {` · ${p.click ?? 0} click`}
           {extras(p, side).map((x) => ` · ${x}`)}
         </span>
       </div>
     </section>
+  );
+}
+
+function ScoreHalf({ side, points, req }: { side: Side; points: number; req: number }) {
+  const row = useRef<HTMLDivElement>(null);
+  const shown = useRef(points);
+  useEffect(() => {
+    const before = shown.current;
+    shown.current = points;
+    if (points <= before || !row.current || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const segs = [...row.current.children].slice(before, points);
+    segs.forEach((seg, i) => animate(seg, { scaleY: [4, 1], opacity: [0, 1] }, { duration: 0.5, delay: 1.2 + i * 0.12, ease: [0.2, 1.4, 0.4, 1] }));
+  }, [points]);
+  return (
+    <div ref={row} class={`score-half score-${side}`} data-anchor={`${side}-points`} aria-label={`${side} ${points} of ${req} points`}>
+      {Array.from({ length: req }, (_, i) => (
+        <i class={i < points ? "on" : ""} />
+      ))}
+    </div>
+  );
+}
+
+function ScoreBar({ view }: { view: any }) {
+  const half = (side: Side) => <ScoreHalf side={side} points={Math.min(view[side]?.["agenda-point"] ?? 0, view[side]?.["agenda-point-req"] ?? 7)} req={view[side]?.["agenda-point-req"] ?? 7} />;
+  return (
+    <div class="score-bar" role="img">
+      {half("corp")}
+      {half("runner")}
+    </div>
   );
 }
 
@@ -125,8 +151,6 @@ function TurnState({ active }: { active: boolean }) {
 
 function MeBar({ view, side, name }: { view: any; side: Side; name: string }) {
   const p = view[side] ?? {};
-  const points = p["agenda-point"] ?? 0;
-  const req = p["agenda-point-req"] ?? 7;
   const clicks = p.click ?? 0;
   return (
     <div class="me-bar" data-anchor={`${side}-panel`}>
@@ -138,9 +162,6 @@ function MeBar({ view, side, name }: { view: any; side: Side; name: string }) {
         <div class="me-line">
           <span class={`label who-${side}`}>
             {side} // {name}
-          </span>
-          <span class="label me-points">
-            <Count value={points} anchor={`${side}-points`} />/{req} pts
           </span>
         </div>
         <div class="me-line">
@@ -802,6 +823,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
 
   return (
     <div class={`board side-${side} ${ptype === "select" ? "selecting" : ""} ${view.run ? "in-run" : ""}`}>
+      <ScoreBar view={view} />
       <Ticker
         action={
           <button class="ticker-menu" onClick={() => setMenu(!menu)} aria-label="Menu" aria-expanded={menu}>

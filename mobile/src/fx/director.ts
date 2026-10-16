@@ -3,7 +3,7 @@ import type { Side } from "../engine";
 import { currentIce } from "../game/actions";
 import { serverName } from "../game/text";
 import { type Plan, collect, play, prepare } from "./cards";
-import { type Point, type Tone, anchor, animate, banner, burst, buzz, coins, done, flash, floater, glitch, layer, lunge, mid, node, place, pointOf, punch, rays, rectOf, reduced, ring, shake, slash, stamp, tileEl, vignette, visible, wrapEl } from "./core";
+import { type Point, type Tone, anchor, animate, banner, burst, buzz, coins, done, flash, floater, glitch, layer, lunge, mid, node, place, pointOf, punch, rays, rectOf, reduced, ring, shake, slash, stamp, tileEl, vignette, visible, wrapEl, scoreSegment } from "./core";
 
 export type IceKind = "sentry" | "gate" | "barrier" | "other";
 
@@ -398,11 +398,12 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
 
   for (const s of SIDES) {
     if (now.points[s] > prev.points[s]) {
-      const el = anchor(`${s}-points`);
       setTimeout(() => {
-        punch(el, 1.5);
-        const pt = pointOf(el);
-        if (pt) burst(pt, s === "runner" ? "red" : "gold", 14, 45, { size: 4, gravity: 0 });
+        const pt = pointOf(scoreSegment(s));
+        if (pt) {
+          burst(pt, s === "runner" ? "red" : "blue", 16, 40, { size: 4, gravity: 0 });
+          ring(pt, s === "runner" ? "red" : "blue", 60);
+        }
       }, 1300);
     }
   }
