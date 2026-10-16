@@ -313,3 +313,18 @@ export function slash(at: Point, tone: Tone = "cyan", size = 90, angle = -35) {
   el.style.width = `${size}px`;
   done(animate(el, { rotate: [angle, angle], scaleX: [0, 1.15, 1.15], opacity: [1, 1, 0] }, { duration: 0.45, times: [0, 0.3, 1], ease: "easeOut" }), el);
 }
+
+export function gate(target: Element | null, tone: Tone = "orange") {
+  const r = rectOf(target);
+  if (!visible(r) || reduced()) return;
+  const el = node(`fx-gate tone-${tone}`);
+  place(el, { left: r.left - 6, top: r.top - 6, width: r.width + 12, height: r.height + 12 });
+  const left = node("fx-gate-half l", el);
+  const right = node("fx-gate-half r", el);
+  const seam = node("fx-gate-seam", el);
+  const close = { duration: 0.24, ease: [0.55, 0, 0.9, 0.5] };
+  animate(left, { x: ["-100%", "0%"] }, close);
+  animate(right, { x: ["100%", "0%"] }, close);
+  animate(seam, { opacity: [0, 1, 0.6], scaleY: [0.2, 1.15, 1] }, { duration: 0.35, delay: 0.22 });
+  done(animate(el, { opacity: [1, 1, 0] }, { duration: 1.1, times: [0, 0.7, 1] }), el);
+}

@@ -3,7 +3,7 @@ import type { Side } from "../engine";
 import { currentIce } from "../game/actions";
 import { serverName } from "../game/text";
 import { type Plan, collect, play, prepare } from "./cards";
-import { type Point, type Tone, anchor, animate, banner, burst, buzz, coins, done, flash, floater, glitch, layer, lunge, mid, node, place, pointOf, punch, rays, rectOf, reduced, ring, shake, slash, stamp, tileEl, vignette, visible, wrapEl, scoreSegment } from "./core";
+import { type Point, type Tone, anchor, animate, banner, burst, buzz, coins, done, flash, floater, gate, glitch, layer, lunge, mid, node, place, pointOf, punch, rays, rectOf, reduced, ring, shake, slash, stamp, tileEl, vignette, visible, wrapEl, scoreSegment } from "./core";
 
 export type IceKind = "sentry" | "gate" | "barrier" | "other";
 
@@ -497,20 +497,34 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
       const at = runnerTarget(me);
       const delay = t;
       const tone = KIND_TONE[iceKind(h.ice)];
+      const text = h.text ?? "";
+      const icePoint = pointOf(iceEl);
       setTimeout(() => {
-        lunge(iceEl, at, {
-          reach: 0.9,
-          onHit: () => {
-            ring(at, "red", 170);
-            burst(at, "red", 22, 90, { size: 6, gravity: 30 });
-            floater([at[0], at[1] - 30], shortText(h.text ?? ""), "red", 50, true);
-            shake(0.9);
-            flash("red", 0.22);
-            glitch(0.8);
-            buzz([60, 30, 60]);
-          },
-        });
-        if (!iceEl) vignette(tone === "blue" ? "cyan" : tone === "red" ? "red" : tone === "orange" ? "orange" : "violet", 0.3);
+        if (/end the run/i.test(text)) {
+          punch(iceEl, 1.12);
+          gate(wrapEl(h.ice.cid) ?? iceEl, tone);
+          if (icePoint) ring(icePoint, tone, 150, 0.2);
+          buzz(50);
+        } else if (/damage|trash|tag|lose|derez|uninstall|destroy/i.test(text)) {
+          lunge(iceEl, at, {
+            reach: 0.9,
+            onHit: () => {
+              ring(at, "red", 170);
+              burst(at, "red", 22, 90, { size: 6, gravity: 30 });
+              floater([at[0], at[1] - 30], shortText(text), "red", 50, true);
+              shake(0.9);
+              flash("red", 0.22);
+              glitch(0.8);
+              buzz([60, 30, 60]);
+            },
+          });
+          if (!iceEl) vignette(tone === "blue" ? "cyan" : tone === "red" ? "red" : tone === "orange" ? "orange" : "violet", 0.3);
+        } else if (icePoint) {
+          punch(iceEl, 1.1);
+          ring(icePoint, tone, 140);
+          floater([icePoint[0], icePoint[1] - 20], shortText(text), tone, 40);
+          buzz(30);
+        }
       }, delay * 1000);
       t += 0.55;
     } else if (h.kind === "damage") {
@@ -555,9 +569,8 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
     } else {
       const jacked = lines.some((l: string) => /jacks? out/i.test(l));
       setTimeout(() => {
-        banner(jacked ? "Jacked out" : "Run ended", serverName(prev.server!), "red", { size: "lg", hold: 0.4, from: "right" });
-        glitch(1);
-        buzz(120);
+        banner(jacked ? "Jacked out" : "Run ended", serverName(prev.server!), "white", { size: "lg", hold: 0.4, from: "right" });
+        buzz(60);
       }, t * 1000);
     }
   } else if (now.phase === "success" && prev.phase !== "success" && now.server) {

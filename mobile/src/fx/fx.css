@@ -548,3 +548,43 @@
 .enc-sub.broken .enc-label {
   text-decoration: none;
 }
+
+.fx-gate {
+  position: absolute;
+  z-index: 3;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.fx-gate-half {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 50%;
+  border: 2px solid var(--tone);
+  background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--tone) 55%, transparent) 0 6px, rgb(0 0 0 / 0.55) 6px 12px);
+  box-shadow: inset 0 0 14px var(--tone);
+}
+
+.fx-gate-half.l {
+  left: 0;
+  border-right-width: 1px;
+}
+
+.fx-gate-half.r {
+  right: 0;
+  border-left-width: 1px;
+}
+
+.fx-gate-seam {
+  position: absolute;
+  left: calc(50% - 1px);
+  top: -4px;
+  bottom: -4px;
+  width: 2px;
+  background: #fff;
+  box-shadow:
+    0 0 14px var(--tone),
+    0 0 4px #fff;
+  opacity: 0;
+}

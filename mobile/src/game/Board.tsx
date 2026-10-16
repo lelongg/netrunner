@@ -132,7 +132,7 @@ function Opponent({ view, side, name }: { view: any; side: Side; name: string })
           <TurnState active={active} />
         </div>
         <div class="opp-stats">
-          {active && <Meter value={p.click ?? 0} max={Math.max(p.click ?? 0, side === "runner" ? 4 : 3)} anchor={`${side}-clicks`} />}
+          <Meter value={active ? (p.click ?? 0) : 0} max={Math.max(active ? (p.click ?? 0) : 0, side === "runner" ? 4 : 3)} anchor={`${side}-clicks`} />
           <span class="label stats">
             <span data-anchor={side === "runner" ? "runner-hand" : undefined}>
               <Stat icon="hand" label={side === "runner" ? "Grip" : "HQ"}>
