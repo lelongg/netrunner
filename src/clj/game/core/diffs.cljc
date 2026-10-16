@@ -206,7 +206,7 @@
 (defn autoresolve-summary [card side]
   (let [settings (into {} (filter (fn [[_ v]] (#{:always :never :ask} v)) (:special card)))]
     (cond-> card
-      (and (seq settings) (= (name side) (some-> (:side card) .toLowerCase)))
+      (and (seq settings) (keyword? side) (string? (:side card)) (= (name side) (.toLowerCase ^String (:side card))))
       (assoc :autoresolve settings))))
 
 (defn card-summary [card state side]

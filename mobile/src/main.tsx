@@ -94,7 +94,11 @@ function App() {
     if (!loaded) return;
     setOpening(from.v === 1 ? (from.vsBot ? "solo game" : "local game") : from.code);
     afterPaint(() => {
-      open(from);
+      try {
+        open(from);
+      } catch (e) {
+        setError(`Could not open this game: ${e instanceof Error ? e.message : e}`);
+      }
       setOpening(null);
     });
   };
