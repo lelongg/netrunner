@@ -17,6 +17,11 @@ function installed(view: any): any[] {
   return out;
 }
 
+function splitCost(label: string): [string, string] {
+  const i = label.indexOf(":");
+  return i > 0 && i < 40 ? [label.slice(0, i).trim(), label.slice(i + 1).trim()] : ["", label];
+}
+
 export function Breakers({ view, side, ice, send, onTap, disabled }: { view: any; side: Side; ice: any; send: (command: string, args?: unknown) => void; onTap: (card: any) => void; disabled: boolean }) {
   const [open, setOpen] = useState(false);
   const unbroken = (ice.subroutines ?? []).filter((s: any) => !s.broken && !s.fired && s.resolve !== false);
@@ -40,7 +45,8 @@ export function Breakers({ view, side, ice, send, onTap, disabled }: { view: any
   const price = (r: (typeof all)[number]) => Number(String(r.ab?.["cost-label"] ?? "").match(/\d+/)?.[0] ?? 0);
   const rows = all.filter((r) => r.full).sort((a, b) => price(a) - price(b));
   const manual: { card: any; cmd: Command }[] = [...all.flatMap((r) => r.manual.map((cmd) => ({ card: r.card, cmd }))), ...others];
-  if (!rows.length && !manual.length) return null;
+  const fromIce = cardCommands(ice, view, side).filter((c) => c.command === "runner-ability");
+  if (!rows.length && !manual.length && !fromIce.length) return null;
   const runner = view.runner ?? {};
   const credits = runner.credit ?? 0;
   const badPub = runner["bad-pub-credit"] ?? 0;
@@ -54,6 +60,24 @@ export function Breakers({ view, side, ice, send, onTap, disabled }: { view: any
           {badPub > 0 && <span class="brk-extra"> +{badPub} bad pub</span>}
         </span>
       </div>
+      {fromIce.map((cmd) => {
+        const [cost, effect] = splitCost(cmd.label);
+        return (
+          <div class="brk best">
+            <button class="brk-card" onClick={() => onTap(ice)} aria-label={ice.title}>
+              {ice.code && <CardImage code={ice.code} alt={ice.title} size="small" width="34px" />}
+            </button>
+            <div class="brk-text">
+              <span class="brk-name">{ice.title}</span>
+              <span class="brk-desc">{glyphs(iconize(effect))}</span>
+            </div>
+            <button class="brk-go" disabled={disabled || cmd.enabled === false} onClick={() => send(cmd.command, cmd.args)}>
+              <span class="brk-cost">{glyphs(iconize(cost))}</span>
+              <span class="brk-verb">Use</span>
+            </button>
+          </div>
+        );
+      })}
       {rows.map(({ card, full, ab }) => {
         const label: string = ab?.label ?? "";
         return (
