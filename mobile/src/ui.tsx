@@ -29,7 +29,13 @@ export function Ticker({ children, action }: { children: ComponentChildren; acti
       const box = feed.current,
         inner = text.current;
       if (!box || !inner) return;
-      setWidth(inner.scrollWidth > box.clientWidth + 1 ? inner.scrollWidth : 0);
+      const pad = (el: Element) => {
+        const cs = getComputedStyle(el);
+        return parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+      };
+      const room = box.clientWidth - pad(box) - (box.classList.contains("scrolling") ? 20 : 0);
+      const need = inner.scrollWidth - pad(inner);
+      setWidth(need > room + 1 ? inner.scrollWidth : 0);
     };
     measure();
     const observer = new ResizeObserver(measure);

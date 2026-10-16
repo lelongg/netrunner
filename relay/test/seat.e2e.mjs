@@ -36,7 +36,7 @@ await guest.waitForSelector(".board", { timeout: 20000 });
 await host.getByRole("button", { name: /^Keep/ }).click();
 await guest.getByRole("button", { name: /^Keep/ }).click();
 await host.getByRole("button", { name: /Start turn/ }).click();
-await host.getByRole("button", { name: "Gain credit" }).click();
+await host.getByRole("button", { name: "Gain 1" }).click();
 await host.waitForTimeout(800);
 
 const hostLink = await host.evaluate(() => window.__nsg.session.rejoinUrl);

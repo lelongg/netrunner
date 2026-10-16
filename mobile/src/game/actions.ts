@@ -184,7 +184,7 @@ export function basicCommands(view: any, side: Side): Command[] {
     return out;
   }
   if (me.click === 0 && !view["end-turn"]) out.push({ label: "End turn", command: "end-turn", kind: "primary" });
-  if (playable(0)) out.push({ label: "Gain credit", command: "credit" });
+  if (playable(0)) out.push({ label: "Gain 1[credit]", command: "credit" });
   if (playable(1) && (me["deck-count"] ?? 0) > 0) out.push({ label: "Draw", command: "draw" });
   if (side === "runner") {
     if (!phaseLocked && me.click > 0) out.push({ label: "Run…", command: "generate-runnable-zones", then: "install-list" });
