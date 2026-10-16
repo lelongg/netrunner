@@ -72,10 +72,8 @@ function keyOf(target: Element): { key: string; anchor: Element } | null {
 
 let current: HTMLElement | null = null;
 let currentAnchor: Element | null = null;
-let timer: number | undefined;
 
 function hide() {
-  clearTimeout(timer);
   const el = current;
   current = null;
   currentAnchor = null;
@@ -100,7 +98,6 @@ function show(text: string, anchor: Element) {
   current = el;
   currentAnchor = anchor;
   animate(el, { opacity: [0, 1], transform: [`translateY(${above ? 6 : -6}px) scale(0.92)`, "translateY(0px) scale(1)"] }, { duration: 0.22, ease: [0.2, 1.3, 0.4, 1] });
-  timer = window.setTimeout(hide, 3200);
 }
 
 export function installTips() {
