@@ -71,12 +71,14 @@ function keyOf(target: Element): { key: string; anchor: Element } | null {
 }
 
 let current: HTMLElement | null = null;
+let currentAnchor: Element | null = null;
 let timer: number | undefined;
 
 function hide() {
   clearTimeout(timer);
   const el = current;
   current = null;
+  currentAnchor = null;
   if (!el) return;
   animate(el, { opacity: [1, 0] }, { duration: 0.15 }).finished.then(() => el.remove(), () => el.remove());
 }
@@ -96,6 +98,7 @@ function show(text: string, anchor: Element) {
   el.style.left = `${left}px`;
   el.style.top = `${above ? r.top - h - 8 : r.bottom + 8}px`;
   current = el;
+  currentAnchor = anchor;
   animate(el, { opacity: [0, 1], transform: [`translateY(${above ? 6 : -6}px) scale(0.92)`, "translateY(0px) scale(1)"] }, { duration: 0.22, ease: [0.2, 1.3, 0.4, 1] });
   timer = window.setTimeout(hide, 3200);
 }
@@ -104,7 +107,7 @@ export function installTips() {
   document.addEventListener("click", (e) => {
     const target = e.target as Element | null;
     const hit = target && keyOf(target);
-    if (!hit) return hide();
+    if (!hit || hit.anchor === currentAnchor) return hide();
     show(MEANINGS[hit.key] ?? hit.key, hit.anchor);
   }, true);
   addEventListener("scroll", hide, { capture: true, passive: true });
