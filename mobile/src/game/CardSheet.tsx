@@ -7,46 +7,62 @@ import { Pager } from "./Pager";
 import { RichText } from "./RichText";
 import { useSwipe } from "./swipe";
 import { iconize, serverLabel, serverName } from "./text";
-import { Icon } from "../icons";
+import { Icon, type IconName } from "../icons";
 import { glyphs } from "./Glyphs";
 
-const COUNTER_NAMES: Record<string, string> = { virus: "virus", power: "power", credit: "credit", agenda: "agenda", advancement: "advancement", bad: "bad publicity" };
+interface Chip {
+  text: string;
+  icon?: IconName;
+  tone?: "new" | "cyan" | "red";
+}
 
-const plural = (n: number, word: string) => `${n} ${word}${n > 1 ? "s" : ""}`;
+interface Facts {
+  where: string[];
+  chips: Chip[];
+  hint?: string;
+}
 
-function cardFacts(card: any, viewer: Side, view: any, known: boolean): string[] {
+const COUNTER_ICONS: Record<string, IconName> = { virus: "virus", credit: "credit", power: "bolt", advancement: "advance", agenda: "agenda" };
+
+function ordinal(n: number) {
+  return `${n}${n === 1 ? "st" : n === 2 ? "nd" : n === 3 ? "rd" : "th"}`;
+}
+
+function cardFacts(card: any, viewer: Side, view: any, known: boolean): Facts {
   const z: any[] = card.zone ?? [];
   const corp = card.side === "Corp";
   const mine = (corp ? "corp" : "runner") === viewer;
-  const facts: string[] = [];
+  const facts: Facts = { where: [], chips: [] };
   const key = String(z[1] ?? "");
-  const where = z[0] === "servers" ? serverName(key) : "";
-  if (z[0] === "servers" && z[2] === "ices") {
-    const ices: any[] = view.corp?.servers?.[key]?.ices ?? [];
-    const i = ices.findIndex((c) => c.cid === card.cid);
-    const fromOutside = i < 0 ? 0 : ices.length - i;
-    const pos = ices.length < 2 ? "" : fromOutside === 1 ? ", outermost" : i === 0 ? ", innermost" : `, ${fromOutside}${fromOutside === 2 ? "nd" : fromOutside === 3 ? "rd" : "th"} from the outside`;
-    facts.push(`${card.rezzed ? "Rezzed" : "Unrezzed"} ice protecting ${where}${pos}`);
-    if (!known && viewer === "runner") facts.push("Revealed if the Corp rezzes it when you approach");
-  } else if (z[0] === "servers") {
-    facts.push(`${known ? (card.rezzed ? "Rezzed, in" : card.type === "Agenda" ? "Facedown agenda in" : "Unrezzed, in") : "Facedown card in"} the root of ${where}`);
-    if (!known && viewer === "runner") facts.push("Run the server and access it to find out");
-  } else if (z[0] === "rig") facts.push(known ? `Installed in ${mine ? "your" : "the Runner's"} rig` : "Facedown in the rig");
-  else if (z[0] === "onhost") facts.push("Hosted on another card");
-  else if (z[0] === "hand") facts.push(corp ? "In HQ" : "In the grip");
-  else if (z[0] === "deck") facts.push(corp ? "In R&D" : "In the stack");
-  else if (z[0] === "discard") facts.push(`${known ? "In" : "Facedown in"} ${corp ? "Archives" : "the heap"}`);
-  else if (z[0] === "scored") facts.push(`Scored agenda, worth ${plural(Number(card.agendapoints ?? 0), "point")}`);
-  else if (z[0] === "current") facts.push("Current, active until another current is played or an agenda is scored or stolen");
-  if (card.new && (z[0] === "servers" || z[0] === "rig")) facts.push("Installed this turn");
+  if (z[0] === "servers") {
+    facts.where.push(serverName(key));
+    if (z[2] === "ices") {
+      const ices: any[] = view.corp?.servers?.[key]?.ices ?? [];
+      const i = ices.findIndex((c) => c.cid === card.cid);
+      const fromOutside = i < 0 ? 0 : ices.length - i;
+      if (ices.length > 1) facts.where.push(fromOutside === 1 ? "outermost" : i === 0 ? "innermost" : `${ordinal(fromOutside)} from outside`);
+      if (!known && viewer === "runner") facts.hint = "Revealed if the Corp rezzes it when you approach.";
+    } else {
+      facts.where.push("root");
+      if (!known && viewer === "runner") facts.hint = "Run the server and access it to find out what it is.";
+    }
+    facts.where.push(card.rezzed ? "rezzed" : known && card.type === "Agenda" ? "facedown" : "unrezzed");
+  } else if (z[0] === "rig") facts.where.push(known ? (mine ? "your rig" : "Runner's rig") : "facedown in the rig");
+  else if (z[0] === "onhost") facts.where.push("hosted");
+  else if (z[0] === "hand") facts.where.push(corp ? "HQ" : "grip");
+  else if (z[0] === "deck") facts.where.push(corp ? "R&D" : "stack");
+  else if (z[0] === "discard") facts.where.push(corp ? "Archives" : "heap", ...(known ? [] : ["facedown"]));
+  else if (z[0] === "scored") facts.where.push(`scored · ${card.agendapoints ?? 0} pts`);
+  else if (z[0] === "current") facts.where.push("current");
+  if (card.new && (z[0] === "servers" || z[0] === "rig")) facts.chips.push({ text: "New", tone: "new" });
   const adv = (card["advance-counter"] ?? 0) + (card["extra-advance-counter"] ?? 0);
-  if (adv) facts.push(`${plural(adv, "advancement counter")}${known && card.type === "Agenda" ? ` of ${card["current-advancement-requirement"] ?? card.advancementcost} needed` : ""}`);
-  for (const [k, v] of Object.entries<any>(card.counter ?? {})) if (v) facts.push(plural(Number(v), `${COUNTER_NAMES[k] ?? k} counter`));
-  if (card["rec-counter"]) facts.push(`${card["rec-counter"]} recurring credits`);
+  if (adv) facts.chips.push({ icon: "advance", text: known && card.type === "Agenda" ? `${adv}/${card["current-advancement-requirement"] ?? card.advancementcost}` : String(adv) });
+  for (const [k, v] of Object.entries<any>(card.counter ?? {})) if (v) facts.chips.push(COUNTER_ICONS[k] ? { icon: COUNTER_ICONS[k], text: String(v) } : { text: `${k} ${v}` });
+  if (card["rec-counter"]) facts.chips.push({ icon: "recurring", text: String(card["rec-counter"]) });
   const now = card["current-strength"];
-  if (known && now != null && card.strength != null && now !== card.strength) facts.push(`Strength ${now} (printed ${card.strength})`);
+  if (known && now != null && card.strength != null && now !== card.strength) facts.chips.push({ text: `str ${now} (${card.strength})`, tone: "cyan" });
   const hosted: any[] = card.hosted ?? [];
-  if (hosted.length) facts.push(`Hosting ${hosted.map((h) => (h.title && (h.seen || h.rezzed || h.side === "Runner" || mine) ? h.title : "a facedown card")).join(", ")}`);
+  if (hosted.length) facts.chips.push({ text: `hosting ${hosted.map((h) => (h.title && (h.seen || h.rezzed || h.side === "Runner" || mine) ? h.title : "facedown card")).join(", ")}` });
   return facts;
 }
 
@@ -115,20 +131,27 @@ export function CardSheet({ card, view, side, db, send, onClose, disabled, index
             <CardBack side={card.side} />
           )}
           <div class="sheet-info">
-            <span class="label">
-              {code ? card.type : card.side}
-              {code && card.subtypes?.length ? ` · ${card.subtypes.join(" · ")}` : ""}
-            </span>
-            <h2>{code ? card.title : "Classified"}</h2>
             {(() => {
               const facts = cardFacts(card, side, view, !!code);
-              return facts.length ? (
-                <ul class="card-facts">
-                  {facts.map((f) => (
-                    <li>{f}</li>
-                  ))}
-                </ul>
-              ) : null;
+              return (
+                <>
+                  <span class="label">
+                    {[code ? card.type : card.side, ...(code && card.subtypes?.length ? card.subtypes : []), ...facts.where].join(" · ")}
+                  </span>
+                  <h2>{code ? card.title : "Classified"}</h2>
+                  {facts.chips.length > 0 && (
+                    <div class="fact-chips">
+                      {facts.chips.map((c) => (
+                        <span class={`fact-chip ${c.tone ?? ""}`}>
+                          {c.icon && <Icon name={c.icon} />}
+                          {c.text}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {facts.hint && <p class="fact-hint">{facts.hint}</p>}
+                </>
+              );
             })()}
             {full?.text && <RichText class="card-text" text={full.text} />}
             {(card.subroutines ?? []).length > 0 && side === "runner" && (
