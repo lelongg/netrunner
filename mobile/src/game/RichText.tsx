@@ -1,6 +1,20 @@
 import { type ComponentChildren, h } from "preact";
 import { iconize } from "./text";
 import { glyphs } from "./Glyphs";
+import { TERMS, termKey } from "../tips";
+
+export function withTerms(text: string): ComponentChildren {
+  return text.split(TERMS).map((part, i) => {
+    const key = i % 2 ? termKey(part) : undefined;
+    return key ? (
+      <span class="term" data-tip={key}>
+        {glyphs(part)}
+      </span>
+    ) : (
+      glyphs(part)
+    );
+  });
+}
 
 const ALLOWED = new Set(["strong", "em", "ul", "li"]);
 
@@ -24,7 +38,7 @@ export function RichText({ text, class: className }: { text: string; class?: str
         stack[stack.length - 1].children.push(h(name, null, ...top.children));
       }
     } else if (part && !(top.tag === "ul" && !part.trim())) {
-      top.children.push(glyphs(iconize(part)));
+      top.children.push(withTerms(iconize(part)));
     }
   }
   while (stack.length > 1) {

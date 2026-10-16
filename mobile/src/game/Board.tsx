@@ -17,6 +17,7 @@ import { Icon, type IconName } from "../icons";
 import { glyphs } from "./Glyphs";
 import { Breakers } from "./Breakers";
 import { CardImage } from "./CardImage";
+import { withTerms } from "./RichText";
 
 interface Props {
   session: Session;
@@ -670,7 +671,7 @@ function Encounter({ view, ice, passed, render, onTap }: { view: any; ice: any; 
                 <li class={`enc-sub ${state}`}>
                   <Icon name="sub" />
                   <span class="enc-label">
-                    <span class="enc-text">{state === "broken" ? <Decrypt text={sub.label ?? "Subroutine"} /> : glyphs(iconize(sub.label ?? "Subroutine"))}</span>
+                    <span class="enc-text">{state === "broken" ? <Decrypt text={sub.label ?? "Subroutine"} /> : withTerms(iconize(sub.label ?? "Subroutine"))}</span>
                   </span>
                   <span class="enc-state">{state === "broken" ? (breaker ? `Broken · ${breaker}` : "Broken") : state === "fired" ? "Fired" : state === "skipped" ? "Won't fire" : encountering ? "Unbroken" : ""}</span>
                 </li>

@@ -20,6 +20,45 @@ const MEANINGS: Record<string, string> = {
   virus: "Virus counters.",
 };
 
+const GLOSSARY: [string, string, string][] = [
+  ["trace", "trace", "Trace X · the Corp pays credits to raise the trace strength above X, the Runner pays to raise their link. If the Corp ends higher, the effect happens."],
+  ["expose", "expose", "Expose · the Runner looks at an installed facedown card, then it stays as it is."],
+  ["bypass", "bypass", "Bypass · the Runner passes the ice without encountering it, so none of its subroutines fire."],
+  ["derez", "derez(?:zed|s)?", "Derez · a rezzed Corp card is turned face down. Its effects stop until the Corp rezzes it again, paying its cost."],
+  ["rez", "rez(?:zed|zing|s)?", "Rez · the Corp pays a card's rez cost to turn it face up and make it active."],
+  ["forfeit", "forfeit(?:ed|s)?", "Forfeit · a scored or stolen agenda is removed from the game and its points are lost."],
+  ["host", "host(?:ed|s|ing)?", "Host · a card placed on another card. If the host leaves play, the hosted cards are trashed."],
+  ["purge", "purge(?:d|s)?", "Purge · the Corp spends 3 clicks to remove every virus counter."],
+  ["sabotage", "sabotage", "Sabotage X · the Corp trashes X cards, from HQ and/or the top of R&D."],
+  ["threat", "threat", "Threat X · this ability is active only while a player has at least X agenda points."],
+  ["advance", "advance(?:d|s|ment)?(?: counters?)?", "Advance · the Corp pays a click and a credit to place an advancement counter. Agendas need enough of them to be scored."],
+  ["access", "access(?:ed|es|ing)?", "Access · the Runner looks at a card during a breach. Agendas are stolen; other cards can be trashed by paying their trash cost."],
+  ["breach", "breach(?:ed|es)?", "Breach · after a successful run, the Runner accesses cards in the server."],
+  ["encounter", "encounter(?:ed|s|ing)?", "Encounter · the Runner faces a rezzed ice. Unbroken subroutines fire."],
+  ["steal", "steal(?:s|ing)?|stolen", "Steal · an agenda the Runner accesses goes to their score area for its points."],
+  ["net", "net damage", "Net damage · the Runner discards a random card from the grip per point. Taking more than the grip holds flatlines them."],
+  ["meat", "meat damage", "Meat damage · like net damage, a random card from the grip per point. Often dealt to tagged Runners."],
+  ["core", "core damage|brain damage", "Core damage · a random card from the grip per point, and the maximum hand size drops by 1 for good."],
+  ["bad-pub", "bad publicity", "Bad publicity · the Runner gains 1 credit per point at the start of each run."],
+  ["tag", "tag(?:ged|s)?", "Tags · while tagged, the Corp can trash the Runner's resources and more. Removing one costs a click and 2 credits."],
+  ["trojan", "trojan", "Trojan · a program installed on a piece of ice instead of in the rig."],
+  ["mark", "your mark|mark", "Mark · a central server chosen at random at the start of the Runner's turn, used by some cards."],
+  ["charge", "charge", "Charge · place 1 power counter on an installed card that already has power counters."],
+  ["expend", "expend", "Expend · the Corp reveals and trashes this card from HQ, paying the cost, to resolve its effect."],
+  ["interface", "interface", "Interface · an icebreaker ability used during an encounter to break subroutines."],
+  ["trash-cost", "trash cost", "Trash cost · what the Runner pays to trash a card they access."],
+  ["recurring", "recurring credits?", "Recurring credits · refilled each turn, usable only as the card says."],
+];
+
+for (const [key, , text] of GLOSSARY) MEANINGS[key] ??= text;
+
+export const TERMS = new RegExp(`\\b(${[...GLOSSARY].sort((a, b) => b[1].length - a[1].length).map(([, re]) => `(?:${re})`).join("|")})\\b`, "gi");
+
+export function termKey(word: string): string | undefined {
+  const lower = word.toLowerCase();
+  return GLOSSARY.find(([, re]) => new RegExp(`^(?:${re})$`, "i").test(lower))?.[0];
+}
+
 const ZONES = ".sheet, .log, .encounter, .prompt, .opp, .me-bar, .fact-chips";
 
 function keyOf(target: Element): { key: string; anchor: Element } | null {
@@ -67,6 +106,6 @@ export function installTips() {
     const hit = target && keyOf(target);
     if (!hit) return hide();
     show(MEANINGS[hit.key] ?? hit.key, hit.anchor);
-  });
+  }, true);
   addEventListener("scroll", hide, { capture: true, passive: true });
 }

@@ -2895,3 +2895,9 @@ button:active:not(:disabled) {
   letter-spacing: 0.04em;
   pointer-events: none;
 }
+
+.term {
+  text-decoration: underline dotted color-mix(in srgb, var(--cyan) 70%, transparent);
+  text-underline-offset: 0.2em;
+  cursor: help;
+}
