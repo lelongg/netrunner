@@ -541,14 +541,16 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
     cameraTo(null, 1);
     const server = document.querySelector(`[data-server="${prev.server}"]`);
     const at = pointOf(server) ?? [innerWidth / 2, innerHeight / 3];
-    if (prev.phase === "success") {
+    const lines = (view.log ?? []).slice(prev.log).map((e: any) => render(e.text));
+    if (prev.phase === "success") return;
+    if (lines.some((l: string) => /\bbreach(es)?\b/i.test(l))) {
       banner("Breach", serverName(prev.server), "cyan", { size: "xl", hold: 0.5 });
       ring(at, "cyan", 260);
       rays(at, "cyan", 380, 1);
       burst(at, "cyan", 24, 110, { size: 5, gravity: 20 });
       buzz([30, 30, 30, 30, 80]);
     } else {
-      const jacked = (view.log ?? []).slice(prev.log).some((e: any) => /jacks? out/i.test(render(e.text)));
+      const jacked = lines.some((l: string) => /jacks? out/i.test(l));
       setTimeout(() => {
         banner(jacked ? "Jacked out" : "Run ended", serverName(prev.server!), "red", { size: "lg", hold: 0.4, from: "right" });
         glitch(1);
