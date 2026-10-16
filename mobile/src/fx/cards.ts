@@ -234,7 +234,7 @@ async function showcase(m: Move, kind: Kind, me: Side) {
   const info = m.to ?? m.from;
   const destEl = tileEl(m.cid);
   const target = rectOf(destEl);
-  const dest = visible(target) ? target : rectOf(zoneAnchor(m.to));
+  const dest = head(m.to?.zone) === "play-area" ? null : visible(target) ? target : rectOf(zoneAnchor(m.to));
   const src = m.src ?? new DOMRect(innerWidth / 2 - 30, innerHeight + 20, 60, 84);
   if (kind === "steal" && (m.to?.holder ?? m.from?.holder) === me) {
     const seen = rectOf(document.querySelector(".prompt img"));
