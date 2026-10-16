@@ -40,21 +40,22 @@ const NAME_KEY = "nsg.name";
 const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const randomChar = () => CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)];
 
-function useScramble(input: { current: HTMLInputElement | null }, active: boolean) {
+function useScramble(rest: { current: HTMLSpanElement | null }, left: number, animate: boolean) {
   useEffect(() => {
-    const el = input.current;
+    const el = rest.current;
     if (!el) return;
-    if (!active || motionOff()) {
-      el.placeholder = "·····";
+    if (!animate || motionOff()) {
+      el.textContent = "·".repeat(left);
       return;
     }
-    let chars = Array.from({ length: 5 }, randomChar);
+    let chars = Array.from({ length: left }, randomChar);
+    el.textContent = chars.join("");
     const timer = setInterval(() => {
       chars = chars.map((c) => (Math.random() < 0.45 ? randomChar() : c));
-      el.placeholder = chars.join("");
+      el.textContent = chars.join("");
     }, 70);
     return () => clearInterval(timer);
-  }, [active]);
+  }, [left, animate]);
 }
 
 function storedName() {
@@ -68,10 +69,10 @@ function storedName() {
 export function Home({ ready, error, initialJoin, saves, onResume, onDiscard, onStart }: Props) {
   const [name, setName] = useState(storedName() || "Player");
   const [code, setCode] = useState(initialJoin ?? "");
-  const codeInput = useRef<HTMLInputElement>(null);
+  const codeRest = useRef<HTMLSpanElement>(null);
   const [animations, setAnimations] = useState(settings.animations);
   useEffect(() => onSettings(() => setAnimations(settings.animations)), []);
-  useScramble(codeInput, !code && animations);
+  useScramble(codeRest, Math.max(0, 5 - code.length), animations);
   const [menu, setMenu] = useState(false);
   useBackClose(menu, () => setMenu(false));
   const go = (role: Role, c?: string, vsBot?: boolean) => {
@@ -156,14 +157,13 @@ export function Home({ ready, error, initialJoin, saves, onResume, onDiscard, on
           <span class="label">Join</span>
           <div class="join-row">
             <label class="prompt-input">
-              <input
-                aria-label="Game code"
-                ref={codeInput}
-                placeholder="·····"
-                value={code}
-                maxLength={5}
-                onInput={(e) => setCode((e.target as HTMLInputElement).value.toUpperCase())}
-              />
+              <span class="code-field">
+                <input aria-label="Game code" value={code} maxLength={5} spellcheck={false} autocapitalize="characters" onInput={(e) => setCode((e.target as HTMLInputElement).value.toUpperCase())} />
+                <span class="code-ghost" aria-hidden="true">
+                  <span class="code-typed">{code}</span>
+                  <span ref={codeRest} />
+                </span>
+              </span>
             </label>
             <button aria-label="Join game" disabled={!ready || code.trim().length < 5} onClick={() => go("guest", code.trim())}>
               <Icon name="arrow-right" />

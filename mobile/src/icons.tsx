@@ -7,6 +7,7 @@ const PATHS = {
   menu: { box: "0 0 20 20", d: "M2 4h16M2 10h16M2 16h10" },
   swap: { box: "0 0 24 20", d: "M2 6h18M15 1l5 5-5 5M22 14H4M9 9l-5 5 5 5" },
   plus: { box: "0 0 20 20", d: "M10 2v16M2 10h16" },
+  check: { box: "0 0 20 20", d: "M3 10.5l4.5 4.5L17 5" },
   minus: { box: "0 0 20 20", d: "M2 10h16" },
   edit: { box: "0 0 20 20", d: "M3 17h4L17 7l-4-4L3 13zM11 5l4 4" },
   undo: { box: "0 0 22 20", d: "M7 3 2 8l5 5M2 8h12a6 6 0 0 1 0 12h-4" },

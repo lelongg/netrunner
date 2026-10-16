@@ -1,6 +1,7 @@
 import { useEffect, useState } from "preact/hooks";
 import { DEFAULT_RELAY } from "../net/relay";
 import { onSettings, setSetting, settings } from "../settings";
+import { Icon } from "../icons";
 
 function Toggle({ label, on, onChange }: { label: string; on: boolean; onChange: (on: boolean) => void }) {
   return (
@@ -26,23 +27,25 @@ export function SettingsMenu({ onClose }: { onClose: () => void }) {
         <Toggle label="Glossary in card text" on={settings.glossary} onChange={(v) => setSetting("glossary", v)} />
         <label class="setting-field">
           <span class="label">Relay server</span>
-          <input value={relay} placeholder={DEFAULT_RELAY ?? "https://…"} spellcheck={false} autocapitalize="off" onInput={(e) => setRelay((e.target as HTMLInputElement).value)} />
+          <span class="relay-field">
+            <input value={relay} placeholder={DEFAULT_RELAY ?? "https://…"} spellcheck={false} autocapitalize="off" onInput={(e) => setRelay((e.target as HTMLInputElement).value)} onKeyDown={(e) => e.key === "Enter" && dirty && valid && setSetting("relay", relay.trim())} />
+            <button class="ghost" aria-label="Save relay" title="Save relay" disabled={!dirty || !valid} onClick={() => setSetting("relay", relay.trim())}>
+              <Icon name="check" />
+            </button>
+            <button
+              class="ghost"
+              aria-label="Use the default relay"
+              title="Use the default relay"
+              disabled={!settings.relay && !relay}
+              onClick={() => {
+                setRelay("");
+                setSetting("relay", "");
+              }}
+            >
+              <Icon name="undo" />
+            </button>
+          </span>
         </label>
-        <div class="setting-actions">
-          <button class="primary" disabled={!dirty || !valid} onClick={() => setSetting("relay", relay.trim())}>
-            Save relay
-          </button>
-          <button
-            class="ghost"
-            disabled={!settings.relay && !relay}
-            onClick={() => {
-              setRelay("");
-              setSetting("relay", "");
-            }}
-          >
-            Default
-          </button>
-        </div>
         <p class="hint">Online games live on the relay that created them: change it only to play on another server.</p>
       </nav>
     </>
