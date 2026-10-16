@@ -58,6 +58,9 @@ jobs:
       - name: Engine smoke test
         run: npm run smoke --prefix mobile
 
+      - name: Shared journal replay test
+        run: npm run journal --prefix mobile
+
       - name: Build mobile app
         run: npm run build --prefix mobile
         env:

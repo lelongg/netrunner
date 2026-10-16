@@ -1,0 +1,603 @@
+[
+ {
+  "seq": 1,
+  "seat": 0,
+  "p": {
+   "k": "join",
+   "name": "Agent",
+   "id": "xrn5dp4i27mb1qtvpg3"
+  }
+ },
+ {
+  "seq": 2,
+  "seat": 0,
+  "p": {
+   "k": "side",
+   "side": "corp",
+   "id": "5s2w2c495vns16t6h6u"
+  }
+ },
+ {
+  "seq": 3,
+  "seat": 0,
+  "p": {
+   "k": "join",
+   "name": "Agent",
+   "id": "xrn5dp4i27mb1qtvpg3"
+  }
+ },
+ {
+  "seq": 4,
+  "seat": 0,
+  "p": {
+   "k": "side",
+   "side": "corp",
+   "id": "5s2w2c495vns16t6h6u"
+  }
+ },
+ {
+  "seq": 5,
+  "seat": 1,
+  "p": {
+   "k": "join",
+   "name": "Runner",
+   "id": "3xgqty1i6o22s1o4zh6n"
+  }
+ },
+ {
+  "seq": 6,
+  "seat": 1,
+  "p": {
+   "k": "join",
+   "name": "Runner",
+   "id": "3xgqty1i6o22s1o4zh6n"
+  }
+ },
+ {
+  "seq": 7,
+  "seat": 1,
+  "p": {
+   "k": "deck",
+   "deck": {
+    "name": "System Gateway Starter Runner · Intermediate",
+    "identity": "The Catalyst: Convention Breaker",
+    "cards": [
+     [
+      "Creative Commission",
+      2
+     ],
+     [
+      "Jailbreak",
+      3
+     ],
+     [
+      "Overclock",
+      2
+     ],
+     [
+      "Mutual Favor",
+      2
+     ],
+     [
+      "Wildcat Strike",
+      2
+     ],
+     [
+      "DZMZ Optimizer",
+      2
+     ],
+     [
+      "Conduit",
+      2
+     ],
+     [
+      "Leech",
+      2
+     ],
+     [
+      "Sure Gamble",
+      3
+     ],
+     [
+      "Tread Lightly",
+      2
+     ],
+     [
+      "VRcation",
+      2
+     ],
+     [
+      "Docklands Pass",
+      1
+     ],
+     [
+      "Pennyshaver",
+      1
+     ],
+     [
+      "Red Team",
+      1
+     ],
+     [
+      "Smartware Distributor",
+      2
+     ],
+     [
+      "Telework Contract",
+      2
+     ],
+     [
+      "Verbal Plasticity",
+      1
+     ],
+     [
+      "Carmen",
+      2
+     ],
+     [
+      "Cleaver",
+      2
+     ],
+     [
+      "Mayfly",
+      2
+     ],
+     [
+      "Unity",
+      2
+     ]
+    ]
+   },
+   "id": "1umpzyb1d17qzeuaouw7"
+  }
+ },
+ {
+  "seq": 8,
+  "seat": 0,
+  "p": {
+   "k": "deck",
+   "deck": {
+    "name": "Classique 2022: Foodcoats (Classique 2022: Foodcoats (C) vs. Book of Kate (R))",
+    "identity": "Haas-Bioroid: Engineering the Future",
+    "cards": [
+     [
+      "Accelerated Beta Test",
+      3
+     ],
+     [
+      "Global Food Initiative",
+      3
+     ],
+     [
+      "NAPD Contract",
+      3
+     ],
+     [
+      "Adonis Campaign",
+      3
+     ],
+     [
+      "Eve Campaign",
+      3
+     ],
+     [
+      "Jackson Howard",
+      3
+     ],
+     [
+      "Ash 2X3ZB9CY",
+      3
+     ],
+     [
+      "Breaker Bay Grid",
+      3
+     ],
+     [
+      "Caprice Nisei",
+      2
+     ],
+     [
+      "Crisium Grid",
+      1
+     ],
+     [
+      "Archived Memories",
+      2
+     ],
+     [
+      "Hedge Fund",
+      3
+     ],
+     [
+      "Architect",
+      3
+     ],
+     [
+      "Eli 1.0",
+      3
+     ],
+     [
+      "Enigma",
+      2
+     ],
+     [
+      "Ichi 1.0",
+      3
+     ],
+     [
+      "Ichi 2.0",
+      2
+     ],
+     [
+      "Turing",
+      3
+     ],
+     [
+      "Wall of Static",
+      1
+     ]
+    ]
+   },
+   "id": "1yxeziy16ckwjx16uoux"
+  }
+ },
+ {
+  "seq": 9,
+  "seat": 0,
+  "p": {
+   "k": "start",
+   "seed": [
+    2121395835,
+    2425402257,
+    2313803411,
+    3110102829
+   ],
+   "id": "1xlesqi7kglku1ep2e2k"
+  }
+ },
+ {
+  "seq": 10,
+  "seat": 0,
+  "p": {
+   "k": "act",
+   "command": "choice",
+   "args": {
+    "eid": {
+     "eid": 469
+    },
+    "choice": {
+     "uuid": "7702663d-72ab-42f0-8619-097d6e823252"
+    }
+   },
+   "id": "quz47m4ytkm510gd4r3"
+  }
+ },
+ {
+  "seq": 11,
+  "seat": 1,
+  "p": {
+   "k": "act",
+   "command": "choice",
+   "args": {
+    "eid": {
+     "eid": 470
+    },
+    "choice": {
+     "uuid": "f53ad354-d429-4a3f-a246-17670239883a"
+    }
+   },
+   "id": "fah461qagfyxukjkuj"
+  }
+ },
+ {
+  "seq": 12,
+  "seat": 0,
+  "p": {
+   "k": "act",
+   "command": "start-turn",
+   "args": null,
+   "id": "17g68p61ysvlrllppga3"
+  }
+ },
+ {
+  "seq": 13,
+  "seat": 0,
+  "p": {
+   "k": "act",
+   "command": "play",
+   "args": {
+    "card": {
+     "cid": "70398fd6-f5b5-47e4-8feb-f171484ea829",
+     "zone": [
+      "hand"
+     ],
+     "side": "Corp",
+     "type": "ICE"
+    },
+    "server": "HQ"
+   },
+   "id": "km6lpq1knm1oxkxfuiu"
+  }
+ },
+ {
+  "seq": 14,
+  "seat": 0,
+  "p": {
+   "k": "act",
+   "command": "play",
+   "args": {
+    "card": {
+     "cid": "a3ac59a4-5a4f-4fa0-b3c3-2a97afc2af00",
+     "zone": [
+      "hand"
+     ],
+     "side": "Corp",
+     "type": "Asset"
+    },
+    "server": "New remote"
+   },
+   "id": "1mmiu5nasraavxcp9k"
+  }
+ },
+ {
+  "seq": 15,
+  "seat": 0,
+  "p": {
+   "k": "act",
+   "command": "credit",
+   "args": null,
+   "id": "10qg5q919heozkiz4d05"
+  }
+ },
+ {
+  "seq": 16,
+  "seat": 0,
+  "p": {
+   "k": "act",
+   "command": "end-turn",
+   "args": null,
+   "id": "1upe0cs16dq7vtnaxlvl"
+  }
+ },
+ {
+  "seq": 17,
+  "seat": 1,
+  "p": {
+   "k": "act",
+   "command": "start-turn",
+   "args": null,
+   "id": "11e1wk0ljbh9p1580lbc"
+  }
+ },
+ {
+  "seq": 18,
+  "seat": 1,
+  "p": {
+   "k": "act",
+   "command": "play",
+   "args": {
+    "card": {
+     "cid": "4edbdfe6-f069-4a9f-ae66-dda21fa16ae8",
+     "zone": [
+      "hand"
+     ],
+     "side": "Runner",
+     "type": "Event"
+    }
+   },
+   "id": "msmbaz1dmlkul11ysho0"
+  }
+ },
+ {
+  "seq": 19,
+  "seat": 1,
+  "p": {
+   "k": "act",
+   "command": "play",
+   "args": {
+    "card": {
+     "cid": "e092de36-a818-4dc7-9af4-f27047630b84",
+     "zone": [
+      "hand"
+     ],
+     "side": "Runner",
+     "type": "Hardware"
+    }
+   },
+   "id": "1quio1h1ku1vve10sj7hc"
+  }
+ },
+ {
+  "seq": 20,
+  "seat": 1,
+  "p": {
+   "k": "act",
+   "command": "play",
+   "args": {
+    "card": {
+     "cid": "2024b05f-7b7c-4912-a71b-78b36db5f330",
+     "zone": [
+      "hand"
+     ],
+     "side": "Runner",
+     "type": "Program"
+    }
+   },
+   "id": "p4kuf1103wm6ezx0sla"
+  }
+ },
+ {
+  "seq": 21,
+  "seat": 1,
+  "p": {
+   "k": "act",
+   "command": "play",
+   "args": {
+    "card": {
+     "cid": "baf2e875-4ee7-42b7-ae34-7c2025cdd679",
+     "zone": [
+      "hand"
+     ],
+     "side": "Runner",
+     "type": "Hardware"
+    }
+   },
+   "id": "ltiiaf1d5r5d21iq1i5t"
+  }
+ },
+ {
+  "seq": 22,
+  "seat": 1,
+  "p": {
+   "k": "act",
+   "command": "end-turn",
+   "args": null,
+   "id": "t6hx751hsr58j1ta1c6z"
+  }
+ },
+ {
+  "seq": 23,
+  "seat": 0,
+  "p": {
+   "k": "act",
+   "command": "rez",
+   "args": {
+    "card": {
+     "cid": "a3ac59a4-5a4f-4fa0-b3c3-2a97afc2af00",
+     "zone": [
+      "servers",
+      "remote1",
+      "content"
+     ],
+     "side": "Corp",
+     "type": "Asset"
+    }
+   },
+   "id": "1qocrlrqvp06u1v9sow0"
+  }
+ },
+ {
+  "seq": 24,
+  "seat": 0,
+  "p": {
+   "k": "act",
+   "command": "start-turn",
+   "args": null,
+   "id": "1kj0zmxt623wi1m46omj"
+  }
+ },
+ {
+  "seq": 25,
+  "seat": 0,
+  "p": {
+   "k": "act",
+   "command": "play",
+   "args": {
+    "card": {
+     "cid": "10309cd2-c851-4bb1-98e8-8ab0b890de8e",
+     "zone": [
+      "hand"
+     ],
+     "side": "Corp",
+     "type": "Asset"
+    },
+    "server": "New remote"
+   },
+   "id": "ketr9e1fxigm81fzt4rh"
+  }
+ },
+ {
+  "seq": 26,
+  "seat": 0,
+  "p": {
+   "k": "act",
+   "command": "rez",
+   "args": {
+    "card": {
+     "cid": "10309cd2-c851-4bb1-98e8-8ab0b890de8e",
+     "zone": [
+      "servers",
+      "remote2",
+      "content"
+     ],
+     "side": "Corp",
+     "type": "Asset"
+    }
+   },
+   "id": "he3z4n1pa0n7kdzrdzr"
+  }
+ },
+ {
+  "seq": 27,
+  "seat": 0,
+  "p": {
+   "k": "act",
+   "command": "ability",
+   "args": {
+    "card": {
+     "cid": "10309cd2-c851-4bb1-98e8-8ab0b890de8e",
+     "zone": [
+      "servers",
+      "remote2",
+      "content"
+     ],
+     "side": "Corp",
+     "type": "Asset"
+    },
+    "ability": 0
+   },
+   "id": "g1y9iafbctkq1wg3thm"
+  }
+ },
+ {
+  "seq": 28,
+  "seat": 0,
+  "p": {
+   "k": "act",
+   "command": "credit",
+   "args": null,
+   "id": "37jrn6s3suuq16hk8db"
+  }
+ },
+ {
+  "seq": 29,
+  "seat": 0,
+  "p": {
+   "k": "act",
+   "command": "end-turn",
+   "args": null,
+   "id": "1i2f32j1bwlnuw1rjdqy4"
+  }
+ },
+ {
+  "seq": 30,
+  "seat": 0,
+  "p": {
+   "k": "act",
+   "command": "select",
+   "args": {
+    "card": {
+     "cid": "bf383013-89eb-41b8-90c9-d99b356b980b",
+     "zone": [
+      "hand"
+     ],
+     "side": "Corp",
+     "type": "Upgrade"
+    },
+    "eid": {
+     "eid": 16809
+    }
+   },
+   "id": "2gizk81v58kp014zjsdh"
+  }
+ },
+ {
+  "seq": 31,
+  "seat": 0,
+  "p": {
+   "k": "say",
+   "text": "De mon côté j'ai fini mon tour (défausse comprise). Tu devrais avoir un bouton « Allow end of turn » ou « Start turn ».",
+   "id": "duqvy31pi4mim17yljhi"
+  }
+ }
+]
