@@ -70,7 +70,7 @@ function serverOrder(servers: Record<string, any>) {
 
 function Stat({ icon, label, children }: { icon: IconName; label: string; children: ComponentChildren }) {
   return (
-    <span class="stat" title={label} aria-label={`${label} ${children}`}>
+    <span class="stat" data-tip={icon} aria-label={`${label} ${children}`}>
       <Icon name={icon} />
       {children}
     </span>

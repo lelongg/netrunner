@@ -2880,3 +2880,18 @@ button:active:not(:disabled) {
   width: 100%;
   margin-top: 8px;
 }
+
+.tip {
+  position: fixed;
+  z-index: 80;
+  max-width: min(280px, calc(100vw - 16px));
+  padding: 8px 10px;
+  background: #0b0c0e;
+  border: 1px solid var(--cyan);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.6);
+  color: var(--text);
+  font-size: 11px;
+  line-height: 1.4;
+  letter-spacing: 0.04em;
+  pointer-events: none;
+}
