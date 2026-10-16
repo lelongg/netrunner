@@ -7,8 +7,10 @@ const BASE = (process.env.POCKET_RIG_URL ?? "https://lelongg.github.io/netrunner
 const NAME = process.env.POCKET_RIG_NAME ?? "Claude";
 
 const INSTRUCTIONS = `Pocket Rig lets you play Netrunner (the Jinteki rules engine) against a human on their phone.
-Flow: join_game with the code the human gives you (or host_game and give them the code), then list_decks and choose_deck. The host starts the game with start_game.
-During the game: get_state shows the whole board from your seat only and a numbered list of legal actions; act performs one of them by id. When nothing is yours to decide, call wait_for_turn and repeat until the game is over.
+Joining: join_game with the code the human gives you, then choose_deck (list_decks shows the options); the host starts the game.
+Hosting: host_game picks a default deck (change it with choose_deck if you like). Tell the human the code in your reply, then in the same turn call wait_for_turn: the game starts by itself once they join, pick a deck and press Ready.
+During the game: get_state shows the whole board from your seat only and a numbered list of legal actions; act performs one of them by id. When nothing is yours to decide, call wait_for_turn.
+Keep playing in a loop (wait_for_turn, then act) without ending your turn until the game is over or the user asks you to stop: the human cannot nudge you while you are idle, so ending your turn stalls the game.
 To save context, act and wait_for_turn only return what changed since your last look (new log lines, changed lines, the current run and prompt) plus the fresh action list. Call get_state again whenever you need the full picture, for example after your context was summarized.
 Use card_info to read a card's full text. Decide every move yourself and explain your reasoning briefly to the user. You only ever see what your seat may see.`;
 
@@ -35,7 +37,7 @@ server.registerTool(
 );
 server.registerTool(
   "host_game",
-  { description: "Create a new game and get the code to give to the human. You choose your side.", inputSchema: { side: side.describe("The side you will play"), name: z.string().optional() } },
+  { description: "Create a new game with a default deck and get the code to give to the human. The game starts by itself once they are ready: give them the code, then call wait_for_turn.", inputSchema: { side: side.describe("The side you will play"), name: z.string().optional() } },
   ({ side, name }) => run((a) => a.host(name ?? NAME, side)),
 );
 server.registerTool("list_decks", { description: "List the preconstructed decks for your side (or the given side).", inputSchema: { side: side.optional() } }, ({ side }) => run((a) => a.decks(side)));
@@ -45,7 +47,7 @@ server.registerTool(
   ({ deck }) => run((a) => a.chooseDeck(deck)),
 );
 server.registerTool("set_side", { description: "Host only: switch the side you play before the game starts.", inputSchema: { side } }, ({ side }) => run((a) => a.setSide(side)));
-server.registerTool("start_game", { description: "Host only: start the game once both decks are ready." }, () => run((a) => a.start()));
+server.registerTool("start_game", { description: "Host only: start the game now (it also starts by itself when the guest is ready)." }, () => run((a) => a.start()));
 server.registerTool("get_state", { description: "Show the lobby, or the whole board from your seat with the recent log and the numbered list of legal actions." }, () => run((a) => a.describe()));
 server.registerTool(
   "act",
@@ -57,7 +59,7 @@ server.registerTool(
 );
 server.registerTool(
   "wait_for_turn",
-  { description: "Wait until you have a decision to make (or the game ends, or the lobby changes), then return what changed since your last look and the action list.", inputSchema: { seconds: z.number().int().optional().describe("Maximum wait, default 50, max 600") } },
+  { description: "Wait until you have a decision to make (in the lobby: until the game starts), then return what changed since your last look and the action list.", inputSchema: { seconds: z.number().int().optional().describe("Maximum wait, default 50, max 600") } },
   ({ seconds }) => run((a) => a.wait(seconds ?? 50)),
 );
 server.registerTool("card_info", { description: "Full text and stats of a card by name.", inputSchema: { name: z.string() } }, ({ name }) => run((a) => a.card(name)));

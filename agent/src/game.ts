@@ -107,7 +107,27 @@ export class Agent {
     this.session?.close();
     this.session = session;
     this.installing = undefined;
-    this.unsubscribe = session.subscribe(() => this.autoPass());
+    this.unsubscribe = session.subscribe(() => {
+      this.autoPass();
+      this.autoStart();
+    });
+  }
+
+  private starting = false;
+
+  private autoStart() {
+    const s = this.session;
+    if (!s || s.lobby.role !== "host" || s.lobby.started || this.starting || !s.canStart) return;
+    this.starting = true;
+    setTimeout(() => {
+      if (this.session === s && s.canStart) s.start();
+      this.starting = false;
+    }, 300);
+  }
+
+  private defaultDeck(side: Side): WireDeck | undefined {
+    const m = (this.engine.precons() as any[])[0];
+    return m ? toWire(fromPrecon({ ...m[side], name: `${m[side].name} (${m.title})` }, this.db)) : undefined;
   }
 
   private autoPass() {
@@ -141,6 +161,9 @@ export class Agent {
     await this.settleLobby();
     this.session!.setSide(side);
     await sleep(500);
+    const deck = this.session!.lobby.myDeck ?? this.defaultDeck(side);
+    if (deck && !this.session!.lobby.myDeck) this.session!.setDeck(deck);
+    await sleep(300);
     return this.describe();
   }
 
@@ -215,7 +238,7 @@ export class Agent {
       `Opponent: ${l.opponentName ?? "not joined yet"}${l.opponentName ? ` · deck ${l.opponentDeckReady ? "ready" : "not ready"}` : ""}`,
       `Your deck: ${l.myDeck ? l.myDeck.name : "none (use list_decks then choose_deck)"}`,
     ];
-    if (l.role === "host") lines.push(s.canStart ? "Ready to start: call start_game." : "Waiting before start_game is possible (both decks needed, guest ready).");
+    if (l.role === "host") lines.push(s.canStart ? "Starting the game…" : "The game starts by itself as soon as the human has joined, picked a deck and pressed Ready. Tell them the code, then call wait_for_turn.");
     else lines.push(l.myDeck ? "You are ready; the host starts the game." : "Pick a deck to be ready.");
     if (l.role === "host" && l.code) lines.push(`Give the human the code ${l.code} or this link: ${(globalThis as any).location.origin}${(globalThis as any).location.pathname}?join=${l.code}`);
     return lines.join("\n");
@@ -514,12 +537,11 @@ export class Agent {
   async wait(seconds: number) {
     const s = this.requireSession();
     const end = Date.now() + Math.max(1, Math.min(seconds, 600)) * 1000;
-    const lobbyBefore = this.lobbyText();
     while (Date.now() < end) {
       const view = s.views[s.lobby.mySide];
       if (s.lobby.started && view) {
         if (view.winner || (!s.pending && canAct(view, s.lobby.mySide))) return this.update();
-      } else if (this.lobbyText() !== lobbyBefore) return this.describe();
+      } else if (s.lobby.error) return this.describe();
       await sleep(400);
     }
     return `Still waiting (the opponent has not given you a decision yet).\n\n${this.update()}`;
