@@ -154,7 +154,7 @@ export function CardSheet({ card, view, side, db, send, onClose, disabled, index
               );
             })()}
             {full?.text && <RichText class="card-text" text={full.text} />}
-            {(card.subroutines ?? []).length > 0 && side === "runner" && (
+            {(card.subroutines ?? []).length > 0 && side === "runner" && !full?.text && (
               <ul class="subs">
                 {card.subroutines.map((s: any) => (
                   <li class={s.broken ? "broken" : s.fired ? "fired" : ""}>
