@@ -457,12 +457,31 @@ function Log({ view, render, names, onSay, onClose }: { view: any; render: (m: u
 function useLastIce(view: any, ice: any) {
   const last = useRef<any>(null);
   if (!view.run) last.current = null;
-  else if (ice?.rezzed && (view.encounters || view.run.phase === "encounter-ice")) last.current = ice;
+  else if (ice?.rezzed && (view.encounters || view.run.phase === "encounter-ice")) {
+    const prev = last.current?.cid === ice.cid ? last.current.subroutines ?? [] : [];
+    const subroutines = (ice.subroutines ?? []).map((sub: any, i: number) => {
+      const was = prev[i] ?? {};
+      return { ...sub, broken: sub.broken || was.broken, breaker: sub.broken ? sub.breaker : was.broken ? was.breaker : sub.breaker, fired: sub.fired || was.fired };
+    });
+    last.current = { ...ice, subroutines };
+  }
   return last.current;
 }
 
-function Encounter({ view, ice, passed }: { view: any; ice: any; passed?: boolean }) {
-  const subs: any[] = ice.subroutines ?? [];
+function breakAllFromLog(view: any, title: string, render: (m: unknown) => string): string | undefined {
+  const lines: any[] = (view.log ?? []).slice(-20);
+  for (const e of lines.reverse()) {
+    const text = render(e.text);
+    if (/approaches /.test(text) && text.includes(title)) return undefined;
+    const m = text.match(/(?:use|uses|strength of) (.+?) (?:to|and) .*?break all\s+(?:\d+\s+)?subroutines on /i);
+    if (m && text.includes(`subroutines on ${title}`)) return m[1];
+  }
+  return undefined;
+}
+
+function Encounter({ view, ice, passed, render }: { view: any; ice: any; passed?: boolean; render: (m: unknown) => string }) {
+  const allBy = passed ? breakAllFromLog(view, ice.title, render) : undefined;
+  const subs: any[] = (ice.subroutines ?? []).map((sub: any) => (allBy && !sub.broken && !sub.fired ? { ...sub, broken: true, breakerTitle: allBy } : sub));
   const encountering = !passed && (!!view.encounters || view.run?.phase === "encounter-ice");
   const strength = ice["current-strength"] ?? ice.strength;
   const types = (ice.subtypes ?? []).join(" · ");
@@ -479,14 +498,14 @@ function Encounter({ view, ice, passed }: { view: any; ice: any; passed?: boolea
       {subs.length > 0 ? (
         <ol class="enc-subs">
           {subs.map((sub) => {
-            const breaker = sub.breaker != null ? findCard(view, sub.breaker)?.title : undefined;
+            const breaker = sub.breakerTitle ?? (sub.breaker != null ? findCard(view, sub.breaker)?.title : undefined);
             const state = sub.broken ? "broken" : sub.fired ? "fired" : sub.resolve === false ? "skipped" : "live";
             return (
               <li class={`enc-sub ${state}`}>
                 <Icon name="sub" />
                 <span class="enc-label">{glyphs(iconize(sub.label ?? "Subroutine"))}</span>
                 <span class="enc-state">
-                  {state === "broken" ? (breaker ? `Broken · ${breaker}` : "Broken") : state === "fired" ? "Fired" : state === "skipped" ? "Won't fire" : encountering ? "Unbroken" : passed ? "Resolved" : ""}
+                  {state === "broken" ? (breaker ? `Broken · ${breaker}` : "Broken") : state === "fired" ? "Fired" : state === "skipped" ? "Won't fire" : encountering ? "Unbroken" : ""}
                 </span>
               </li>
             );
@@ -916,7 +935,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
         <button class="last-log" onClick={() => setShowLog(true)}>
           {lastLog ? glyphs(iconize(render(lastLog.text)).slice(0, 140)) : "Log"}
         </button>
-        {!view.winner && (ice?.rezzed ? <Encounter view={view} ice={ice} /> : lastIce && <Encounter view={view} ice={lastIce} passed />)}
+        {!view.winner && (ice?.rezzed ? <Encounter view={view} render={render} ice={lastIce?.cid === ice.cid && (view.encounters || view.run?.phase === "encounter-ice") ? lastIce : ice} /> : lastIce && <Encounter view={view} render={render} ice={lastIce} passed />)}
         {panel}
         <MeBar view={view} side={side} name={names[side]} />
         <div class="hand">

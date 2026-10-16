@@ -45,7 +45,7 @@ Jinteki.net team.
 | | | |
 |---|---|---|
 | ![Run](docs/run.jpg) | ![Access](docs/access.jpg) | ![Invite](docs/lobby.jpg) |
-| A run in progress | Accessing a card | Hosting with a QR code |
+| Which card broke each subroutine | Accessing a card | Hosting with a QR code |
 | ![NetrunnerDB decklists](docs/decks.jpg) | ![Card](docs/card.jpg) | ![Board](docs/board.jpg) |
 | NetrunnerDB decklists | Card sheet | Board from the Runner's seat |
 
