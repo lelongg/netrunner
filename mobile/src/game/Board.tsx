@@ -854,6 +854,31 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
           >
             Deck list
           </button>
+          <button
+            onClick={async () => {
+              setMenu(false);
+              const text = session.journal();
+              if (!text) return;
+              const name = `pocket-rig-${(session.lobby.code || "game").replace(/[^\w-]/g, "")}.json`;
+              const file = new File([text], name, { type: "application/json" });
+              try {
+                if (navigator.canShare?.({ files: [file] })) {
+                  await navigator.share({ files: [file], title: name });
+                  return;
+                }
+              } catch (e) {
+                if ((e as Error)?.name === "AbortError") return;
+              }
+              const url = URL.createObjectURL(file);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = name;
+              a.click();
+              setTimeout(() => URL.revokeObjectURL(url), 1000);
+            }}
+          >
+            Export game journal
+          </button>
           {session.rejoinUrl && (
             <button
               onClick={async () => {

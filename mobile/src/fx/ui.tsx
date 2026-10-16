@@ -41,15 +41,40 @@ export function useLoop(ref: { current: Element | null }, keyframes: any, option
 const BOUNCE = [0.2, 1.25, 0.4, 1] as const;
 const SMOOTH = [0.2, 0.9, 0.3, 1] as const;
 
+function settle(el: Element) {
+  requestAnimationFrame(() => {
+    const style = (el as HTMLElement).style;
+    style.transform = "";
+    style.opacity = "";
+  });
+}
+
 function rise(el: Element, from: string, duration: number, ease: readonly number[], delay = 0, fade = true) {
-  animate(el, fade ? { transform: [from, "none"], opacity: [0, 1] } : { transform: [from, "none"] }, { duration, ease: ease as any, delay });
+  animate(el, fade ? { transform: [from, "none"], opacity: [0, 1] } : { transform: [from, "none"] }, { duration, ease: ease as any, delay }).finished.then(
+    () => settle(el),
+    () => settle(el),
+  );
 }
 
 const ENTER: [string, (el: HTMLElement) => void][] = [
   [".sheet", (el) => rise(el, "translateY(100%)", 0.32, SMOOTH, 0, false)],
-  [".sheet-backdrop, .menu-backdrop", (el) => animate(el, { opacity: [0, 1] }, { duration: 0.18 })],
+  [
+    ".sheet-backdrop, .menu-backdrop",
+    (el) =>
+      animate(el, { opacity: [0, 1] }, { duration: 0.18 }).finished.then(
+        () => settle(el),
+        () => settle(el),
+      ),
+  ],
   [".menu", (el) => rise(el, "translateY(-14px) scale(0.85)", 0.28, BOUNCE)],
-  [".card-zoom", (el) => animate(el, { opacity: [0, 1] }, { duration: 0.15 })],
+  [
+    ".card-zoom",
+    (el) =>
+      animate(el, { opacity: [0, 1] }, { duration: 0.15 }).finished.then(
+        () => settle(el),
+        () => settle(el),
+      ),
+  ],
   [".update-banner", (el) => rise(el, "translateY(60px)", 0.35, BOUNCE)],
   [".toast", (el) => rise(el, "translateX(-40px) scale(0.9)", 0.32, BOUNCE)],
   [".encounter", (el) => rise(el, "translateY(24px) scale(0.96)", 0.34, BOUNCE)],
@@ -91,7 +116,11 @@ export function installMotion() {
   let pressed: HTMLElement | null = null;
   const release = () => {
     if (!pressed) return;
-    animate(pressed, { transform: "scale(1)" }, { duration: 0.25, ease: [0.2, 1.6, 0.4, 1] });
+    const el = pressed;
+    animate(el, { transform: "scale(1)" }, { duration: 0.25, ease: [0.2, 1.6, 0.4, 1] }).finished.then(
+      () => requestAnimationFrame(() => (el.style.transform = "")),
+      () => requestAnimationFrame(() => (el.style.transform = "")),
+    );
     pressed = null;
   };
   document.addEventListener(

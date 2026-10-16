@@ -26,10 +26,7 @@ export interface LobbyState {
   since?: number;
 }
 
-type LocalEntry =
-  | { side: Side; kind: "act"; command: string; args: unknown }
-  | { side: Side; kind: "say"; user?: string; text: string }
-  | { side: Side; kind: "concede" };
+type LocalEntry = { side: Side; kind: "act"; command: string; args: unknown } | { side: Side; kind: "say"; user?: string; text: string } | { side: Side; kind: "concede" };
 
 export type SavedGame =
   | {
@@ -364,8 +361,7 @@ export class Session {
       case "concede": {
         if (!this.game) break;
         const side = this.sideOf(seat);
-        const local: LocalEntry =
-          p.k === "act" ? { side, kind: "act", command: p.command, args: p.args ?? null } : p.k === "say" ? { side, kind: "say", user: t.names[seat], text: p.text } : { side, kind: "concede" };
+        const local: LocalEntry = p.k === "act" ? { side, kind: "act", command: p.command, args: p.args ?? null } : p.k === "say" ? { side, kind: "say", user: t.names[seat], text: p.text } : { side, kind: "concede" };
         const error = this.exec(local);
         if (seat === this.seat) {
           this.pending = false;
@@ -555,10 +551,7 @@ export class Session {
     const theirs = fromWire(this.opponentDeck!, this.db);
     const me = { username: this.lobby.myName };
     const them = { username: this.lobby.opponentName ?? "Player 2" };
-    const players =
-      this.lobby.mySide === "corp"
-        ? { corp: { user: me, deck: engineDeck(mine) }, runner: { user: them, deck: engineDeck(theirs) } }
-        : { corp: { user: them, deck: engineDeck(theirs) }, runner: { user: me, deck: engineDeck(mine) } };
+    const players = this.lobby.mySide === "corp" ? { corp: { user: me, deck: engineDeck(mine) }, runner: { user: them, deck: engineDeck(theirs) } } : { corp: { user: them, deck: engineDeck(theirs) }, runner: { user: me, deck: engineDeck(mine) } };
     this.deckNames = { [this.lobby.mySide]: mine.name, [other(this.lobby.mySide)]: theirs.name };
     this.boot({ gameid: this.lobby.code, format: "casual", ...players }, seed);
     this.log = [];
@@ -597,10 +590,10 @@ export class Session {
     this.broadcast();
   }
 
-  private persist() {
+  private snapshot(): SavedGame | undefined {
     if (this.lobby.role === "local") {
       if (!this.setup || !this.seed) return;
-      return writeSave(this.saveId!, {
+      return {
         v: 1,
         role: "local",
         code: this.lobby.code,
@@ -614,10 +607,10 @@ export class Session {
         log: this.log,
         savedAt: Date.now(),
         summary: this.summary(),
-      });
+      };
     }
     if (!this.lobby.code || !this.transport) return;
-    writeSave(this.saveId!, {
+    return {
       v: 2,
       role: this.lobby.role,
       transport: this.transport.kind,
@@ -627,7 +620,17 @@ export class Session {
       entries: this.entries,
       savedAt: Date.now(),
       summary: this.summary(),
-    });
+    };
+  }
+
+  private persist() {
+    const save = this.snapshot();
+    if (save) writeSave(this.saveId!, save);
+  }
+
+  journal(): string | undefined {
+    const save = this.snapshot();
+    return save && JSON.stringify(save);
   }
 
   get saveId() {
