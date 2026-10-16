@@ -132,6 +132,10 @@ function Seat({ label, side, deck, db, matchups, onPick, onSide, locked, inline,
   const [choosing, setChoosing] = useState(false);
   const [viewing, setViewing] = useState(false);
   const current = useMemo(() => (deck ? fromWire(deck, db) : undefined), [deck]);
+  useEffect(() => {
+    setChoosing(false);
+    setViewing(false);
+  }, [side]);
   useBackClose(viewing, () => setViewing(false));
   return (
     <section class={`panel section seat ${inline ? "inline" : ""}`}>
@@ -287,9 +291,9 @@ export function Lobby({ session, db, matchups, onLeave }: Props) {
         {lobby.role === "guest" && !inLobby && lobby.status !== "closed" && <JoinStatus lobby={lobby} />}
         {lobby.error && <p class="error">{lobby.error}</p>}
 
-        {inLobby && <Seat key={lobby.mySide} label={lobby.role === "local" && !lobby.vsBot ? "Player 1" : "You"} name={lobby.myName} onName={(n) => session.setName(n)} inline={lobby.role !== "local" && !inviting} side={lobby.mySide} deck={lobby.myDeck} db={db} matchups={matchups} onPick={(d) => session.setDeck(d)} onSide={lobby.role !== "guest" ? (s) => session.setSide(s) : undefined} />}
+        {inLobby && <Seat label={lobby.role === "local" && !lobby.vsBot ? "Player 1" : "You"} name={lobby.myName} onName={(n) => session.setName(n)} inline={lobby.role !== "local" && !inviting} side={lobby.mySide} deck={lobby.myDeck} db={db} matchups={matchups} onPick={(d) => session.setDeck(d)} onSide={lobby.role !== "guest" ? (s) => session.setSide(s) : undefined} />}
 
-        {lobby.role === "local" && <Seat key={other(lobby.mySide)} label={lobby.vsBot ? "Bot" : "Player 2"} side={other(lobby.mySide)} deck={session.localOpponentDeck} db={db} matchups={matchups} onPick={(d) => session.setDeck(d, other(lobby.mySide))} />}
+        {lobby.role === "local" && <Seat label={lobby.vsBot ? "Bot" : "Player 2"} side={other(lobby.mySide)} deck={session.localOpponentDeck} db={db} matchups={matchups} onPick={(d) => session.setDeck(d, other(lobby.mySide))} />}
 
         <div class="lobby-footer">
           {lobby.role === "host" && !inviting && <p class={`status ${lobby.opponentDeckReady ? "connected" : ""}`}>{lobby.opponentDeckReady ? `${opponent} is ready` : `Waiting for ${opponent} to pick a deck…`}</p>}
