@@ -38,9 +38,10 @@ from, default `https://lelongg.github.io/netrunner/`).
 
 | Tool | What it does |
 |---|---|
-| `join_game(code)` | Join a game with its code, or come back to one this server already played |
-| `host_game(side)` | Create a game and get the code to give to the human |
-| `list_decks`, `choose_deck(deck)` | Pick a preconstructed deck or a NetrunnerDB URL (marks a guest ready) |
+| `list_decks(side?)` | The preconstructed decks of a side (NetrunnerDB deck URLs work too) |
+| `host_game(side, deck)` | Create a game with your side and deck and get the code to give to the human; it starts by itself once they are ready |
+| `join_game(code, deck?)` | Join a game with its code (with a deck you are ready at once), or come back to one this server already played |
+| `choose_deck(deck)` | Change your deck before the game starts (marks a guest ready) |
 | `set_side`, `start_game` | Host only |
 | `get_state` | The lobby, or the whole board from your seat with a numbered list of legal actions |
 | `act(action, amount?, text?)` | Perform one listed action |

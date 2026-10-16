@@ -7,8 +7,9 @@ const BASE = (process.env.POCKET_RIG_URL ?? "https://lelongg.github.io/netrunner
 const NAME = process.env.POCKET_RIG_NAME ?? "Claude";
 
 const INSTRUCTIONS = `Pocket Rig lets you play Netrunner (the Jinteki rules engine) against a human on their phone.
-Joining: join_game with the code the human gives you, then choose_deck (list_decks shows the options); the host starts the game.
-Hosting: host_game picks a default deck (change it with choose_deck if you like). Tell the human the code in your reply, then in the same turn call wait_for_turn: the game starts by itself once they join, pick a deck and press Ready.
+Decks: list_decks shows the preconstructed decks of a side; NetrunnerDB deck URLs work too. Pick one that suits you.
+Joining: join_game with the code the human gives you and your deck; the host starts the game.
+Hosting: host_game with your side and deck. Tell the human the code in your reply, then in the same turn call wait_for_turn: the game starts by itself once they join, pick a deck and press Ready.
 During the game: get_state shows the whole board from your seat only and a numbered list of legal actions; act performs one of them by id. When nothing is yours to decide, call wait_for_turn.
 Keep playing in a loop (wait_for_turn, then act) without ending your turn until the game is over or the user asks you to stop: the human cannot nudge you while you are idle, so ending your turn stalls the game.
 To save context, act and wait_for_turn only return what changed since your last look (new log lines, changed lines, the current run and prompt) plus the fresh action list. Call get_state again whenever you need the full picture, for example after your context was summarized.
@@ -30,15 +31,23 @@ const run = async (fn: (a: Agent) => Promise<string> | string) => {
 const server = new McpServer({ name: "pocket-rig", version: "1.0.0" }, { instructions: INSTRUCTIONS });
 const side = z.enum(["corp", "runner"]);
 
+const deckArg = z.string().describe('A preconstructed deck name as list_decks shows it (e.g. "System Gateway Starter Runner (Beginner)") or a NetrunnerDB deck URL');
+
 server.registerTool(
   "join_game",
-  { description: "Join a Pocket Rig game with its 5-letter code (or rejoin one this server already played).", inputSchema: { code: z.string().describe("Game code, e.g. K7QPA"), name: z.string().optional().describe("Your player name") } },
-  ({ code, name }) => run((a) => a.join(code, name ?? NAME)),
+  {
+    description: "Join a Pocket Rig game with its 5-letter code (or rejoin one this server already played). With a deck, you are ready right away.",
+    inputSchema: { code: z.string().describe("Game code, e.g. K7QPA"), deck: deckArg.optional(), name: z.string().optional().describe("Your player name") },
+  },
+  ({ code, deck, name }) => run((a) => a.join(code, name ?? NAME, deck)),
 );
 server.registerTool(
   "host_game",
-  { description: "Create a new game with a default deck and get the code to give to the human. The game starts by itself once they are ready: give them the code, then call wait_for_turn.", inputSchema: { side: side.describe("The side you will play"), name: z.string().optional() } },
-  ({ side, name }) => run((a) => a.host(name ?? NAME, side)),
+  {
+    description: "Create a new game with your side and deck, and get the code to give to the human. Call list_decks first to pick a deck. The game starts by itself once they are ready: give them the code, then call wait_for_turn.",
+    inputSchema: { side: side.describe("The side you will play"), deck: deckArg, name: z.string().optional() },
+  },
+  ({ side, deck, name }) => run((a) => a.host(name ?? NAME, side, deck)),
 );
 server.registerTool("list_decks", { description: "List the preconstructed decks for your side (or the given side).", inputSchema: { side: side.optional() } }, ({ side }) => run((a) => a.decks(side)));
 server.registerTool(

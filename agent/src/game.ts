@@ -125,10 +125,7 @@ export class Agent {
     }, 300);
   }
 
-  private defaultDeck(side: Side): WireDeck | undefined {
-    const m = (this.engine.precons() as any[])[0];
-    return m ? toWire(fromPrecon({ ...m[side], name: `${m[side].name} (${m.title})` }, this.db)) : undefined;
-  }
+
 
   private autoPass() {
     const s = this.session;
@@ -147,22 +144,29 @@ export class Agent {
     await sleep(600);
   }
 
-  async join(code: string, name: string) {
+  async join(code: string, name: string, deck?: string) {
     const upper = code.trim().toUpperCase();
     const save = loadSave(upper);
     this.attach(save ? Session.resume(this.engine, this.db, save) : new Session(this.engine, this.db, "guest", upper, name));
     if (!save) this.session!.setName(name);
     await this.settleLobby();
+    const s = this.session!;
+    if (deck && !s.lobby.started) {
+      const end = Date.now() + 10000;
+      while (Date.now() < end && !s.lobby.opponentName) await sleep(200);
+      return this.chooseDeck(deck);
+    }
     return this.describe();
   }
 
-  async host(name: string, side: Side) {
+  async host(name: string, side: Side, deck: string) {
+    const wire = await this.resolveDeck(deck, side);
     this.attach(new Session(this.engine, this.db, "host", undefined, name, side));
     await this.settleLobby();
-    this.session!.setSide(side);
+    const s = this.session!;
+    s.setSide(side);
     await sleep(500);
-    const deck = this.session!.lobby.myDeck ?? this.defaultDeck(side);
-    if (deck && !this.session!.lobby.myDeck) this.session!.setDeck(deck);
+    s.setDeck(wire);
     await sleep(300);
     return this.describe();
   }
@@ -186,23 +190,21 @@ export class Agent {
     return `Preconstructed decks${want ? ` for the ${want}` : ""}:\n${lines.join("\n")}\n\nchoose_deck also accepts a NetrunnerDB deck or decklist URL.`;
   }
 
+  private async resolveDeck(nameOrUrl: string, side: Side): Promise<WireDeck> {
+    if (/netrunnerdb\.com/.test(nameOrUrl)) return toWire(await importNrdb(nameOrUrl, side, this.db));
+    const wanted = nameOrUrl.trim().toLowerCase();
+    for (const m of this.engine.precons() as any[]) {
+      const d = m[side];
+      const label = `${d.name} (${m.title})`;
+      if (label.toLowerCase() === wanted || d.name.toLowerCase() === wanted || label.toLowerCase().includes(wanted)) return toWire(fromPrecon({ ...d, name: label }, this.db));
+    }
+    throw new Error(`No ${side} deck matches "${nameOrUrl}".\n\n${this.decks(side)}`);
+  }
+
   async chooseDeck(nameOrUrl: string) {
     const s = this.requireSession();
     if (s.lobby.started) throw new Error("The game has already started.");
-    const side = s.lobby.mySide;
-    let deck: WireDeck | undefined;
-    if (/netrunnerdb\.com/.test(nameOrUrl)) deck = toWire(await importNrdb(nameOrUrl, side, this.db));
-    else {
-      const wanted = nameOrUrl.trim().toLowerCase();
-      const found: any[] = [];
-      for (const m of this.engine.precons() as any[]) {
-        const d = m[side];
-        const label = `${d.name} (${m.title})`.toLowerCase();
-        if (label === wanted || d.name.toLowerCase() === wanted || label.includes(wanted)) found.push({ ...d, name: `${d.name} (${m.title})` });
-      }
-      if (!found.length) throw new Error(`No ${side} precon matches "${nameOrUrl}". Use list_decks.`);
-      deck = toWire(fromPrecon(found[0], this.db));
-    }
+    const deck = await this.resolveDeck(nameOrUrl, s.lobby.mySide);
     s.setDeck(deck);
     if (s.lobby.role === "guest") {
       await sleep(300);
