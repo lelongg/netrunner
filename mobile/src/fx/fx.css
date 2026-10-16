@@ -447,7 +447,9 @@
   right: 0;
   top: 0;
   height: 40px;
+  z-index: 4;
   pointer-events: none;
+  mix-blend-mode: screen;
   background: linear-gradient(180deg, transparent, rgb(34 211 238 / 0.2), transparent);
 }
 

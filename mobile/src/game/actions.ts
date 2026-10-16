@@ -187,7 +187,7 @@ export function basicCommands(view: any, side: Side): Command[] {
   if (playable(0)) out.push({ label: "Gain 1[credit]", command: "credit" });
   if (playable(1) && (me["deck-count"] ?? 0) > 0) out.push({ label: "Draw", command: "draw" });
   if (side === "runner") {
-    if (!phaseLocked && me.click > 0) out.push({ label: "Run…", command: "generate-runnable-zones", then: "install-list" });
+    if (!phaseLocked && me.click > 0) out.push({ label: "Run", command: "generate-runnable-zones", then: "install-list" });
     if (!phaseLocked && playable(5) && (me.tag?.base ?? 0) > 0) out.push({ label: "Remove tag", command: "remove-tag" });
   } else {
     if (playable(6)) out.push({ label: "Purge", command: "purge" });
