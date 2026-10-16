@@ -1212,6 +1212,11 @@ textarea:focus {
   flex: 1 1 auto;
 }
 
+.buttons button {
+  flex: 1 1 0;
+  min-width: calc(33.3% - 6px);
+}
+
 .buttons button.cta,
 .choices button.wide {
   flex-basis: 100%;
