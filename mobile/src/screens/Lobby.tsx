@@ -17,6 +17,7 @@ interface Props {
   db: CardDb;
   matchups: Matchup[];
   onLeave: () => void;
+  onWatch: () => void;
 }
 
 const SIDE_LABEL: Record<Side, string> = { corp: "Corp", runner: "Runner" };
@@ -190,7 +191,7 @@ function Seat({ label, side, deck, db, matchups, onPick, onSide, locked, inline,
   );
 }
 
-export function Lobby({ session, db, matchups, onLeave }: Props) {
+export function Lobby({ session, db, matchups, onLeave, onWatch }: Props) {
   const { lobby } = session;
   const [copied, setCopied] = useState(false);
   const link = shareLink(lobby.code);
@@ -290,6 +291,14 @@ export function Lobby({ session, db, matchups, onLeave }: Props) {
         {lobby.role === "local" && <p class="status">{lobby.vsBot ? "Solo game · you against the bot" : "Local game · both sides on this device"}</p>}
         {lobby.role === "guest" && !inLobby && lobby.status !== "closed" && <JoinStatus lobby={lobby} />}
         {lobby.error && <p class="error">{lobby.error}</p>}
+        {lobby.role === "guest" && /two players/i.test(lobby.error ?? "") && lobby.code && (
+          <button
+            class="primary"
+            onClick={onWatch}
+          >
+            Watch this game
+          </button>
+        )}
 
         {inLobby && <Seat label={lobby.role === "local" && !lobby.vsBot ? "Player 1" : "You"} name={lobby.myName} onName={(n) => session.setName(n)} inline={lobby.role !== "local" && !inviting} side={lobby.mySide} deck={lobby.myDeck} db={db} matchups={matchups} onPick={(d) => session.setDeck(d)} onSide={lobby.role !== "guest" ? (s) => session.setSide(s) : undefined} />}
 

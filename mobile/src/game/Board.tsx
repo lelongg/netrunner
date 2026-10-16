@@ -30,6 +30,7 @@ interface Props {
   onSwitchSide?: () => void;
   onLeave: () => void;
   onExit: () => void;
+  onWatch?: () => void;
   handoffLog?: number;
 }
 
@@ -787,7 +788,7 @@ function feedText(view: any, side: Side, names: Record<Side, string>, watching =
   return `Turn ${view.turn ?? 0} · ${active === side && !watching ? "your move" : `${names[active] ?? active} to play`}`;
 }
 
-export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, onExit, handoffLog }: Props) {
+export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, onExit, onWatch, handoffLog }: Props) {
   const [selected, setSelected] = useState<any>(null);
   const [showLog, setShowLog] = useState(false);
   const [picking, setPicking] = useState(false);
@@ -1104,6 +1105,16 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
               }}
             >
               Close stuck prompt
+            </button>
+          )}
+          {!watching && onWatch && session.watchUrl && (
+            <button
+              onClick={() => {
+                setMenu(false);
+                onWatch();
+              }}
+            >
+              Watch instead
             </button>
           )}
           {!watching && (

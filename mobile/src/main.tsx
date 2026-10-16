@@ -162,6 +162,14 @@ function App() {
     setSaves(listSaves());
   };
 
+  const watch = (code: string, forget = false) => {
+    if (!loaded) return;
+    if (forget) session?.forget();
+    session?.close();
+    setSession(new Session(loaded.engine, loaded.db, "spectator", code, "Spectator", "runner"));
+    setSaves(listSaves());
+  };
+
   const exit = () => {
     session?.close();
     setSession(null);
@@ -226,7 +234,7 @@ function App() {
   }
 
   const { lobby } = session;
-  if (!lobby.started) return <Lobby session={session} db={loaded.db} matchups={loaded.matchups} onLeave={leave} />;
+  if (!lobby.started) return <Lobby session={session} db={loaded.db} matchups={loaded.matchups} onLeave={leave} onWatch={() => watch(lobby.code, true)} />;
 
   if (hotSeat) {
     if (handoff)
@@ -257,7 +265,7 @@ function App() {
 
   const view = session.views[lobby.mySide];
   if (!view) return <Opening label={lobby.code || "game"} ready />;
-  return <Board session={session} engine={loaded.engine} db={loaded.db} side={lobby.mySide} view={view} onLeave={leave} onExit={exit} />;
+  return <Board session={session} engine={loaded.engine} db={loaded.db} side={lobby.mySide} view={view} onLeave={leave} onExit={exit} onWatch={() => watch(lobby.code)} />;
 }
 
 function Opening({ label, ready }: { label: string; ready: boolean }) {

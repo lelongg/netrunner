@@ -78,6 +78,18 @@ await late.waitForTimeout(800);
 const after2 = await late.locator(".me-bar .who-runner, .me-bar .who-corp").first().getAttribute("class");
 assert(before2 !== after2, "the spectator can switch which side is at the bottom");
 
+const third = await open(`${APP}?join=${code}`);
+await third.getByRole("button", { name: "Watch this game" }).waitFor({ timeout: 20000 });
+await third.getByRole("button", { name: "Watch this game" }).click();
+await third.waitForSelector(".board .actions.watching", { timeout: 30000 });
+assert(true, "a third player who finds the game full is offered to watch it, and watches");
+
+await guest.getByRole("button", { name: "Menu" }).click();
+await guest.waitForTimeout(300);
+await guest.getByRole("button", { name: "Watch instead" }).click();
+await guest.waitForSelector(".board .actions.watching", { timeout: 30000 });
+assert(true, "a player can switch to watching from the game menu");
+
 assert(errors.length === 0, `no page errors${errors.length ? `: ${errors.join(" | ")}` : ""}`);
 if (process.env.SHOT) await late.screenshot({ path: process.env.SHOT });
 await browser.close();
