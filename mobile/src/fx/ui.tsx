@@ -34,7 +34,7 @@ export function useLoop(ref: { current: Element | null }, keyframes: any, option
   useEffect(() => {
     if (!ref.current || still()) return;
     const anim = animate(ref.current, keyframes, { repeat: Infinity, ...options });
-    return () => anim.stop();
+    return () => anim.cancel();
   }, deps);
 }
 

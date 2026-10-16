@@ -20,9 +20,13 @@ export function Ticker({ children, action }: { children: ComponentChildren; acti
   const [width, setWidth] = useState(0);
   const track = useRef<HTMLSpanElement>(null);
   useEffect(() => {
-    if (!width || !track.current || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const anim = animate(track.current, { transform: ["translateX(0%)", "translateX(-50%)"] }, { duration: Math.max(6, width / 40), repeat: Infinity, ease: "linear" });
-    return () => anim.stop();
+    const el = track.current;
+    if (!width || !el || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const anim = animate(el, { transform: ["translateX(0%)", "translateX(-50%)"] }, { duration: Math.max(6, width / 40), repeat: Infinity, ease: "linear" });
+    return () => {
+      anim.cancel();
+      el.style.transform = "";
+    };
   }, [width]);
   useLayoutEffect(() => {
     const measure = () => {
