@@ -3345,7 +3345,16 @@ button:active:not(:disabled) {
   width: 100%;
   max-width: 360px;
   padding: 18px 16px 14px;
+  border-top: 2px solid var(--red);
   box-shadow: 0 18px 60px #000c;
+}
+
+.dialog.cyan {
+  border-top-color: var(--cyan);
+}
+
+.dialog::before {
+  top: -2px;
 }
 
 .dialog h2 {
