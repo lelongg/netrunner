@@ -1,7 +1,7 @@
 import type { EngineApi, GameHandle, Side } from "../engine";
 
 export type Seat = Side | "spectator";
-import { cardRef } from "./actions";
+import { cardRef, promptOf } from "./actions";
 
 export type LocalEntry = { side: Side; kind: "act"; command: string; args: unknown } | { side: Side; kind: "say"; user?: string; text: string } | { side: Side; kind: "concede" };
 
@@ -58,6 +58,13 @@ export class GameRunner {
     return live ? cardRef(ice) : null;
   }
 
+  private aligned(game: GameHandle, side: Side, args: unknown) {
+    const eid = (args as { eid?: { eid?: unknown } } | null)?.eid;
+    if (!eid || typeof eid !== "object") return args ?? null;
+    const current = promptOf(this.engine.view(game, side), side)?.eid;
+    return current && current.eid !== eid.eid ? { ...(args as object), eid: current } : args;
+  }
+
   private exec(entry: LocalEntry) {
     const game = this.game;
     if (!game) return false;
@@ -66,7 +73,7 @@ export class GameRunner {
         if (entry.kind === "act") {
           const ice = entry.command === "continue" ? this.unbrokenOnPass(game, entry.side) : null;
           if (ice) this.engine.act(game, "corp", "unbroken-subroutines", { card: ice });
-          else this.engine.act(game, entry.side, entry.command, entry.args ?? null);
+          else this.engine.act(game, entry.side, entry.command, this.aligned(game, entry.side, entry.args));
         } else if (entry.kind === "say") this.engine.say(game, entry.side, { username: entry.user }, entry.text);
         else this.engine.concede(game, entry.side);
       });
