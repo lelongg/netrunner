@@ -154,7 +154,7 @@ export function Dialogs() {
   if (!current) return null;
   return (
     <div ref={backdrop} class="dialog-backdrop" onClick={() => close(false)}>
-      <div ref={box} class={`dialog panel ${current.danger ? "danger" : ""}`} role="alertdialog" aria-modal="true" aria-label={current.title} onClick={(e) => e.stopPropagation()}>
+      <div ref={box} class={`dialog panel ${current.danger ? "" : "cyan"}`} role="alertdialog" aria-modal="true" aria-label={current.title} onClick={(e) => e.stopPropagation()}>
         <h2>{current.title}</h2>
         {current.body && <p>{current.body}</p>}
         <div class="dialog-actions">

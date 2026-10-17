@@ -174,21 +174,9 @@ export function CardSheet({ card, view, side, db, send, onClose, disabled, index
       }
     },
     release: (dir) => {
-      const h = head();
-      for (const d of [-1, 1] as const) {
-        const el = peekOf(d);
-        if (!el || el.style.visibility !== "visible") continue;
-        const from = new DOMMatrixReadOnly(getComputedStyle(el).transform).m41;
-        const to = dir === d ? 0 : d * ((h?.getBoundingClientRect().width ?? 300) + 24);
-        if (dir === d) peeked.current = true;
-        animate(el, { x: [from, to] }, dir === d ? { duration: 0.16, ease: [0.4, 0, 1, 1], keep: true } : { type: "spring", visualDuration: 0.3, bounce: 0.2, keep: true }).finished.then(
-          () => {
-            if (dir !== d) el.style.visibility = "hidden";
-          },
-          () => {},
-        );
-      }
+      if (dir) peeked.current = true;
     },
+    gap: 24,
   };
   const swipe = useDragPager(
     head,
