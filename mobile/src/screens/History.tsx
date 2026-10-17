@@ -272,19 +272,21 @@ function StatRows({ stats }: { stats: Stat[] }) {
   );
 }
 
-function StatTiles({ tiles, side }: { tiles: Tile[]; side: Side }) {
+function StatStrip({ only }: { only: Record<Side, Tile[]> }) {
   return (
-    <div class={`stat-tiles ${side}`}>
-      <span class={`label who-${side}`}>{side === "corp" ? "Corp" : "Runner"}</span>
-      {tiles.map((t) => (
-        <div class="stat-tile">
-          <span class="stat-tile-num">
-            {t.value}
-            {t.detail && <small>{t.detail}</small>}
-          </span>
-          <span class="stat-tile-label">{t.label}</span>
-        </div>
-      ))}
+    <div class="stat-strip" role="list">
+      {SIDES.flatMap((side) =>
+        only[side].map((t) => (
+          <div class={`stat-card ${side}`} role="listitem">
+            <span class={`stat-card-side who-${side}`}>{side}</span>
+            <span class="stat-card-num">
+              {t.value}
+              {t.detail && <small>{t.detail}</small>}
+            </span>
+            <span class="stat-card-label">{t.label}</span>
+          </div>
+        )),
+      )}
     </div>
   );
 }
@@ -494,13 +496,7 @@ function Report({ head, engine, db, onClose }: { head: Head; engine: EngineApi; 
           </section>
         )}
 
-        {stats && (
-          <section class="report-only">
-            {SIDES.map((side) => (
-              <StatTiles side={side} tiles={stats.only[side]} />
-            ))}
-          </section>
-        )}
+        {stats && <StatStrip only={stats.only} />}
 
         {final && (
           <section class="panel section report-log">
