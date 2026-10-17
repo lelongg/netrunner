@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "preact/hooks";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { CardDb, Deck, EngineApi, Side } from "../engine";
 import type { SavedGame } from "../session";
 import { type Archived, archiveFinished, listHistory, removeHistory } from "../history";
@@ -418,10 +418,18 @@ function Report({ head, engine, db, onClose }: { head: Head; engine: EngineApi; 
     setReplay(r);
     return () => r.dispose();
   }, []);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const el = hero.current;
     if (!el || motionOff()) return;
-    animate(el.querySelectorAll(".report-word, .report-score, .report-sub"), { opacity: [0, 1], y: [18, 0] }, { duration: 0.45, delay: stagger(0.08), ease: [0.2, 0.9, 0.3, 1] });
+    const parts = [...el.querySelectorAll<HTMLElement>(".report-word, .report-score, .report-sub")];
+    for (const part of parts) {
+      part.style.opacity = "0";
+      part.style.transform = "translateY(18px)";
+    }
+    animate(parts, { opacity: [0, 1], y: [18, 0] }, { duration: 0.45, delay: stagger(0.08), ease: [0.2, 0.9, 0.3, 1] }).finished.then(
+      () => parts.forEach((part) => (part.style.opacity = "")),
+      () => {},
+    );
   }, []);
   const render = (m: unknown) => engine.renderMessage(m);
   const final = replay?.done ? replay.frames[replay.frames.length - 1] : undefined;

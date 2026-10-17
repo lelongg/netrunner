@@ -172,7 +172,9 @@ function DeckRow({ db, stored, onOpen }: { db: CardDb; stored: StoredDeck; onOpe
         <CardImage class="deck-row-id" code={deck.identity.code} alt={deck.identity.title} size="small" width="52px" />
         <span class="deck-row-main">
           <span class="deck-row-name">{deck.name}</span>
-          <span class="deck-row-id-name">{deck.identity.title}</span>
+          <span class="deck-row-id-name">
+            <b>{FACTION_SHORT[deck.identity.faction ?? "Neutral"] ?? deck.identity.faction}</b> · {deck.identity.title}
+          </span>
           <span class="deck-row-meta">
             <span class={a.size < a.minimum ? "red" : ""}>
               {a.size}/{a.minimum}
@@ -376,7 +378,7 @@ function DeckEditor({ db, initial, onClose, onOpen }: { db: CardDb; initial: Sto
       <Ticker>
         Deck editor <span class={a.legal ? "cyan" : "yellow"}>{a.legal ? "legal" : `${a.problems.length} to fix`}</span>
       </Ticker>
-      <div class={`screen deck-editor side-${side}`}>
+      <div class={`screen deck-editor side-${side} faction-${factionKey(deck.identity.faction)}`}>
         <header class="editor-head">
           <button class="ghost" onClick={onClose} aria-label="Back to decks">
             <Icon name="arrow-left" />
@@ -425,6 +427,13 @@ function DeckEditor({ db, initial, onClose, onOpen }: { db: CardDb; initial: Sto
         )}
 
         <section class={`panel deck-summary faction-${factionKey(deck.identity.faction)}`}>
+          <span class="summary-mark" aria-hidden="true">
+            {(FACTION_SHORT[deck.identity.faction ?? "Neutral"] ?? deck.identity.faction ?? "").toUpperCase()}
+          </span>
+          <div class="summary-who">
+            <span class="summary-faction">{deck.identity.faction}</span>
+            <span class="summary-id-name">{deck.identity.title}</span>
+          </div>
           <button class="summary-id" onClick={() => open(deck.identity)} aria-label={deck.identity.title}>
             <CardImage code={deck.identity.code} alt={deck.identity.title} size="small" width="64px" />
           </button>

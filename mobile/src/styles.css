@@ -5137,8 +5137,12 @@ button.armed {
   display: flex;
   min-height: 112px;
   align-items: center;
+  justify-content: center;
   margin: 10px 0;
-  padding-left: 8px;
+}
+
+.sample-card:first-child {
+  margin-left: 0;
 }
 
 .sample-card {
@@ -5225,4 +5229,154 @@ button.armed {
 .sheet-stepper .stepper b {
   min-width: 34px;
   font-size: 22px;
+}
+
+.deck-editor {
+  --fca: color-mix(in srgb, var(--fc, var(--cyan)) 70%, white);
+}
+
+.deck-editor.faction-neutral,
+.deck-editor.faction-neutral-corp,
+.deck-editor.faction-neutral-runner,
+.deck-summary.faction-neutral {
+  --fc: var(--cyan);
+}
+
+.deck-summary {
+  position: relative;
+  overflow: hidden;
+  border-color: color-mix(in srgb, var(--fc) 45%, var(--line-2));
+}
+
+.summary-mark {
+  position: absolute;
+  right: -6px;
+  bottom: -16px;
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 104px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--fc);
+  opacity: 0.13;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.summary-who {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 2px;
+}
+
+.summary-faction {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 22px;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--fc);
+  text-shadow: 0 0 18px color-mix(in srgb, var(--fc) 45%, transparent);
+}
+
+.summary-id-name {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+
+.deck-summary > :not(.summary-mark) {
+  position: relative;
+}
+
+.deck-editor .deck-name {
+  border-bottom-color: color-mix(in srgb, var(--fc) 55%, transparent);
+}
+
+.deck-editor .deck-name:focus {
+  border-bottom: 1px solid var(--fc);
+}
+
+.deck-editor .editor-tabs {
+  border-color: color-mix(in srgb, var(--fc) 35%, var(--line-2));
+}
+
+.deck-editor .editor-tabs button.on {
+  box-shadow: inset 0 -2px 0 var(--fc);
+  color: var(--fca);
+}
+
+.deck-editor .meter-row.ok .meter-bar i {
+  background: var(--fc);
+}
+
+.deck-editor .stepper button {
+  color: var(--fca);
+}
+
+.deck-editor .stepper {
+  border-color: color-mix(in srgb, var(--fc) 30%, var(--line-2));
+}
+
+.deck-editor .chips button.on:not(.faction-chip),
+.deck-editor .browser-row .toggle.on {
+  border-color: var(--fc);
+  color: var(--fca);
+}
+
+.deck-editor .search:focus-within {
+  border-color: var(--fc);
+}
+
+.deck-editor .deck-section-head {
+  border-bottom-color: color-mix(in srgb, var(--fc) 50%, var(--line-2));
+}
+
+.deck-editor .deck-section-head .label:first-child {
+  color: var(--fca);
+}
+
+.deck-editor .browse-card.in .browse-img .card-image {
+  outline-color: var(--fc);
+}
+
+.deck-editor .browse-qty {
+  background: var(--fc);
+}
+
+.deck-editor .curve-col i {
+  background: linear-gradient(180deg, var(--fc), color-mix(in srgb, var(--fc) 30%, transparent));
+}
+
+.deck-editor .spread-cell b {
+  color: var(--fca);
+}
+
+.deck-editor .spread-cell.zero b {
+  color: var(--red);
+}
+
+.deck-editor .sample-buttons .primary,
+.deck-editor .deck-empty .primary {
+  border-bottom-color: var(--fc);
+}
+
+.deck-row-id-name b {
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+}
+
+.buttons button .sym.glyph {
+  line-height: 0;
+}
+
+.actions .buttons button:not(.cta) {
+  padding-left: 8px;
+  padding-right: 8px;
+  letter-spacing: 0.16em;
 }
