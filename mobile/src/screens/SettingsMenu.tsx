@@ -2,6 +2,8 @@ import { useEffect, useState } from "preact/hooks";
 import { DEFAULT_RELAY } from "../net/relay";
 import { onSettings, setSetting, settings } from "../settings";
 import { Icon } from "../icons";
+import { disablePush, enablePush, pushSupported } from "../net/push";
+import { tell } from "../ui";
 
 function Toggle({ label, on, onChange }: { label: string; on: boolean; onChange: (on: boolean) => void }) {
   return (
@@ -46,6 +48,17 @@ export function SettingsMenu({ onClose }: { onClose: () => void }) {
         </label>
         <Toggle label="Animations" on={settings.animations} onChange={(v) => setSetting("animations", v)} />
         <Toggle label="Glossary" on={settings.glossary} onChange={(v) => setSetting("glossary", v)} />
+        {pushSupported() && (
+          <Toggle
+            label="Turn notifications"
+            on={settings.notifications}
+            onChange={async (v) => {
+              if (!v) return disablePush();
+              const error = await enablePush();
+              if (error) tell("Notifications are off", error);
+            }}
+          />
+        )}
         <label class="setting-field">
           <span class="label">Relay server</span>
           <span class="relay-field">

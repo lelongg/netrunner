@@ -74,3 +74,33 @@ self.addEventListener("fetch", (event) => {
     else event.respondWith(networkFirst(request, SHELL));
   }
 });
+
+self.addEventListener("push", (event) => {
+  let data = {};
+  try {
+    data = event.data?.json() ?? {};
+  } catch {}
+  event.waitUntil(
+    self.registration.showNotification(data.title || "Your move", {
+      body: data.body || "Your opponent is waiting for you.",
+      tag: data.code ? `turn-${data.code}` : "turn",
+      renotify: true,
+      icon: new URL("./icon-192.png", self.registration.scope).href,
+      data: { code: data.code },
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const code = event.notification.data?.code;
+  const url = new URL(code ? `./?game=${encodeURIComponent(code)}` : "./", self.registration.scope).href;
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(async (windows) => {
+      const win = windows.find((w) => w.url.startsWith(self.registration.scope));
+      if (!win) return self.clients.openWindow(url);
+      if (win.url !== url) await win.navigate(url).catch(() => {});
+      return win.focus();
+    }),
+  );
+});

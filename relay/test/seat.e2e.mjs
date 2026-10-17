@@ -52,6 +52,7 @@ assert(true, "the guest's browser data is gone");
 await host.waitForFunction(() => /offline/i.test(document.querySelector(".ticker .feed")?.textContent ?? ""), null, { timeout: 30000 });
 await host.locator(".ticker-menu").click();
 await host.getByRole("button", { name: /Free opponent's seat/ }).click();
+await host.locator(".dialog").getByRole("button", { name: /^Free seat$/ }).click();
 await host.waitForTimeout(800);
 const newcomer = await open(`${APP}?join=${code}`);
 await newcomer.waitForSelector(".board", { timeout: 30000 });

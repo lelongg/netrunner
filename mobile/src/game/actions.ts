@@ -30,6 +30,16 @@ export function promptOf(view: any, side: Side): any {
   return view?.[side]?.["prompt-state"] ?? null;
 }
 
+export function awaitingMove(view: any, side: Side) {
+  const ptype = promptOf(view, side)?.["prompt-type"];
+  return !view?.winner && (ptype ? ptype !== "waiting" && ptype !== "run" : view?.["active-player"] === side && !view.run && (view[side]?.click ?? 0) > 0);
+}
+
+export function owesMove(view: any, side: Side) {
+  const ptype = promptOf(view, side)?.["prompt-type"];
+  return !view?.winner && (ptype ? ptype !== "waiting" && ptype !== "run" : view?.["active-player"] === side && !view.run && !view["end-turn"]);
+}
+
 export function hasBlockingPrompt(view: any, side: Side) {
   const p = promptOf(view, side);
   return !!p && p["prompt-type"] !== "run";

@@ -1,5 +1,6 @@
 import { settings } from "../settings";
 import { type Store, browserStore } from "../store";
+import { currentSub } from "./push";
 import { type Entry, type LinkStatus, Outbox, type Payload, type Seat, type Transport, type TransportHandlers } from "./types";
 
 export const DEFAULT_RELAY: string | undefined = import.meta.env.VITE_RELAY_URL?.replace(/\/$/, "") || undefined;
@@ -106,7 +107,10 @@ export class RelayTransport implements Transport {
   private pingTimer?: number;
   private pongTimer?: number;
   private status: LinkStatus = { link: "connecting", peer: false, step: "relay", since: Date.now() };
-  private wake = () => this.revive();
+  private wake = () => {
+    this.focus();
+    this.revive();
+  };
   private dead = false;
 
   constructor(
@@ -125,6 +129,14 @@ export class RelayTransport implements Transport {
     if (this.ticket.seat === null) return;
     const tagged = this.outbox.add(p);
     if (this.status.link === "open" && this.ws?.readyState === WebSocket.OPEN) this.ws.send(JSON.stringify({ t: "append", p: tagged }));
+  }
+
+  nudge(text: string) {
+    if (this.ticket.seat !== null && this.ws?.readyState === WebSocket.OPEN) this.ws.send(JSON.stringify({ t: "nudge", text }));
+  }
+
+  private focus() {
+    if (this.ticket.seat !== null && this.ws?.readyState === WebSocket.OPEN) this.ws.send(JSON.stringify({ t: "focus", on: document.visibilityState === "visible" }));
   }
 
   release() {
@@ -174,6 +186,11 @@ export class RelayTransport implements Transport {
         this.handlers.onEntries(entries);
       } else if (msg.t === "synced") {
         this.attempt = 0;
+        this.focus();
+        if (this.ticket.seat !== null)
+          void currentSub().then((sub) => {
+            if (sub && this.ws === ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ t: "subscribe", sub }));
+          });
         this.setStatus({ link: "open", step: undefined, hint: undefined, since: undefined, error: undefined });
         for (const p of this.outbox.pending) ws.send(JSON.stringify({ t: "append", p }));
       } else if (msg.t === "presence") {

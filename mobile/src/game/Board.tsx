@@ -6,7 +6,7 @@ import { Cta, Meter, Ticker, ask, tell } from "../ui";
 import { useFx, iceKind } from "../fx/director";
 import { Count, useLoop } from "../fx/ui";
 import { animate } from "../fx/core";
-import { type Command, pendingChoice, basicCommands, currentIce, findCard, otherSide, promptOf, runCommands, siblingsOf } from "./actions";
+import { type Command, pendingChoice, awaitingMove, basicCommands, currentIce, findCard, otherSide, promptOf, runCommands, siblingsOf } from "./actions";
 import { DeckViewer } from "../screens/DeckViewer";
 import { CardSheet } from "./CardSheet";
 import { CardTile } from "./CardTile";
@@ -827,7 +827,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
     setSelected(null);
     setSlide(undefined);
   };
-  const myMove = !view.winner && (ptype ? ptype !== "waiting" && ptype !== "run" : view["active-player"] === side && !view.run && (me.click ?? 0) > 0);
+  const myMove = awaitingMove(view, side);
   const remote = session.lobby.role !== "local" || session.lobby.vsBot;
   const canUndo = !watching && undoAllowed(session, view, side, render, handoffLog);
   useEffect(() => {

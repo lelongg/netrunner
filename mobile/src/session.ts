@@ -2,6 +2,7 @@ import type { CardDb, Deck, EngineApi, Side } from "./engine";
 import { HeuristicBot } from "./bot/heuristic.ts";
 import { type WireDeck, engineDeck, fromWire } from "./decks";
 import { type GameHost, type LocalEntry, type Op, type Seat as ViewSeat, makeHost } from "./game/runner";
+import { owesMove } from "./game/actions";
 import { RelayTransport, relayUrl, createGame, joinGame, rejoinLink, storedTicket, watchLink } from "./net/relay";
 import type { Entry, LinkStatus, Payload, Seat, Transport } from "./net/types";
 import { type Store, browserStore } from "./store";
@@ -196,6 +197,8 @@ export class Session {
   private botTimer?: number;
   private transport?: Transport;
   private seat: Seat = 0;
+  private lastAuthor?: Seat;
+  private mustAct?: boolean;
   private entries: Entry[] = [];
   private table: Table = { names: [undefined, undefined], creatorSide: "corp", sideSet: false, decks: [null, null], started: false };
   private wantedSide: Side = "corp";
@@ -334,6 +337,7 @@ export class Session {
 
   private apply(entry: Entry) {
     this.entries.push(entry);
+    this.lastAuthor = entry.seat;
     const { seat, p } = entry;
     const t = this.table;
     switch (p.k) {
@@ -426,7 +430,17 @@ export class Session {
       if (this.autoplay && !this.bot) this.bot = new HeuristicBot(this.lobby.mySide, (title) => this.db.byTitle.get(title) as any);
       this.emit();
       this.scheduleBot();
+      this.checkTurn();
     });
+  }
+
+  private checkTurn() {
+    const side = this.lobby.mySide;
+    const view = this.views[side];
+    const now = !!view && owesMove(view, side);
+    const before = this.mustAct;
+    this.mustAct = now;
+    if (before && !now && !view?.winner && this.lastAuthor === this.seat && this.transport instanceof RelayTransport) this.transport.nudge(`${this.lobby.myName} is waiting for you.`);
   }
 
   get rejoinUrl(): string | undefined {

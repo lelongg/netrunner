@@ -1,4 +1,5 @@
 import { DurableObject } from "cloudflare:workers";
+import { type PushSub, type Vapid, sendPush, validSub } from "./push";
 
 export interface Env {
   GAME_ROOM: DurableObjectNamespace<GameRoom>;
@@ -7,10 +8,13 @@ export interface Env {
   JOIN_LIMIT?: RateLimit;
   ALLOWED_ORIGINS?: string;
   EXPIRY_DAYS?: string;
+  VAPID_PUBLIC_KEY?: string;
+  VAPID_PRIVATE_KEY?: string;
+  VAPID_SUBJECT?: string;
 }
 
 type Seat = 0 | 1;
-type Seated = { seat: Seat | null };
+type Seated = { seat: Seat | null; focus?: boolean };
 
 const MAX_MESSAGE_BYTES = 4096;
 const MAX_ENTRIES = 20000;
@@ -18,11 +22,14 @@ const BURST_WINDOW_MS = 10000;
 const BURST_MAX = 60;
 const RESYNC_CHUNK = 400;
 const MAX_WATCHERS = 20;
+const PUSH_GAP_MS = 20000;
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const CODE_RE = /^[A-HJ-NP-Z2-9]{5}$/;
 
 const token = () => Array.from(crypto.getRandomValues(new Uint8Array(18)), (b) => b.toString(16).padStart(2, "0")).join("");
 const newCode = () => Array.from(crypto.getRandomValues(new Uint32Array(5)), (n) => CODE_ALPHABET[n % CODE_ALPHABET.length]).join("");
+
+const vapid = (env: Env): Vapid | null => (env.VAPID_PUBLIC_KEY && env.VAPID_PRIVATE_KEY ? { publicKey: env.VAPID_PUBLIC_KEY, privateKey: env.VAPID_PRIVATE_KEY, subject: env.VAPID_SUBJECT || "https://github.com/lelongg/netrunner" } : null);
 
 function allowedOrigin(request: Request, env: Env): string | null {
   const origin = request.headers.get("Origin");
@@ -70,7 +77,12 @@ export default {
       return json({ error: "Could not allocate a game code" }, 503, origin);
     }
 
-    const match = url.pathname.match(/^\/games\/([^/]+)\/(join|ws|seat)$/);
+    if (request.method === "GET" && url.pathname === "/push-key") {
+      const keys = vapid(env);
+      return keys ? json({ key: keys.publicKey }, 200, origin) : json({ error: "Push is not configured on this relay" }, 404, origin);
+    }
+
+    const match = url.pathname.match(/^\/games\/([^/]+)\/(join|ws|seat|push)$/);
     if (!match || !CODE_RE.test(match[1])) return json({ error: "Not found" }, 404, origin);
     if (match[2] !== "ws" && (await limited(env.JOIN_LIMIT, request))) return json({ error: "Too many requests, try again in a minute" }, 429, origin);
     const room = env.GAME_ROOM.get(env.GAME_ROOM.idFromName(match[1]));
@@ -83,6 +95,17 @@ export default {
     if (match[2] === "seat" && request.method === "GET") {
       const seat = await room.seatOf(url.searchParams.get("token") ?? "");
       return seat === null ? json({ error: "Unknown seat" }, 404, origin) : json({ code: match[1], seat }, 200, origin);
+    }
+    if (match[2] === "push" && request.method === "POST") {
+      let body: { token?: string; sub?: unknown };
+      try {
+        body = await request.json();
+      } catch {
+        return json({ error: "Malformed body" }, 400, origin);
+      }
+      if (body.sub !== null && !validSub(body.sub)) return json({ error: "Invalid subscription" }, 400, origin);
+      const ok = await room.setPush(String(body.token ?? ""), body.sub as PushSub | null, match[1]);
+      return ok ? json({ ok: true }, 200, origin) : json({ error: "Unknown seat" }, 404, origin);
     }
     if (match[2] === "ws" && request.headers.get("Upgrade") === "websocket") return room.fetch(request);
     return json({ error: "Not found" }, 404, origin);
@@ -105,6 +128,8 @@ export class GameRoom extends DurableObject<Env> {
 
   private init() {
     this.sql.exec("CREATE TABLE IF NOT EXISTS seats (seat INTEGER PRIMARY KEY, token TEXT NOT NULL)");
+    this.sql.exec("CREATE TABLE IF NOT EXISTS pushes (seat INTEGER PRIMARY KEY, sub TEXT NOT NULL, last INTEGER NOT NULL DEFAULT 0)");
+    this.sql.exec("CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT NOT NULL)");
     this.sql.exec("CREATE TABLE IF NOT EXISTS entries (seq INTEGER PRIMARY KEY AUTOINCREMENT, seat INTEGER NOT NULL, body TEXT NOT NULL, at INTEGER NOT NULL)");
   }
 
@@ -134,9 +159,42 @@ export class GameRoom extends DurableObject<Env> {
     return row ? (row.seat as Seat) : null;
   }
 
+  async setPush(token: string, sub: PushSub | null, code: string): Promise<boolean> {
+    const seat = await this.seatOf(token);
+    if (seat === null) return false;
+    this.init();
+    this.remember(code);
+    if (sub) this.sql.exec("INSERT INTO pushes (seat, sub) VALUES (?, ?) ON CONFLICT(seat) DO UPDATE SET sub = excluded.sub", seat, JSON.stringify(sub));
+    else this.sql.exec("DELETE FROM pushes WHERE seat = ?", seat);
+    return true;
+  }
+
+  private remember(code: string) {
+    this.sql.exec("INSERT OR IGNORE INTO meta (k, v) VALUES ('code', ?)", code);
+  }
+
+  private async nudge(from: Seat, text: string) {
+    const keys = vapid(this.env);
+    if (!keys) return;
+    const target = (1 - from) as Seat;
+    if (this.ctx.getWebSockets(String(target)).some((s) => (s.deserializeAttachment() as Seated).focus)) return;
+    const row = this.sql.exec<{ sub: string; last: number }>("SELECT sub, last FROM pushes WHERE seat = ?", target).toArray()[0];
+    if (!row || Date.now() - row.last < PUSH_GAP_MS) return;
+    this.sql.exec("UPDATE pushes SET last = ? WHERE seat = ?", Date.now(), target);
+    const code = this.sql.exec<{ v: string }>("SELECT v FROM meta WHERE k = 'code'").toArray()[0]?.v;
+    const payload = JSON.stringify({ code, title: "Your move", body: text });
+    try {
+      const status = await sendPush(JSON.parse(row.sub), payload, keys);
+      if (status === 404 || status === 410) this.sql.exec("DELETE FROM pushes WHERE seat = ?", target);
+    } catch {}
+  }
+
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
     if (!this.exists()) return new Response("Unknown game", { status: 403 });
+    this.init();
+    const code = url.pathname.match(/^\/games\/([^/]+)\/ws$/)?.[1];
+    if (code) this.remember(code);
     const since = Math.max(0, Number(url.searchParams.get("since") ?? 0) || 0);
     let seat: Seat | null = null;
     if (url.searchParams.has("watch")) {
@@ -174,6 +232,18 @@ export class GameRoom extends DurableObject<Env> {
       return ws.send(JSON.stringify({ t: "synced", last: this.lastSeq() }));
     }
     if (seat === null) return this.reject(ws, "Spectators cannot play");
+    if (msg.t === "focus") return ws.serializeAttachment({ seat, focus: !!(msg as { on?: unknown }).on } satisfies Seated);
+    if (msg.t === "subscribe") {
+      const sub = (msg as { sub?: unknown }).sub;
+      if (sub === null) this.sql.exec("DELETE FROM pushes WHERE seat = ?", seat);
+      else if (validSub(sub)) this.sql.exec("INSERT INTO pushes (seat, sub) VALUES (?, ?) ON CONFLICT(seat) DO UPDATE SET sub = excluded.sub", seat, JSON.stringify(sub));
+      return;
+    }
+    if (msg.t === "nudge") {
+      const text = String((msg as { text?: unknown }).text ?? "").slice(0, 140) || "Your opponent is waiting for you.";
+      this.ctx.waitUntil(this.nudge(seat, text));
+      return;
+    }
     if (msg.t === "release") {
       if (seat !== 0) return this.reject(ws, "Only the host can free a seat");
       this.sql.exec("DELETE FROM seats WHERE seat = 1");
