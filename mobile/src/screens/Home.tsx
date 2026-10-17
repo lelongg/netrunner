@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import { type Role, type SavedGame, saveId } from "../session";
-import { Cta, Ticker } from "../ui";
+import { Cta, Ticker, ask } from "../ui";
 import { Icon } from "../icons";
 import { useBackClose } from "../back";
 import { SettingsMenu } from "./SettingsMenu";
@@ -126,8 +126,8 @@ export function Home({ ready, error, initialJoin, saves, onResume, onDiscard, on
                     <button
                       class="ghost game-delete"
                       aria-label={`Delete ${title}`}
-                      onClick={() => {
-                        if (confirm(`Delete "${title}" from this device?`)) onDiscard(save);
+                      onClick={async () => {
+                        if (await ask({ title: "Delete this game?", body: `"${title}" is removed from this device and you will not be able to come back to it.`, ok: "Delete", danger: true })) onDiscard(save);
                       }}
                     >
                       <Icon name="close" />

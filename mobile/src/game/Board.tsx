@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "preact/ho
 import type { ComponentChildren } from "preact";
 import type { CardDb, EngineApi, Side } from "../engine";
 import type { Session } from "../session";
-import { Cta, Meter, Ticker } from "../ui";
+import { Cta, Meter, Ticker, ask, tell } from "../ui";
 import { useFx, iceKind } from "../fx/director";
 import { Count, useLoop } from "../fx/ui";
 import { animate } from "../fx/core";
@@ -792,6 +792,12 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
   const [selected, setSelected] = useState<any>(null);
   const [showLog, setShowLog] = useState(false);
   const [picking, setPicking] = useState(false);
+  const [armed, setArmed] = useState<string | null>(null);
+  useEffect(() => {
+    if (!armed) return;
+    const t = setTimeout(() => setArmed(null), 3000);
+    return () => clearTimeout(t);
+  }, [armed]);
   const [menu, setMenu] = useState(false);
   const [zone, setZone] = useState<ZoneRef | null>(null);
   const [deckOpen, setDeckOpen] = useState(false);
@@ -943,25 +949,27 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
             <Cta
               disabled={disabled || lead.enabled === false}
               onClick={() => {
-                if (lead.confirm && !confirm(lead.confirm)) return;
+                if (lead.confirm && armed !== lead.command) return setArmed(lead.command);
+                setArmed(null);
                 send(lead.command, lead.args);
                 if (lead.then === "install-list") setPicking(true);
               }}
             >
-              {glyphs(iconize(lead.label))}
+              {glyphs(iconize(armed === lead.command && lead.confirm ? lead.confirm : lead.label))}
             </Cta>
           )}
           {others.map((c) => (
             <button
-              class={c.kind === "danger" ? "danger" : c.kind === "primary" ? "primary" : ""}
+              class={armed === c.command && c.confirm ? "danger armed" : c.kind === "danger" ? "danger" : c.kind === "primary" ? "primary" : ""}
               disabled={disabled || c.enabled === false}
               onClick={() => {
-                if (c.confirm && !confirm(c.confirm)) return;
+                if (c.confirm && armed !== c.command) return setArmed(c.command);
+                setArmed(null);
                 send(c.command, c.args);
                 if (c.then === "install-list") setPicking(true);
               }}
             >
-              {glyphs(iconize(c.label))}
+              {glyphs(iconize(armed === c.command && c.confirm ? c.confirm : c.label))}
             </button>
           ))}
           {commands.length === 0 && <span class="status">Waiting for {names[opp]}…</span>}
@@ -1036,7 +1044,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
                   if (navigator.share) await navigator.share({ title: "Watch this Netrunner game", url });
                   else {
                     await navigator.clipboard.writeText(url);
-                    alert("Spectator link copied.");
+                    tell("Link copied", "Send it to anyone who wants to watch this game.");
                   }
                 } catch {}
                 setMenu(false);
@@ -1078,7 +1086,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
                   if (navigator.share) await navigator.share({ title: "Rejoin my Netrunner game", url });
                   else {
                     await navigator.clipboard.writeText(url);
-                    alert("Rejoin link copied. Keep it private: it lets anyone take your seat.");
+                    tell("Link copied", "Keep it private: it lets anyone take your seat.");
                   }
                 } catch {}
                 setMenu(false);
@@ -1089,9 +1097,9 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
           )}
           {session.canFreeSeat && (
             <button
-              onClick={() => {
-                if (confirm(`Free ${session.lobby.opponentName ?? "your opponent"}'s seat? Anyone with the game code can then take it and continue the game.`)) session.freeSeat();
+              onClick={async () => {
                 setMenu(false);
+                if (await ask({ title: "Free their seat?", body: `Anyone with the game code can then take ${session.lobby.opponentName ?? "your opponent"}'s seat and continue the game.`, ok: "Free seat", danger: true })) session.freeSeat();
               }}
             >
               Free opponent's seat
@@ -1099,9 +1107,9 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
           )}
           {prompt && ptype !== "run" && (
             <button
-              onClick={() => {
-                if (confirm("Close the current prompt? Use this only if the game is stuck.")) closePrompt();
+              onClick={async () => {
                 setMenu(false);
+                if (await ask({ title: "Close the prompt?", body: "Use this only if the game is stuck.", ok: "Close prompt", danger: true })) closePrompt();
               }}
             >
               Close stuck prompt
@@ -1120,9 +1128,9 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
           {!watching && (
             <button
               class="danger"
-              onClick={() => {
-                if (confirm("Concede this game?")) session.concede(side);
+              onClick={async () => {
                 setMenu(false);
+                if (await ask({ title: "Concede?", body: "Your opponent wins this game.", ok: "Concede", danger: true })) session.concede(side);
               }}
             >
               Concede
@@ -1131,9 +1139,9 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
           {!watching && (
             <button
               class="ghost"
-              onClick={() => {
-                if (confirm("Delete this game from this device? You will not be able to come back to it.")) onLeave();
+              onClick={async () => {
                 setMenu(false);
+                if (await ask({ title: "Delete this game?", body: "It is removed from this device and you will not be able to come back to it.", ok: "Delete", danger: true })) onLeave();
               }}
             >
               Delete game

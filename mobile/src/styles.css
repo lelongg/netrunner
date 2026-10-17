@@ -3329,3 +3329,69 @@ button:active:not(:disabled) {
   visibility: hidden;
   pointer-events: none;
 }
+
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: #000b;
+  backdrop-filter: blur(3px);
+}
+
+.dialog {
+  width: 100%;
+  max-width: 360px;
+  padding: 18px 16px 14px;
+  border-top: 2px solid var(--cyan);
+  box-shadow: 0 18px 60px #000c;
+}
+
+.dialog.danger {
+  border-top-color: var(--red);
+}
+
+.dialog h2 {
+  margin: 0 0 8px;
+  font-family: var(--display);
+  font-size: 24px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.dialog p {
+  margin: 0;
+  line-height: 1.5;
+  color: var(--text-2);
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.dialog-actions button {
+  min-width: 96px;
+}
+
+button.armed {
+  background: rgb(255 59 48 / 0.16);
+  color: var(--text);
+  animation: armed-pulse 0.9s ease-in-out infinite alternate;
+}
+
+@keyframes armed-pulse {
+  to {
+    box-shadow: 0 0 14px rgb(255 59 48 / 0.45);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button.armed {
+    animation: none;
+  }
+}

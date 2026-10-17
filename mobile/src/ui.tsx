@@ -3,6 +3,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { animate } from "motion";
 import { Icon } from "./icons";
 import { motionOff } from "./settings";
+import { useBackClose } from "./back";
 
 export function Meter({ value, max, tone = "cyan", small, anchor }: { value: number; max: number; tone?: "cyan" | "red" | "yellow"; small?: boolean; anchor?: string }) {
   const count = Math.max(0, Math.min(max, 12));
@@ -99,4 +100,74 @@ function Sheen({ off }: { off?: boolean }) {
     return () => anim.stop();
   }, [off]);
   return <i ref={el} class="cta-sheen" aria-hidden="true" />;
+}
+
+export interface Ask {
+  title: string;
+  body?: string;
+  ok?: string;
+  cancel?: string | null;
+  danger?: boolean;
+}
+
+let pending: ((a: (Ask & { resolve: (yes: boolean) => void }) | null) => void) | null = null;
+const queue: (Ask & { resolve: (yes: boolean) => void })[] = [];
+
+export function ask(a: Ask): Promise<boolean> {
+  return new Promise((resolve) => {
+    queue.push({ ...a, resolve });
+    if (queue.length === 1) pending?.(queue[0]);
+  });
+}
+
+export const tell = (title: string, body?: string) => ask({ title, body, ok: "OK", cancel: null }).then(() => {});
+
+export function Dialogs() {
+  const [current, setCurrent] = useState<(Ask & { resolve: (yes: boolean) => void }) | null>(queue[0] ?? null);
+  const box = useRef<HTMLDivElement>(null);
+  const backdrop = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    pending = setCurrent;
+    return () => {
+      pending = null;
+    };
+  }, []);
+  useBackClose(!!current, () => close(false));
+  useEffect(() => {
+    if (!current) return;
+    box.current?.querySelector<HTMLButtonElement>("button.dialog-ok")?.focus();
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && close(false);
+    addEventListener("keydown", onKey);
+    return () => removeEventListener("keydown", onKey);
+  }, [current]);
+  useLayoutEffect(() => {
+    if (!current || motionOff()) return;
+    if (backdrop.current) animate(backdrop.current, { opacity: [0, 1] }, { duration: 0.18 });
+    if (box.current) animate(box.current, { opacity: [0, 1], transform: ["translateY(16px) scale(0.96)", "translateY(0px) scale(1)"] }, { type: "spring", visualDuration: 0.28, bounce: 0.2 });
+  }, [current]);
+  const close = (yes: boolean) => {
+    const a = queue.shift();
+    if (!a) return;
+    a.resolve(yes);
+    setCurrent(queue[0] ?? null);
+  };
+  if (!current) return null;
+  return (
+    <div ref={backdrop} class="dialog-backdrop" onClick={() => close(false)}>
+      <div ref={box} class={`dialog panel ${current.danger ? "danger" : ""}`} role="alertdialog" aria-modal="true" aria-label={current.title} onClick={(e) => e.stopPropagation()}>
+        <h2>{current.title}</h2>
+        {current.body && <p>{current.body}</p>}
+        <div class="dialog-actions">
+          {current.cancel !== null && (
+            <button class="ghost" onClick={() => close(false)}>
+              {current.cancel ?? "Cancel"}
+            </button>
+          )}
+          <button class={`dialog-ok ${current.danger ? "danger" : "primary"}`} onClick={() => close(true)}>
+            {current.ok ?? "Confirm"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }

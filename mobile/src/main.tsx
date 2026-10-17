@@ -1,3 +1,4 @@
+import { Dialogs } from "./ui";
 import { render } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { animate } from "motion";
@@ -335,6 +336,7 @@ render(
   <>
     <App />
     <UpdateBanner />
+    <Dialogs />
   </>,
   document.getElementById("app")!,
 );
