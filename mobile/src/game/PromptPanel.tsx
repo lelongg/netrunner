@@ -1,7 +1,11 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { Side } from "../engine";
 import { cardRef, findCard } from "./actions";
-import { ZoomableCardImage } from "./CardImage";
+import { createPortal } from "preact/compat";
+import { CardImage, ZoomableCardImage } from "./CardImage";
+import { Pager } from "./Pager";
+import { useSheetPager } from "./swipe";
+import { useBackClose } from "../back";
 import { Icon } from "../icons";
 import { RichText } from "./RichText";
 import { byServerOrder, iconize } from "./text";
@@ -38,6 +42,59 @@ function NumberPicker({ min, max, initial, onSubmit, disabled, extra }: { min: n
   );
 }
 
+interface CardChoice {
+  choice: any;
+  card: any;
+}
+
+function ChoiceSheet({ items, index, disabled, onGo, onPick, onClose }: { items: CardChoice[]; index: number; disabled: boolean; onGo: (i: number) => void; onPick: (c: CardChoice) => void; onClose: () => void }) {
+  const sheet = useRef<HTMLDivElement>(null);
+  const step = (dir: -1 | 1) => items[index + dir] && onGo(index + dir);
+  const swipe = useSheetPager(sheet, index, (dir) => !!items[index + dir], step);
+  const cc = items[index];
+  const info = (card: any) => (
+    <div class="sheet-info">
+      <span class="label">
+        {card.type}
+        {Array.isArray(card.subtypes) && card.subtypes.length ? ` · ${card.subtypes.join(" · ")}` : ""}
+      </span>
+      <h2>{card.title}</h2>
+      {card.text && <RichText class="card-text" text={card.text} />}
+    </div>
+  );
+  return createPortal(
+    <div class="sheet-backdrop" onClick={onClose}>
+      <div ref={sheet} class="sheet panel swipeable" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={cc.card.title} {...swipe}>
+        {items.length > 1 && <Pager index={index} count={items.length} onStep={step} />}
+        {([["prev", index - 1], ["next", index + 1]] as const).map(([k, i]) => {
+          const n = items[i];
+          return (
+            n && (
+              <div key={`${k}:${i}`} class={`sheet-peek ${k}`} aria-hidden="true">
+                <CardImage class="sheet-img" code={n.card.code} alt="" size="large" />
+                {info(n.card)}
+              </div>
+            )
+          );
+        })}
+        <div key={index} class="sheet-head">
+          <ZoomableCardImage class="sheet-img" code={cc.card.code} alt={cc.card.title} size="large" gallery={items.map((x) => ({ code: x.card.code, alt: x.card.title }))} galleryStart={index} onGallery={onGo} />
+          {info(cc.card)}
+        </div>
+        <div class="sheet-actions">
+          <button class="primary" disabled={disabled} onClick={() => onPick(cc)}>
+            Choose {cc.card.title}
+          </button>
+          <button class="ghost" onClick={onClose}>
+            Close
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 function choiceLabel(value: any, render: (m: unknown) => string) {
   if (value && typeof value === "object") return value.title ?? value["printed-title"] ?? render(value);
   return render(value);
@@ -50,6 +107,15 @@ export function PromptPanel({ view, side, prompt, render, send, closePrompt, dis
   const msg = iconize(render(prompt.msg));
   const answer = (choice: unknown) => send("choice", { eid, choice });
   const [title, setTitle] = useState("");
+  const [peek, setPeek] = useState<number | null>(null);
+  useBackClose(peek != null, () => setPeek(null));
+  const cardChoices: CardChoice[] = Array.isArray(choices)
+    ? choices.flatMap((c: any) => {
+        const t = c.value && typeof c.value === "object" ? (c.value.title as string | undefined) : typeof c.value === "string" ? c.value : undefined;
+        const card = t ? db.byTitle.get(t) : undefined;
+        return card?.code && card.type !== "Identity" ? [{ choice: c, card }] : [];
+      })
+    : [];
   const pay = ptype === "select" ? render(prompt.msg).match(/^Choose a credit providing card \((\d+)(?: of (\d+))?/) : null;
   const sources: any[] = pay ? (prompt.selectable ?? []).map((cid: unknown) => findCard(view, cid)).filter(Boolean) : [];
   const owed = pay?.[2] != null ? Math.max(0, Number(pay[2]) - Number(pay[1])) : undefined;
@@ -131,6 +197,42 @@ export function PromptPanel({ view, side, prompt, render, send, closePrompt, dis
             </button>
           )}
         </div>
+      </>
+    );
+  } else if (Array.isArray(choices) && cardChoices.length >= 2) {
+    const others = choices.filter((c: any) => c.value !== "Hide" && !cardChoices.some((cc) => cc.choice === c));
+    body = (
+      <>
+        <div class="choice-cards">
+          {cardChoices.map((cc, i) => (
+            <button class="choice-card" disabled={disabled} onClick={() => setPeek(i)} aria-label={cc.card.title}>
+              <CardImage code={cc.card.code} alt={cc.card.title} size="small" width="28vw" lazy />
+              <span>{cc.card.title}</span>
+            </button>
+          ))}
+        </div>
+        {others.length > 0 && (
+          <div class="choices">
+            {others.map((c: any) => (
+              <button disabled={disabled} onClick={() => answer({ uuid: c.uuid })}>
+                {glyphs(iconize(choiceLabel(c.value, render)))}
+              </button>
+            ))}
+          </div>
+        )}
+        {peek != null && cardChoices[peek] && (
+          <ChoiceSheet
+            items={cardChoices}
+            index={peek}
+            disabled={disabled}
+            onGo={setPeek}
+            onPick={(cc) => {
+              setPeek(null);
+              answer({ uuid: cc.choice.uuid });
+            }}
+            onClose={() => setPeek(null)}
+          />
+        )}
       </>
     );
   } else if (Array.isArray(choices)) {

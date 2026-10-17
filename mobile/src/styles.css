@@ -2519,10 +2519,16 @@ button:active:not(:disabled) {
   border-radius: 3px;
 }
 
+.brk-card {
+  position: relative;
+  align-self: center;
+}
+
 .brk-card .card-image {
   display: block;
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: auto;
+  aspect-ratio: 300 / 419;
   border-radius: 2px;
   overflow: hidden;
 }
@@ -2530,7 +2536,22 @@ button:active:not(:disabled) {
 .brk-card img {
   height: 100%;
   object-fit: cover;
-  object-position: 50% 18%;
+}
+
+.brk-str {
+  position: absolute;
+  left: 50%;
+  bottom: -6px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.brk-str.ok {
+  color: var(--cyan);
+}
+
+.brk-str.low {
+  color: var(--yellow);
 }
 
 .brk-text {
@@ -5531,4 +5552,46 @@ button.armed {
   letter-spacing: 0.3em;
   color: var(--muted);
   pointer-events: none;
+}
+
+.choice-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(28vw, 110px), 1fr));
+  gap: 8px;
+  max-height: 46vh;
+  overflow-y: auto;
+  padding: 2px;
+}
+
+.choice-card {
+  padding: 0;
+  border: none;
+  background: none;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-transform: none;
+  letter-spacing: 0.02em;
+  font-size: 10px;
+  line-height: 1.2;
+  text-align: center;
+  color: var(--text-2);
+}
+
+.choice-card:active:not(:disabled) {
+  transform: none;
+}
+
+.choice-card .card-image {
+  transition: transform 0.12s ease-out;
+}
+
+.choice-card:active:not(:disabled) .card-image {
+  transform: scale(0.95);
+}
+
+.brk-str {
+  font-size: 10px;
+  padding: 1px 3px;
 }

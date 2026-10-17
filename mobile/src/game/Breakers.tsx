@@ -1,5 +1,6 @@
 import { useState } from "preact/hooks";
 import { type Command, cardCommands } from "./actions";
+import { Icon } from "../icons";
 import { CardImage } from "./CardImage";
 import { glyphs } from "./Glyphs";
 import { iconize } from "./text";
@@ -65,7 +66,7 @@ export function Breakers({ view, side, ice, send, onTap, disabled }: { view: any
         return (
           <div class="brk best">
             <button class="brk-card" onClick={() => onTap(ice)} aria-label={ice.title}>
-              {ice.code && <CardImage code={ice.code} alt={ice.title} size="small" width="34px" />}
+              {ice.code && <CardImage code={ice.code} alt={ice.title} size="small" width="30px" />}
             </button>
             <div class="brk-text">
               <span class="brk-name">{ice.title}</span>
@@ -83,7 +84,18 @@ export function Breakers({ view, side, ice, send, onTap, disabled }: { view: any
         return (
           <div class="brk best">
             <button class="brk-card" onClick={() => onTap(card)} aria-label={card.title}>
-              {card.code && <CardImage code={card.code} alt={card.title} size="small" width="34px" />}
+              {card.code && <CardImage code={card.code} alt={card.title} size="small" width="30px" />}
+              {(() => {
+                const str = card["current-strength"] ?? card.strength;
+                if (str == null) return null;
+                const iceStr = Number(ice["current-strength"] ?? ice.strength ?? 0);
+                return (
+                  <span class={`badge str brk-str ${Number(str) >= iceStr ? "ok" : "low"}`} aria-label={`strength ${str}`}>
+                    <Icon name="strength" class="glyph" />
+                    {str}
+                  </span>
+                );
+              })()}
             </button>
             <div class="brk-text">
               <span class="brk-name">{card.title}</span>
