@@ -1530,6 +1530,11 @@ textarea:focus {
   color: var(--text);
 }
 
+.fact-chip.tippable {
+  cursor: help;
+  border-style: dashed;
+}
+
 .fact-chip .icon {
   height: 11px;
 }

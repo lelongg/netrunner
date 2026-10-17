@@ -15,6 +15,7 @@ interface Chip {
   text: string;
   icon?: IconName;
   tone?: "new" | "cyan" | "red";
+  tip?: string;
 }
 
 interface Facts {
@@ -24,6 +25,14 @@ interface Facts {
 }
 
 const COUNTER_ICONS: Record<string, IconName> = { virus: "virus", credit: "credit", power: "power", advancement: "advance", agenda: "agenda" };
+
+const COUNTER_TIPS: Record<string, string> = {
+  virus: "Virus counters · used by virus programs. The Corp removes every one of them when it purges.",
+  credit: "Credits stored on this card · spent the way the card says.",
+  power: "Power counters · spent or counted by this card's abilities.",
+  agenda: "Agenda counters · spent to use this agenda's abilities.",
+  advancement: "Advancement counters · used by this card's abilities.",
+};
 
 function ordinal(n: number) {
   return `${n}${n === 1 ? "st" : n === 2 ? "nd" : n === 3 ? "rd" : "th"}`;
@@ -55,15 +64,30 @@ function cardFacts(card: any, viewer: Side, view: any, known: boolean): Facts {
   else if (z[0] === "discard") facts.where.push(corp ? "Archives" : "heap", ...(known ? [] : ["facedown"]));
   else if (z[0] === "scored") facts.where.push(`scored · ${card.agendapoints ?? 0} pts`);
   else if (z[0] === "current") facts.where.push("current");
-  if (card.new && (z[0] === "servers" || z[0] === "rig")) facts.chips.push({ text: "New", tone: "new" });
+  if (card.new && (z[0] === "servers" || z[0] === "rig")) facts.chips.push({ text: "New", tone: "new", tip: "New · installed since its owner's turn began." });
   const adv = (card["advance-counter"] ?? 0) + (card["extra-advance-counter"] ?? 0);
-  if (adv) facts.chips.push({ icon: "advance", text: known && card.type === "Agenda" ? `${adv}/${card["current-advancement-requirement"] ?? card.advancementcost}` : String(adv) });
-  for (const [k, v] of Object.entries<any>(card.counter ?? {})) if (v) facts.chips.push(COUNTER_ICONS[k] ? { icon: COUNTER_ICONS[k], text: String(v) } : { text: `${k} ${v}` });
-  if (card["rec-counter"]) facts.chips.push({ icon: "recurring", text: String(card["rec-counter"]) });
+  if (adv) {
+    const req = card["current-advancement-requirement"] ?? card.advancementcost;
+    const agenda = known && card.type === "Agenda";
+    facts.chips.push({
+      icon: "advance",
+      text: agenda ? `${adv}/${req}` : String(adv),
+      tip: agenda
+        ? `Advancement counters · ${adv} of the ${req} this agenda needs before the Corp can score it.`
+        : `Advancement counters · ${adv} on this card. Agendas need them to be scored, and some ice and assets get stronger with them. The Corp adds them for 1 click and 1 credit, or with card effects.`,
+    });
+  }
+  for (const [k, v] of Object.entries<any>(card.counter ?? {})) {
+    if (!v) continue;
+    const tip = COUNTER_TIPS[k] ?? `${k[0].toUpperCase()}${k.slice(1)} counters · used by this card's abilities.`;
+    facts.chips.push(COUNTER_ICONS[k] ? { icon: COUNTER_ICONS[k], text: String(v), tip } : { text: `${k} ${v}`, tip });
+  }
+  if (card["rec-counter"]) facts.chips.push({ icon: "recurring", text: String(card["rec-counter"]), tip: "Recurring credits · placed on this card again each turn, and spent only the way the card says." });
   const now = card["current-strength"];
-  if (known && now != null && card.strength != null && now !== card.strength) facts.chips.push({ icon: "strength", text: `${now} (${card.strength})`, tone: "cyan" });
+  if (known && now != null && card.strength != null && now !== card.strength)
+    facts.chips.push({ icon: "strength", text: `${now} (${card.strength})`, tone: "cyan", tip: `Strength ${now} · printed ${card.strength}, changed by effects in play. An icebreaker needs at least the ice's strength to break it.` });
   const hosted: any[] = card.hosted ?? [];
-  if (hosted.length) facts.chips.push({ text: `hosting ${hosted.map((h) => (h.title && (h.seen || h.rezzed || h.side === "Runner" || mine) ? h.title : "facedown card")).join(", ")}` });
+  if (hosted.length) facts.chips.push({ text: `hosting ${hosted.map((h) => (h.title && (h.seen || h.rezzed || h.side === "Runner" || mine) ? h.title : "facedown card")).join(", ")}`, tip: "Hosted cards · they sit on this card and are trashed if it leaves play." });
   return facts;
 }
 
@@ -120,7 +144,7 @@ function SheetInfo({ card, code, full, side, view }: { card: any; code?: string;
             {facts.chips.length > 0 && (
               <div class="fact-chips">
                 {facts.chips.map((c) => (
-                  <span class={`fact-chip ${c.tone ?? ""}`}>
+                  <span class={`fact-chip ${c.tone ?? ""} ${c.tip ? "tippable" : ""}`} data-tip={c.tip}>
                     {c.icon && <Icon name={c.icon} />}
                     {c.text}
                   </span>
