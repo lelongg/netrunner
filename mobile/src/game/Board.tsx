@@ -997,6 +997,8 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
     <div class={`board side-${side} ${ptype === "select" ? "selecting" : ""} ${view.run ? "in-run" : ""}`}>
       <ScoreBar view={view} />
       <Ticker
+        onFeed={() => setShowLog(true)}
+        feedKey={log.length}
         action={
           <button class="ticker-menu" onClick={() => setMenu(!menu)} aria-label="Menu" aria-expanded={menu}>
             <Icon name={menu ? "close" : "menu"} />
@@ -1004,7 +1006,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
           </button>
         }
       >
-        {feedText(view, side, names, watching)}
+        {view.winner || !lastLog ? feedText(view, side, names, watching) : glyphs(iconize(render(lastLog.text)))}
         {!!session.lobby.watchers && <span class="cyan"> · {session.lobby.watchers} watching</span>}
         {link && link !== "connected" && <span class="yellow"> · {link === "waiting" ? "opponent offline" : "reconnecting"}</span>}
       </Ticker>
@@ -1168,9 +1170,6 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
         {myArea}
       </main>
       <footer class="dock">
-        <button class="last-log" onClick={() => setShowLog(true)}>
-          {lastLog ? glyphs(iconize(render(lastLog.text)).slice(0, 140)) : "Log"}
-        </button>
         <div class="enc-zone">
           {!view.winner && (ice?.rezzed ? <Encounter view={view} render={render} onTap={tap} ice={lastIce?.cid === ice.cid && (view.encounters || view.run?.phase === "encounter-ice") ? lastIce : ice} /> : lastIce && <Encounter view={view} render={render} onTap={tap} ice={lastIce} passed />)}
           {!view.winner && !watching && side === "runner" && view.encounters && ice?.rezzed && !(prompt && ptype !== "run") && <Breakers view={view} side={side} ice={ice} send={send} onTap={tap} disabled={disabled} />}

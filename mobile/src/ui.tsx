@@ -16,7 +16,7 @@ export function Meter({ value, max, tone = "cyan", small, anchor }: { value: num
   );
 }
 
-export function Ticker({ children, action }: { children: ComponentChildren; action?: ComponentChildren }) {
+export function Ticker({ children, action, onFeed, feedKey }: { children: ComponentChildren; action?: ComponentChildren; onFeed?: () => void; feedKey?: unknown }) {
   const feed = useRef<HTMLSpanElement>(null);
   const text = useRef<HTMLSpanElement>(null);
   const [width, setWidth] = useState(0);
@@ -29,7 +29,7 @@ export function Ticker({ children, action }: { children: ComponentChildren; acti
       anim.cancel();
       el.style.transform = "";
     };
-  }, [width]);
+  }, [width, feedKey]);
   useLayoutEffect(() => {
     const measure = () => {
       const box = feed.current,
@@ -53,7 +53,14 @@ export function Ticker({ children, action }: { children: ComponentChildren; acti
   return (
     <div class="ticker">
       <span class="live">LIVE FEED</span>
-      <span class={`feed ${width ? "scrolling" : ""}`} ref={feed}>
+      <span
+        class={`feed ${width ? "scrolling" : ""} ${onFeed ? "tappable" : ""}`}
+        ref={feed}
+        role={onFeed ? "button" : undefined}
+        tabIndex={onFeed ? 0 : undefined}
+        onClick={onFeed}
+        onKeyDown={onFeed && ((e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), onFeed()))}
+      >
         <span class="feed-track" ref={track}>
           <span class="feed-text" ref={text}>
             {children}

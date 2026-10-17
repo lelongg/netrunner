@@ -61,9 +61,9 @@ assert((await late.locator(".dock .hand img").count()) === 0 && (await late.loca
 for (const p of [host, guest]) if (await p.getByRole("button", { name: /^Start turn/ }).count()) await click(p, /^Start turn/);
 await host.waitForTimeout(800);
 const active = (await host.getByRole("button", { name: /^Gain 1/ }).count()) ? host : guest;
-const before = await late.locator(".log, .last-log").first().textContent();
+const before = await late.locator(".log, .ticker .feed").first().textContent();
 await click(active, /^Gain 1/);
-await late.waitForFunction((b) => document.querySelector(".last-log")?.textContent !== b, before, { timeout: 15000 });
+await late.waitForFunction((b) => document.querySelector(".ticker .feed")?.textContent !== b, before, { timeout: 15000 });
 await late.waitForTimeout(800);
 assert(JSON.stringify(await credits(late)) === JSON.stringify(await credits(active)), "the spectator follows new moves live");
 

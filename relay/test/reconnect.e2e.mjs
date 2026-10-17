@@ -28,7 +28,7 @@ const click = async (page, name) => {
   await page.waitForTimeout(500);
 };
 const publicState = async (page) => {
-  await page.locator(".last-log").click();
+  await page.locator(".ticker .feed").click();
   const log = await page.locator(".log p").allTextContents();
   await page.locator(".sheet-backdrop").click({ position: { x: 5, y: 5 } });
   const credits = await page.locator(".opp .big, .me-bar .big").allTextContents();

@@ -352,6 +352,13 @@ textarea:focus {
   overflow: hidden;
 }
 
+.ticker .feed.tappable {
+  cursor: pointer;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+}
+
 .ticker .feed.scrolling {
   padding: 0;
   mask-image: linear-gradient(90deg, transparent, #000 10px, #000 calc(100% - 10px), transparent);
@@ -1154,26 +1161,6 @@ textarea:focus {
   padding-bottom: env(safe-area-inset-bottom);
   display: flex;
   flex-direction: column;
-}
-
-.last-log {
-  border: none;
-  background: transparent;
-  color: var(--muted);
-  font-size: 10px;
-  letter-spacing: 0.06em;
-  text-transform: none;
-  text-align: left;
-  min-height: 30px;
-  padding: 4px 12px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.last-log::before {
-  content: "> ";
-  color: var(--cyan);
 }
 
 .prompt,
