@@ -6,6 +6,7 @@ import { CardImage, ZoomableCardImage } from "./CardImage";
 import { Pager } from "./Pager";
 import { useSheetPager } from "./swipe";
 import { useBackClose } from "../back";
+import { returnAccessed } from "../fx/access";
 import { Icon } from "../icons";
 import { RichText } from "./RichText";
 import { byServerOrder, iconize } from "./text";
@@ -243,7 +244,14 @@ export function PromptPanel({ view, side, prompt, render, send, closePrompt, dis
           {byServerOrder(choices, (c: any) => c.value)
             .filter((c: any) => c.value !== "Hide")
             .map((c: any) => (
-              <button class={ptype === "select" ? "primary wide" : ""} disabled={disabled} onClick={() => answer({ uuid: c.uuid })}>
+              <button
+                class={ptype === "select" ? "primary wide" : ""}
+                disabled={disabled}
+                onClick={() => {
+                  if (accessed && /^no action$/i.test(String(c.value))) returnAccessed(source, document.querySelector(".prompt.accessed .prompt-img"), view.run?.server?.[0]);
+                  answer({ uuid: c.uuid });
+                }}
+              >
                 {glyphs(iconize(choiceLabel(c.value, render)))}
               </button>
             ))}

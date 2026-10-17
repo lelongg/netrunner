@@ -254,10 +254,13 @@ async function showcase(m: Move, kind: Kind, me: Side) {
   const sx = src.width / big.width;
   const sy = src.height / big.height;
   const tone: Tone = kind === "score" ? "gold" : kind === "steal" ? "red" : sideTone(info?.owner);
-  const mine = (m.to?.holder ?? m.from?.holder) === me;
+  const mine = (m.to?.holder ?? m.from?.holder ?? info?.owner) === me;
   const hold = kind === "play" ? (mine ? 0.35 : 0.9) : 0.9;
   ghost.style.transformOrigin = "0 0";
-  await animate(ghost, { x: [src.left - big.left, 0], y: [src.top - big.top, 0], scaleX: [sx, 1], scaleY: [sy, 1], rotate: [mine ? 0 : -12, 0], opacity: [0.4, 1] }, { type: "spring", visualDuration: 0.42, bounce: 0.28 }).finished;
+  const glow = node(`fx-glow tone-${tone}`, ghost);
+  glow.style.opacity = "0";
+  const arrive = animate(ghost, { x: [src.left - big.left, 0], y: [src.top - big.top, 0], scaleX: [sx, 1], scaleY: [sy, 1], rotate: [mine ? 0 : -12, 0], opacity: [0.4, 1] }, { type: "spring", visualDuration: 0.42, bounce: 0.28 });
+  await Promise.race([arrive.finished, new Promise((r) => setTimeout(r, 300))]);
   const center = mid(big);
   if (kind === "play") {
     ring(center, tone, big.width * 1.6);
@@ -273,10 +276,10 @@ async function showcase(m: Move, kind: Kind, me: Side) {
     buzz([40, 40, 40, 40, 120]);
     banner(kind === "steal" ? "Stolen" : "Scored", info?.title ?? "", kind === "steal" ? "red" : "gold", { size: "xl", hold: hold + 0.2 });
   }
-  const glow = node(`fx-glow tone-${tone}`, ghost);
-  animate(glow, { opacity: [0, 1, 0.6] }, { duration: 0.5 });
+  animate(glow, { opacity: [0, 1, 0.75] }, { duration: hold + 0.3, times: [0, 0.4, 1], ease: "easeOut", keep: true });
+  await new Promise((r) => setTimeout(r, 140));
   await animate(ghost, { scaleX: [1, 1.04], scaleY: [1, 1.04] }, { duration: hold, ease: "easeInOut" }).finished;
-  glow.remove();
+  animate(glow, { opacity: [0.75, 0] }, { duration: 0.3, ease: "easeOut", keep: true });
   if (kind === "score" || kind === "steal") {
     points(center, scoreSegments(m.to?.holder ?? "corp", info?.points ?? 1), kind === "steal" ? "red" : "gold");
     burst(center, tone, 36, big.width * 0.9, { size: 6, gravity: 0, shards: true });
