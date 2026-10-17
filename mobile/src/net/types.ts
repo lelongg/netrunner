@@ -29,6 +29,7 @@ export interface LinkStatus {
   since?: number;
   error?: string;
   watchers?: number;
+  free?: boolean[];
 }
 
 export interface TransportHandlers {

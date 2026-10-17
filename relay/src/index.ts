@@ -180,12 +180,14 @@ export class GameRoom extends DurableObject<Env> {
   async join(): Promise<{ seat: Seat; token: string } | { error: "unknown" | "full" }> {
     if (!this.exists()) return { error: "unknown" };
     const taken = this.sql.exec<{ seat: number }>("SELECT seat FROM seats").toArray().map((r) => r.seat);
-    if (!taken.includes(0)) return { error: "unknown" };
-    if (taken.includes(1)) return { error: "full" };
+    if (!taken.length && !this.lastSeq()) return { error: "unknown" };
+    const seat = ([1, 0] as Seat[]).find((s) => !taken.includes(s));
+    if (seat === undefined) return { error: "full" };
     const t = token();
-    this.sql.exec("INSERT INTO seats (seat, token) VALUES (1, ?)", t);
+    this.sql.exec("INSERT INTO seats (seat, token) VALUES (?, ?)", seat, t);
     await this.touch();
-    return { seat: 1, token: t };
+    this.broadcastPresence();
+    return { seat, token: t };
   }
 
   async seatOf(token: string): Promise<Seat | null> {
@@ -233,7 +235,7 @@ export class GameRoom extends DurableObject<Env> {
     const since = Math.max(0, Number(url.searchParams.get("since") ?? 0) || 0);
     let seat: Seat | null = null;
     if (url.searchParams.has("watch")) {
-      if (!this.sql.exec("SELECT seat FROM seats WHERE seat = 0").toArray().length) return new Response("Unknown game", { status: 403 });
+      if (!this.sql.exec("SELECT seat FROM seats").toArray().length && !this.lastSeq()) return new Response("Unknown game", { status: 403 });
       if (this.ctx.getWebSockets("watch").length >= MAX_WATCHERS) return new Response("Too many spectators", { status: 403 });
     } else {
       const row = this.sql.exec<{ seat: number }>("SELECT seat FROM seats WHERE token = ?", url.searchParams.get("token") ?? "").toArray()[0];
@@ -284,9 +286,10 @@ export class GameRoom extends DurableObject<Env> {
       return;
     }
     if (msg.t === "release") {
-      if (seat !== 0) return this.reject(ws, "Only the host can free a seat");
-      this.sql.exec("DELETE FROM seats WHERE seat = 1");
-      for (const socket of this.ctx.getWebSockets("1")) socket.close(4002, "Seat released by the host");
+      const other = (1 - seat) as Seat;
+      this.sql.exec("DELETE FROM seats WHERE seat = ?", other);
+      this.sql.exec("DELETE FROM pushes WHERE seat = ?", other);
+      for (const socket of this.ctx.getWebSockets(String(other))) socket.close(4002, "Seat released by the other player");
       this.broadcastPresence();
       return;
     }
@@ -345,7 +348,9 @@ export class GameRoom extends DurableObject<Env> {
     const open = this.ctx.getWebSockets().filter((s) => s !== leaving && s.readyState === WebSocket.OPEN);
     const seats = [0, 1].map((seat) => open.some((s) => (s.deserializeAttachment() as Seated).seat === seat));
     const watchers = open.filter((s) => (s.deserializeAttachment() as Seated).seat === null).length;
-    const out = JSON.stringify({ t: "presence", seats, watchers });
+    const taken = this.sql.exec<{ seat: number }>("SELECT seat FROM seats").toArray().map((r) => r.seat);
+    const free = [0, 1].map((seat) => !taken.includes(seat));
+    const out = JSON.stringify({ t: "presence", seats, watchers, free });
     for (const socket of open) {
       try {
         socket.send(out);

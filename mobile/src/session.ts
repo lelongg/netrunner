@@ -4,7 +4,7 @@ import { type WireDeck, engineDeck, fromWire } from "./decks";
 import { type GameHost, type LocalEntry, type Op, type Seat as ViewSeat, makeHost } from "./game/runner";
 import { owesMove } from "./game/actions";
 import { archive } from "./history";
-import { RelayTransport, relayUrl, createGame, joinGame, rejoinLink, storedTicket, watchLink } from "./net/relay";
+import { RelayTransport, relayUrl, createGame, forgetTicket, joinGame, rejoinLink, storedTicket, watchLink } from "./net/relay";
 import type { Entry, LinkStatus, Payload, Seat, Transport } from "./net/types";
 import { type Store, browserStore } from "./store";
 
@@ -464,7 +464,22 @@ export class Session {
   }
 
   get canFreeSeat() {
-    return this.transport instanceof RelayTransport && this.seat === 0 && !!this.table.names[1] && !this.link.peer;
+    const other = 1 - this.seat;
+    return this.transport instanceof RelayTransport && !this.watching && !!this.table.names[other] && !this.link.free?.[other];
+  }
+
+  get freeSeatSide(): Side | undefined {
+    if (!this.watching || !(this.transport instanceof RelayTransport) || !this.table.started) return undefined;
+    const seat = ([0, 1] as Seat[]).find((s) => this.link.free?.[s]);
+    return seat === undefined ? undefined : this.sideOf(seat);
+  }
+
+  async takeSeat() {
+    const code = this.lobby.code;
+    if (!code || !this.freeSeatSide) return;
+    forgetTicket(code, this.store);
+    const ticket = await joinGame(code, this.store);
+    location.href = rejoinLink(ticket);
   }
 
   freeSeat() {

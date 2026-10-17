@@ -140,7 +140,7 @@ export class RelayTransport implements Transport {
   }
 
   release() {
-    if (this.ticket.seat === 0 && this.ws?.readyState === WebSocket.OPEN) this.ws.send(JSON.stringify({ t: "release" }));
+    if (this.ticket.seat !== null && this.ws?.readyState === WebSocket.OPEN) this.ws.send(JSON.stringify({ t: "release" }));
   }
 
   get seatTicket(): SeatTicket | undefined {
@@ -195,7 +195,7 @@ export class RelayTransport implements Transport {
         for (const p of this.outbox.pending) ws.send(JSON.stringify({ t: "append", p }));
       } else if (msg.t === "presence") {
         const seat = this.ticket.seat;
-        this.setStatus({ peer: seat === null ? !!(msg.seats?.[0] || msg.seats?.[1]) : !!msg.seats?.[1 - seat], watchers: Number(msg.watchers) || 0 });
+        this.setStatus({ peer: seat === null ? !!(msg.seats?.[0] || msg.seats?.[1]) : !!msg.seats?.[1 - seat], watchers: Number(msg.watchers) || 0, free: Array.isArray(msg.free) ? msg.free.map(Boolean) : undefined });
       } else if (msg.t === "error" && /slow down/i.test(String(msg.error))) {
         clearTimeout(this.resendTimer);
         this.resendTimer = window.setTimeout(() => {

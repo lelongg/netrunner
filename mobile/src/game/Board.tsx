@@ -930,6 +930,21 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
           </p>
         )}
         {view.reason && view.winner && <span class="label">{view.reason}</span>}
+        {!view.winner && session.freeSeatSide && (
+          <Cta
+            onClick={async () => {
+              const seatSide = session.freeSeatSide!;
+              if (!(await ask({ title: `Take the ${seatSide === "corp" ? "Corp" : "Runner"} seat?`, body: "You will play this side from where the game stands now.", ok: "Take seat" }))) return;
+              try {
+                await session.takeSeat();
+              } catch (e) {
+                await tell("Could not take the seat", e instanceof Error ? e.message : String(e));
+              }
+            }}
+          >
+            Take the {session.freeSeatSide === "corp" ? "Corp" : "Runner"} seat
+          </Cta>
+        )}
       </section>
     );
   } else if (view.winner) {
@@ -1130,7 +1145,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
             <button
               onClick={async () => {
                 setMenu(false);
-                if (await ask({ title: "Free their seat?", body: `Anyone with the game code can then take ${session.lobby.opponentName ?? "your opponent"}'s seat and continue the game.`, ok: "Free seat", danger: true })) session.freeSeat();
+                if (await ask({ title: "Free their seat?", body: `${session.lobby.opponentName ?? "Your opponent"} will be disconnected. Anyone with the game code, or watching it, can then take their seat and continue the game.`, ok: "Free seat", danger: true })) session.freeSeat();
               }}
             >
               <Icon name="close" /> Free opponent's seat

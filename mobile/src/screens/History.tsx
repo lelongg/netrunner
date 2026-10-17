@@ -622,6 +622,7 @@ function ReplayPlayer({ replay, engine, db, script, onClose }: { replay: Replay;
     concede() {},
     journal() {},
     freeSeat() {},
+    freeSeatSide: undefined,
     clearActionError() {},
   };
   const total = Math.max(1, last);
