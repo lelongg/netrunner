@@ -38,7 +38,7 @@ export const eternalPoints = (card: Card) => Number((card.format as any)?.eterna
 export const deckLimit = (card: Card) => Number(card["deck-limit"] ?? 3);
 
 export function agendaRange(size: number): [number, number] {
-  const base = 2 * Math.floor(Math.max(size, 40) / 5) + 2;
+  const base = 2 * Math.floor(size / 5) + 2;
   return [base, base + 1];
 }
 

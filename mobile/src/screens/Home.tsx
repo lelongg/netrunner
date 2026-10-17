@@ -16,6 +16,7 @@ interface Props {
   onStart: (role: Role, name: string, code?: string, vsBot?: boolean) => void;
   onGuide: () => void;
   onHistory: (id?: string) => void;
+  onDecks: () => void;
 }
 
 function describe(save: SavedGame) {
@@ -68,7 +69,7 @@ function storedName() {
   }
 }
 
-export function Home({ ready, error, initialJoin, saves, onResume, onDiscard, onStart, onGuide, onHistory }: Props) {
+export function Home({ ready, error, initialJoin, saves, onResume, onDiscard, onStart, onGuide, onHistory, onDecks }: Props) {
   const [code, setCode] = useState(initialJoin ?? "");
   const codeRest = useRef<HTMLSpanElement>(null);
   const [animations, setAnimations] = useState(settings.animations);
@@ -96,9 +97,14 @@ export function Home({ ready, error, initialJoin, saves, onResume, onDiscard, on
         <section class="panel hero">
           <div class="row">
             <span class="label">For Netrunner</span>
-            <button class="ghost hero-history" disabled={!ready} onClick={() => onHistory()}>
-              <Icon name="history" /> History
-            </button>
+            <span class="hero-links">
+              <button class="ghost hero-history" disabled={!ready} onClick={onDecks}>
+                <Icon name="deck" /> Decks
+              </button>
+              <button class="ghost hero-history" disabled={!ready} onClick={() => onHistory()}>
+                <Icon name="history" /> History
+              </button>
+            </span>
           </div>
           <h1 style="margin: 0; display: flex; flex-direction: column">
             <span class="big">POCKET</span>

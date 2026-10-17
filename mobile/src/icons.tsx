@@ -24,6 +24,10 @@ const PATHS = {
   pause: { box: "0 0 20 20", d: "M6 3v14M14 3v14" },
   "step-back": { box: "0 0 20 20", d: "M4 3v14M16 3.5 7 10l9 6.5z" },
   "step-forward": { box: "0 0 20 20", d: "M16 3v14M4 3.5l9 6.5-9 6.5z" },
+  search: { box: "0 0 20 20", d: "M8.5 2.5a6 6 0 1 1 0 12 6 6 0 0 1 0-12zM13 13l5 5" },
+  deck: { box: "0 0 20 20", d: "M6 2.5h11v13H6zM3 5.5v12h11" },
+  copy: { box: "0 0 20 20", d: "M7 7h10v10H7zM13 7V3H3v10h4" },
+  dice: { box: "0 0 20 20", d: "M3 3h14v14H3zM7 7h.01M13 7h.01M10 10h.01M7 13h.01M13 13h.01" },
   share: { box: "0 0 20 20", d: "M10 13V2M5.5 6.5 10 2l4.5 4.5M3 10v8h14v-8" },
   history: { box: "0 0 20 20", d: "M3.2 6.5A8 8 0 1 1 2 10M2 3v4h4M10 5.5v5l3.5 2" },
 } as const;

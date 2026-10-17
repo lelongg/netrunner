@@ -108,20 +108,46 @@ export function fromWire(w: WireDeck, db: CardDb): Deck {
 export const engineDeck = (d: Deck) => ({ identity: d.identity, cards: d.cards.map(({ qty, card }) => ({ qty, card })) });
 
 const STORE = "nsg.decks";
+const MAX_DECKS = 80;
 
-export function savedDecks(): (WireDeck & { side: Side })[] {
+export interface StoredDeck extends WireDeck {
+  side: Side;
+  id: string;
+  format?: string;
+  updatedAt?: number;
+}
+
+const newDeckId = () => Array.from(crypto.getRandomValues(new Uint32Array(2)), (n) => n.toString(36)).join("");
+
+export function savedDecks(): StoredDeck[] {
   try {
-    return JSON.parse(localStorage.getItem(STORE) ?? "[]");
+    const raw: (WireDeck & { side: Side; id?: string })[] = JSON.parse(localStorage.getItem(STORE) ?? "[]");
+    return raw.map((d) => ({ ...d, id: d.id ?? `${d.side}:${d.name}` }));
   } catch {
     return [];
   }
 }
 
-export function saveDeck(deck: Deck, side: Side) {
+function writeDecks(all: StoredDeck[]) {
   try {
-    const all = savedDecks().filter((d) => !(d.name === deck.name && d.side === side));
-    localStorage.setItem(STORE, JSON.stringify([{ ...toWire(deck), side }, ...all].slice(0, 30)));
+    localStorage.setItem(STORE, JSON.stringify(all.slice(0, MAX_DECKS)));
   } catch {
     /* storage unavailable */
   }
+}
+
+export function saveDeck(deck: Deck, side: Side) {
+  const all = savedDecks();
+  const same = all.find((d) => d.name === deck.name && d.side === side);
+  writeDecks([{ ...toWire(deck), side, id: same?.id ?? newDeckId(), format: same?.format, updatedAt: Date.now() }, ...all.filter((d) => d !== same)]);
+}
+
+export function putDeck(deck: Omit<StoredDeck, "id"> & { id?: string }): StoredDeck {
+  const stored: StoredDeck = { ...deck, id: deck.id ?? newDeckId(), updatedAt: Date.now() };
+  writeDecks([stored, ...savedDecks().filter((d) => d.id !== stored.id)]);
+  return stored;
+}
+
+export function removeDeck(id: string) {
+  writeDecks(savedDecks().filter((d) => d.id !== id));
 }

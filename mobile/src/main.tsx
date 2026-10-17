@@ -1,5 +1,6 @@
 import { Dialogs } from "./ui";
 import { History } from "./screens/History";
+import { Decks } from "./screens/Decks";
 import { useBackClose } from "./back";
 import { render } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
@@ -105,6 +106,7 @@ function App() {
 
   const [guide, setGuide] = useState(false);
   const [archive, setArchive] = useState<string | boolean>(false);
+  const [decks, setDecks] = useState(false);
   const [sharedReplay, setSharedReplay] = useState(replayParam ? { code: replayParam, relay: replayRelay } : undefined);
   const [opening, setOpeningState] = useState<string | null>(joinParam ?? watchParam ?? gameParam?.replace(/^local:.*/, "local game") ?? null);
   const [held, setHeld] = useState<string | null>(null);
@@ -202,6 +204,8 @@ function App() {
 
   if (!error && (held || (opening && !session))) return <Opening label={(held ?? opening)!} ready={!!loaded} />;
 
+  if (decks && loaded && !session) return <Decks db={loaded.db} matchups={loaded.matchups} onClose={() => setDecks(false)} />;
+
   if ((archive || sharedReplay) && loaded && !session)
     return (
       <History
@@ -247,6 +251,7 @@ function App() {
       <Home
         onGuide={() => setGuide(true)}
         onHistory={(id) => setArchive(id ?? true)}
+        onDecks={() => setDecks(true)}
         ready={!!loaded}
         error={error}
         initialJoin={joinParam}

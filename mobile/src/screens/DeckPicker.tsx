@@ -99,10 +99,10 @@ export function DeckPicker({ side, db, matchups, value, onChange, showCurrent = 
       )}
       {tab === "saved" && (
         <ul class="deck-list">
-          {saved.length === 0 && <li class="hint">No imported deck for this side yet.</li>}
+          {saved.length === 0 && <li class="hint">No deck of yours for this side yet. Build one from Decks on the home screen.</li>}
           {saved.map((d) => (
             <li>
-              <button class={value?.name === d.name ? "on" : ""} onClick={() => pick(d)}>
+              <button class={value?.name === d.name ? "on" : ""} onClick={() => pick({ name: d.name, identity: d.identity, cards: d.cards })}>
                 <strong>{d.name}</strong>
                 <span>{d.identity}</span>
               </button>
