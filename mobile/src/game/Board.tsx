@@ -156,12 +156,22 @@ function Opponent({ view, side, name }: { view: any; side: Side; name: string })
 function ScoreHalf({ side, points, req }: { side: Side; points: number; req: number }) {
   const row = useRef<HTMLDivElement>(null);
   const shown = useRef(points);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const before = shown.current;
     shown.current = points;
     if (points <= before || !row.current || motionOff()) return;
-    const segs = [...row.current.children].slice(before, points);
-    segs.forEach((seg, i) => animate(seg, { scaleY: [4, 1], opacity: [0, 1] }, { duration: 0.5, delay: 1.2 + i * 0.12, ease: [0.2, 1.4, 0.4, 1] }));
+    const segs = [...row.current.children].slice(before, points) as HTMLElement[];
+    for (const seg of segs) {
+      seg.style.opacity = "0";
+      seg.dataset.pending = "1";
+    }
+    setTimeout(() => {
+      segs.forEach((seg, i) => {
+        if (!seg.dataset.pending) return;
+        delete seg.dataset.pending;
+        animate(seg, { scaleY: [4, 1], opacity: [0, 1] }, { duration: 0.5, delay: i * 0.12, ease: [0.2, 1.4, 0.4, 1] }).finished.then(() => (seg.style.opacity = ""));
+      });
+    }, 5000);
   }, [points]);
   return (
     <div ref={row} class={`score-half score-${side}`} data-anchor={`${side}-points`} aria-label={`${side} ${points} of ${req} points`}>

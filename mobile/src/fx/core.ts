@@ -126,7 +126,11 @@ export function points(from: Point, segments: Element[], tone: Tone = "gold") {
         el.remove();
         ring(to, tone, 70);
         burst(to, tone, 10, 40, { size: 4, gravity: 0 });
-        animate(seg, { scaleY: [1, 3, 1], filter: ["brightness(1)", "brightness(2.5)", "brightness(1)"] }, { duration: 0.5, ease: "easeOut" });
+        const pending = seg instanceof HTMLElement && !!seg.dataset.pending;
+        if (pending) delete (seg as HTMLElement).dataset.pending;
+        animate(seg, { scaleY: [pending ? 3.5 : 1, 3, 1], opacity: [pending ? 0 : 1, 1, 1], filter: ["brightness(1)", "brightness(2.5)", "brightness(1)"] }, { duration: 0.5, ease: "easeOut" }).finished.then(() => {
+          if (pending) (seg as HTMLElement).style.opacity = "";
+        });
       },
       () => el.remove(),
     );
