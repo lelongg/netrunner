@@ -868,6 +868,15 @@ textarea:focus {
   align-items: center;
 }
 
+.playfield > .opp {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  flex: none;
+  box-shadow: 0 0 0 10px var(--bg), 0 12px 14px 4px rgb(0 0 0 / 0.75);
+  clip-path: inset(-10px -10px -40px -10px);
+}
+
 .opp .big {
   font-size: 44px;
   flex: none;

@@ -1019,7 +1019,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
               onExit();
             }}
           >
-            <Icon name="arrow-left" /> All games
+            <Icon name="arrow-left" /> Back
           </button>
           {onSwitchSide && (
             <button
