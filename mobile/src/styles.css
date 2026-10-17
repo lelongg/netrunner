@@ -1737,7 +1737,6 @@ form.chat input {
   place-items: center;
   padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
   background: #000000f5;
-  backdrop-filter: blur(6px);
   cursor: zoom-out;
 }
 
@@ -5529,6 +5528,7 @@ button.armed {
 
 .card-zoom-stage .card-zoom-frame {
   width: 100%;
+  will-change: transform;
 }
 
 .card-zoom-frame.prev,

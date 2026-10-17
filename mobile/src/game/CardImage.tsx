@@ -51,12 +51,14 @@ export interface GalleryItem {
   alt: string;
 }
 
-function ZoomFrame({ code, alt, role }: { code: string; alt: string; role: "prev" | "current" | "next" }) {
+function ZoomFrame({ code, alt, role, settled }: { code: string; alt: string; role: "prev" | "current" | "next"; settled: boolean }) {
   const [sharp, setSharp] = useState<"loading" | "loaded" | "error">(Number(code) >= 26000 ? "loading" : "error");
+  const [wanted, setWanted] = useState(role === "current");
+  if (!wanted && (role === "current" || settled)) setWanted(true);
   return (
     <div class={`card-zoom-frame ${role} ${sharp}`} aria-hidden={role === "current" ? undefined : "true"}>
       <img class="card-zoom-base" crossOrigin="anonymous" src={cardImage(code, "large")} alt={role === "current" ? alt : ""} decoding="async" />
-      {sharp !== "error" && <img class="card-zoom-sharp" crossOrigin="anonymous" src={cardImage(code, "xlarge")} alt="" decoding="async" onLoad={() => setSharp("loaded")} onError={() => setSharp("error")} />}
+      {wanted && sharp !== "error" && <img class="card-zoom-sharp" crossOrigin="anonymous" src={cardImage(code, "xlarge")} alt="" decoding="async" onLoad={() => setSharp("loaded")} onError={() => setSharp("error")} />}
     </div>
   );
 }
@@ -65,12 +67,14 @@ export function CardZoom({ items, start, onClose }: { items: GalleryItem[]; star
   const [index, setIndex] = useState(Math.max(0, start));
   const stage = useRef<HTMLDivElement>(null);
   const landed = useRef(false);
+  const span = useRef(0);
+  const [settled, setSettled] = useState(false);
   const frame = (role: "prev" | "current" | "next") => stage.current?.querySelector<HTMLElement>(`.card-zoom-frame.${role}`);
   const peek: Peek = {
     move: (dx) => {
       const c = frame("current");
       if (!c) return;
-      const w = c.getBoundingClientRect().width + 24;
+      const w = (span.current ||= c.offsetWidth + 24);
       for (const d of [-1, 1] as const) {
         const el = frame(d === 1 ? "next" : "prev");
         if (!el) continue;
@@ -79,6 +83,7 @@ export function CardZoom({ items, start, onClose }: { items: GalleryItem[]; star
       }
     },
     release: (dir) => {
+      span.current = 0;
       if (dir) landed.current = true;
     },
     gap: 24,
@@ -98,6 +103,10 @@ export function CardZoom({ items, start, onClose }: { items: GalleryItem[]; star
       el.style.opacity = "";
     }
     landed.current = false;
+    span.current = 0;
+    setSettled(false);
+    const t = setTimeout(() => setSettled(true), 350);
+    return () => clearTimeout(t);
   }, [index]);
 
   useEffect(() => {
@@ -124,7 +133,7 @@ export function CardZoom({ items, start, onClose }: { items: GalleryItem[]; star
     >
       <div ref={stage} class="card-zoom-stage">
         {shown.map(([role, i]) => (
-          <ZoomFrame key={items[i].code + ":" + i} code={items[i].code} alt={items[i].alt} role={role} />
+          <ZoomFrame key={items[i].code + ":" + i} code={items[i].code} alt={items[i].alt} role={role} settled={settled} />
         ))}
       </div>
       {items.length > 1 && (
