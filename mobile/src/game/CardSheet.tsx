@@ -108,6 +108,43 @@ interface Props {
   neighbors?: { prev?: any; next?: any };
 }
 
+function SheetInfo({ card, code, full, side, view }: { card: any; code?: string; full?: any; side: Side; view: any }) {
+  return (
+    <div class="sheet-info">
+      {(() => {
+        const facts = cardFacts(card, side, view, !!code);
+        return (
+          <>
+            <span class="label">{[code ? card.type : card.side, ...(code && card.subtypes?.length ? card.subtypes : []), ...facts.where].join(" · ")}</span>
+            <h2>{code ? card.title : "Classified"}</h2>
+            {facts.chips.length > 0 && (
+              <div class="fact-chips">
+                {facts.chips.map((c) => (
+                  <span class={`fact-chip ${c.tone ?? ""}`}>
+                    {c.icon && <Icon name={c.icon} />}
+                    {c.text}
+                  </span>
+                ))}
+              </div>
+            )}
+            {facts.hint && <p class="fact-hint">{facts.hint}</p>}
+          </>
+        );
+      })()}
+      {full?.text && <RichText class="card-text" text={full.text} />}
+      {(card.subroutines ?? []).length > 0 && side === "runner" && !full?.text && (
+        <ul class="subs">
+          {card.subroutines.map((s: any) => (
+            <li class={s.broken ? "broken" : s.fired ? "fired" : ""}>
+              <Icon name="sub" /> {glyphs(iconize(s.label))}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 export function CardSheet({ card, view, side, db, send, onClose, disabled, index = 0, count = 1, slide, onStep, readOnly, neighbors }: Props) {
   const [installing, setInstalling] = useState(false);
   const owner = card.side === (side === "corp" ? "Corp" : "Runner");
@@ -207,47 +244,14 @@ export function CardSheet({ card, view, side, db, send, onClose, disabled, index
           const nCode = visibleCode(n, nOwner);
           return (
             <div key={`${k}:${n.cid}`} class={`sheet-peek ${k}`} aria-hidden="true">
-              {nCode ? <CardImage class="sheet-img" code={nCode} alt="" size="large" /> : <div class="sheet-img" />}
-              <div class="sheet-info">
-                <h2>{nCode ? n.title : "Classified"}</h2>
-              </div>
+              {nCode ? <CardImage class="sheet-img" code={nCode} alt="" size="large" /> : <CardBack side={n.side} />}
+              <SheetInfo card={n} code={nCode} full={nCode ? db.byTitle.get(n.title) : undefined} side={side} view={view} />
             </div>
           );
         })}
         <div key={card.cid} class="sheet-head">
           {code ? <ZoomableCardImage class="sheet-img" code={code} alt={card.title} size="large" /> : <CardBack side={card.side} />}
-          <div class="sheet-info">
-            {(() => {
-              const facts = cardFacts(card, side, view, !!code);
-              return (
-                <>
-                  <span class="label">{[code ? card.type : card.side, ...(code && card.subtypes?.length ? card.subtypes : []), ...facts.where].join(" · ")}</span>
-                  <h2>{code ? card.title : "Classified"}</h2>
-                  {facts.chips.length > 0 && (
-                    <div class="fact-chips">
-                      {facts.chips.map((c) => (
-                        <span class={`fact-chip ${c.tone ?? ""}`}>
-                          {c.icon && <Icon name={c.icon} />}
-                          {c.text}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  {facts.hint && <p class="fact-hint">{facts.hint}</p>}
-                </>
-              );
-            })()}
-            {full?.text && <RichText class="card-text" text={full.text} />}
-            {(card.subroutines ?? []).length > 0 && side === "runner" && !full?.text && (
-              <ul class="subs">
-                {card.subroutines.map((s: any) => (
-                  <li class={s.broken ? "broken" : s.fired ? "fired" : ""}>
-                    <Icon name="sub" /> {glyphs(iconize(s.label))}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+          <SheetInfo card={card} code={code} full={full} side={side} view={view} />
         </div>
         {installing ? (
           <div class="sheet-actions">
