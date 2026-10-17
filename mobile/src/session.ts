@@ -3,6 +3,7 @@ import { HeuristicBot } from "./bot/heuristic.ts";
 import { type WireDeck, engineDeck, fromWire } from "./decks";
 import { type GameHost, type LocalEntry, type Op, type Seat as ViewSeat, makeHost } from "./game/runner";
 import { owesMove } from "./game/actions";
+import { archive } from "./history";
 import { RelayTransport, relayUrl, createGame, joinGame, rejoinLink, storedTicket, watchLink } from "./net/relay";
 import type { Entry, LinkStatus, Payload, Seat, Transport } from "./net/types";
 import { type Store, browserStore } from "./store";
@@ -199,6 +200,7 @@ export class Session {
   private seat: Seat = 0;
   private lastAuthor?: Seat;
   private mustAct?: boolean;
+  private archived = false;
   private entries: Entry[] = [];
   private table: Table = { names: [undefined, undefined], creatorSide: "corp", sideSet: false, decks: [null, null], started: false };
   private wantedSide: Side = "corp";
@@ -697,7 +699,12 @@ export class Session {
 
   private persist() {
     const save = this.snapshot();
-    if (save) writeSave(this.saveId!, save, this.store);
+    if (!save) return;
+    writeSave(this.saveId!, save, this.store);
+    if (save.summary?.winner && !this.archived) {
+      this.archived = true;
+      void archive(save);
+    }
   }
 
   journal(): string | undefined {

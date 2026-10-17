@@ -32,6 +32,8 @@ interface Props {
   onExit: () => void;
   onWatch?: () => void;
   handoffLog?: number;
+  controls?: preact.ComponentChildren;
+  quiet?: boolean;
 }
 
 interface ClickMark {
@@ -521,11 +523,41 @@ function groupLog(log: any[], render: (m: unknown) => string, names: Record<Side
   return turns.filter((t) => t.groups.length);
 }
 
+export function LogTurns({ log, render, names }: { log: any[]; render: (m: unknown) => string; names: Record<Side, string> }) {
+  const turns = useMemo(() => groupLog(log, render, names), [log.length]);
+  return (
+    <>
+      {turns.map((t) => (
+        <section class={`log-turn ${t.side ? `side-${t.side}` : ""}`}>
+          <header class="log-turn-head">
+            {t.number ? (
+              <>
+                <span>Turn {t.number}</span>
+                {t.side && <span class={`who-${t.side}`}>{t.side}</span>}
+                <span class="log-who">{t.who}</span>
+              </>
+            ) : (
+              <span>Setup</span>
+            )}
+          </header>
+          {t.groups.map((g) => (
+            <div class={`log-group log-${g.kind} ${g.side ? `side-${g.side}` : ""}`}>
+              {g.kind === "action" && <span class="log-click">Click {g.click}</span>}
+              {g.lines.map((l, i) => (
+                <p class={i > 0 ? "log-sub" : undefined}>{l}</p>
+              ))}
+            </div>
+          ))}
+        </section>
+      ))}
+    </>
+  );
+}
+
 function Log({ view, render, names, onSay, onClose }: { view: any; render: (m: unknown) => string; names: Record<Side, string>; onSay: (t: string) => void; onClose: () => void }) {
   const [text, setText] = useState("");
   const end = useRef<HTMLDivElement>(null);
   const log: any[] = view.log ?? [];
-  const turns = useMemo(() => groupLog(log, render, names), [log.length]);
   useEffect(() => end.current?.scrollIntoView(), [log.length]);
   return (
     <div class="sheet-backdrop" onClick={onClose}>
@@ -537,29 +569,7 @@ function Log({ view, render, names, onSay, onClose }: { view: any; render: (m: u
           </button>
         </div>
         <div class="log">
-          {turns.map((t) => (
-            <section class={`log-turn ${t.side ? `side-${t.side}` : ""}`}>
-              <header class="log-turn-head">
-                {t.number ? (
-                  <>
-                    <span>Turn {t.number}</span>
-                    {t.side && <span class={`who-${t.side}`}>{t.side}</span>}
-                    <span class="log-who">{t.who}</span>
-                  </>
-                ) : (
-                  <span>Setup</span>
-                )}
-              </header>
-              {t.groups.map((g) => (
-                <div class={`log-group log-${g.kind} ${g.side ? `side-${g.side}` : ""}`}>
-                  {g.kind === "action" && <span class="log-click">Click {g.click}</span>}
-                  {g.lines.map((l, i) => (
-                    <p class={i > 0 ? "log-sub" : undefined}>{l}</p>
-                  ))}
-                </div>
-              ))}
-            </section>
-          ))}
+          <LogTurns log={log} render={render} names={names} />
           <div ref={end} />
         </div>
         <form
@@ -788,7 +798,7 @@ function feedText(view: any, side: Side, names: Record<Side, string>, watching =
   return `Turn ${view.turn ?? 0} · ${active === side && !watching ? "your move" : `${names[active] ?? active} to play`}`;
 }
 
-export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, onExit, onWatch, handoffLog }: Props) {
+export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, onExit, onWatch, handoffLog, controls, quiet }: Props) {
   const [selected, setSelected] = useState<any>(null);
   const [showLog, setShowLog] = useState(false);
   const [picking, setPicking] = useState(false);
@@ -803,7 +813,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
   const [deckOpen, setDeckOpen] = useState(false);
   const autoZone = useRef(false);
   const render = (m: unknown) => engine.renderMessage(m);
-  useFx(view, side, render);
+  useFx(view, side, render, quiet);
   const send = (command: string, args?: unknown) => session.send(command, args, side);
   const watching = session.lobby.role === "spectator";
   const disabled = session.pending || watching;
@@ -887,7 +897,8 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
   const link = session.lobby.role === "local" ? null : session.lobby.status;
 
   let panel: preact.ComponentChildren;
-  if (watching) {
+  if (controls) panel = <section class="actions replay-controls">{controls}</section>;
+  else if (watching) {
     panel = (
       <section class="actions watching">
         {view.winner ? (

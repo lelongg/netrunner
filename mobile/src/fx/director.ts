@@ -711,7 +711,7 @@ function flipSiblings(rects: Map<unknown, DOMRect>, moved: Set<unknown>) {
   }
 }
 
-export function useFx(view: any, me: Side, render: (m: unknown) => string) {
+export function useFx(view: any, me: Side, render: (m: unknown) => string, quiet = false) {
   const last = useRef<any>(null);
   const cards = useRef<ReturnType<typeof collect> | null>(null);
   const plan = useRef<Plan | null>(null);
@@ -720,7 +720,7 @@ export function useFx(view: any, me: Side, render: (m: unknown) => string) {
 
   if (last.current !== view) {
     const next = collect(view);
-    plan.current = cards.current && !document.hidden ? prepare(cards.current, next) : null;
+    plan.current = cards.current && !document.hidden && !quiet ? prepare(cards.current, next) : null;
     cards.current = next;
     rects.current = new Map();
     if (plan.current) for (const el of document.querySelectorAll<HTMLElement>(".playfield .tile[data-cid], .dock .tile[data-cid]")) rects.current.set(el.dataset.cid, el.getBoundingClientRect());
@@ -734,7 +734,7 @@ export function useFx(view: any, me: Side, render: (m: unknown) => string) {
     state.current = now;
     const p = plan.current;
     plan.current = null;
-    if (prev && p && !document.hidden) {
+    if (prev && p && !document.hidden && !quiet) {
       const moved = new Set(p.moves.map((m) => String(m.cid)));
       flipSiblings(rects.current, moved);
       const lines: string[] = (view.log ?? []).slice(prev.log).map((e: any) => render(e.text));

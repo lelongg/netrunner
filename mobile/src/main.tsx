@@ -1,4 +1,6 @@
 import { Dialogs } from "./ui";
+import { History } from "./screens/History";
+import { useBackClose } from "./back";
 import { render } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { animate } from "motion";
@@ -74,6 +76,7 @@ function App() {
   const [handoffLog, setHandoffLog] = useState(0);
   const [saves, setSaves] = useState<SavedGame[]>(() => listSaves());
   useSession(session);
+  useBackClose(!!session, () => exit());
   const currentId = session?.saveId;
   useEffect(() => {
     const url = currentId ? `${location.pathname}?game=${encodeURIComponent(currentId)}` : location.pathname;
@@ -99,6 +102,7 @@ function App() {
   }, [autoPass, corpView?.log?.length, corpView?.run?.phase, corpView?.run?.position]);
 
   const [guide, setGuide] = useState(false);
+  const [archive, setArchive] = useState<string | boolean>(false);
   const [opening, setOpeningState] = useState<string | null>(joinParam ?? watchParam ?? gameParam?.replace(/^local:.*/, "local game") ?? null);
   const [held, setHeld] = useState<string | null>(null);
   const openedAt = useRef(performance.now());
@@ -195,6 +199,9 @@ function App() {
 
   if (!error && (held || (opening && !session))) return <Opening label={(held ?? opening)!} ready={!!loaded} />;
 
+  if (archive && loaded && !session)
+    return <History engine={loaded.engine} db={loaded.db} saves={saves} initial={typeof archive === "string" ? archive : undefined} onClose={() => setArchive(false)} />;
+
   if (guide && loaded && !session)
     return (
       <Guide
@@ -224,6 +231,7 @@ function App() {
     return (
       <Home
         onGuide={() => setGuide(true)}
+        onHistory={(id) => setArchive(id ?? true)}
         ready={!!loaded}
         error={error}
         initialJoin={joinParam}

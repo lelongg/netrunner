@@ -15,6 +15,7 @@ interface Props {
   onDiscard: (save: SavedGame) => void;
   onStart: (role: Role, name: string, code?: string, vsBot?: boolean) => void;
   onGuide: () => void;
+  onHistory: (id?: string) => void;
 }
 
 function describe(save: SavedGame) {
@@ -67,7 +68,7 @@ function storedName() {
   }
 }
 
-export function Home({ ready, error, initialJoin, saves, onResume, onDiscard, onStart, onGuide }: Props) {
+export function Home({ ready, error, initialJoin, saves, onResume, onDiscard, onStart, onGuide, onHistory }: Props) {
   const [code, setCode] = useState(initialJoin ?? "");
   const codeRest = useRef<HTMLSpanElement>(null);
   const [animations, setAnimations] = useState(settings.animations);
@@ -95,6 +96,9 @@ export function Home({ ready, error, initialJoin, saves, onResume, onDiscard, on
         <section class="panel hero">
           <div class="row">
             <span class="label">For Netrunner</span>
+            <button class="ghost hero-history" disabled={!ready} onClick={() => onHistory()}>
+              <Icon name="history" /> History
+            </button>
           </div>
           <h1 style="margin: 0; display: flex; flex-direction: column">
             <span class="big">POCKET</span>
@@ -112,7 +116,7 @@ export function Home({ ready, error, initialJoin, saves, onResume, onDiscard, on
                 const { title, detail, status } = describe(save);
                 return (
                   <li key={saveId(save)}>
-                    <button class="game-row" disabled={!ready} onClick={() => onResume(save)}>
+                    <button class="game-row" disabled={!ready} onClick={() => (save.summary?.winner ? onHistory(saveId(save)) : onResume(save))}>
                       <span class="game-main">
                         <span class="game-title">{title}</span>
                         <span class="game-detail">{detail}</span>
