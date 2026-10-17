@@ -5,7 +5,7 @@ import { type FormatKey, FORMATS, TYPE_ORDER, analyze, costCurve, deckLimit, gro
 import { CardImage, ZoomableCardImage } from "../game/CardImage";
 import { RichText } from "../game/RichText";
 import { Pager } from "../game/Pager";
-import { useSwipe } from "../game/swipe";
+import { useSheetPager } from "../game/swipe";
 import { useBackClose } from "../back";
 import { Icon } from "../icons";
 import { Cta, Ticker, ask, tell } from "../ui";
@@ -851,36 +851,55 @@ function hyperNone(size: number, hits: number, draws: number) {
   return p;
 }
 
+function CardInfo({ card, identity, format }: { card: Card; identity: Card; format: FormatKey }) {
+  const inf = influenceOf(identity, card);
+  const l = legality(card, format);
+  return (
+    <div class="sheet-info">
+      <span class="label">
+        {card.type}
+        {Array.isArray(card.subtypes) && card.subtypes.length ? ` · ${(card.subtypes as string[]).join(" · ")}` : ""}
+      </span>
+      <h2>{card.title}</h2>
+      <span class="label">
+        {card.faction}
+        {inf ? ` · ${inf} inf` : ""} · {card.setname as string}
+      </span>
+      <span class={`legal-line ${l}`}>{l === "legal" ? `Legal in ${FORMATS.find((f) => f.key === format)!.label}` : l === "restricted" ? "Restricted" : l === "banned" ? "Banned" : "Not in this format"}</span>
+      {card.text && <RichText class="card-text" text={card.text} />}
+    </div>
+  );
+}
+
 function CardSheet({ card, list, identity, format, qty, onQty, onGo, onClose }: { card: Card; list: Card[]; identity: Card; format: FormatKey; qty: number; onQty: (n: number) => void; onGo: (c: Card) => void; onClose: () => void }) {
   const index = Math.max(0, list.indexOf(card));
   const step = (dir: -1 | 1) => {
     const next = list[index + dir];
     if (next) onGo(next);
   };
-  const swipe = useSwipe(step);
-  const inf = influenceOf(identity, card);
-  const l = legality(card, format);
+  const sheet = useRef<HTMLDivElement>(null);
+  const swipe = useSheetPager(sheet, `${card.title}:${index}`, (dir) => !!list[index + dir], step);
   const isId = card.type === "Identity";
   const blocked = card.type === "Agenda" && !isNeutral(card) && card.faction !== identity.faction;
+  const neighbors = { prev: list[index - 1], next: list[index + 1] };
   return (
     <div class="sheet-backdrop" onClick={onClose}>
-      <div class="sheet panel swipeable" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={card.title} {...swipe}>
+      <div ref={sheet} class="sheet panel swipeable" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={card.title} {...swipe}>
         {list.length > 1 && <Pager index={index} count={list.length} onStep={step} />}
+        {(["prev", "next"] as const).map((k) => {
+          const n = neighbors[k];
+          return (
+            n && (
+              <div key={`${k}:${n.title}`} class={`sheet-peek ${k}`} aria-hidden="true">
+                <CardImage class="sheet-img" code={n.code} alt="" size="large" />
+                <CardInfo card={n} identity={identity} format={format} />
+              </div>
+            )
+          );
+        })}
         <div key={`${card.code}:${index}`} class="sheet-head">
           <ZoomableCardImage class="sheet-img" code={card.code} alt={card.title} size="large" />
-          <div class="sheet-info">
-            <span class="label">
-              {card.type}
-              {Array.isArray(card.subtypes) && card.subtypes.length ? ` · ${(card.subtypes as string[]).join(" · ")}` : ""}
-            </span>
-            <h2>{card.title}</h2>
-            <span class="label">
-              {card.faction}
-              {inf ? ` · ${inf} inf` : ""} · {card.setname as string}
-            </span>
-            <span class={`legal-line ${l}`}>{l === "legal" ? `Legal in ${FORMATS.find((f) => f.key === format)!.label}` : l === "restricted" ? "Restricted" : l === "banned" ? "Banned" : "Not in this format"}</span>
-            {card.text && <RichText class="card-text" text={card.text} />}
-          </div>
+          <CardInfo card={card} identity={identity} format={format} />
         </div>
         {blocked && <p class="error">Agendas must be neutral or from your identity's faction.</p>}
         {!isId && (!blocked || qty > 0) && (

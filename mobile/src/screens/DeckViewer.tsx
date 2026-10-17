@@ -1,10 +1,10 @@
-import { useState } from "preact/hooks";
+import { useRef, useState } from "preact/hooks";
 import type { Card, Deck, DeckEntry } from "../engine";
 import { deckSize } from "../decks";
 import { CardImage, ZoomableCardImage } from "../game/CardImage";
 import { Pager } from "../game/Pager";
 import { RichText } from "../game/RichText";
-import { useSwipe } from "../game/swipe";
+import { useSheetPager } from "../game/swipe";
 import { useBackClose } from "../back";
 import { Icon } from "../icons";
 
@@ -43,29 +43,48 @@ interface DetailProps {
   count: number;
   slide?: -1 | 1;
   onStep: (dir: -1 | 1) => void;
+  neighbors: { prev?: Card; next?: Card };
 }
 
-function CardDetail({ card, qty, influence, onClose, index, count, slide, onStep }: DetailProps) {
-  const swipe = useSwipe(onStep);
+function DetailInfo({ card, qty, influence }: { card: Card; qty?: number; influence: number }) {
+  return (
+    <div class="sheet-info">
+      <span class="label">
+        {card.type}
+        {Array.isArray(card.subtypes) && card.subtypes.length ? ` · ${(card.subtypes as string[]).join(" · ")}` : ""}
+      </span>
+      <h2>{card.title}</h2>
+      <span class="label">
+        {card.faction}
+        {qty ? ` · ×${qty}` : ""}
+        {influence ? ` · ${influence} inf` : ""}
+      </span>
+      {card.text && <RichText class="card-text" text={card.text} />}
+    </div>
+  );
+}
+
+function CardDetail({ card, qty, influence, onClose, index, count, onStep, neighbors }: DetailProps) {
+  const sheet = useRef<HTMLDivElement>(null);
+  const swipe = useSheetPager(sheet, `${card.code}:${index}`, (dir) => (dir === 1 ? index < count - 1 : index > 0), onStep);
   return (
     <div class="sheet-backdrop" onClick={onClose}>
-      <div class="sheet panel swipeable" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={card.title} {...swipe}>
+      <div ref={sheet} class="sheet panel swipeable" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={card.title} {...swipe}>
         <Pager index={index} count={count} onStep={onStep} />
-        <div key={card.code} class={`sheet-head ${slide ? `slide-${slide < 0 ? "prev" : "next"}` : ""}`}>
+        {(["prev", "next"] as const).map((k) => {
+          const n = neighbors[k];
+          return (
+            n && (
+              <div key={`${k}:${n.code}`} class={`sheet-peek ${k}`} aria-hidden="true">
+                <CardImage class="sheet-img" code={n.code} alt="" size="large" />
+                <DetailInfo card={n} influence={0} />
+              </div>
+            )
+          );
+        })}
+        <div key={card.code} class="sheet-head">
           <ZoomableCardImage class="sheet-img" code={card.code} alt={card.title} size="large" />
-          <div class="sheet-info">
-            <span class="label">
-              {card.type}
-              {Array.isArray(card.subtypes) && card.subtypes.length ? ` · ${(card.subtypes as string[]).join(" · ")}` : ""}
-            </span>
-            <h2>{card.title}</h2>
-            <span class="label">
-              {card.faction}
-              {qty ? ` · ×${qty}` : ""}
-              {influence ? ` · ${influence} inf` : ""}
-            </span>
-            {card.text && <RichText class="card-text" text={card.text} />}
-          </div>
+          <DetailInfo card={card} qty={qty} influence={influence} />
         </div>
         <button class="ghost" onClick={onClose}>
           Close
@@ -201,6 +220,7 @@ export function DeckViewer({ deck, onClose }: { deck: Deck; onClose: () => void 
           count={ordered.length}
           slide={slide}
           onStep={step}
+          neighbors={{ prev: ordered[position - 1]?.card, next: ordered[position + 1]?.card }}
           onClose={() => {
             setDetail(null);
             setSlide(undefined);

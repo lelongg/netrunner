@@ -1,25 +1,7 @@
 import { type AnimationPlaybackControls, animate as animateValue } from "motion";
 import { motionOff } from "../settings";
-import { useRef } from "preact/hooks";
-
-export function useSwipe(onSwipe: (dir: -1 | 1) => void) {
-  const start = useRef<{ x: number; y: number } | null>(null);
-  return {
-    onTouchStart: (e: TouchEvent) => {
-      const t = e.touches[0];
-      start.current = e.touches.length === 1 ? { x: t.clientX, y: t.clientY } : null;
-    },
-    onTouchEnd: (e: TouchEvent) => {
-      const from = start.current;
-      start.current = null;
-      const t = e.changedTouches[0];
-      if (!from || !t) return;
-      const dx = t.clientX - from.x;
-      const dy = t.clientY - from.y;
-      if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) onSwipe(dx < 0 ? 1 : -1);
-    },
-  };
-}
+import { useLayoutEffect, useRef } from "preact/hooks";
+import { animate as animateFx } from "../fx/core";
 
 export interface Peek {
   move: (dx: number) => void;
@@ -101,4 +83,66 @@ export function useDragPager(target: () => HTMLElement | null | undefined, can: 
       }
     },
   };
+}
+
+export function useSheetPager(sheet: { current: HTMLElement | null }, key: unknown, can: (dir: -1 | 1) => boolean, step: (dir: -1 | 1) => void) {
+  const entering = useRef<-1 | 1 | 0>(0);
+  const peeked = useRef(false);
+  const head = () => sheet.current?.querySelector<HTMLElement>(".sheet-head");
+  const peekOf = (dir: -1 | 1) => sheet.current?.querySelector<HTMLElement>(dir === 1 ? ".sheet-peek.next" : ".sheet-peek.prev");
+  const peek: Peek = {
+    move: (dx) => {
+      const h = head();
+      if (!h) return;
+      const w = h.getBoundingClientRect().width + 24;
+      for (const dir of [-1, 1] as const) {
+        const el = peekOf(dir);
+        if (!el) continue;
+        const show = dir === 1 ? dx < 0 : dx > 0;
+        if (show && el.style.visibility !== "visible") {
+          el.style.top = `${h.offsetTop}px`;
+          el.style.height = "auto";
+          const need = el.offsetHeight;
+          el.style.height = `${Math.max(need, h.offsetHeight)}px`;
+          const box = sheet.current;
+          if (box && need > h.offsetHeight) box.style.minHeight = `${box.offsetHeight + need - h.offsetHeight}px`;
+        }
+        el.style.visibility = show ? "visible" : "hidden";
+        el.style.transform = `translateX(${dir * w + dx}px)`;
+      }
+    },
+    release: (dir) => {
+      if (!dir) return;
+      peeked.current = true;
+      const box = sheet.current;
+      if (box) box.style.minHeight = `${box.offsetHeight}px`;
+    },
+    gap: 24,
+  };
+  const swipe = useDragPager(head, can, (dir) => {
+    entering.current = dir;
+    step(dir);
+  }, peek);
+  useLayoutEffect(() => {
+    const dir = entering.current;
+    entering.current = 0;
+    if (peeked.current) {
+      peeked.current = false;
+      for (const d of [-1, 1] as const) {
+        const el = peekOf(d);
+        if (el) el.style.visibility = "hidden";
+      }
+      return;
+    }
+    const el = head();
+    if (!dir || !el || motionOff()) return;
+    const from = dir * el.getBoundingClientRect().width * 0.6;
+    el.style.transform = `translateX(${from}px)`;
+    el.style.opacity = "0.3";
+    animateFx(el, { x: [from, 0], opacity: [0.3, 1] }, { type: "spring", visualDuration: 0.3, bounce: 0.15 }).finished.then(
+      () => (el.style.opacity = ""),
+      () => {},
+    );
+  }, [key]);
+  return swipe;
 }

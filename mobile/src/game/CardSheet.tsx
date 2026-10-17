@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
+import { useEffect, useRef, useState } from "preact/hooks";
 import { useLoop } from "../fx/ui";
 import type { Side } from "../engine";
 import { type Command, cardCommands, cardRef, pendingChoice } from "./actions";
@@ -6,9 +6,7 @@ import { CardImage, ZoomableCardImage } from "./CardImage";
 import { visibleCode } from "./CardTile";
 import { Pager } from "./Pager";
 import { RichText } from "./RichText";
-import { type Peek, useDragPager } from "./swipe";
-import { animate } from "../fx/core";
-import { motionOff } from "../settings";
+import { useSheetPager } from "./swipe";
 import { iconize, serverLabel, serverName } from "./text";
 import { Icon, type IconName } from "../icons";
 import { glyphs } from "./Glyphs";
@@ -154,69 +152,12 @@ export function CardSheet({ card, view, side, db, send, onClose, disabled, index
   const installList: unknown[] = view.corp?.["install-list"] ?? [];
   useEffect(() => setInstalling(false), [card.cid]);
   const sheet = useRef<HTMLDivElement>(null);
-  const entering = useRef<-1 | 1 | 0>(0);
-  const head = () => sheet.current?.querySelector<HTMLElement>(".sheet-head");
-  const peekOf = (dir: -1 | 1) => sheet.current?.querySelector<HTMLElement>(dir === 1 ? ".sheet-peek.next" : ".sheet-peek.prev");
-  const peeked = useRef(false);
-  const peek: Peek = {
-    move: (dx) => {
-      const h = head();
-      if (!h) return;
-      const w = h.getBoundingClientRect().width + 24;
-      for (const dir of [-1, 1] as const) {
-        const el = peekOf(dir);
-        if (!el) continue;
-        const show = dir === 1 ? dx < 0 : dx > 0;
-        if (show && el.style.visibility !== "visible") {
-          el.style.top = `${h.offsetTop}px`;
-          el.style.height = "auto";
-          const need = el.offsetHeight;
-          el.style.height = `${Math.max(need, h.offsetHeight)}px`;
-          const box = sheet.current;
-          if (box && need > h.offsetHeight) box.style.minHeight = `${box.offsetHeight + need - h.offsetHeight}px`;
-        }
-        el.style.visibility = show ? "visible" : "hidden";
-        el.style.transform = `translateX(${dir * w + dx}px)`;
-      }
-    },
-    release: (dir) => {
-      if (!dir) return;
-      peeked.current = true;
-      const box = sheet.current;
-      if (box) box.style.minHeight = `${box.offsetHeight}px`;
-    },
-    gap: 24,
-  };
-  const swipe = useDragPager(
-    head,
+  const swipe = useSheetPager(
+    sheet,
+    card.cid,
     (dir) => !installing && !!onStep && (dir === 1 ? index < count - 1 : index > 0),
-    (dir) => {
-      entering.current = dir;
-      onStep?.(dir);
-    },
-    peek,
+    (dir) => onStep?.(dir),
   );
-  useLayoutEffect(() => {
-    const dir = entering.current;
-    entering.current = 0;
-    if (peeked.current) {
-      peeked.current = false;
-      for (const d of [-1, 1] as const) {
-        const el = peekOf(d);
-        if (el) el.style.visibility = "hidden";
-      }
-      return;
-    }
-    const el = head();
-    if (!dir || !el || motionOff()) return;
-    const from = dir * el.getBoundingClientRect().width * 0.6;
-    el.style.transform = `translateX(${from}px)`;
-    el.style.opacity = "0.3";
-    animate(el, { x: [from, 0], opacity: [0.3, 1] }, { type: "spring", visualDuration: 0.3, bounce: 0.15 }).finished.then(
-      () => (el.style.opacity = ""),
-      () => {},
-    );
-  }, [card.cid]);
 
   const run = (c: Command) => {
     pendingChoice.value = c.choose;
