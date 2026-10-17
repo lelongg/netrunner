@@ -25,12 +25,14 @@ import { MotionGlobalConfig } from "motion";
 const joinParam = new URLSearchParams(location.search).get("join")?.toUpperCase() ?? undefined;
 const gameParam = new URLSearchParams(location.search).get("game") ?? undefined;
 const watchParam = new URLSearchParams(location.search).get("watch")?.toUpperCase() ?? undefined;
+const replayParam = new URLSearchParams(location.search).get("replay")?.toUpperCase() ?? undefined;
+const replayRelay = new URLSearchParams(location.search).get("relay") ?? undefined;
 const seatFromLink = joinParam ? ticketFromHash(joinParam, location.hash) : undefined;
 if (seatFromLink) storeTicket(seatFromLink);
 const autopilotParam = new URLSearchParams(location.search).has("autopilot");
 const agentParam = new URLSearchParams(location.search).has("agent") || sessionStorage.getItem("nsg.agent") === "1";
 if (agentParam) sessionStorage.setItem("nsg.agent", "1");
-if (joinParam || watchParam) history.replaceState(null, "", location.pathname);
+if (joinParam || watchParam || replayParam) history.replaceState(null, "", location.pathname);
 
 function useSession(session: Session | null) {
   const [, setTick] = useState(0);
@@ -103,6 +105,7 @@ function App() {
 
   const [guide, setGuide] = useState(false);
   const [archive, setArchive] = useState<string | boolean>(false);
+  const [sharedReplay, setSharedReplay] = useState(replayParam ? { code: replayParam, relay: replayRelay } : undefined);
   const [opening, setOpeningState] = useState<string | null>(joinParam ?? watchParam ?? gameParam?.replace(/^local:.*/, "local game") ?? null);
   const [held, setHeld] = useState<string | null>(null);
   const openedAt = useRef(performance.now());
@@ -199,8 +202,20 @@ function App() {
 
   if (!error && (held || (opening && !session))) return <Opening label={(held ?? opening)!} ready={!!loaded} />;
 
-  if (archive && loaded && !session)
-    return <History engine={loaded.engine} db={loaded.db} saves={saves} initial={typeof archive === "string" ? archive : undefined} onClose={() => setArchive(false)} />;
+  if ((archive || sharedReplay) && loaded && !session)
+    return (
+      <History
+        engine={loaded.engine}
+        db={loaded.db}
+        saves={saves}
+        initial={typeof archive === "string" ? archive : undefined}
+        shared={sharedReplay}
+        onClose={() => {
+          setArchive(false);
+          setSharedReplay(undefined);
+        }}
+      />
+    );
 
   if (guide && loaded && !session)
     return (

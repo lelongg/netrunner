@@ -2,13 +2,14 @@ import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { CardDb, Deck, EngineApi, Side } from "../engine";
 import type { SavedGame } from "../session";
 import { type Archived, archiveFinished, listHistory, removeHistory } from "../history";
-import { type Frame, Replay, type Script, scriptOf } from "../game/replay";
+import { type Frame, Replay, type Script, type SharedGame, scriptOf, scriptOfShared, shareOf } from "../game/replay";
 import { Board, LogTurns } from "../game/Board";
 import { CardImage, ZoomableCardImage } from "../game/CardImage";
 import { DeckViewer } from "./DeckViewer";
 import { useBackClose } from "../back";
 import { Icon } from "../icons";
-import { Cta, Ticker, ask } from "../ui";
+import { Cta, Ticker, ask, tell } from "../ui";
+import { DEFAULT_RELAY, relayUrl } from "../net/relay";
 import { stagger } from "motion";
 import { animate } from "../fx/core";
 import { motionOff } from "../settings";
@@ -41,7 +42,9 @@ function dateText(ms: number) {
 const MODE: Record<Script["mode"], string> = { solo: "Solo vs bot", local: "Local game", online: "Online" };
 
 interface Head {
-  archived: Archived;
+  id: string;
+  endedAt: number;
+  shared?: string;
   script: Script | null;
   mySide: Side;
   winner?: Side;
@@ -53,9 +56,17 @@ interface Head {
 
 function headOf(archived: Archived, db: CardDb): Head {
   const save = archived.save;
-  const script = scriptOf(save, db);
   const sum = save.summary ?? {};
-  const mySide = script?.mySide ?? sum.side ?? "corp";
+  return headFrom(scriptOf(save, db), { id: archived.id, endedAt: archived.endedAt, side: sum.side, winner: sum.winner, points: (sum.points ?? [0, 0]) as [number, number], turn: sum.turn ?? 0 });
+}
+
+function headOfShared(code: string, game: SharedGame, db: CardDb): Head {
+  const mine = game.mySide;
+  return { ...headFrom(scriptOfShared(game, db), { id: `shared:${code}`, endedAt: game.endedAt, side: mine, winner: game.winner, points: [game.points[mine], game.points[other(mine)]], turn: game.turn }), shared: code, outcome: "over" };
+}
+
+function headFrom(script: Script | null, r: { id: string; endedAt: number; side?: Side; winner?: Side; points: [number, number]; turn: number }): Head {
+  const mySide = script?.mySide ?? r.side ?? "corp";
   const identities: Head["identities"] = {};
   for (const side of SIDES) {
     const id = script?.setup?.[side]?.deck?.identity;
@@ -63,28 +74,41 @@ function headOf(archived: Archived, db: CardDb): Head {
   }
   const local = script?.mode === "local";
   return {
-    archived,
+    id: r.id,
+    endedAt: r.endedAt,
     script,
     mySide,
-    winner: sum.winner,
-    points: (sum.points ?? [0, 0]) as [number, number],
-    turn: sum.turn ?? 0,
+    winner: r.winner,
+    points: r.points,
+    turn: r.turn,
     identities,
-    outcome: local ? "over" : sum.winner === mySide ? "won" : "lost",
+    outcome: local ? "over" : r.winner === mySide ? "won" : "lost",
   };
 }
 
-const OUTCOME = { won: "Victory", lost: "Defeat", over: "Game over" };
+const outcomeWord = (h: { outcome: "won" | "lost" | "over"; winner?: Side }) => (h.outcome === "won" ? "Victory" : h.outcome === "lost" ? "Defeat" : h.winner ? `${h.winner === "corp" ? "Corp" : "Runner"} wins` : "Game over");
 
 function sidePoints(head: Head, side: Side) {
   return side === head.mySide ? head.points[0] : head.points[1];
 }
 
-export function History({ engine, db, saves, initial, onClose }: { engine: EngineApi; db: CardDb; saves: SavedGame[]; initial?: string; onClose: () => void }) {
+export function History({ engine, db, saves, initial, shared, onClose }: { engine: EngineApi; db: CardDb; saves: SavedGame[]; initial?: string; shared?: { code: string; relay?: string }; onClose: () => void }) {
   const [games, setGames] = useState<Archived[] | null>(null);
   const [open, setOpen] = useState<Head | null>(null);
+  const [failed, setFailed] = useState<string | null>(null);
   useBackClose(true, onClose);
   useBackClose(!!open, () => setOpen(null));
+  useEffect(() => {
+    if (!shared) return;
+    const relay = shared.relay ?? relayUrl();
+    if (!relay) return setFailed("Shared games need the online relay.");
+    fetch(`${relay}/replays/${shared.code}`)
+      .then(async (res) => {
+        if (!res.ok) throw new Error(((await res.json().catch(() => null)) as { error?: string } | null)?.error ?? "This replay could not be loaded.");
+        setOpen(headOfShared(shared.code, (await res.json()) as SharedGame, db));
+      })
+      .catch((e) => setFailed(e instanceof Error ? e.message : String(e)));
+  }, []);
   useEffect(() => {
     void archiveFinished(saves)
       .then(listHistory)
@@ -95,7 +119,16 @@ export function History({ engine, db, saves, initial, onClose }: { engine: Engin
       });
   }, []);
   const heads = useMemo(() => (games ?? []).map((g) => headOf(g, db)), [games]);
-  if (open) return <Report head={open} engine={engine} db={db} onClose={() => setOpen(null)} />;
+  if (open) return <Report head={open} engine={engine} db={db} onClose={() => (open.shared && shared ? onClose() : setOpen(null))} />;
+  if (shared && !failed)
+    return (
+      <div class="opening" role="status" aria-live="polite">
+        <span class="label">Loading replay</span>
+        <span class="opening-title" data-text={shared.code}>
+          {shared.code}
+        </span>
+      </div>
+    );
   const won = heads.filter((h) => h.outcome === "won").length;
   const lost = heads.filter((h) => h.outcome === "lost").length;
   return (
@@ -119,10 +152,11 @@ export function History({ engine, db, saves, initial, onClose }: { engine: Engin
             <span class="label">lost</span>
           </section>
         )}
+        {failed && <p class="error">{failed}</p>}
         {games && heads.length === 0 && <p class="hint history-empty">Finished games show up here, with their stats and a replay.</p>}
         <ul class="history-list">
           {heads.map((h) => (
-            <li key={h.archived.id}>
+            <li key={h.id}>
               <button class={`history-row ${h.outcome}`} onClick={() => setOpen(h)}>
                 <span class="history-ids">
                   {SIDES.map((side) => {
@@ -131,13 +165,13 @@ export function History({ engine, db, saves, initial, onClose }: { engine: Engin
                   })}
                 </span>
                 <span class="history-main">
-                  <span class={`history-outcome ${h.outcome}`}>{OUTCOME[h.outcome]}</span>
+                  <span class={`history-outcome ${h.outcome}`}>{outcomeWord(h)}</span>
                   <span class="history-title">
                     {h.script ? (h.script.mode === "local" ? "Local game" : `vs ${h.script.names[other(h.mySide)]}`) : "Game"}
                     <span class={`who-${h.mySide}`}> · {h.mySide}</span>
                   </span>
                   <span class="history-detail">
-                    {sidePoints(h, "corp")}–{sidePoints(h, "runner")} · turn {h.turn} · {dateText(h.archived.endedAt)}
+                    {sidePoints(h, "corp")}–{sidePoints(h, "runner")} · turn {h.turn} · {dateText(h.endedAt)}
                   </span>
                 </span>
                 <Icon name="arrow-right" />
@@ -147,7 +181,7 @@ export function History({ engine, db, saves, initial, onClose }: { engine: Engin
                 aria-label="Remove from history"
                 onClick={async () => {
                   if (!(await ask({ title: "Remove this game?", body: "It disappears from your history on this device.", ok: "Remove", danger: true }))) return;
-                  await removeHistory(h.archived.id);
+                  await removeHistory(h.id);
                   setGames(await listHistory());
                 }}
               >
@@ -163,45 +197,70 @@ export function History({ engine, db, saves, initial, onClose }: { engine: Engin
 
 interface Stat {
   label: string;
-  values: Partial<Record<Side, number>>;
+  values: Record<Side, number>;
 }
 
-function statsOf(view: any, render: (m: unknown) => string): Stat[] {
+interface Tile {
+  label: string;
+  value: string | number;
+  detail?: string;
+}
+
+interface Stats {
+  shared: Stat[];
+  only: Record<Side, Tile[]>;
+}
+
+function statsOf(view: any, render: (m: unknown) => string): Stats {
   const s = view?.stats ?? {};
   const lines: string[] = (view?.log ?? []).map((e: any) => render(e.text));
   const names = { corp: view?.corp?.user?.username, runner: view?.runner?.user?.username };
-  const count = (side: Side, re: RegExp) => lines.filter((l) => names[side] && l.startsWith(names[side]) && re.test(l)).length;
+  const by = (side: Side) => lines.filter((l) => names[side] && l.startsWith(names[side]));
+  const count = (side: Side, re: RegExp) => by(side).filter((l) => re.test(l)).length;
   const sum = (o: Record<string, number> | undefined) => Object.values(o ?? {}).reduce((a, b) => a + (Number(b) || 0), 0);
-  const both = (f: (side: Side) => number | undefined) => ({ corp: f("corp"), runner: f("runner") });
-  const out: Stat[] = [
+  const both = (f: (side: Side) => number) => ({ corp: f("corp"), runner: f("runner") });
+  const shared: Stat[] = [
     { label: "Credits gained", values: both((x) => s[x]?.gain?.credit ?? 0) },
     { label: "Credits spent", values: both((x) => s[x]?.spent?.credit ?? 0) },
     { label: "Cards drawn", values: both((x) => s[x]?.gain?.card ?? 0) },
     { label: "Clicks used", values: both((x) => s[x]?.lose?.click ?? 0) },
     { label: "Cards played", values: both((x) => sum(s[x]?.["cards-played"])) },
-    { label: "Agendas scored", values: { corp: count("corp", / scores /) } },
-    { label: "Agendas stolen", values: { runner: count("runner", / steals /) } },
-    { label: "Ice rezzed", values: { corp: s.corp?.cards?.rezzed ?? count("corp", / to rez /) } },
-    { label: "Runs", values: { runner: s.runner?.runs?.started ?? count("runner", / to make a run on /) } },
-    { label: "Successful runs", values: { runner: count("runner", / breaches /) } },
-    { label: "Cards accessed", values: { runner: s.runner?.access?.cards ?? count("runner", / accesses /) } },
-    { label: "Damage dealt", values: { corp: lines.filter((l) => /to do \d+ (net|meat|core|brain) damage/.test(l) && names.corp && l.startsWith(names.corp)).reduce((n, l) => n + Number(l.match(/to do (\d+)/)?.[1] ?? 0), 0) } },
-  ];
-  return out.filter((st) => SIDES.some((x) => (st.values[x] ?? 0) > 0));
+    { label: "Installs", values: both((x) => count(x, / to install /)) },
+  ].filter((st) => st.values.corp + st.values.runner > 0);
+  const runs = s.runner?.runs?.started ?? count("runner", / to make a run on /);
+  const breaches = count("runner", / breaches /);
+  const damage = by("corp").reduce((n, l) => n + Number(l.match(/to do (\d+) (?:net|meat|core|brain) damage/)?.[1] ?? 0), 0);
+  const scored = count("corp", / scores /);
+  const stolen = count("runner", / steals /);
+  const only: Record<Side, Tile[]> = {
+    corp: [
+      { label: "Agendas scored", value: scored },
+      { label: "Ice rezzed", value: s.corp?.cards?.rezzed ?? count("corp", / to rez /) },
+      { label: "Advancements", value: count("corp", / to advance /) },
+      { label: "Damage dealt", value: damage },
+    ],
+    runner: [
+      { label: "Agendas stolen", value: stolen },
+      { label: "Runs", value: runs },
+      { label: "Successful", value: breaches, detail: runs ? `${Math.round((breaches / runs) * 100)}%` : undefined },
+      { label: "Cards accessed", value: s.runner?.access?.cards ?? count("runner", / accesses /) },
+    ],
+  };
+  return { shared, only };
 }
 
 function StatRows({ stats }: { stats: Stat[] }) {
   return (
     <div class="stat-rows">
       {stats.map((st) => {
-        const max = Math.max(1, ...SIDES.map((x) => st.values[x] ?? 0));
+        const max = Math.max(1, st.values.corp, st.values.runner);
         return (
           <div class="stat-row">
             {SIDES.map((x) => (
-              <span class={`stat-side ${x} ${st.values[x] === undefined ? "none" : ""}`}>
-                <span class="stat-num">{st.values[x] ?? "–"}</span>
+              <span class={`stat-side ${x} ${st.values[x] > st.values[other(x)] ? "lead" : ""}`}>
+                <span class="stat-num">{st.values[x]}</span>
                 <span class="stat-bar">
-                  <i style={{ width: `${((st.values[x] ?? 0) / max) * 100}%` }} />
+                  <i style={{ width: `${(st.values[x] / max) * 100}%` }} />
                 </span>
               </span>
             ))}
@@ -209,6 +268,23 @@ function StatRows({ stats }: { stats: Stat[] }) {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+function StatTiles({ tiles, side }: { tiles: Tile[]; side: Side }) {
+  return (
+    <div class={`stat-tiles ${side}`}>
+      <span class={`label who-${side}`}>{side === "corp" ? "Corp" : "Runner"}</span>
+      {tiles.map((t) => (
+        <div class="stat-tile">
+          <span class="stat-tile-num">
+            {t.value}
+            {t.detail && <small>{t.detail}</small>}
+          </span>
+          <span class="stat-tile-label">{t.label}</span>
+        </div>
+      ))}
     </div>
   );
 }
@@ -245,12 +321,59 @@ function Chart({ frames, pick, label, max: fixedMax }: { frames: Frame[]; pick: 
   );
 }
 
+const SHARED_KEY = (id: string) => `nsg.shared.${id}`;
+
+async function upload(head: Head, script: Script): Promise<string> {
+  try {
+    const known = localStorage.getItem(SHARED_KEY(head.id));
+    if (known) return known;
+  } catch {}
+  const relay = relayUrl();
+  if (!relay) throw new Error("Sharing needs the online relay.");
+  const body = JSON.stringify(shareOf(script, { winner: head.winner, points: { corp: sidePoints(head, "corp"), runner: sidePoints(head, "runner") }, turn: head.turn, endedAt: head.endedAt }));
+  const res = await fetch(`${relay}/replays`, { method: "POST", headers: { "Content-Type": "application/json" }, body });
+  const data = (await res.json().catch(() => ({}))) as { code?: string; error?: string };
+  if (!res.ok || !data.code) throw new Error(data.error ?? "The relay refused the game.");
+  try {
+    localStorage.setItem(SHARED_KEY(head.id), data.code);
+  } catch {}
+  return data.code;
+}
+
 function Report({ head, engine, db, onClose }: { head: Head; engine: EngineApi; db: CardDb; onClose: () => void }) {
   const [, setTick] = useState(0);
   const [replay, setReplay] = useState<Replay | null>(null);
   const [watching, setWatching] = useState(false);
   const [deck, setDeck] = useState<Deck | null>(null);
   const [logOpen, setLogOpen] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const share = async () => {
+    if (!script) return;
+    setSharing(true);
+    try {
+      const code = head.shared ?? (await upload(head, script));
+      const relay = relayUrl();
+      const url = `${location.origin}${location.pathname}?replay=${code}${relay && relay !== DEFAULT_RELAY ? `&relay=${encodeURIComponent(relay)}` : ""}`;
+      const winner = head.winner && script.names[head.winner];
+      const text = `${winner ? `${winner} wins` : "Netrunner game"} ${sidePoints(head, "corp")}–${sidePoints(head, "runner")} · ${script.names.corp} vs ${script.names.runner}`;
+      try {
+        if (navigator.share) await navigator.share({ title: "Netrunner game replay", text, url });
+        else {
+          await navigator.clipboard.writeText(url);
+          tell("Link copied", "Anyone with the link can see the report and watch the replay.");
+        }
+      } catch (e) {
+        if ((e as Error)?.name !== "AbortError") {
+          await navigator.clipboard?.writeText(url).catch(() => {});
+          tell("Link copied", "Anyone with the link can see the report and watch the replay.");
+        }
+      }
+    } catch (e) {
+      tell("Could not share", e instanceof Error ? e.message : String(e));
+    } finally {
+      setSharing(false);
+    }
+  };
   const hero = useRef<HTMLElement>(null);
   useBackClose(!!deck, () => setDeck(null));
   useBackClose(watching, () => setWatching(false));
@@ -268,7 +391,7 @@ function Report({ head, engine, db, onClose }: { head: Head; engine: EngineApi; 
   }, []);
   const render = (m: unknown) => engine.renderMessage(m);
   const final = replay?.done ? replay.frames[replay.frames.length - 1] : undefined;
-  const stats = useMemo(() => (final ? statsOf(final.views.corp, render) : []), [final]);
+  const stats = useMemo(() => (final ? statsOf(final.views.corp, render) : null), [final]);
   const deckOf = (side: Side): Deck | null => {
     const d = script?.setup?.[side]?.deck;
     return d ? { name: script!.deckNames[side] ?? `${side === "corp" ? "Corp" : "Runner"} deck`, ...d } : null;
@@ -291,8 +414,8 @@ function Report({ head, engine, db, onClose }: { head: Head; engine: EngineApi; 
         </header>
 
         <section ref={hero} class={`panel report-hero ${head.outcome} win-${head.winner ?? "none"}`}>
-          <span class="report-word" data-text={OUTCOME[head.outcome]}>
-            {OUTCOME[head.outcome]}
+          <span class="report-word" data-text={outcomeWord(head)}>
+            {outcomeWord(head)}
           </span>
           <span class="report-score">
             <span class="corp">{sidePoints(head, "corp")}</span>
@@ -300,7 +423,7 @@ function Report({ head, engine, db, onClose }: { head: Head; engine: EngineApi; 
             <span class="runner">{sidePoints(head, "runner")}</span>
           </span>
           <span class="report-sub">
-            {winnerName ? `${winnerName} wins${reason ? ` ${reason}` : ""}` : "Game over"} · turn {head.turn} · {dateText(head.archived.endedAt)}
+            {winnerName ? `${winnerName} wins${reason ? ` ${reason}` : ""}` : "Game over"} · turn {head.turn} · {dateText(head.endedAt)}
           </span>
         </section>
 
@@ -314,7 +437,7 @@ function Report({ head, engine, db, onClose }: { head: Head; engine: EngineApi; 
                   {id && <ZoomableCardImage class="report-id" code={id.code} alt={id.title} size="medium" width="120px" />}
                   <span class={`label who-${side}`}>
                     {side}
-                    {side === head.mySide && script.mode !== "local" ? " · you" : ""}
+                    {side === head.mySide && script.mode !== "local" && !head.shared ? " · you" : ""}
                   </span>
                   <span class="report-name">{script.names[side]}</span>
                   <span class="report-deck">{script.deckNames[side] ?? id?.title}</span>
@@ -333,9 +456,15 @@ function Report({ head, engine, db, onClose }: { head: Head; engine: EngineApi; 
         )}
 
         {script && (
-          <Cta onClick={() => setWatching(true)} disabled={!replay || replay.frames.length === 0}>
-            Watch the replay
-          </Cta>
+          <div class="report-cta">
+            <Cta onClick={() => setWatching(true)} disabled={!replay || replay.frames.length === 0}>
+              Watch the replay
+            </Cta>
+            <button class="report-share" onClick={share} disabled={sharing} aria-label="Share this game">
+              <Icon name="share" />
+              <span>{sharing ? "…" : "Share"}</span>
+            </button>
+          </div>
         )}
 
         {replay && !replay.done && (
@@ -354,14 +483,22 @@ function Report({ head, engine, db, onClose }: { head: Head; engine: EngineApi; 
           </section>
         )}
 
-        {stats.length > 0 && (
+        {stats && (
           <section class="panel section report-stats">
             <div class="stat-head">
               <span class="who-corp">{script?.names.corp}</span>
-              <span class="label">Stats</span>
+              <span class="label">Head to head</span>
               <span class="who-runner">{script?.names.runner}</span>
             </div>
-            <StatRows stats={stats} />
+            <StatRows stats={stats.shared} />
+          </section>
+        )}
+
+        {stats && (
+          <section class="report-only">
+            {SIDES.map((side) => (
+              <StatTiles side={side} tiles={stats.only[side]} />
+            ))}
           </section>
         )}
 

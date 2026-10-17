@@ -4070,3 +4070,120 @@ button.armed {
   border-color: var(--cyan);
   color: var(--cyan);
 }
+
+.report-hero.over.win-corp .report-word {
+  color: var(--corp);
+  text-shadow: -3px 0 var(--red), 0 0 28px rgb(127 176 255 / 0.45);
+}
+
+.report-hero.over.win-runner .report-word {
+  color: var(--runner);
+  text-shadow: 3px 0 var(--cyan), 0 0 28px rgb(255 106 95 / 0.4);
+}
+
+.history-outcome.over {
+  color: var(--text);
+}
+
+.stat-side:not(.lead) .stat-bar i {
+  opacity: 0.55;
+}
+
+.report-only {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.stat-tiles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  align-content: start;
+}
+
+.stat-tiles > .label {
+  grid-column: 1 / -1;
+  margin-bottom: 2px;
+}
+
+.stat-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 8px 8px;
+  background: var(--panel);
+  border: 1px solid var(--line-2);
+  border-top: 2px solid var(--line-2);
+}
+
+.stat-tiles.corp .stat-tile {
+  border-top-color: var(--corp);
+  background: linear-gradient(180deg, rgb(127 176 255 / 0.08), transparent 70%), var(--panel);
+}
+
+.stat-tiles.runner .stat-tile {
+  border-top-color: var(--runner);
+  background: linear-gradient(180deg, rgb(255 106 95 / 0.08), transparent 70%), var(--panel);
+}
+
+.stat-tile-num {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 28px;
+  line-height: 0.9;
+}
+
+.stat-tiles.corp .stat-tile-num {
+  color: var(--corp);
+}
+
+.stat-tiles.runner .stat-tile-num {
+  color: var(--runner);
+}
+
+.stat-tile-num small {
+  margin-left: 6px;
+  font-family: var(--mono);
+  font-weight: 400;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+
+.stat-tile-label {
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.report-cta {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.report-cta > .cta {
+  flex: 1;
+  min-width: 0;
+}
+
+.report-share {
+  flex: none;
+  width: 76px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  color: var(--cyan);
+  border-color: var(--cyan);
+}
+
+.report-share .icon {
+  height: 18px;
+}

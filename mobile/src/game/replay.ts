@@ -1,5 +1,5 @@
 import type { CardDb, EngineApi, Side } from "../engine";
-import { type WireDeck, engineDeck, fromWire } from "../decks";
+import { type WireDeck, engineDeck, fromWire, toWire } from "../decks";
 import type { SavedGame } from "../session";
 import { type GameHost, type LocalEntry, makeHost } from "./runner";
 
@@ -149,4 +149,37 @@ export class Replay {
     this.stopped = true;
     this.host.dispose();
   }
+}
+
+export interface SharedGame {
+  v: 1;
+  mode: Script["mode"];
+  names: Record<Side, string>;
+  deckNames: Partial<Record<Side, string>>;
+  mySide: Side;
+  decks: Record<Side, WireDeck>;
+  seed: number[];
+  entries: LocalEntry[];
+  winner?: Side;
+  points: Record<Side, number>;
+  turn: number;
+  endedAt: number;
+}
+
+export function shareOf(script: Script, result: { winner?: Side; points: Record<Side, number>; turn: number; endedAt: number }): SharedGame {
+  const wire = (side: Side) => toWire({ name: script.deckNames[side] ?? `${side} deck`, ...script.setup[side].deck });
+  return { v: 1, mode: script.mode, names: script.names, deckNames: script.deckNames, mySide: script.mySide, decks: { corp: wire("corp"), runner: wire("runner") }, seed: script.seed, entries: script.entries, ...result };
+}
+
+export function scriptOfShared(game: SharedGame, db: CardDb): Script {
+  const player = (side: Side) => ({ user: { username: game.names[side] }, deck: engineDeck(fromWire(game.decks[side], db)) });
+  return {
+    setup: { gameid: "replay", format: "casual", corp: player("corp"), runner: player("runner") },
+    seed: game.seed,
+    entries: game.entries,
+    mySide: game.mySide,
+    names: game.names,
+    deckNames: game.deckNames,
+    mode: game.mode,
+  };
 }

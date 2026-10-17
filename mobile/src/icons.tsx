@@ -24,6 +24,7 @@ const PATHS = {
   pause: { box: "0 0 20 20", d: "M6 3v14M14 3v14" },
   "step-back": { box: "0 0 20 20", d: "M4 3v14M16 3.5 7 10l9 6.5z" },
   "step-forward": { box: "0 0 20 20", d: "M16 3v14M4 3.5l9 6.5-9 6.5z" },
+  share: { box: "0 0 20 20", d: "M10 13V2M5.5 6.5 10 2l4.5 4.5M3 10v8h14v-8" },
   history: { box: "0 0 20 20", d: "M3.2 6.5A8 8 0 1 1 2 10M2 3v4h4M10 5.5v5l3.5 2" },
 } as const;
 

@@ -1,0 +1,13 @@
+const BASE = process.env.RELAY ?? "http://127.0.0.1:8787";
+const ORIGIN = { Origin: "http://localhost:4178" };
+const assert = (c, m) => { if (!c) { console.error("FAIL:", m); process.exit(1); } else console.log("ok:", m); };
+const body = JSON.stringify({ v: 1, entries: [{ side: "corp", kind: "act", command: "credit", args: null }] });
+const made = await fetch(`${BASE}/replays`, { method: "POST", headers: { ...ORIGIN, "Content-Type": "application/json" }, body });
+const { code } = await made.json();
+assert(made.status === 201 && /^[A-Z2-9]{8}$/.test(code), `share a replay as ${code}`);
+const got = await fetch(`${BASE}/replays/${code}`, { headers: ORIGIN });
+assert(got.status === 200 && (await got.text()) === body, "the replay reads back unchanged");
+assert((await fetch(`${BASE}/replays/ZZZZZZZZ`, { headers: ORIGIN })).status === 404, "an unknown replay is 404");
+assert((await fetch(`${BASE}/replays`, { method: "POST", headers: ORIGIN, body: "not json" })).status === 400, "malformed replays are refused");
+assert((await fetch(`${BASE}/replays`, { method: "POST", headers: ORIGIN, body: JSON.stringify({ x: "a".repeat(600 * 1024) }) })).status === 413, "oversized replays are refused");
+console.log("replay sharing checks passed");

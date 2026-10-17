@@ -3,6 +3,7 @@ import { type PushSub, type Vapid, sendPush, validSub } from "./push";
 
 export interface Env {
   GAME_ROOM: DurableObjectNamespace<GameRoom>;
+  REPLAYS: DurableObjectNamespace<ReplayStore>;
   CREATE_LIMIT?: RateLimit;
   CREATE_LIMIT_ALL?: RateLimit;
   JOIN_LIMIT?: RateLimit;
@@ -23,6 +24,9 @@ const BURST_MAX = 60;
 const RESYNC_CHUNK = 400;
 const MAX_WATCHERS = 20;
 const PUSH_GAP_MS = 20000;
+const MAX_REPLAY_BYTES = 512 * 1024;
+const REPLAY_DAYS = 365;
+const REPLAY_RE = /^[A-HJ-NP-Z2-9]{8}$/;
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const CODE_RE = /^[A-HJ-NP-Z2-9]{5}$/;
 
@@ -80,6 +84,31 @@ export default {
     if (request.method === "GET" && url.pathname === "/push-key") {
       const keys = vapid(env);
       return keys ? json({ key: keys.publicKey }, 200, origin) : json({ error: "Push is not configured on this relay" }, 404, origin);
+    }
+
+    if (request.method === "POST" && url.pathname === "/replays") {
+      if ((await limited(env.CREATE_LIMIT, request)) || (await limited(env.CREATE_LIMIT_ALL, null))) return json({ error: "Too many shares, try again in a minute" }, 429, origin);
+      const body = await request.text();
+      if (body.length > MAX_REPLAY_BYTES) return json({ error: "This game is too long to share" }, 413, origin);
+      try {
+        JSON.parse(body);
+      } catch {
+        return json({ error: "Malformed replay" }, 400, origin);
+      }
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const code = Array.from(crypto.getRandomValues(new Uint32Array(8)), (n) => CODE_ALPHABET[n % CODE_ALPHABET.length]).join("");
+        if (await env.REPLAYS.get(env.REPLAYS.idFromName(code)).put(body)) return json({ code }, 201, origin);
+      }
+      return json({ error: "Could not allocate a replay code" }, 503, origin);
+    }
+    const replay = url.pathname.match(/^\/replays\/([^/]+)$/);
+    if (replay && request.method === "GET") {
+      if (!REPLAY_RE.test(replay[1]) || (await limited(env.JOIN_LIMIT, request))) return json({ error: "Not found" }, 404, origin);
+      const body = await env.REPLAYS.get(env.REPLAYS.idFromName(replay[1])).read();
+      if (!body) return json({ error: "This replay does not exist or has expired" }, 404, origin);
+      const headers = new Headers({ "Content-Type": "application/json", "Cache-Control": "public, max-age=86400" });
+      if (origin) headers.set("Access-Control-Allow-Origin", origin);
+      return new Response(body, { headers });
     }
 
     const match = url.pathname.match(/^\/games\/([^/]+)\/(join|ws|seat|push)$/);
@@ -321,5 +350,26 @@ export class GameRoom extends DurableObject<Env> {
   private async touch() {
     const days = Number(this.env.EXPIRY_DAYS) || 14;
     await this.ctx.storage.setAlarm(Date.now() + days * 24 * 60 * 60 * 1000);
+  }
+}
+
+export class ReplayStore extends DurableObject<Env> {
+  async put(body: string): Promise<boolean> {
+    const sql = this.ctx.storage.sql;
+    sql.exec("CREATE TABLE IF NOT EXISTS replay (id INTEGER PRIMARY KEY CHECK (id = 0), body TEXT NOT NULL)");
+    if (sql.exec("SELECT COUNT(*) AS n FROM replay").one().n) return false;
+    sql.exec("INSERT INTO replay (id, body) VALUES (0, ?)", body);
+    await this.ctx.storage.setAlarm(Date.now() + REPLAY_DAYS * 24 * 60 * 60 * 1000);
+    return true;
+  }
+
+  async read(): Promise<string | null> {
+    const sql = this.ctx.storage.sql;
+    if (!sql.exec("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'replay'").toArray().length) return null;
+    return sql.exec<{ body: string }>("SELECT body FROM replay").toArray()[0]?.body ?? null;
+  }
+
+  async alarm() {
+    await this.ctx.storage.deleteAll();
   }
 }
