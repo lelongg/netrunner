@@ -62,6 +62,9 @@ function canAct(view: any, side: Side) {
   return basicCommands(view, side).some((c) => c.enabled !== false && c.command !== "toggle-auto-no-action");
 }
 
+const OPENING_DELAY_MS = 300;
+const OPENING_MIN_MS = 1000;
+
 function App() {
   const [loaded, setLoaded] = useState<{ engine: EngineApi; db: CardDb; matchups: Matchup[] }>();
   const [error, setError] = useState<string>();
@@ -96,7 +99,20 @@ function App() {
   }, [autoPass, corpView?.log?.length, corpView?.run?.phase, corpView?.run?.position]);
 
   const [guide, setGuide] = useState(false);
-  const [opening, setOpening] = useState<string | null>(joinParam ?? watchParam ?? gameParam?.replace(/^local:.*/, "local game") ?? null);
+  const [opening, setOpeningState] = useState<string | null>(joinParam ?? watchParam ?? gameParam?.replace(/^local:.*/, "local game") ?? null);
+  const [held, setHeld] = useState<string | null>(null);
+  const openedAt = useRef(performance.now());
+  const openingLabel = useRef(opening);
+  const setOpening = (label: string | null) => {
+    const shown = performance.now() - openedAt.current;
+    if (label) openedAt.current = performance.now();
+    else if (openingLabel.current && shown > OPENING_DELAY_MS && shown < OPENING_MIN_MS) {
+      setHeld(openingLabel.current);
+      setTimeout(() => setHeld(null), OPENING_MIN_MS - shown);
+    }
+    openingLabel.current = label;
+    setOpeningState(label);
+  };
   const afterPaint = (fn: () => void) => requestAnimationFrame(() => setTimeout(fn, 0));
 
   const resume = (from: SavedGame) => {
@@ -177,7 +193,7 @@ function App() {
     setSaves(listSaves());
   };
 
-  if (opening && !session && !error) return <Opening label={opening} ready={!!loaded} />;
+  if (!error && (held || (opening && !session))) return <Opening label={(held ?? opening)!} ready={!!loaded} />;
 
   if (guide && loaded && !session)
     return (
