@@ -2300,6 +2300,12 @@ button:active:not(:disabled) {
   text-overflow: ellipsis;
 }
 
+.game-detail {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .game-detail,
 .game-meta {
   font-size: 10px;
@@ -4511,6 +4517,8 @@ button.armed {
 }
 
 .editor-head {
+  position: relative;
+  z-index: 31;
   display: flex;
   align-items: center;
   gap: 4px;
@@ -5426,4 +5434,73 @@ button.armed {
 .id-card:active:not(:disabled) .card-image,
 .precon-card:active:not(:disabled) .card-image {
   transform: scale(0.95);
+}
+
+.menu button {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  text-align: left;
+}
+
+.menu button > .icon {
+  flex: none;
+  width: 16px;
+  height: 13px;
+  margin: 0;
+  opacity: 0.85;
+}
+
+@media (max-width: 359px) {
+  .hero .row > .label {
+    display: none;
+  }
+
+  .footer {
+    letter-spacing: 0.14em;
+    gap: 4px 8px;
+  }
+
+  .hero .row {
+    justify-content: flex-end;
+  }
+
+  .deck-summary {
+    grid-template-columns: 56px 1fr;
+  }
+
+  .summary-id .card-image {
+    width: 56px;
+  }
+
+  .summary-side {
+    grid-column: 1 / -1;
+    flex-direction: row;
+  }
+
+  .summary-side > * {
+    flex: 1;
+  }
+}
+
+@media (max-height: 700px) {
+  .screen.home .games {
+    min-height: 96px;
+  }
+
+  .screen.home .footer {
+    padding-top: 8px;
+  }
+}
+
+.browser-row .toggle {
+  white-space: nowrap;
+}
+
+@media (max-width: 359px) {
+  .browser-row .toggle {
+    padding: 4px 8px;
+    letter-spacing: 0.1em;
+  }
 }

@@ -1,14 +1,12 @@
 import { useEffect, useRef } from "preact/hooks";
 
-const stack: (() => void)[] = [];
-let ignored = 0;
+const stack: { close: () => void; live: boolean }[] = [];
 
 addEventListener("popstate", () => {
-  if (ignored > 0) {
-    ignored--;
-    return;
-  }
-  stack.pop()?.();
+  const top = stack.pop();
+  if (!top) return;
+  if (top.live) top.close();
+  else history.back();
 });
 
 export function useBackClose(open: boolean, onClose: () => void) {
@@ -16,15 +14,11 @@ export function useBackClose(open: boolean, onClose: () => void) {
   latest.current = onClose;
   useEffect(() => {
     if (!open) return;
-    const close = () => latest.current();
+    const entry = { close: () => latest.current(), live: true };
     history.pushState({ overlay: true }, "");
-    stack.push(close);
+    stack.push(entry);
     return () => {
-      const i = stack.indexOf(close);
-      if (i < 0) return;
-      stack.splice(i, 1);
-      ignored++;
-      history.back();
+      entry.live = false;
     };
   }, [open]);
 }

@@ -67,11 +67,11 @@ export function analyze(deck: Deck, format: FormatKey): Analysis {
   const influenceLimit = identity.influencelimit == null ? null : Number(identity.influencelimit);
   const influence = deck.cards.reduce((n, e) => n + influenceOf(identity, e.card) * e.qty, 0);
   const points = deck.cards.reduce((n, e) => n + Number(e.card.agendapoints ?? 0) * e.qty, 0);
-  const pointsRange = corp ? agendaRange(size) : null;
+  const pointsRange = corp ? agendaRange(Math.max(size, minimum)) : null;
   const problems: Problem[] = [];
   if (size < minimum) problems.push({ level: "error", text: `${minimum - size} more card${minimum - size > 1 ? "s" : ""} needed (minimum ${minimum})` });
   if (influenceLimit != null && influence > influenceLimit) problems.push({ level: "error", text: `${influence - influenceLimit} influence over the limit` });
-  if (pointsRange && (points < pointsRange[0] || points > pointsRange[1])) problems.push({ level: "error", text: `Agenda points must be ${pointsRange[0]} or ${pointsRange[1]} for ${size} cards (now ${points})` });
+  if (pointsRange && (points < pointsRange[0] || points > pointsRange[1])) problems.push({ level: "error", text: `Agenda points must be ${pointsRange[0]} or ${pointsRange[1]} for ${Math.max(size, minimum)} cards (now ${points})` });
   for (const e of deck.cards) {
     if (e.qty > deckLimit(e.card)) problems.push({ level: "error", text: `${e.card.title}: at most ${deckLimit(e.card)} ${deckLimit(e.card) > 1 ? "copies" : "copy"}` });
     if (e.card.side !== identity.side) problems.push({ level: "error", text: `${e.card.title} is a ${e.card.side} card` });

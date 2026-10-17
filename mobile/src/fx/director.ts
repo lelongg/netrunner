@@ -3,7 +3,7 @@ import type { Side } from "../engine";
 import { currentIce } from "../game/actions";
 import { serverName } from "../game/text";
 import { type Plan, collect, play, prepare } from "./cards";
-import { type Point, type Tone, anchor, animate, banner, burst, buzz, coins, done, flash, floater, gate, glitch, layer, lunge, mid, node, place, pointOf, punch, rays, rectOf, reduced, ring, shake, slash, stamp, tileEl, vignette, visible, wrapEl, scoreSegment } from "./core";
+import { type Point, type Tone, anchor, animate, banner, burst, buzz, haptics, coins, done, flash, floater, gate, glitch, layer, lunge, mid, node, place, pointOf, punch, rays, rectOf, reduced, ring, shake, slash, stamp, tileEl, vignette, visible, wrapEl, scoreSegment } from "./core";
 
 export type IceKind = "sentry" | "gate" | "barrier" | "other";
 
@@ -275,11 +275,13 @@ function confetti() {
   }
 }
 
-function finale(won: boolean) {
+let spectating = false;
+
+function finale(won: boolean, label?: string) {
   if (reduced()) return;
   const el = node(`fx-finale ${won ? "won" : "lost"}`);
   const word = node("fx-finale-word", el);
-  const text = won ? "VICTORY" : "DEFEAT";
+  const text = label ?? (won ? "VICTORY" : "DEFEAT");
   const letters = [...text].map((ch) => {
     const s = document.createElement("span");
     s.textContent = ch;
@@ -355,9 +357,12 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
   if (reduced()) return;
   let busy = 0;
 
-  if (now.winner && !prev.winner) setTimeout(() => finale(now.winner === me), 1600);
+  if (now.winner && !prev.winner) setTimeout(() => (spectating ? finale(true, `${now.winner === "corp" ? "CORP" : "RUNNER"} WINS`) : finale(now.winner === me)), 1600);
 
-  if (now.active && prev.active && now.active !== prev.active) {
+  if (now.active && prev.active && now.active !== prev.active && spectating) {
+    const side = now.active as Side;
+    banner(`${side === "corp" ? "Corp" : "Runner"} turn`, `${now.clicks[side]} clicks`, "white", { size: "md", hold: 0.45 });
+  } else if (now.active && prev.active && now.active !== prev.active) {
     const mine = now.active === me;
     banner(mine ? "Your turn" : `${now.active === "corp" ? "Corp" : "Runner"} turn`, mine ? `${now.clicks[me]} clicks` : "", mine ? "gold" : "white", { size: mine ? "xl" : "md", hold: mine ? 0.6 : 0.35 });
     if (mine) {
@@ -711,7 +716,9 @@ function flipSiblings(rects: Map<unknown, DOMRect>, moved: Set<unknown>) {
   }
 }
 
-export function useFx(view: any, me: Side, render: (m: unknown) => string, quiet = false) {
+export function useFx(view: any, me: Side, render: (m: unknown) => string, quiet = false, watching = false) {
+  spectating = watching;
+  haptics.muted = watching;
   const last = useRef<any>(null);
   const cards = useRef<ReturnType<typeof collect> | null>(null);
   const plan = useRef<Plan | null>(null);

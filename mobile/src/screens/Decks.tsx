@@ -864,7 +864,7 @@ function DeckStats({ deck, onOpen }: { deck: Deck; onOpen: (c: Card, list: Card[
         </ul>
         {corp && size > 0 && (
           <p class="hint">
-            Agenda density: one in {Math.round((size / Math.max(1, agendas)) * 10) / 10} cards · {Math.round((1 - hyperNone(size, agendas, 5)) * 100)}% to open with an agenda
+            {agendas} agenda{agendas === 1 ? "" : "s"}, one every {Math.round((size / Math.max(1, agendas)) * 10) / 10} cards · {Math.round((1 - hyperNone(size, agendas, 5)) * 100)}% chance to open with one
           </p>
         )}
       </section>

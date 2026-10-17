@@ -31,8 +31,19 @@ const replayRelay = new URLSearchParams(location.search).get("relay") ?? undefin
 const seatFromLink = joinParam ? ticketFromHash(joinParam, location.hash) : undefined;
 if (seatFromLink) storeTicket(seatFromLink);
 const autopilotParam = new URLSearchParams(location.search).has("autopilot");
-const agentParam = new URLSearchParams(location.search).has("agent") || sessionStorage.getItem("nsg.agent") === "1";
-if (agentParam) sessionStorage.setItem("nsg.agent", "1");
+const agentParam =
+  new URLSearchParams(location.search).has("agent") ||
+  (() => {
+    try {
+      return sessionStorage.getItem("nsg.agent") === "1";
+    } catch {
+      return false;
+    }
+  })();
+if (agentParam)
+  try {
+    sessionStorage.setItem("nsg.agent", "1");
+  } catch {}
 if (joinParam || watchParam || replayParam) history.replaceState(null, "", location.pathname);
 
 function useSession(session: Session | null) {

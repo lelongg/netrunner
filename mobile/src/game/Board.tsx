@@ -813,7 +813,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
   const [deckOpen, setDeckOpen] = useState(false);
   const autoZone = useRef(false);
   const render = (m: unknown) => engine.renderMessage(m);
-  useFx(view, side, render, quiet);
+  useFx(view, side, render, quiet, session.lobby.role === "spectator");
   const send = (command: string, args?: unknown) => session.send(command, args, side);
   const watching = session.lobby.role === "spectator";
   const disabled = session.pending || watching;
@@ -1045,7 +1045,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
               setMenu(false);
             }}
           >
-            Deck list
+            <Icon name="deck" /> Deck list
           </button>
           {session.watchUrl && (
             <button
@@ -1061,7 +1061,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
                 setMenu(false);
               }}
             >
-              Spectator link
+              <Icon name="eye" /> Spectator link
             </button>
           )}
           {!watching && <button
@@ -1087,7 +1087,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
               setTimeout(() => URL.revokeObjectURL(url), 1000);
             }}
           >
-            Export game journal
+            <Icon name="share" /> Export game journal
           </button>}
           {session.rejoinUrl && (
             <button
@@ -1103,7 +1103,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
                 setMenu(false);
               }}
             >
-              Rejoin link
+              <Icon name="share" /> Rejoin link
             </button>
           )}
           {session.canFreeSeat && (
@@ -1113,7 +1113,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
                 if (await ask({ title: "Free their seat?", body: `Anyone with the game code can then take ${session.lobby.opponentName ?? "your opponent"}'s seat and continue the game.`, ok: "Free seat", danger: true })) session.freeSeat();
               }}
             >
-              Free opponent's seat
+              <Icon name="close" /> Free opponent's seat
             </button>
           )}
           {prompt && ptype !== "run" && (
@@ -1123,7 +1123,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
                 if (await ask({ title: "Close the prompt?", body: "Use this only if the game is stuck.", ok: "Close prompt", danger: true })) closePrompt();
               }}
             >
-              Close stuck prompt
+              <Icon name="warning" /> Close stuck prompt
             </button>
           )}
           {!watching && onWatch && session.watchUrl && (
@@ -1133,7 +1133,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
                 onWatch();
               }}
             >
-              Watch instead
+              <Icon name="eye" /> Watch instead
             </button>
           )}
           {!watching && (
@@ -1144,7 +1144,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
                 if (await ask({ title: "Concede?", body: "Your opponent wins this game.", ok: "Concede", danger: true })) session.concede(side);
               }}
             >
-              Concede
+              <Icon name="flag" /> Concede
             </button>
           )}
           {!watching && (
@@ -1155,7 +1155,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
                 if (await ask({ title: "Delete this game?", body: "It is removed from this device and you will not be able to come back to it.", ok: "Delete", danger: true })) onLeave();
               }}
             >
-              Delete game
+              <Icon name="close" /> Delete game
             </button>
           )}
         </nav>

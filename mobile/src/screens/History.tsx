@@ -500,7 +500,7 @@ function Report({ head, engine, db, onClose }: { head: Head; engine: EngineApi; 
         {script && (
           <div class="report-cta">
             <Cta onClick={() => setWatching(true)} disabled={!replay || replay.frames.length === 0}>
-              Watch the replay
+              Watch replay
             </Cta>
             <button class="report-share" onClick={share} disabled={sharing} aria-label="Share this game">
               <Icon name="share" />

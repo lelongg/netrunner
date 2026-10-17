@@ -152,7 +152,10 @@ export const done = (anim: { finished: Promise<unknown> }, el: Element) =>
     () => el.remove(),
   );
 
+export const haptics = { muted: false };
+
 export function buzz(pattern: number | number[]) {
+  if (haptics.muted) return;
   try {
     navigator.vibrate?.(pattern);
   } catch {}
