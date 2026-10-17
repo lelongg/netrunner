@@ -231,6 +231,8 @@ function ImportSheet({ db, side, onClose, onDone }: { db: CardDb; side: Side; on
 function IdentityPicker({ db, side, format, matchups, onPick, onClose }: { db: CardDb; side: Side; format: FormatKey; matchups?: Matchup[]; onPick: (identity: Card, from?: Deck) => void; onClose: () => void }) {
   const [fmt, setFmt] = useState<FormatKey>(format);
   const [query, setQuery] = useState("");
+  const [preview, setPreview] = useState<Card | null>(null);
+  useBackClose(!!preview, () => setPreview(null));
   const ids = useMemo(() => {
     const q = normalize(query.trim());
     return db.all
@@ -287,7 +289,7 @@ function IdentityPicker({ db, side, format, matchups, onPick, onClose }: { db: C
             </span>
             <div class="id-grid">
               {cards.map((c) => (
-                <button class="id-card" onClick={() => onPick(c)} aria-label={c.title}>
+                <button class="id-card" onClick={() => setPreview(c)} aria-label={c.title}>
                   <CardImage code={c.code} alt={c.title} size="small" width="34vw" lazy />
                   <span class="id-meta">
                     {String(c.minimumdecksize ?? "")}/{String(c.influencelimit ?? "∞")}
@@ -301,7 +303,79 @@ function IdentityPicker({ db, side, format, matchups, onPick, onClose }: { db: C
         ))}
         {ids.length === 0 && <p class="hint">No identity matches.</p>}
       </div>
+      {preview && (
+        <IdentitySheet
+          card={preview}
+          list={byFaction.flatMap(([, cards]) => cards)}
+          onGo={setPreview}
+          onPick={() => onPick(preview)}
+          onClose={() => setPreview(null)}
+        />
+      )}
     </>
+  );
+}
+
+function IdentityInfo({ card }: { card: Card }) {
+  return (
+    <div class="sheet-info">
+      <span class="label">
+        Identity{Array.isArray(card.subtypes) && card.subtypes.length ? ` · ${(card.subtypes as string[]).join(" · ")}` : ""}
+      </span>
+      <h2>{card.title}</h2>
+      <span class={`label faction-label faction-${factionKey(card.faction)}`}>{card.faction}</span>
+      <div class="id-facts">
+        <span>
+          <b>{String(card.minimumdecksize ?? "–")}</b> min cards
+        </span>
+        <span>
+          <b>{card.influencelimit == null ? "∞" : String(card.influencelimit)}</b> influence
+        </span>
+        {card.baselink != null && (
+          <span>
+            <b>{String(card.baselink)}</b> <Icon name="link" /> link
+          </span>
+        )}
+      </div>
+      {card.text && <RichText class="card-text" text={card.text} />}
+    </div>
+  );
+}
+
+function IdentitySheet({ card, list, onGo, onPick, onClose }: { card: Card; list: Card[]; onGo: (c: Card) => void; onPick: () => void; onClose: () => void }) {
+  const index = Math.max(0, list.indexOf(card));
+  const step = (dir: -1 | 1) => {
+    const next = list[index + dir];
+    if (next) onGo(next);
+  };
+  const sheet = useRef<HTMLDivElement>(null);
+  const swipe = useSheetPager(sheet, card.code, (dir) => !!list[index + dir], step);
+  const neighbors = { prev: list[index - 1], next: list[index + 1] };
+  return (
+    <div class="sheet-backdrop" onClick={onClose}>
+      <div ref={sheet} class={`sheet panel swipeable faction-${factionKey(card.faction)}`} onClick={(e) => e.stopPropagation()} role="dialog" aria-label={card.title} {...swipe}>
+        {list.length > 1 && <Pager index={index} count={list.length} onStep={step} />}
+        {(["prev", "next"] as const).map((k) => {
+          const n = neighbors[k];
+          return (
+            n && (
+              <div key={`${k}:${n.code}`} class={`sheet-peek ${k}`} aria-hidden="true">
+                <CardImage class="sheet-img" code={n.code} alt="" size="large" />
+                <IdentityInfo card={n} />
+              </div>
+            )
+          );
+        })}
+        <div key={card.code} class="sheet-head">
+          <ZoomableCardImage class="sheet-img" code={card.code} alt={card.title} size="large" />
+          <IdentityInfo card={card} />
+        </div>
+        <Cta onClick={onPick}>Build with this identity</Cta>
+        <button class="ghost" onClick={onClose}>
+          Close
+        </button>
+      </div>
+    </div>
   );
 }
 

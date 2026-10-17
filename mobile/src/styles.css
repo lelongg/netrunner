@@ -5380,3 +5380,30 @@ button.armed {
   padding-right: 8px;
   letter-spacing: 0.16em;
 }
+
+.id-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 2px 0 4px;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.id-facts span {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.id-facts b {
+  font-family: var(--display);
+  font-size: 18px;
+  color: var(--fc, var(--text));
+}
+
+.id-facts .sym {
+  color: var(--text-2);
+}
