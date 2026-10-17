@@ -1167,12 +1167,14 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
         </nav>
       )}
       <Toasts toasts={session.actionError ? [...toasts, { id: ACTION_ERROR, type: "error", msg: session.actionError }] : toasts} render={render} dismiss={(id) => (id === ACTION_ERROR ? session.clearActionError() : send("toast", { id }))} />
-      <main class="playfield">
-        <Opponent view={view} side={opp} name={names[opp]} />
-        {theirArea}
-        <div class="divider" />
-        {myArea}
-      </main>
+      <div class="playfield-frame">
+        <main class="playfield">
+          <Opponent view={view} side={opp} name={names[opp]} />
+          {theirArea}
+          <div class="divider" />
+          {myArea}
+        </main>
+      </div>
       <footer class="dock">
         <div class="enc-zone">
           {!view.winner && (ice?.rezzed ? <Encounter view={view} render={render} onTap={tap} ice={lastIce?.cid === ice.cid && (view.encounters || view.run?.phase === "encounter-ice") ? lastIce : ice} /> : lastIce && <Encounter view={view} render={render} onTap={tap} ice={lastIce} passed />)}
