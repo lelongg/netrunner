@@ -83,20 +83,28 @@ export function Breakers({ view, side, ice, send, onTap, disabled }: { view: any
           <div class="brk best">
             <button class="brk-card" onClick={() => onTap(card)} aria-label={card.title}>
               {card.code && <CardImage code={card.code} alt={card.title} size="small" width="30px" />}
-              {(() => {
-                const str = card["current-strength"] ?? card.strength;
-                if (str == null) return null;
-                const iceStr = Number(ice["current-strength"] ?? ice.strength ?? 0);
-                return (
-                  <span class={`badge str brk-str ${Number(str) >= iceStr ? "ok" : "low"}`} aria-label={`strength ${str}`}>
-                    <Icon name="strength" class="glyph" />
-                    {str}
-                  </span>
-                );
-              })()}
             </button>
             <div class="brk-text">
-              <span class="brk-name">{card.title}</span>
+              <span class="brk-head-line">
+                <span class="brk-name">{card.title}</span>
+                <span class="brk-meta">
+                  {(card.subtypes ?? []).filter((t: string) => t !== "Icebreaker").join(" · ")}
+                  {(() => {
+                    const str = card["current-strength"] ?? card.strength;
+                    if (str == null) return null;
+                    const fits = Number(str) >= Number(ice["current-strength"] ?? ice.strength ?? 0);
+                    return (
+                      <>
+                        {" · "}
+                        <span class={`brk-str ${fits ? "ok" : "low"}`} data-tip="strength" aria-label={`strength ${str}`}>
+                          <Icon name="strength" />
+                          {str}
+                        </span>
+                      </>
+                    );
+                  })()}
+                </span>
+              </span>
               <span class="brk-desc">{label.startsWith("Match") ? "Match strength, break all" : "Break all"}</span>
             </div>
             {full && (

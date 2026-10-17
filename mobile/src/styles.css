@@ -2547,12 +2547,9 @@ button:active:not(:disabled) {
   object-fit: cover;
 }
 
-.brk-str {
-  position: absolute;
-  left: 50%;
-  bottom: -6px;
-  transform: translateX(-50%);
-  white-space: nowrap;
+.brk-str .icon {
+  height: 10px;
+  vertical-align: -1px;
 }
 
 .brk-str.ok {
@@ -2576,6 +2573,23 @@ button:active:not(:disabled) {
   font-size: 15px;
   line-height: 1;
   text-transform: uppercase;
+}
+
+.brk-head-line {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.brk-meta {
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .brk-desc {
@@ -5599,11 +5613,6 @@ button.armed {
 
 .choice-card:active:not(:disabled) .card-image {
   transform: scale(0.95);
-}
-
-.brk-str {
-  font-size: 10px;
-  padding: 1px 3px;
 }
 
 .fx-return {

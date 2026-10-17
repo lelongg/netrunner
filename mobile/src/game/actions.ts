@@ -285,8 +285,7 @@ export function runCommands(view: any, side: Side, autoContinue = false): Comman
   const label = (text: string) => (waiting ? "Waiting for Corp…" : text);
   if (enc) {
     const live: any[] = ice?.rezzed ? (ice.subroutines ?? []).filter((s: any) => !s.broken && !s.fired && s.resolve !== false) : [];
-    const fire = live.length === 1 ? (live[0].label ?? "1 subroutine") : `${live.length} subroutines`;
-    out.push({ label: label(live.length ? `Let it fire · ${fire}` : "Continue"), command: "continue", enabled: !waiting, kind: live.length ? "danger" : "primary" });
+    out.push({ label: label(live.length ? "Let it fire" : "Continue"), command: "continue", enabled: !waiting, kind: live.length ? "danger" : "primary" });
   } else if (run) {
     if (run["next-phase"] && run.phase !== "initiation") out.push({ label: nextPhaseLabel(view), command: "start-next-phase", enabled: !run["no-action"], kind: "primary" });
     else if (run.phase === "initiation" || (!run["next-phase"] && run.position !== 0)) out.push({ label: label(nextPhaseLabel(view)), command: "continue", enabled: !waiting, kind: "primary" });
