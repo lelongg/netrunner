@@ -33,6 +33,21 @@ namespace_id = "1003"
 simple = { limit = 120, period = 60 }
 
 [[ratelimits]]
+name = "REPLAY_LIMIT"
+namespace_id = "1004"
+simple = { limit = 5, period = 60 }
+
+[[ratelimits]]
+name = "REPLAY_LIMIT_ALL"
+namespace_id = "1005"
+simple = { limit = 30, period = 60 }
+
+[[ratelimits]]
+name = "WATCH_LIMIT"
+namespace_id = "1006"
+simple = { limit = 30, period = 60 }
+
+[[ratelimits]]
 name = "JOIN_LIMIT"
 namespace_id = "1002"
 simple = { limit = 60, period = 60 }

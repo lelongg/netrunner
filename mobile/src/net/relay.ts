@@ -131,8 +131,8 @@ export class RelayTransport implements Transport {
     if (this.status.link === "open" && this.ws?.readyState === WebSocket.OPEN) this.ws.send(JSON.stringify({ t: "append", p: tagged }));
   }
 
-  nudge(text: string) {
-    if (this.ticket.seat !== null && this.ws?.readyState === WebSocket.OPEN) this.ws.send(JSON.stringify({ t: "nudge", text }));
+  nudge(name: string) {
+    if (this.ticket.seat !== null && this.ws?.readyState === WebSocket.OPEN) this.ws.send(JSON.stringify({ t: "nudge", name }));
   }
 
   private focus() {

@@ -12,6 +12,10 @@ export interface Env {
   VAPID_PUBLIC_KEY?: string;
   VAPID_PRIVATE_KEY?: string;
   VAPID_SUBJECT?: string;
+  PUSH_ALLOW_LOOPBACK?: string;
+  REPLAY_LIMIT?: RateLimit;
+  REPLAY_LIMIT_ALL?: RateLimit;
+  WATCH_LIMIT?: RateLimit;
 }
 
 type Seat = 0 | 1;
@@ -24,8 +28,8 @@ const BURST_MAX = 60;
 const RESYNC_CHUNK = 400;
 const MAX_WATCHERS = 20;
 const PUSH_GAP_MS = 20000;
-const MAX_REPLAY_BYTES = 512 * 1024;
-const REPLAY_DAYS = 365;
+const MAX_REPLAY_BYTES = 300 * 1024;
+const REPLAY_DAYS = 180;
 const REPLAY_RE = /^[A-HJ-NP-Z2-9]{8}$/;
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const CODE_RE = /^[A-HJ-NP-Z2-9]{5}$/;
@@ -87,11 +91,12 @@ export default {
     }
 
     if (request.method === "POST" && url.pathname === "/replays") {
-      if ((await limited(env.CREATE_LIMIT, request)) || (await limited(env.CREATE_LIMIT_ALL, null))) return json({ error: "Too many shares, try again in a minute" }, 429, origin);
+      if ((await limited(env.REPLAY_LIMIT, request)) || (await limited(env.REPLAY_LIMIT_ALL, null))) return json({ error: "Too many shares, try again in a minute" }, 429, origin);
       const body = await request.text();
       if (body.length > MAX_REPLAY_BYTES) return json({ error: "This game is too long to share" }, 413, origin);
       try {
-        JSON.parse(body);
+        const parsed = JSON.parse(body);
+        if (!parsed || typeof parsed !== "object" || parsed.v !== 1 || !Array.isArray(parsed.entries)) throw new Error();
       } catch {
         return json({ error: "Malformed replay" }, 400, origin);
       }
@@ -114,6 +119,7 @@ export default {
     const match = url.pathname.match(/^\/games\/([^/]+)\/(join|ws|seat|push)$/);
     if (!match || !CODE_RE.test(match[1])) return json({ error: "Not found" }, 404, origin);
     if (match[2] !== "ws" && (await limited(env.JOIN_LIMIT, request))) return json({ error: "Too many requests, try again in a minute" }, 429, origin);
+    if (match[2] === "ws" && url.searchParams.has("watch") && (await limited(env.WATCH_LIMIT, request))) return json({ error: "Too many requests, try again in a minute" }, 429, origin);
     const room = env.GAME_ROOM.get(env.GAME_ROOM.idFromName(match[1]));
 
     if (match[2] === "join" && request.method === "POST") {
@@ -132,7 +138,7 @@ export default {
       } catch {
         return json({ error: "Malformed body" }, 400, origin);
       }
-      if (body.sub !== null && !validSub(body.sub)) return json({ error: "Invalid subscription" }, 400, origin);
+      if (body.sub !== null && !validSub(body.sub, env.PUSH_ALLOW_LOOPBACK === "1")) return json({ error: "Invalid subscription" }, 400, origin);
       const ok = await room.setPush(String(body.token ?? ""), body.sub as PushSub | null, match[1]);
       return ok ? json({ ok: true }, 200, origin) : json({ error: "Unknown seat" }, 404, origin);
     }
@@ -265,11 +271,15 @@ export class GameRoom extends DurableObject<Env> {
     if (msg.t === "subscribe") {
       const sub = (msg as { sub?: unknown }).sub;
       if (sub === null) this.sql.exec("DELETE FROM pushes WHERE seat = ?", seat);
-      else if (validSub(sub)) this.sql.exec("INSERT INTO pushes (seat, sub) VALUES (?, ?) ON CONFLICT(seat) DO UPDATE SET sub = excluded.sub", seat, JSON.stringify(sub));
+      else if (validSub(sub, this.env.PUSH_ALLOW_LOOPBACK === "1")) this.sql.exec("INSERT INTO pushes (seat, sub) VALUES (?, ?) ON CONFLICT(seat) DO UPDATE SET sub = excluded.sub", seat, JSON.stringify(sub));
       return;
     }
     if (msg.t === "nudge") {
-      const text = String((msg as { text?: unknown }).text ?? "").slice(0, 140) || "Your opponent is waiting for you.";
+      const name = String((msg as { name?: unknown }).name ?? "")
+        .replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2066-\u2069]/g, "")
+        .trim()
+        .slice(0, 24);
+      const text = name ? `${name} is waiting for you.` : "Your opponent is waiting for you.";
       this.ctx.waitUntil(this.nudge(seat, text));
       return;
     }

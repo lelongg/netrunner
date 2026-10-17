@@ -61,28 +61,29 @@ const { code } = created.body;
 const joined = await post(`/games/${code}/join`);
 assert((await post(`/games/${code}/push`, { token: "nope", sub })).status === 404, "subscribing needs a seat token");
 assert((await post(`/games/${code}/push`, { token: joined.body.token, sub: { endpoint: "ftp://x", keys: {} } })).status === 400, "invalid subscriptions are refused");
+assert((await post(`/games/${code}/push`, { token: joined.body.token, sub: { ...sub, endpoint: "https://evil.example/hook" } })).status === 400, "only real push services are accepted as endpoints");
 assert((await post(`/games/${code}/push`, { token: joined.body.token, sub })).status === 200, "guest subscribes over HTTP");
 
 const host = await connect(code, created.body.token);
 const guest = await connect(code, joined.body.token);
 guest.send(JSON.stringify({ t: "focus", on: true }));
 await wait(200);
-host.send(JSON.stringify({ t: "nudge", text: "Your move against Host" }));
+host.send(JSON.stringify({ t: "nudge", name: "Host" }));
 await wait(800);
 assert(received.length === 0, "no push while the guest has the game in front of them");
 
 guest.send(JSON.stringify({ t: "focus", on: false }));
 await wait(200);
-host.send(JSON.stringify({ t: "nudge", text: "Your move against Host" }));
+host.send(JSON.stringify({ t: "nudge", name: "Host\u202e<b>Click here</b> to claim a prize and more text" }));
 await wait(1500);
 assert(received.length === 1, "push sent once the guest looks away");
 const got = received[0];
 assert(got.headers["content-encoding"] === "aes128gcm" && Number(got.headers.ttl) > 0, "push uses aes128gcm with a TTL");
 await verifyVapid(got.headers.authorization);
 const payload = await decrypt(got.body);
-assert(payload.code === code && payload.body === "Your move against Host", "payload names the game and the message");
+assert(payload.code === code && payload.body === "Host<b>Click here</b> to is waiting for you.", `the relay writes the message from a short name only (${payload.body})`);
 
-host.send(JSON.stringify({ t: "nudge", text: "again" }));
+host.send(JSON.stringify({ t: "nudge", name: "again" }));
 await wait(800);
 assert(received.length === 1, "pushes to the same seat are spaced out");
 

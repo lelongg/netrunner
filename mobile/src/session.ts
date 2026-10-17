@@ -447,7 +447,7 @@ export class Session {
     const now = !!view && owesMove(view, side);
     const before = this.mustAct;
     this.mustAct = now;
-    if (before && !now && !view?.winner && this.lastAuthor === this.seat && this.transport instanceof RelayTransport) this.transport.nudge(`${this.lobby.myName} is waiting for you.`);
+    if (before && !now && !view?.winner && this.lastAuthor === this.seat && this.transport instanceof RelayTransport) this.transport.nudge(this.lobby.myName);
   }
 
   get rejoinUrl(): string | undefined {

@@ -33,9 +33,21 @@ async function hmac(key: Uint8Array, data: Uint8Array) {
   return new Uint8Array(await crypto.subtle.sign("HMAC", k, data));
 }
 
-export function validSub(sub: unknown): sub is PushSub {
+const PUSH_HOSTS = [/^fcm\.googleapis\.com$/, /^updates\.push\.services\.mozilla\.com$/, /^([a-z0-9-]+\.)*push\.apple\.com$/, /^[a-z0-9-]+\.notify\.windows\.com$/];
+
+export function pushHostAllowed(endpoint: string, loopback = false) {
+  try {
+    const url = new URL(endpoint);
+    if (loopback && url.protocol === "http:" && url.hostname === "127.0.0.1") return true;
+    return url.protocol === "https:" && PUSH_HOSTS.some((re) => re.test(url.hostname));
+  } catch {
+    return false;
+  }
+}
+
+export function validSub(sub: unknown, loopback = false): sub is PushSub {
   const s = sub as PushSub;
-  if (!s || typeof s.endpoint !== "string" || s.endpoint.length > 1024 || !/^(https:\/\/|http:\/\/127\.0\.0\.1:)/.test(s.endpoint)) return false;
+  if (!s || typeof s.endpoint !== "string" || s.endpoint.length > 1024 || !pushHostAllowed(s.endpoint, loopback)) return false;
   if (typeof s.keys?.p256dh !== "string" || typeof s.keys?.auth !== "string") return false;
   try {
     return unb64url(s.keys.p256dh).length === 65 && unb64url(s.keys.auth).length === 16;
