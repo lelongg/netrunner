@@ -82,6 +82,7 @@ export class Agent {
   private actions: Action[] = [];
   private stamp = "";
   private waitingSince = 0;
+  private waits = 0;
   private installing?: any;
   private unsubscribe?: () => void;
 
@@ -566,13 +567,15 @@ export class Agent {
     return this.describe();
   }
 
-  async wait(seconds: number, tick?: (elapsed: number) => void) {
+  async wait(seconds: number, tick?: (elapsed: number) => void, signal?: AbortSignal) {
     const s = this.requireSession();
     const lobby = !s.lobby.started;
     const start = Date.now();
-    const end = start + Math.max(1, Math.min(seconds, lobby ? 45 : 900)) * 1000;
+    const end = start + Math.max(1, Math.min(seconds, lobby ? 45 : 3600)) * 1000;
+    const mine = ++this.waits;
     let ticked = start;
     while (Date.now() < end) {
+      if (mine !== this.waits || signal?.aborted) return "This wait was replaced by a newer call.";
       const view = s.views[s.lobby.mySide];
       if (s.lobby.started && view) {
         if (view.winner || (!s.pending && canAct(view, s.lobby.mySide))) {
