@@ -31,7 +31,7 @@ const RUNNER: Step[] = [
   { id: "actions", anchor: ".actions .buttons", text: "Basic actions: gain 1[credit], draw a card, or Run a server to break in. Try installing an icebreaker before running into ice.", when: myTurn },
   { id: "help", anchor: ".me-bar .stat", text: "Tap any icon, or any underlined word in a card's text, to see what it means.", when: myTurn },
   { id: "approach", anchor: ".server.running", text: "You are running this server. You pass its ice one piece at a time, from the outermost. The Corp may rez a piece of ice when you approach it.", when: (v) => !!v.run && !v.encounters },
-  { id: "encounter", anchor: ".encounter", text: "Encounter! Each subroutine fires unless you break it. The Break it panel lists what your icebreakers can do; their strength must reach the ice's.", when: (v) => !!v.encounters },
+  { id: "encounter", anchor: ".encounter", text: "Encounter! Each subroutine fires unless you break it. The panel below lists what your icebreakers can do; their strength must reach the ice's.", when: (v) => !!v.encounters },
   { id: "access", anchor: ".prompt", text: "You are accessing a card. An agenda is stolen for its points; other cards can be trashed by paying their trash cost.", when: accessing },
   { id: "end-turn", anchor: ".actions .buttons", text: "No clicks left: end your turn and the Corp plays again.", when: (v, s) => (v.turn ?? 0) > 0 && basicCommands(v, s).some((c) => c.command === "end-turn") },
 ];

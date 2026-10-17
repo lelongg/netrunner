@@ -48,19 +48,17 @@ export function Breakers({ view, side, ice, send, onTap, disabled }: { view: any
   const manual: { card: any; cmd: Command }[] = [...all.flatMap((r) => r.manual.map((cmd) => ({ card: r.card, cmd }))), ...others];
   const fromIce = cardCommands(ice, view, side).filter((c) => c.command === "runner-ability");
   if (!rows.length && !manual.length && !fromIce.length) return null;
-  const runner = view.runner ?? {};
-  const credits = runner.credit ?? 0;
-  const badPub = runner["bad-pub-credit"] ?? 0;
+  const badPub = view.runner?.["bad-pub-credit"] ?? 0;
   return (
     <div class="breakers">
-      <div class="brk-head">
-        <span>Break it</span>
-        <span>
-          you have <b>{credits}</b>
-          {glyphs(iconize("[credit]"))}
-          {badPub > 0 && <span class="brk-extra"> +{badPub} bad pub</span>}
-        </span>
-      </div>
+      {badPub > 0 && (
+        <div class="brk-head">
+          <span>
+            +<b>{badPub}</b>
+            {glyphs(iconize("[credit]"))} bad publicity for this run
+          </span>
+        </div>
+      )}
       {fromIce.map((cmd) => {
         const [cost, effect] = splitCost(cmd.label);
         return (
