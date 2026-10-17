@@ -5407,3 +5407,19 @@ button.armed {
 .id-facts .sym {
   color: var(--text-2);
 }
+
+.id-card:active:not(:disabled),
+.precon-card:active:not(:disabled),
+.sample-card:active:not(:disabled) {
+  transform: none;
+}
+
+.sample-card:active:not(:disabled) {
+  transform: rotate(calc((var(--i) - 2) * 3deg)) translateY(calc(abs(var(--i) - 2) * 3px));
+}
+
+.id-card:active:not(:disabled) .card-image,
+.precon-card:active:not(:disabled) .card-image {
+  outline: 2px solid var(--fc, var(--cyan));
+  outline-offset: 2px;
+}
