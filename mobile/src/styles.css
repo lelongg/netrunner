@@ -2697,18 +2697,6 @@ button:active:not(:disabled) {
   min-width: 0;
 }
 
-.enc-phase {
-  flex: none;
-  font-size: 8px;
-  letter-spacing: 0.28em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
-.encounter.live .enc-phase {
-  color: var(--red);
-}
-
 .enc-title {
   font-family: var(--display);
   font-weight: 900;
@@ -2804,7 +2792,43 @@ button:active:not(:disabled) {
 }
 
 .encounter.passed {
-  opacity: 0.7;
+  border-left-color: var(--cyan);
+}
+
+.encounter.passed .enc-body,
+.encounter.passed .enc-card .card-image {
+  filter: grayscale(0.85);
+  opacity: 0.55;
+  transition:
+    opacity 0.4s ease,
+    filter 0.4s ease;
+}
+
+.enc-card {
+  position: relative;
+}
+
+.enc-cleared {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 3px;
+  background: linear-gradient(135deg, transparent calc(50% - 1px), var(--cyan) calc(50% - 1px) calc(50% + 1px), transparent calc(50% + 1px)), rgb(0 0 0 / 0.45);
+  color: var(--cyan);
+}
+
+.enc-cleared .icon {
+  height: 18px;
+  padding: 3px;
+  border-radius: 50%;
+  background: var(--bg);
+  box-shadow: 0 0 0 1px var(--cyan);
+}
+
+.encounter.passed .enc-text {
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--text) 50%, transparent);
 }
 
 .footer span:last-child {
@@ -2816,10 +2840,6 @@ button:active:not(:disabled) {
 .encounter.live {
   border-left-color: var(--ice, var(--red));
   background: repeating-linear-gradient(90deg, transparent 0 22px, color-mix(in srgb, var(--ice, var(--red)) 7%, transparent) 22px 23px), repeating-linear-gradient(0deg, transparent 0 22px, color-mix(in srgb, var(--ice, var(--red)) 7%, transparent) 22px 23px), var(--panel-2);
-}
-
-.encounter.live .enc-phase {
-  color: var(--ice, var(--red));
 }
 
 .encounter.live .enc-card .card-image {

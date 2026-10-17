@@ -96,7 +96,7 @@ export function Breakers({ view, side, ice, send, onTap, disabled }: { view: any
                     return (
                       <>
                         {" · "}
-                        <span class={`brk-str ${fits ? "ok" : "low"}`} data-tip="strength" aria-label={`strength ${str}`}>
+                        <span class={`stat brk-str ${fits ? "ok" : "low"}`} data-tip="strength" aria-label={`strength ${str}`}>
                           <Icon name="strength" />
                           {str}
                         </span>

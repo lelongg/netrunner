@@ -511,10 +511,6 @@
   background: repeating-linear-gradient(90deg, transparent 0 22px, color-mix(in srgb, var(--ice, var(--red)) 7%, transparent) 22px 23px), repeating-linear-gradient(0deg, transparent 0 22px, color-mix(in srgb, var(--ice, var(--red)) 7%, transparent) 22px 23px), var(--panel-2);
 }
 
-.encounter.live .enc-phase {
-  color: var(--ice, var(--red));
-}
-
 .encounter.live .enc-card .card-image {
   box-shadow:
     0 0 0 1px var(--ice, var(--line-2)),

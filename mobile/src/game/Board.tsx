@@ -672,11 +672,15 @@ function Encounter({ view, ice, passed, render, onTap }: { view: any; ice: any; 
       {ice.code && (
         <button class="enc-card" onClick={() => onTap(findCard(view, ice.cid) ?? ice)} aria-label={ice.title}>
           <CardImage code={ice.code} alt={ice.title} size="small" width="48px" />
+          {passed && (
+            <span class="enc-cleared" aria-label="Passed">
+              <Icon name="check" />
+            </span>
+          )}
         </button>
       )}
       <div class="enc-body">
         <div class="enc-head">
-          <span class="enc-phase">{passed ? "Passed" : encountering ? "Encounter" : "Approach"}</span>
           <span class="enc-title">{ice.title}</span>
           <span class="enc-meta">
             {types}
