@@ -277,11 +277,13 @@ function IdentityPicker({ db, side, format, matchups, onPick, onClose }: { db: C
         </div>
         {byFaction.map(([faction, cards]) => (
           <section class="id-group">
-            <span class={`label faction-label faction-${factionKey(faction)}`}>{faction}</span>
+            <span class={`label faction-label faction-${factionKey(faction)}`}>
+              {faction} <span class="hint">{cards.length}</span>
+            </span>
             <div class="id-grid">
               {cards.map((c) => (
                 <button class="id-card" onClick={() => onPick(c)} aria-label={c.title}>
-                  <CardImage code={c.code} alt={c.title} size="small" width="30vw" lazy />
+                  <CardImage code={c.code} alt={c.title} size="small" width="34vw" lazy />
                   <span class="id-meta">
                     {String(c.minimumdecksize ?? "")}/{String(c.influencelimit ?? "∞")}
                     {c.baselink != null && ` · ${c.baselink}`}

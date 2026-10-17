@@ -4473,12 +4473,25 @@ button.armed {
 }
 
 .id-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  scroll-padding: 0 16px;
+  margin: 0 -16px;
+  padding: 0 16px 4px;
+  scrollbar-width: none;
+}
+
+.id-grid::-webkit-scrollbar {
+  display: none;
 }
 
 .id-card {
+  flex: none;
+  width: 34%;
+  max-width: 150px;
+  scroll-snap-align: start;
   padding: 0;
   border: none;
   background: none;
