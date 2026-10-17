@@ -93,11 +93,18 @@ export function prepare(prev: Map<unknown, Info>, next: Map<unknown, Info>): Pla
       m.clone = el.cloneNode(true) as HTMLElement;
     } else {
       const fallback = m.from ? zoneAnchor(m.from) : m.to && head(m.to.zone) === "hand" ? pile(`${m.to.holder}-deck`) : m.to ? (anchor(`${m.to.owner}-hand`) ?? pile(`${m.to.owner}-deck`)) : null;
-      const fr = rectOf(fallback);
+      const fr = cardShaped(rectOf(fallback));
       m.src = visible(fr) ? fr : null;
     }
   }
   return { moves };
+}
+
+function cardShaped(r: DOMRect | null) {
+  if (!r) return r;
+  const height = Math.min(r.height, (r.width * 419) / 300, 120);
+  const width = (height * 300) / 419;
+  return new DOMRect(r.left + (r.width - width) / 2, r.top + (r.height - height) / 2, width, height);
 }
 
 function synth(info: Info | undefined, faceUp: boolean): HTMLElement {
@@ -236,7 +243,7 @@ async function showcase(m: Move, kind: Kind, me: Side) {
   const info = m.to ?? m.from;
   const destEl = tileEl(m.cid);
   const target = rectOf(destEl);
-  const dest = head(m.to?.zone) === "play-area" ? null : visible(target) ? target : rectOf(zoneAnchor(m.to));
+  const dest = head(m.to?.zone) === "play-area" ? null : visible(target) ? target : cardShaped(rectOf(zoneAnchor(m.to)));
   const src = m.src ?? new DOMRect(innerWidth / 2 - 30, innerHeight + 20, 60, 84);
   if (kind === "steal" && (m.to?.holder ?? m.from?.holder) === me) {
     const seen = rectOf(document.querySelector(".prompt img"));
@@ -318,7 +325,7 @@ export function play(plan: Plan, me: Side, lines: string[] = []) {
     }
     const destEl = tileEl(m.cid);
     const dr = rectOf(destEl);
-    const dest = visible(dr) ? dr : rectOf(zoneAnchor(m.to));
+    const dest = visible(dr) ? dr : cardShaped(rectOf(zoneAnchor(m.to)));
     const src = m.src;
     if (!src || !dest || !visible(dest)) {
       if (destEl && visible(dr)) animate(destEl, { scale: [0.6, 1], opacity: [0, 1] }, { type: "spring", visualDuration: 0.35, bounce: 0.4 });
@@ -330,7 +337,7 @@ export function play(plan: Plan, me: Side, lines: string[] = []) {
       const { ghost, flip } = twoSided(face, info, src);
       ghost.style.transformOrigin = "0 0";
       hide(destEl);
-      animate(flip, { transformPerspective: 600, rotateY: [180, 0] }, { duration: 0.45, delay: delay + 0.08, ease: [0.3, 0.6, 0.3, 1], keep: true });
+      animate(flip, { transformPerspective: 1200, rotateY: [180, 0] }, { duration: 0.24, delay: delay + 0.04, ease: [0.4, 0, 0.2, 1], keep: true });
       flyTo(ghost, src, dest, { delay, duration: 0.5, lift: 50, tilt: 0 }).finished.then(() => {
         ghost.remove();
         show(destEl);
