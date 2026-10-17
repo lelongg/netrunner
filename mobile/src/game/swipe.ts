@@ -27,14 +27,17 @@ export interface Peek {
   gap?: number;
 }
 
-const SPRING = { type: "spring", stiffness: 420, damping: 32, restDelta: 1, restSpeed: 40 } as const;
+const SPRING = { type: "spring", stiffness: 600, damping: 50, restDelta: 1, restSpeed: 40 } as const;
 
 export function useDragPager(target: () => HTMLElement | null | undefined, can: (dir: -1 | 1) => boolean, step: (dir: -1 | 1) => void, peek?: Peek) {
   const drag = useRef<{ x: number; y: number; t: number; axis?: "x" | "y"; dx: number; v: number } | null>(null);
   const flight = useRef<AnimationPlaybackControls | null>(null);
   const settle = (el: HTMLElement, from: number, velocity: number, to: number, done: () => void) => {
     const width = el.getBoundingClientRect().width;
-    const paint = (x: number) => {
+    const lo = Math.min(from, to);
+    const hi = Math.max(from, to);
+    const paint = (raw: number) => {
+      const x = Math.min(hi, Math.max(lo, raw));
       el.style.transform = x ? `translateX(${x}px)` : "";
       if (!peek) el.style.opacity = x ? String(1 - (0.7 * Math.min(Math.abs(x), width)) / width) : "";
       peek?.move(x);

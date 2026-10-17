@@ -166,15 +166,24 @@ export function CardSheet({ card, view, side, db, send, onClose, disabled, index
       for (const dir of [-1, 1] as const) {
         const el = peekOf(dir);
         if (!el) continue;
-        el.style.top = `${h.offsetTop}px`;
-        el.style.height = `${h.offsetHeight}px`;
         const show = dir === 1 ? dx < 0 : dx > 0;
+        if (show && el.style.visibility !== "visible") {
+          el.style.top = `${h.offsetTop}px`;
+          el.style.height = "auto";
+          const need = el.offsetHeight;
+          el.style.height = `${Math.max(need, h.offsetHeight)}px`;
+          const box = sheet.current;
+          if (box && need > h.offsetHeight) box.style.minHeight = `${box.offsetHeight + need - h.offsetHeight}px`;
+        }
         el.style.visibility = show ? "visible" : "hidden";
         el.style.transform = `translateX(${dir * w + dx}px)`;
       }
     },
     release: (dir) => {
-      if (dir) peeked.current = true;
+      if (!dir) return;
+      peeked.current = true;
+      const box = sheet.current;
+      if (box) box.style.minHeight = `${box.offsetHeight}px`;
     },
     gap: 24,
   };
