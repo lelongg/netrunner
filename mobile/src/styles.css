@@ -2721,6 +2721,11 @@ button:active:not(:disabled) {
   text-overflow: ellipsis;
 }
 
+.enc-meta .stat,
+.enc-meta .stat .icon {
+  color: var(--text);
+}
+
 .enc-subs {
   list-style: none;
   margin: 0;
