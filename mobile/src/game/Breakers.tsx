@@ -23,9 +23,30 @@ function splitCost(label: string): [string, string] {
   return i > 0 && i < 40 ? [label.slice(0, i).trim(), label.slice(i + 1).trim()] : ["", label];
 }
 
-export function Breakers({ view, side, ice, send, onTap, disabled }: { view: any; side: Side; ice: any; send: (command: string, args?: unknown) => void; onTap: (card: any) => void; disabled: boolean }) {
+const credits = (label: unknown) => {
+  const text = String(label ?? "");
+  const m = text.match(/^(\d+) \[Credits\]$/);
+  return m ? Number(m[1]) : text ? null : 0;
+};
+
+function partialCost(card: any, ice: any, wanted: number): number | null {
+  const abilities: any[] = card.abilities ?? [];
+  const brk = abilities.find((a) => !a.dynamic && /^break /i.test(a.label ?? ""));
+  if (!brk) return null;
+  const per = /any number/i.test(brk.label) ? Infinity : Number(String(brk.label).match(/\d+/)?.[0] ?? 1);
+  const str = Number(card["current-strength"] ?? card.strength ?? 0);
+  const pump = str < Number(ice["current-strength"] ?? ice.strength ?? 0) ? credits(abilities.find((a) => a.dynamic === "auto-pump")?.["cost-label"]) : 0;
+  const each = credits(brk["cost-label"]);
+  if (pump == null || each == null) return null;
+  return pump + Math.ceil(wanted / per) * each;
+}
+
+export function Breakers({ view, side, ice, send, onTap, disabled, skip, onPartial }: { view: any; side: Side; ice: any; send: (command: string, args?: unknown) => void; onTap: (card: any) => void; disabled: boolean; skip?: Set<number>; onPartial?: (breaker: any, subs: string[]) => void }) {
   const [open, setOpen] = useState(false);
   const unbroken = (ice.subroutines ?? []).filter((s: any) => !s.broken && !s.fired && s.resolve !== false);
+  const wanted = (ice.subroutines ?? []).filter((s: any, i: number) => !s.broken && !s.fired && s.resolve !== false && !skip?.has(i)).length;
+  const partial = wanted < unbroken.length;
+  const wantedLabels: string[] = (ice.subroutines ?? []).filter((s: any, i: number) => !s.broken && !s.fired && s.resolve !== false && !skip?.has(i)).map((s: any) => s.label);
   const cards = installed(view);
   const breakers = cards.filter((c) => (c.subtypes ?? []).includes("Icebreaker"));
   const others = cards
@@ -105,11 +126,18 @@ export function Breakers({ view, side, ice, send, onTap, disabled }: { view: any
                   })()}
                 </span>
               </span>
-              <span class="brk-desc">{label.startsWith("Match") ? "Match strength, break all" : "Break all"}</span>
+              <span class="brk-desc">{partial ? (wanted ? `${label.startsWith("Match") ? "Match strength, break" : "Break"} ${wanted} of ${unbroken.length}` : "Nothing selected") : label.startsWith("Match") ? "Match strength, break all" : "Break all"}</span>
             </div>
-            {full && (
-              <button class="brk-go" disabled={disabled || full.enabled === false} onClick={() => send(full.command, full.args)}>
-                <span class="brk-cost">{glyphs(iconize(ab?.["cost-label"] ?? ""))}</span>
+            {full && !(partial && !wanted) && (
+              <button class="brk-go" disabled={disabled || full.enabled === false || (partial && !wanted)} onClick={() => (partial ? onPartial?.(card, wantedLabels) : send(full.command, full.args))}>
+                <span class="brk-cost">
+                  {partial
+                    ? (() => {
+                        const cost = partialCost(card, ice, wanted);
+                        return cost == null ? "" : glyphs(iconize(`${cost} [Credits]`));
+                      })()
+                    : glyphs(iconize(ab?.["cost-label"] ?? ""))}
+                </span>
                 <span class="brk-verb">Break</span>
               </button>
             )}

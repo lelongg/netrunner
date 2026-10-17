@@ -2746,6 +2746,31 @@ button:active:not(:disabled) {
     opacity 0.2s;
 }
 
+.enc-sub.pickable {
+  cursor: pointer;
+  margin: 0 -4px;
+  padding: 3px 4px;
+  border-radius: 3px;
+}
+
+.enc-sub.pickable:active {
+  background: rgb(255 255 255 / 0.06);
+}
+
+.encounter .enc-sub.live.pickable .enc-state {
+  color: var(--cyan);
+}
+
+.enc-sub.pickable:not(.left) .enc-text {
+  background: linear-gradient(var(--cyan), var(--cyan)) 0 58% / 100% 2px no-repeat;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+.encounter .enc-sub.live.left .enc-state {
+  color: var(--red);
+}
+
 .enc-sub .icon {
   flex: none;
   height: 0.9em;

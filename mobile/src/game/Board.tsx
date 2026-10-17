@@ -6,7 +6,7 @@ import { Cta, Meter, Ticker, ask, tell } from "../ui";
 import { useFx, iceKind } from "../fx/director";
 import { Count, useLoop } from "../fx/ui";
 import { animate } from "../fx/core";
-import { type Command, pendingChoice, awaitingMove, basicCommands, currentIce, findCard, otherSide, promptOf, runCommands, siblingsOf } from "./actions";
+import { type Command, cardRef, pendingChoice, awaitingMove, basicCommands, currentIce, findCard, otherSide, promptOf, runCommands, siblingsOf } from "./actions";
 import { DeckViewer } from "../screens/DeckViewer";
 import { CardSheet } from "./CardSheet";
 import { CardTile } from "./CardTile";
@@ -644,7 +644,7 @@ function Decrypt({ text }: { text: string }) {
   return <>{shown === text ? glyphs(iconize(text)) : shown}</>;
 }
 
-function Encounter({ view, ice, passed, render, onTap }: { view: any; ice: any; passed?: boolean; render: (m: unknown) => string; onTap: (card: any) => void }) {
+function Encounter({ view, ice, passed, render, onTap, skip, onToggle }: { view: any; ice: any; passed?: boolean; render: (m: unknown) => string; onTap: (card: any) => void; skip?: Set<number>; onToggle?: (i: number) => void }) {
   const allBy = passed ? breakAllFromLog(view, ice.title, render) : undefined;
   const subs: any[] = (ice.subroutines ?? []).map((sub: any) => (allBy && !sub.broken && !sub.fired ? { ...sub, broken: true, breakerTitle: allBy } : sub));
   const encountering = !passed && (!!view.encounters || view.run?.phase === "encounter-ice");
@@ -699,13 +699,15 @@ function Encounter({ view, ice, passed, render, onTap }: { view: any; ice: any; 
             {subs.map((sub, i) => {
               const breaker = sub.breakerTitle ?? (sub.breaker != null ? findCard(view, sub.breaker)?.title : undefined);
               const state = states[i];
+              const pickable = !!onToggle && state === "live";
+              const left = pickable && !!skip?.has(i);
               return (
-                <li class={`enc-sub ${state}`}>
+                <li class={`enc-sub ${state} ${pickable ? "pickable" : ""} ${left ? "left" : ""}`} onClick={pickable ? () => onToggle!(i) : undefined} role={pickable ? "checkbox" : undefined} aria-checked={pickable ? !left : undefined}>
                   <Icon name="sub" />
                   <span class="enc-label">
                     <span class="enc-text">{state === "broken" ? <Decrypt text={sub.label ?? "Subroutine"} /> : withTerms(iconize(sub.label ?? "Subroutine"))}</span>
                   </span>
-                  <span class="enc-state">{state === "broken" ? (breaker ? `Broken · ${breaker}` : "Broken") : state === "fired" ? "Fired" : state === "skipped" ? "Won't fire" : encountering ? "Unbroken" : ""}</span>
+                  <span class="enc-state">{state === "broken" ? (breaker ? `Broken · ${breaker}` : "Broken") : state === "fired" ? "Fired" : state === "skipped" ? "Won't fire" : left ? "Let it fire" : pickable ? "Break" : encountering ? "Unbroken" : ""}</span>
                 </li>
               );
             })}
@@ -912,6 +914,58 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
   }, [runServer, view.run?.position, side]);
   const ice = currentIce(view);
   const lastIce = useLastIce(view, ice);
+  const [skip, setSkip] = useState<{ cid: unknown; subs: Set<number> }>({ cid: null, subs: new Set() });
+  const skipped = skip.cid === ice?.cid ? skip.subs : new Set<number>();
+  const plan = useRef<{ ice: unknown; breaker: unknown; want: string[]; stage: "pump" | "break" | "pick"; steps: number } | null>(null);
+  const [planTick, setPlanTick] = useState(0);
+  const breakSome = (breaker: any, want: string[]) => {
+    plan.current = { ice: ice?.cid, breaker: breaker.cid, want, stage: "pump", steps: 0 };
+    setPlanTick((t) => t + 1);
+  };
+  useEffect(() => {
+    const p = plan.current;
+    if (!p || session.pending) return;
+    const cur = currentIce(view);
+    if (!view.encounters || cur?.cid !== p.ice || ++p.steps > 24) {
+      plan.current = null;
+      return;
+    }
+    const left = (cur.subroutines ?? []).filter((s: any) => !s.broken && !s.fired && p.want.includes(s.label));
+    const pr = promptOf(view, side);
+    if (pr && pr["prompt-type"] !== "run") {
+      if (!/^Break a subroutine/i.test(render(pr.msg))) {
+        plan.current = null;
+        return;
+      }
+      const choices: any[] = Array.isArray(pr.choices) ? pr.choices : [];
+      const pick = choices.find((c) => left.some((s: any) => s.label === c.value)) ?? choices.find((c) => c.value === "Done");
+      if (pick) send("choice", { eid: pr.eid, choice: { uuid: pick.uuid } });
+      else plan.current = null;
+      return;
+    }
+    const card = findCard(view, p.breaker);
+    const abilities: any[] = card?.abilities ?? [];
+    if (p.stage === "pump") {
+      p.stage = "break";
+      const pump = abilities.find((a) => a.dynamic === "auto-pump" && a.playable);
+      if (pump) {
+        send("dynamic-ability", { card: cardRef(card), dynamic: pump.dynamic, source: pump.source, index: pump.index });
+        return;
+      }
+    }
+    const i = abilities.findIndex((a) => !a.dynamic && /^break /i.test(a.label ?? "") && a.playable);
+    if (!left.length || i < 0) {
+      plan.current = null;
+      return;
+    }
+    p.stage = "pick";
+    send("ability", { card: cardRef(card), ability: i });
+  }, [view, session.pending, planTick]);
+  const toggleSub = (i: number) => {
+    const next = new Set(skipped);
+    if (!next.delete(i)) next.add(i);
+    setSkip({ cid: ice?.cid, subs: next });
+  };
   const link = session.lobby.role === "local" ? null : session.lobby.status;
 
   let panel: preact.ComponentChildren;
@@ -1206,8 +1260,8 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
       </div>
       <footer class="dock">
         <div class="enc-zone">
-          {!view.winner && (ice?.rezzed ? <Encounter view={view} render={render} onTap={tap} ice={lastIce?.cid === ice.cid && (view.encounters || view.run?.phase === "encounter-ice") ? lastIce : ice} /> : lastIce && <Encounter view={view} render={render} onTap={tap} ice={lastIce} passed />)}
-          {!view.winner && !watching && side === "runner" && view.encounters && ice?.rezzed && !(prompt && ptype !== "run") && <Breakers view={view} side={side} ice={ice} send={send} onTap={tap} disabled={disabled} />}
+          {!view.winner && (ice?.rezzed ? <Encounter view={view} render={render} onTap={tap} ice={lastIce?.cid === ice.cid && (view.encounters || view.run?.phase === "encounter-ice") ? lastIce : ice} skip={skipped} onToggle={!watching && side === "runner" && view.encounters && !(prompt && ptype !== "run") ? toggleSub : undefined} /> : lastIce && <Encounter view={view} render={render} onTap={tap} ice={lastIce} passed />)}
+          {!view.winner && !watching && side === "runner" && view.encounters && ice?.rezzed && !(prompt && ptype !== "run") && <Breakers view={view} side={side} ice={ice} send={send} onTap={tap} disabled={disabled} skip={skipped} onPartial={breakSome} />}
         </div>
         {panel}
         <MeBar view={view} side={side} name={names[side]} />
