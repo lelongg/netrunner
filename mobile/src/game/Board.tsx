@@ -824,7 +824,7 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
   const selectable = useMemo(() => new Set<unknown>(prompt?.selectable ?? []), [prompt]);
   const tap = (card: any) => setSelected(card);
   const current = selected ? findCard(view, selected.cid) : null;
-  const siblings = current ? siblingsOf(view, current.cid) : [];
+  const siblings = current ? (current.zone?.[0] === "discard" ? [...siblingsOf(view, current.cid)].reverse() : siblingsOf(view, current.cid)) : [];
   const position = siblings.findIndex((c) => c.cid === current?.cid);
   const [slide, setSlide] = useState<-1 | 1>();
   const step = (dir: -1 | 1) => {
@@ -832,6 +832,10 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
     if (!next) return;
     setSlide(dir);
     setSelected(next);
+  };
+  const openZone = (z: ZoneRef) => {
+    const cards: any[] = view[z.owner]?.[z.key] ?? [];
+    if (cards.length) setSelected(cards[cards.length - 1]);
   };
   const closeCard = () => {
     setSelected(null);
@@ -989,8 +993,8 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
     );
   }
 
-  const theirArea = opp === "corp" ? <CorpArea view={view} side={side} mine={false} onTap={tap} onZone={setZone} selectable={selectable} runServer={runServer} /> : <RunnerArea view={view} side={side} onTap={tap} onZone={setZone} selectable={selectable} />;
-  const myArea = side === "corp" ? <CorpArea view={view} side={side} mine onTap={tap} onZone={setZone} selectable={selectable} runServer={runServer} /> : <RunnerArea view={view} side={side} onTap={tap} onZone={setZone} selectable={selectable} />;
+  const theirArea = opp === "corp" ? <CorpArea view={view} side={side} mine={false} onTap={tap} onZone={openZone} selectable={selectable} runServer={runServer} /> : <RunnerArea view={view} side={side} onTap={tap} onZone={openZone} selectable={selectable} />;
+  const myArea = side === "corp" ? <CorpArea view={view} side={side} mine onTap={tap} onZone={openZone} selectable={selectable} runServer={runServer} /> : <RunnerArea view={view} side={side} onTap={tap} onZone={openZone} selectable={selectable} />;
   const hand: any[] = [...(me.hand ?? []), ...(me.discard ?? []).filter((c: any) => c["flashback-playable"])];
 
   return (
