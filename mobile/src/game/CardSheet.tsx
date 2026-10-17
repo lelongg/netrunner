@@ -6,7 +6,7 @@ import { CardImage, ZoomableCardImage } from "./CardImage";
 import { visibleCode } from "./CardTile";
 import { Pager } from "./Pager";
 import { RichText } from "./RichText";
-import { useDragPager } from "./swipe";
+import { type Peek, useDragPager } from "./swipe";
 import { animate } from "../fx/core";
 import { motionOff } from "../settings";
 import { iconize, serverLabel, serverName } from "./text";
@@ -105,9 +105,10 @@ interface Props {
   slide?: -1 | 1;
   onStep?: (dir: -1 | 1) => void;
   readOnly?: boolean;
+  neighbors?: { prev?: any; next?: any };
 }
 
-export function CardSheet({ card, view, side, db, send, onClose, disabled, index = 0, count = 1, slide, onStep, readOnly }: Props) {
+export function CardSheet({ card, view, side, db, send, onClose, disabled, index = 0, count = 1, slide, onStep, readOnly, neighbors }: Props) {
   const [installing, setInstalling] = useState(false);
   const owner = card.side === (side === "corp" ? "Corp" : "Runner");
   const code = visibleCode(card, owner);
@@ -118,6 +119,40 @@ export function CardSheet({ card, view, side, db, send, onClose, disabled, index
   const sheet = useRef<HTMLDivElement>(null);
   const entering = useRef<-1 | 1 | 0>(0);
   const head = () => sheet.current?.querySelector<HTMLElement>(".sheet-head");
+  const peekOf = (dir: -1 | 1) => sheet.current?.querySelector<HTMLElement>(dir === 1 ? ".sheet-peek.next" : ".sheet-peek.prev");
+  const peeked = useRef(false);
+  const peek: Peek = {
+    move: (dx) => {
+      const h = head();
+      if (!h) return;
+      const w = h.getBoundingClientRect().width + 24;
+      for (const dir of [-1, 1] as const) {
+        const el = peekOf(dir);
+        if (!el) continue;
+        el.style.top = `${h.offsetTop}px`;
+        el.style.height = `${h.offsetHeight}px`;
+        const show = dir === 1 ? dx < 0 : dx > 0;
+        el.style.visibility = show ? "visible" : "hidden";
+        el.style.transform = `translateX(${dir * w + dx}px)`;
+      }
+    },
+    release: (dir) => {
+      const h = head();
+      for (const d of [-1, 1] as const) {
+        const el = peekOf(d);
+        if (!el || el.style.visibility !== "visible") continue;
+        const from = new DOMMatrixReadOnly(getComputedStyle(el).transform).m41;
+        const to = dir === d ? 0 : d * ((h?.getBoundingClientRect().width ?? 300) + 24);
+        if (dir === d) peeked.current = true;
+        animate(el, { x: [from, to] }, dir === d ? { duration: 0.16, ease: [0.4, 0, 1, 1], keep: true } : { type: "spring", visualDuration: 0.3, bounce: 0.2, keep: true }).finished.then(
+          () => {
+            if (dir !== d) el.style.visibility = "hidden";
+          },
+          () => {},
+        );
+      }
+    },
+  };
   const swipe = useDragPager(
     head,
     (dir) => !installing && !!onStep && (dir === 1 ? index < count - 1 : index > 0),
@@ -125,10 +160,19 @@ export function CardSheet({ card, view, side, db, send, onClose, disabled, index
       entering.current = dir;
       onStep?.(dir);
     },
+    peek,
   );
   useLayoutEffect(() => {
     const dir = entering.current;
     entering.current = 0;
+    if (peeked.current) {
+      peeked.current = false;
+      for (const d of [-1, 1] as const) {
+        const el = peekOf(d);
+        if (el) el.style.visibility = "hidden";
+      }
+      return;
+    }
     const el = head();
     if (!dir || !el || motionOff()) return;
     const from = dir * el.getBoundingClientRect().width * 0.6;
@@ -156,6 +200,20 @@ export function CardSheet({ card, view, side, db, send, onClose, disabled, index
     <div class="sheet-backdrop" onClick={onClose}>
       <div ref={sheet} class="sheet panel swipeable" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={code ? card.title : "Hidden card"} {...swipe}>
         {onStep && !installing && <Pager index={index} count={count} onStep={onStep} />}
+        {(["prev", "next"] as const).map((k) => {
+          const n = neighbors?.[k];
+          if (!n) return null;
+          const nOwner = n.side === (side === "corp" ? "Corp" : "Runner");
+          const nCode = visibleCode(n, nOwner);
+          return (
+            <div key={`${k}:${n.cid}`} class={`sheet-peek ${k}`} aria-hidden="true">
+              {nCode ? <CardImage class="sheet-img" code={nCode} alt="" size="large" /> : <div class="sheet-img" />}
+              <div class="sheet-info">
+                <h2>{nCode ? n.title : "Classified"}</h2>
+              </div>
+            </div>
+          );
+        })}
         <div key={card.cid} class="sheet-head">
           {code ? <ZoomableCardImage class="sheet-img" code={code} alt={card.title} size="large" /> : <CardBack side={card.side} />}
           <div class="sheet-info">

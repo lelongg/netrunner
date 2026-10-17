@@ -3314,3 +3314,17 @@ button:active:not(:disabled) {
   pointer-events: none;
   box-shadow: 0 0 30px rgb(246 224 58 / 0.5);
 }
+
+.sheet {
+  position: relative;
+}
+
+.sheet-peek {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  display: flex;
+  gap: 12px;
+  visibility: hidden;
+  pointer-events: none;
+}

@@ -21,7 +21,12 @@ export function useSwipe(onSwipe: (dir: -1 | 1) => void) {
   };
 }
 
-export function useDragPager(target: () => HTMLElement | null | undefined, can: (dir: -1 | 1) => boolean, step: (dir: -1 | 1) => void) {
+export interface Peek {
+  move: (dx: number) => void;
+  release: (dir: -1 | 0 | 1) => void;
+}
+
+export function useDragPager(target: () => HTMLElement | null | undefined, can: (dir: -1 | 1) => boolean, step: (dir: -1 | 1) => void, peek?: Peek) {
   const drag = useRef<{ x: number; y: number; t: number; axis?: "x" | "y"; dx: number } | null>(null);
   const settle = (el: HTMLElement, to: number, done?: () => void) => {
     const from = drag.current?.dx ?? 0;
@@ -51,6 +56,7 @@ export function useDragPager(target: () => HTMLElement | null | undefined, can: 
       const dir = dx < 0 ? 1 : -1;
       d.dx = can(dir) ? dx : dx * 0.25;
       el.style.transform = `translateX(${d.dx}px)`;
+      peek?.move(d.dx);
     },
     onTouchEnd: () => {
       const d = drag.current;
@@ -62,8 +68,13 @@ export function useDragPager(target: () => HTMLElement | null | undefined, can: 
       const dir = d.dx < 0 ? 1 : -1;
       const speed = Math.abs(d.dx) / Math.max(1, performance.now() - d.t);
       const width = el.getBoundingClientRect().width;
-      if (can(dir) && (Math.abs(d.dx) > width * 0.25 || speed > 0.6)) settle(el, -dir * width, () => step(dir));
-      else settle(el, 0);
+      if (can(dir) && (Math.abs(d.dx) > width * 0.25 || speed > 0.6)) {
+        peek?.release(dir);
+        settle(el, -dir * width, () => step(dir));
+      } else {
+        peek?.release(0);
+        settle(el, 0);
+      }
       drag.current = null;
     },
   };
