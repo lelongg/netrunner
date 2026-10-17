@@ -272,12 +272,43 @@ function StatRows({ stats }: { stats: Stat[] }) {
   );
 }
 
+function useAutoScroll(ref: { current: HTMLElement | null }, every = 2500) {
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || motionOff()) return;
+    let idleUntil = 0;
+    const hold = () => (idleUntil = Date.now() + 5000);
+    const timer = setInterval(() => {
+      if (Date.now() < idleUntil || document.hidden) return;
+      const cards = [...el.children] as HTMLElement[];
+      const loop = cards.find((c) => c.dataset.loop === "start");
+      if (!cards[0] || !loop) return;
+      const step = cards[1] ? cards[1].offsetLeft - cards[0].offsetLeft : cards[0].offsetWidth;
+      const period = loop.offsetLeft - cards[0].offsetLeft;
+      if (el.scrollLeft >= period - 1) el.scrollLeft -= period;
+      el.scrollTo({ left: el.scrollLeft + step, behavior: "smooth" });
+    }, every);
+    el.addEventListener("pointerdown", hold);
+    el.addEventListener("touchstart", hold, { passive: true });
+    el.addEventListener("wheel", hold, { passive: true });
+    return () => {
+      clearInterval(timer);
+      el.removeEventListener("pointerdown", hold);
+      el.removeEventListener("touchstart", hold);
+      el.removeEventListener("wheel", hold);
+    };
+  }, []);
+}
+
 function StatStrip({ only }: { only: Record<Side, Tile[]> }) {
+  const strip = useRef<HTMLDivElement>(null);
+  useAutoScroll(strip);
   return (
-    <div class="stat-strip" role="list">
-      {SIDES.flatMap((side) =>
-        only[side].map((t) => (
-          <div class={`stat-card ${side}`} role="listitem">
+    <div ref={strip} class="stat-strip" role="list">
+      {[0, 1].flatMap((copy) =>
+        SIDES.flatMap((side) =>
+          only[side].map((t, i) => (
+          <div class={`stat-card ${side}`} role={copy ? undefined : "listitem"} aria-hidden={copy ? "true" : undefined} data-loop={copy && side === "corp" && i === 0 ? "start" : undefined}>
             <span class={`stat-card-side who-${side}`}>{side}</span>
             <span class="stat-card-num">
               {t.value}
@@ -285,7 +316,8 @@ function StatStrip({ only }: { only: Record<Side, Tile[]> }) {
             </span>
             <span class="stat-card-label">{t.label}</span>
           </div>
-        )),
+          )),
+        ),
       )}
     </div>
   );

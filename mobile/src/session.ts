@@ -430,10 +430,15 @@ export class Session {
     if (this.watching) return this.commit(["spectator"], () => this.emit());
     this.commit([this.lobby.mySide], () => {
       if (this.autoplay && !this.bot) this.bot = new HeuristicBot(this.lobby.mySide, (title) => this.db.byTitle.get(title) as any);
+      this.settleEnd();
       this.emit();
       this.scheduleBot();
       this.checkTurn();
     });
+  }
+
+  private settleEnd() {
+    if (!this.archived && this.views[this.lobby.mySide]?.winner) this.persist();
   }
 
   private checkTurn() {
@@ -748,6 +753,7 @@ export class Session {
     if (!this.booted) return;
     this.commit(["corp", "runner"], () => {
       if (!this.online()) this.pending = false;
+      this.settleEnd();
       this.emit();
       this.scheduleBot();
     });
