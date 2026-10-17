@@ -4,9 +4,12 @@ import { type StoredDeck, fromPrecon, fromWire, importNrdb, parseDecklist, putDe
 import { type FormatKey, FORMATS, TYPE_ORDER, analyze, costCurve, deckLimit, groupByType, influenceByFaction, influenceOf, isNeutral, legality, subtypeSpread, toText } from "../deckrules";
 import { CardImage, ZoomableCardImage } from "../game/CardImage";
 import { RichText } from "../game/RichText";
+import { Pager } from "../game/Pager";
+import { useSwipe } from "../game/swipe";
 import { useBackClose } from "../back";
 import { Icon } from "../icons";
 import { Cta, Ticker, ask, tell } from "../ui";
+import { motionOff } from "../settings";
 
 const SIDE_NAME: Record<Side, "Corp" | "Runner"> = { corp: "Corp", runner: "Runner" };
 
@@ -319,7 +322,8 @@ function DeckEditor({ db, initial, onClose, onOpen }: { db: CardDb; initial: Sto
   const [deck, setDeck] = useState<Deck>(() => fromWire(initial, db));
   const [format, setFormat] = useState<FormatKey>(formatOf(initial));
   const [tab, setTab] = useState<Tab>(() => (initial.cards.length ? "deck" : "cards"));
-  const [detail, setDetail] = useState<Card | null>(null);
+  const [detail, setDetail] = useState<{ card: Card; list: Card[] } | null>(null);
+  const open = (card: Card, list: Card[] = [card]) => setDetail({ card, list });
   const [menu, setMenu] = useState(false);
   const [issues, setIssues] = useState(false);
   const [changingId, setChangingId] = useState(false);
@@ -421,7 +425,7 @@ function DeckEditor({ db, initial, onClose, onOpen }: { db: CardDb; initial: Sto
         )}
 
         <section class={`panel deck-summary faction-${factionKey(deck.identity.faction)}`}>
-          <button class="summary-id" onClick={() => setDetail(deck.identity)} aria-label={deck.identity.title}>
+          <button class="summary-id" onClick={() => open(deck.identity)} aria-label={deck.identity.title}>
             <CardImage code={deck.identity.code} alt={deck.identity.title} size="small" width="64px" />
           </button>
           <div class="summary-meters">
@@ -453,11 +457,22 @@ function DeckEditor({ db, initial, onClose, onOpen }: { db: CardDb; initial: Sto
           ))}
         </div>
 
-        {tab === "deck" && <DeckList deck={deck} format={format} onQty={setQty} onOpen={setDetail} onBrowse={() => setTab("cards")} />}
-        {tab === "cards" && <CardBrowser db={db} deck={deck} format={format} qtyOf={qtyOf} onQty={setQty} onOpen={setDetail} />}
-        {tab === "stats" && <DeckStats deck={deck} />}
+        {tab === "deck" && <DeckList deck={deck} format={format} onQty={setQty} onOpen={open} onBrowse={() => setTab("cards")} />}
+        {tab === "cards" && <CardBrowser db={db} deck={deck} format={format} qtyOf={qtyOf} onQty={setQty} onOpen={open} />}
+        {tab === "stats" && <DeckStats deck={deck} onOpen={open} />}
       </div>
-      {detail && <CardSheet card={detail} identity={deck.identity} format={format} qty={qtyOf.get(detail.title) ?? 0} onQty={(n) => setQty(detail, n)} onClose={() => setDetail(null)} />}
+      {detail && (
+        <CardSheet
+          card={detail.card}
+          list={detail.list}
+          identity={deck.identity}
+          format={format}
+          qty={qtyOf.get(detail.card.title) ?? 0}
+          onQty={(n) => setQty(detail.card, n)}
+          onGo={(card) => setDetail({ ...detail, card })}
+          onClose={() => setDetail(null)}
+        />
+      )}
     </>
   );
 }
@@ -515,8 +530,9 @@ function CardCost({ card }: { card: Card }) {
   );
 }
 
-function DeckList({ deck, format, onQty, onOpen, onBrowse }: { deck: Deck; format: FormatKey; onQty: (c: Card, n: number) => void; onOpen: (c: Card) => void; onBrowse: () => void }) {
+function DeckList({ deck, format, onQty, onOpen, onBrowse }: { deck: Deck; format: FormatKey; onQty: (c: Card, n: number) => void; onOpen: (c: Card, list: Card[]) => void; onBrowse: () => void }) {
   const sections = groupByType(deck);
+  const ordered = sections.flatMap((g) => g.entries.map((e) => e.card));
   if (!sections.length)
     return (
       <div class="deck-empty">
@@ -539,7 +555,7 @@ function DeckList({ deck, format, onQty, onOpen, onBrowse }: { deck: Deck; forma
               const l = legality(e.card, format);
               return (
                 <li class={`edit-row faction-${factionKey(e.card.faction)} ${l !== "legal" && l !== "restricted" ? "illegal" : ""}`}>
-                  <button class="edit-row-main" onClick={() => onOpen(e.card)}>
+                  <button class="edit-row-main" onClick={() => onOpen(e.card, ordered)}>
                     <span class="edit-row-title">
                       {e.card.uniqueness ? "◆ " : ""}
                       {e.card.title}
@@ -565,7 +581,7 @@ function DeckList({ deck, format, onQty, onOpen, onBrowse }: { deck: Deck; forma
 
 const PAGE = 36;
 
-function CardBrowser({ db, deck, format, qtyOf, onQty, onOpen }: { db: CardDb; deck: Deck; format: FormatKey; qtyOf: Map<string, number>; onQty: (c: Card, n: number) => void; onOpen: (c: Card) => void }) {
+function CardBrowser({ db, deck, format, qtyOf, onQty, onOpen }: { db: CardDb; deck: Deck; format: FormatKey; qtyOf: Map<string, number>; onQty: (c: Card, n: number) => void; onOpen: (c: Card, list: Card[]) => void }) {
   const sideName = deck.identity.side;
   const [query, setQuery] = useState("");
   const [types, setTypes] = useState<string[]>([]);
@@ -673,7 +689,7 @@ function CardBrowser({ db, deck, format, qtyOf, onQty, onOpen }: { db: CardDb; d
           const blocked = c.type === "Agenda" && !isNeutral(c) && c.faction !== deck.identity.faction;
           return (
             <div class={`browse-card ${qty ? "in" : ""} ${blocked ? "blocked" : ""}`}>
-              <button class="browse-img" onClick={() => onOpen(c)} aria-label={c.title}>
+              <button class="browse-img" onClick={() => onOpen(c, results)} aria-label={c.title}>
                 <CardImage code={c.code} alt={c.title} size="small" width="31vw" lazy />
                 {qty > 0 && <span class="browse-qty">×{qty}</span>}
                 {inf > 0 && <span class="browse-inf">{"●".repeat(Math.min(inf, 5))}</span>}
@@ -698,7 +714,7 @@ function shuffle<T>(list: T[]) {
   return out;
 }
 
-function DeckStats({ deck }: { deck: Deck }) {
+function DeckStats({ deck, onOpen }: { deck: Deck; onOpen: (c: Card, list: Card[]) => void }) {
   const corp = deck.identity.side === "Corp";
   const curve = costCurve(deck);
   const peak = Math.max(1, ...curve.map((b) => b.count));
@@ -709,12 +725,25 @@ function DeckStats({ deck }: { deck: Deck }) {
   const library = useMemo(() => deck.cards.flatMap((e) => Array.from({ length: e.qty }, () => e.card)), [deck]);
   const [hand, setHand] = useState<Card[]>([]);
   const [rest, setRest] = useState<Card[]>([]);
+  const [deal, setDeal] = useState(0);
+  const [leaving, setLeaving] = useState(false);
   const draw = (fresh: boolean) => {
     const pile = fresh ? shuffle(library) : rest;
     const n = fresh ? 5 : 1;
-    setHand((h) => (fresh ? pile.slice(0, n) : [...h, ...pile.slice(0, n)]));
-    setRest(pile.slice(n));
+    const apply = () => {
+      setHand((h) => (fresh ? pile.slice(0, n) : [...h, ...pile.slice(0, n)]));
+      setRest(pile.slice(n));
+      if (fresh) setDeal((d) => d + 1);
+      setLeaving(false);
+    };
+    if (fresh && hand.length && !motionOff()) {
+      setLeaving(true);
+      setTimeout(apply, 390);
+    } else apply();
   };
+  useEffect(() => {
+    if (library.length) draw(true);
+  }, []);
   const agendas = deck.cards.filter((e) => e.card.type === "Agenda").reduce((n, e) => n + e.qty, 0);
   return (
     <div class="deck-stats-tab">
@@ -786,16 +815,16 @@ function DeckStats({ deck }: { deck: Deck }) {
           <span class="label">Sample hand</span>
           <span class="hint">{rest.length ? `${rest.length} left in deck` : ""}</span>
         </div>
-        <div class="sample-hand">
+        <div class={`sample-hand ${leaving ? "leaving" : ""}`}>
           {hand.map((c, i) => (
-            <span class="sample-card" style={{ "--i": i } as any}>
+            <button key={`${deal}:${i}`} class="sample-card" style={{ "--i": i } as any} onClick={() => onOpen(c, hand)} aria-label={c.title}>
               <CardImage code={c.code} alt={c.title} size="small" width="20vw" />
-            </span>
+            </button>
           ))}
-          {hand.length === 0 && <span class="hint">Shuffle and draw an opening hand.</span>}
+          {hand.length === 0 && <span class="hint">Add cards to draw a sample hand.</span>}
         </div>
         <div class="sample-buttons">
-          <button class="primary" disabled={!library.length} onClick={() => draw(true)}>
+          <button class="primary" disabled={!library.length || leaving} onClick={() => draw(true)}>
             <Icon name="dice" /> {hand.length ? "Redraw" : "Draw 5"}
           </button>
           <button disabled={!hand.length || !rest.length} onClick={() => draw(false)}>
@@ -813,15 +842,22 @@ function hyperNone(size: number, hits: number, draws: number) {
   return p;
 }
 
-function CardSheet({ card, identity, format, qty, onQty, onClose }: { card: Card; identity: Card; format: FormatKey; qty: number; onQty: (n: number) => void; onClose: () => void }) {
+function CardSheet({ card, list, identity, format, qty, onQty, onGo, onClose }: { card: Card; list: Card[]; identity: Card; format: FormatKey; qty: number; onQty: (n: number) => void; onGo: (c: Card) => void; onClose: () => void }) {
+  const index = Math.max(0, list.indexOf(card));
+  const step = (dir: -1 | 1) => {
+    const next = list[index + dir];
+    if (next) onGo(next);
+  };
+  const swipe = useSwipe(step);
   const inf = influenceOf(identity, card);
   const l = legality(card, format);
   const isId = card.type === "Identity";
   const blocked = card.type === "Agenda" && !isNeutral(card) && card.faction !== identity.faction;
   return (
     <div class="sheet-backdrop" onClick={onClose}>
-      <div class="sheet panel" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={card.title}>
-        <div class="sheet-head">
+      <div class="sheet panel swipeable" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={card.title} {...swipe}>
+        {list.length > 1 && <Pager index={index} count={list.length} onStep={step} />}
+        <div key={`${card.code}:${index}`} class="sheet-head">
           <ZoomableCardImage class="sheet-img" code={card.code} alt={card.title} size="large" />
           <div class="sheet-info">
             <span class="label">
