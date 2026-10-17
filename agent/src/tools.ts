@@ -7,7 +7,7 @@ Decks: list_decks shows the preconstructed decks of a side; NetrunnerDB deck URL
 Joining: join_game with the code the human gives you and your deck; the host starts the game.
 Hosting: host_game with your side and deck, then reply to the human with the code and the join link and end your turn, so they can read it. The game starts by itself once they join, pick a deck and press Ready; call wait_for_turn when they tell you they are in.
 During the game: get_state shows the whole board from your seat only and a numbered list of legal actions; act performs one of them by id. When nothing is yours to decide, call wait_for_turn.
-Keep playing in a loop (wait_for_turn, then act) without ending your turn until the game is over or the user asks you to stop: the human cannot nudge you while you are idle, so ending your turn stalls the game.
+Keep playing in a loop (wait_for_turn, then act) without ending your turn until the game is over or the user asks you to stop: the human cannot nudge you while you are idle, so ending your turn stalls the game. A human may think for many minutes, even half an hour: when wait_for_turn says it is still waiting, call it again at once, however long it has been.
 To save context, act and wait_for_turn only return what changed since your last look (new log lines, changed lines, the current run and prompt) plus the fresh action list. Call get_state again whenever you need the full picture, for example after your context was summarized.
 Use card_info to read a card's full text. Decide every move yourself. You only ever see what your seat may see.
 The person you are talking to is your opponent. Keep your hidden information hidden in everything you write to them: never mention the cards in your hand or deck, what your facedown or unrezzed cards are, which installed card is an agenda or a trap, how many credits you are saving for what, or your plans and bluffs. Think about your strategy privately and only write things your opponent can already see on the board (moves once they are public, like a run, a rez or a scored agenda), plus friendly table talk. If they ask about your hidden cards or plans, decline playfully, as a human player would. When the game is over you may discuss it freely.`;
@@ -68,7 +68,11 @@ export function registerTools(server: McpServer, agent: () => Promise<Agent>, NA
       description: "Wait until you have a decision to make (in the lobby: until the game starts), then return what changed since your last look and the action list.",
       inputSchema: { seconds: z.number().int().optional().describe("Maximum wait, default 90, max 900") },
     },
-    ({ seconds }) => run((a) => a.wait(seconds ?? 90)),
+    ({ seconds }, extra) => {
+      const token = extra._meta?.progressToken;
+      const tick = token === undefined ? undefined : (elapsed: number) => void extra.sendNotification({ method: "notifications/progress", params: { progressToken: token, progress: Math.round(elapsed / 1000), message: "Waiting for your opponent" } }).catch(() => {});
+      return run((a) => a.wait(seconds ?? 90, tick));
+    },
   );
   server.registerTool("card_info", { description: "Full text and stats of a card by name.", inputSchema: { name: z.string() } }, ({ name }) => run((a) => a.card(name)));
   server.registerTool("say", { description: "Send a chat message to your opponent's game log.", inputSchema: { message: z.string() } }, ({ message }) => run((a) => a.say(message)));

@@ -81,6 +81,7 @@ export class Agent {
   session?: Session;
   private actions: Action[] = [];
   private stamp = "";
+  private waitingSince = 0;
   private installing?: any;
   private unsubscribe?: () => void;
 
@@ -524,6 +525,7 @@ export class Agent {
   async act(id: number, amount?: number, text?: string) {
     const s = this.requireSession();
     if (!s.lobby.started) throw new Error("The game has not started.");
+    this.waitingSince = 0;
     if (this.stampOf() !== this.stamp) {
       return `The game changed since you listed actions; nothing was done.\n\n${this.update()}`;
     }
@@ -564,19 +566,31 @@ export class Agent {
     return this.describe();
   }
 
-  async wait(seconds: number) {
+  async wait(seconds: number, tick?: (elapsed: number) => void) {
     const s = this.requireSession();
     const lobby = !s.lobby.started;
-    const end = Date.now() + Math.max(1, Math.min(seconds, lobby ? 45 : 900)) * 1000;
+    const start = Date.now();
+    const end = start + Math.max(1, Math.min(seconds, lobby ? 45 : 900)) * 1000;
+    let ticked = start;
     while (Date.now() < end) {
       const view = s.views[s.lobby.mySide];
       if (s.lobby.started && view) {
-        if (view.winner || (!s.pending && canAct(view, s.lobby.mySide))) return this.update();
+        if (view.winner || (!s.pending && canAct(view, s.lobby.mySide))) {
+          this.waitingSince = 0;
+          return this.update();
+        }
       } else if (s.lobby.error) return this.describe();
+      if (tick && Date.now() - ticked >= 15_000) {
+        ticked = Date.now();
+        tick(ticked - start);
+      }
       await sleep(400);
     }
     if (!s.lobby.started) return `The human has not joined and pressed Ready yet. End your turn now: reply with the code and the join link, and wait for them to tell you they are in before calling wait_for_turn again.\n\n${this.describe()}`;
-    return `Still waiting: the opponent is thinking or playing. Call wait_for_turn again right away; do not end your turn or ask the user to do anything.\n\n${this.update()}`;
+    this.waitingSince ||= start;
+    const minutes = Math.floor((Date.now() - this.waitingSince) / 60_000);
+    const head = `Still waiting: it is your opponent's move${minutes ? ` (${minutes} min so far)` : ""}. Humans often think for many minutes; that is normal and the game is fine. Call wait_for_turn again right away, as many times as it takes. Do not end your turn and do not ask the user anything.`;
+    return this.logLines().length === this.logSeen ? `${head} Nothing changed since your last look.` : `${head}\n\n${this.update()}`;
   }
 
   card(name: string) {
