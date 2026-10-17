@@ -83,6 +83,7 @@ export class Agent {
   private stamp = "";
   private waitingSince = 0;
   private waits = 0;
+  private linkGiven = "";
   private installing?: any;
   private unsubscribe?: () => void;
 
@@ -260,8 +261,12 @@ export class Agent {
     ];
     if (l.role === "host") lines.push(s.canStart ? "Starting the game…" : "The game starts by itself as soon as the human has joined, picked a deck and pressed Ready. Write the code and the link below to the human now, then call wait_for_turn right away in the same turn, without waiting for a reply.");
     else lines.push(l.myDeck ? "You are ready; the host starts the game." : "Pick a deck to be ready.");
-    if (l.role === "host" && l.code) lines.push(`Give the human the code ${l.code} or this link: ${(globalThis as any).location.origin}${(globalThis as any).location.pathname}?join=${l.code}`);
+    if (l.role === "host" && l.code) lines.unshift(`Join link for the human: ${this.joinLink()} (code ${l.code}). They only see what you write in your message, never tool results, so copy this link into your reply.`);
     return lines.join("\n");
+  }
+
+  private joinLink() {
+    return `${(globalThis as any).location.origin}${(globalThis as any).location.pathname}?join=${this.session!.lobby.code}`;
   }
 
   private cardLine(c: any, viewer: Side): string {
@@ -569,6 +574,11 @@ export class Agent {
 
   async wait(seconds: number, tick?: (elapsed: number) => void, signal?: AbortSignal) {
     const s = this.requireSession();
+    const l = s.lobby;
+    if (!l.started && l.role === "host" && l.code && !l.opponentName && this.linkGiven !== l.code) {
+      this.linkGiven = l.code;
+      return `Not waiting yet: the human cannot join without the link, and they only see the text of your message, never tool results. Write this link to them now in your reply: ${this.joinLink()} (code ${l.code}). Then call wait_for_turn again in the same turn, without waiting for a reply.`;
+    }
     const start = Date.now();
     const end = start + Math.max(1, Math.min(seconds, 3600)) * 1000;
     const mine = ++this.waits;
