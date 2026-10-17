@@ -258,7 +258,7 @@ export class Agent {
       `Opponent: ${l.opponentName ?? "not joined yet"}${l.opponentName ? ` · deck ${l.opponentDeckReady ? "ready" : "not ready"}` : ""}`,
       `Your deck: ${l.myDeck ? l.myDeck.name : "none (use list_decks then choose_deck)"}`,
     ];
-    if (l.role === "host") lines.push(s.canStart ? "Starting the game…" : "The game starts by itself as soon as the human has joined, picked a deck and pressed Ready. Reply to the human now with the code and the link below, then end your turn; call wait_for_turn once they say they have joined.");
+    if (l.role === "host") lines.push(s.canStart ? "Starting the game…" : "The game starts by itself as soon as the human has joined, picked a deck and pressed Ready. Write the code and the link below to the human now, then call wait_for_turn right away in the same turn, without waiting for a reply.");
     else lines.push(l.myDeck ? "You are ready; the host starts the game." : "Pick a deck to be ready.");
     if (l.role === "host" && l.code) lines.push(`Give the human the code ${l.code} or this link: ${(globalThis as any).location.origin}${(globalThis as any).location.pathname}?join=${l.code}`);
     return lines.join("\n");
@@ -569,9 +569,8 @@ export class Agent {
 
   async wait(seconds: number, tick?: (elapsed: number) => void, signal?: AbortSignal) {
     const s = this.requireSession();
-    const lobby = !s.lobby.started;
     const start = Date.now();
-    const end = start + Math.max(1, Math.min(seconds, lobby ? 45 : 3600)) * 1000;
+    const end = start + Math.max(1, Math.min(seconds, 3600)) * 1000;
     const mine = ++this.waits;
     let ticked = start;
     while (Date.now() < end) {
@@ -589,7 +588,7 @@ export class Agent {
       }
       await sleep(400);
     }
-    if (!s.lobby.started) return `The human has not joined and pressed Ready yet. End your turn now: reply with the code and the join link, and wait for them to tell you they are in before calling wait_for_turn again.\n\n${this.describe()}`;
+    if (!s.lobby.started) return `The human has not joined and pressed Ready yet; that is normal. Call wait_for_turn again right away. Do not end your turn and do not ask the user anything.\n\n${this.describe()}`;
     this.waitingSince ||= start;
     const minutes = Math.floor((Date.now() - this.waitingSince) / 60_000);
     const head = `Still waiting: it is your opponent's move${minutes ? ` (${minutes} min so far)` : ""}. Humans often think for many minutes; that is normal and the game is fine. Call wait_for_turn again right away, as many times as it takes. Do not end your turn and do not ask the user anything.`;
