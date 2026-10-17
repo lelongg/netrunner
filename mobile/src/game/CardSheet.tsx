@@ -104,6 +104,8 @@ interface Props {
   onStep?: (dir: -1 | 1) => void;
   readOnly?: boolean;
   neighbors?: { prev?: any; next?: any };
+  siblings?: any[];
+  onJump?: (card: any) => void;
 }
 
 function SheetInfo({ card, code, full, side, view }: { card: any; code?: string; full?: any; side: Side; view: any }) {
@@ -143,12 +145,16 @@ function SheetInfo({ card, code, full, side, view }: { card: any; code?: string;
   );
 }
 
-export function CardSheet({ card, view, side, db, send, onClose, disabled, index = 0, count = 1, slide, onStep, readOnly, neighbors }: Props) {
+export function CardSheet({ card, view, side, db, send, onClose, disabled, index = 0, count = 1, slide, onStep, readOnly, neighbors, siblings, onJump }: Props) {
   const [installing, setInstalling] = useState(false);
   const owner = card.side === (side === "corp" ? "Corp" : "Runner");
   const code = visibleCode(card, owner);
   const full = code ? db.byTitle.get(card.title) : undefined;
   const commands = readOnly ? [] : cardCommands(card, view, side);
+  const gallery = (siblings ?? [card]).flatMap((c) => {
+    const vc = visibleCode(c, c.side === (side === "corp" ? "Corp" : "Runner"));
+    return vc ? [{ card: c, item: { code: vc, alt: c.title as string } }] : [];
+  });
   const installList: unknown[] = view.corp?.["install-list"] ?? [];
   useEffect(() => setInstalling(false), [card.cid]);
   const sheet = useRef<HTMLDivElement>(null);
@@ -188,7 +194,19 @@ export function CardSheet({ card, view, side, db, send, onClose, disabled, index
           );
         })}
         <div key={card.cid} class="sheet-head">
-          {code ? <ZoomableCardImage class="sheet-img" code={code} alt={card.title} size="large" /> : <CardBack side={card.side} />}
+          {code ? (
+            <ZoomableCardImage
+              class="sheet-img"
+              code={code}
+              alt={card.title}
+              size="large"
+              gallery={gallery.map((g) => g.item)}
+              galleryStart={gallery.findIndex((g) => g.card === card)}
+              onGallery={(i) => onJump?.(gallery[i].card)}
+            />
+          ) : (
+            <CardBack side={card.side} />
+          )}
           <SheetInfo card={card} code={code} full={full} side={side} view={view} />
         </div>
         {installing ? (

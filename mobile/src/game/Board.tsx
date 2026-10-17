@@ -1199,7 +1199,15 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
           }}
         />
       )}
-      {current && <CardSheet card={current} view={view} side={side} db={db} send={send} disabled={disabled} readOnly={watching} index={Math.max(0, position)} count={siblings.length} slide={slide} onStep={step} onClose={closeCard} neighbors={{ prev: siblings[position - 1], next: siblings[position + 1] }} />}
+      {current && (
+        <CardSheet card={current} view={view} side={side} db={db} send={send} disabled={disabled} readOnly={watching} index={Math.max(0, position)} count={siblings.length} slide={slide} onStep={step} onClose={closeCard} neighbors={{ prev: siblings[position - 1], next: siblings[position + 1] }}
+          siblings={siblings}
+          onJump={(c) => {
+            setSlide(undefined);
+            setSelected(c);
+          }}
+        />
+      )}
       {session.lobby.tutorial && <Coach session={session} view={view} side={side} />}
       {showLog && <Log view={view} render={render} names={names} onSay={(t) => session.say(t, side)} onClose={() => setShowLog(false)} />}
     </div>

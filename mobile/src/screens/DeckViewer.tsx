@@ -44,6 +44,8 @@ interface DetailProps {
   slide?: -1 | 1;
   onStep: (dir: -1 | 1) => void;
   neighbors: { prev?: Card; next?: Card };
+  all: Card[];
+  onJump: (index: number) => void;
 }
 
 function DetailInfo({ card, qty, influence }: { card: Card; qty?: number; influence: number }) {
@@ -64,7 +66,7 @@ function DetailInfo({ card, qty, influence }: { card: Card; qty?: number; influe
   );
 }
 
-function CardDetail({ card, qty, influence, onClose, index, count, onStep, neighbors }: DetailProps) {
+function CardDetail({ card, qty, influence, onClose, index, count, onStep, neighbors, all, onJump }: DetailProps) {
   const sheet = useRef<HTMLDivElement>(null);
   const swipe = useSheetPager(sheet, `${card.code}:${index}`, (dir) => (dir === 1 ? index < count - 1 : index > 0), onStep);
   return (
@@ -83,7 +85,7 @@ function CardDetail({ card, qty, influence, onClose, index, count, onStep, neigh
           );
         })}
         <div key={card.code} class="sheet-head">
-          <ZoomableCardImage class="sheet-img" code={card.code} alt={card.title} size="large" />
+          <ZoomableCardImage class="sheet-img" code={card.code} alt={card.title} size="large" gallery={all.map((c) => ({ code: c.code, alt: c.title }))} galleryStart={index} onGallery={onJump} />
           <DetailInfo card={card} qty={qty} influence={influence} />
         </div>
         <button class="ghost" onClick={onClose}>
@@ -221,6 +223,11 @@ export function DeckViewer({ deck, onClose }: { deck: Deck; onClose: () => void 
           slide={slide}
           onStep={step}
           neighbors={{ prev: ordered[position - 1]?.card, next: ordered[position + 1]?.card }}
+          all={ordered.map((e) => e.card)}
+          onJump={(i) => {
+            setSlide(undefined);
+            setDetail(ordered[i]);
+          }}
           onClose={() => {
             setDetail(null);
             setSlide(undefined);

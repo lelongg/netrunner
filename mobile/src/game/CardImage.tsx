@@ -1,5 +1,6 @@
 import { createPortal } from "preact/compat";
-import { useEffect, useRef, useState } from "preact/hooks";
+import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
+import { type Peek, useDragPager } from "./swipe";
 import { useBackClose } from "../back";
 import { cardImage } from "../engine";
 
@@ -45,52 +46,119 @@ export function CardImage({ code, alt, size, class: className, lazy, width }: Pr
   );
 }
 
-export function CardZoom({ code, alt, onClose }: { code: string; alt: string; onClose: () => void }) {
+export interface GalleryItem {
+  code: string;
+  alt: string;
+}
+
+function ZoomFrame({ code, alt, role }: { code: string; alt: string; role: "prev" | "current" | "next" }) {
   const [sharp, setSharp] = useState<"loading" | "loaded" | "error">(Number(code) >= 26000 ? "loading" : "error");
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
   return (
-    <div
-      class="card-zoom"
-      role="dialog"
-      aria-label={alt}
-      onClick={(e) => {
-        e.stopPropagation();
-        onClose();
-      }}
-    >
-      <div class={`card-zoom-frame ${sharp}`}>
-        <img class="card-zoom-base" crossOrigin="anonymous" src={cardImage(code, "large")} alt={alt} decoding="async" />
-        {sharp !== "error" && (
-          <img
-            class="card-zoom-sharp"
-            crossOrigin="anonymous"
-            src={cardImage(code, "xlarge")}
-            alt=""
-            decoding="async"
-            onLoad={() => setSharp("loaded")}
-            onError={() => setSharp("error")}
-          />
-        )}
-      </div>
+    <div class={`card-zoom-frame ${role} ${sharp}`} aria-hidden={role === "current" ? undefined : "true"}>
+      <img class="card-zoom-base" crossOrigin="anonymous" src={cardImage(code, "large")} alt={role === "current" ? alt : ""} decoding="async" />
+      {sharp !== "error" && <img class="card-zoom-sharp" crossOrigin="anonymous" src={cardImage(code, "xlarge")} alt="" decoding="async" onLoad={() => setSharp("loaded")} onError={() => setSharp("error")} />}
     </div>
   );
 }
 
-export function ZoomableCardImage(props: Props) {
+export function CardZoom({ items, start, onClose }: { items: GalleryItem[]; start: number; onClose: (index: number) => void }) {
+  const [index, setIndex] = useState(Math.max(0, start));
+  const stage = useRef<HTMLDivElement>(null);
+  const landed = useRef(false);
+  const frame = (role: "prev" | "current" | "next") => stage.current?.querySelector<HTMLElement>(`.card-zoom-frame.${role}`);
+  const peek: Peek = {
+    move: (dx) => {
+      const c = frame("current");
+      if (!c) return;
+      const w = c.getBoundingClientRect().width + 24;
+      for (const d of [-1, 1] as const) {
+        const el = frame(d === 1 ? "next" : "prev");
+        if (!el) continue;
+        el.style.visibility = (d === 1 ? dx < 0 : dx > 0) ? "visible" : "hidden";
+        el.style.transform = `translateX(${d * w + dx}px)`;
+      }
+    },
+    release: (dir) => {
+      if (dir) landed.current = true;
+    },
+    gap: 24,
+  };
+  const swipe = useDragPager(
+    () => frame("current"),
+    (dir) => !!items[index + dir],
+    (dir) => setIndex((i) => i + dir),
+    peek,
+  );
+  useLayoutEffect(() => {
+    for (const role of ["prev", "current", "next"] as const) {
+      const el = frame(role);
+      if (!el) continue;
+      el.style.visibility = "";
+      el.style.transform = "";
+      el.style.opacity = "";
+    }
+    landed.current = false;
+  }, [index]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose(index);
+      else if (e.key === "ArrowRight" && items[index + 1]) setIndex(index + 1);
+      else if (e.key === "ArrowLeft" && items[index - 1]) setIndex(index - 1);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [index, onClose]);
+
+  const shown = ([["prev", index - 1], ["current", index], ["next", index + 1]] as const).filter(([, i]) => items[i]);
+  return (
+    <div
+      class="card-zoom swipeable"
+      role="dialog"
+      aria-label={items[index]?.alt}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClose(index);
+      }}
+      {...swipe}
+    >
+      <div ref={stage} class="card-zoom-stage">
+        {shown.map(([role, i]) => (
+          <ZoomFrame key={items[i].code + ":" + i} code={items[i].code} alt={items[i].alt} role={role} />
+        ))}
+      </div>
+      {items.length > 1 && (
+        <span class="card-zoom-count" aria-hidden="true">
+          {index + 1} / {items.length}
+        </span>
+      )}
+    </div>
+  );
+}
+
+export function ZoomableCardImage(props: Props & { gallery?: GalleryItem[]; galleryStart?: number; onGallery?: (index: number) => void }) {
   const [zoomed, setZoomed] = useState(false);
   useBackClose(zoomed, () => setZoomed(false));
+  const { gallery, galleryStart, onGallery, ...image } = props;
+  const start = gallery ? (galleryStart ?? gallery.findIndex((g) => g.code === props.code)) : -1;
+  const items = start >= 0 ? gallery! : [{ code: props.code, alt: props.alt }];
   return (
     <>
       <button class={`card-zoom-trigger ${props.class ?? ""}`} onClick={() => setZoomed(true)} aria-label={`Enlarge ${props.alt}`}>
-        <CardImage {...props} class="" />
+        <CardImage {...image} class="" />
       </button>
-      {zoomed && createPortal(<CardZoom code={props.code} alt={props.alt} onClose={() => setZoomed(false)} />, document.body)}
+      {zoomed &&
+        createPortal(
+          <CardZoom
+            items={items}
+            start={Math.max(0, start)}
+            onClose={(i) => {
+              setZoomed(false);
+              if (start >= 0 && i !== start) onGallery?.(i);
+            }}
+          />,
+          document.body,
+        )}
     </>
   );
 }

@@ -367,7 +367,7 @@ function IdentitySheet({ card, list, onGo, onPick, onClose }: { card: Card; list
           );
         })}
         <div key={card.code} class="sheet-head">
-          <ZoomableCardImage class="sheet-img" code={card.code} alt={card.title} size="large" />
+          <ZoomableCardImage class="sheet-img" code={card.code} alt={card.title} size="large" gallery={list.map((c) => ({ code: c.code, alt: c.title }))} galleryStart={index} onGallery={(i) => onGo(list[i])} />
           <IdentityInfo card={card} />
         </div>
         <Cta onClick={onPick}>Build with this identity</Cta>
@@ -972,7 +972,7 @@ function CardSheet({ card, list, identity, format, qty, onQty, onGo, onClose }: 
           );
         })}
         <div key={`${card.code}:${index}`} class="sheet-head">
-          <ZoomableCardImage class="sheet-img" code={card.code} alt={card.title} size="large" />
+          <ZoomableCardImage class="sheet-img" code={card.code} alt={card.title} size="large" gallery={list.map((c) => ({ code: c.code, alt: c.title }))} galleryStart={index} onGallery={(i) => onGo(list[i])} />
           <CardInfo card={card} identity={identity} format={format} />
         </div>
         {blocked && <p class="error">Agendas must be neutral or from your identity's faction.</p>}
