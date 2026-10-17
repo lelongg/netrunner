@@ -221,14 +221,16 @@ function App() {
           if (!loaded) return;
           const existing = role === "guest" && code ? loadSave(code) : null;
           if (existing) return resume(existing);
-          setOpening((role === "guest" || role === "spectator") && code ? code : role === "host" ? "new game" : vsBot ? "solo game" : "local game");
-          afterPaint(() => {
+          const begin = () => {
             const next = new Session(loaded.engine, loaded.db, role, role === "local" ? newRoomCode() : code, name, role === "spectator" ? "runner" : undefined);
             if (vsBot) next.enableBot();
             setSession(next);
             setLocalSide("corp");
             setOpening(null);
-          });
+          };
+          if (role === "local") return begin();
+          setOpening((role === "guest" || role === "spectator") && code ? code : role === "host" ? "new game" : "local game");
+          afterPaint(begin);
         }}
       />
     );
