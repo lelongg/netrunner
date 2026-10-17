@@ -5418,8 +5418,12 @@ button.armed {
   transform: rotate(calc((var(--i) - 2) * 3deg)) translateY(calc(abs(var(--i) - 2) * 3px));
 }
 
+.id-card .card-image,
+.precon-card .card-image {
+  transition: transform 0.12s ease-out;
+}
+
 .id-card:active:not(:disabled) .card-image,
 .precon-card:active:not(:disabled) .card-image {
-  outline: 2px solid var(--fc, var(--cyan));
-  outline-offset: 2px;
+  transform: scale(0.95);
 }
