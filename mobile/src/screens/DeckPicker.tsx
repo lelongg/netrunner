@@ -2,7 +2,7 @@ import { useMemo, useState } from "preact/hooks";
 import type { CardDb, Matchup, Side } from "../engine";
 import { CardImage } from "../game/CardImage";
 import { useBackClose } from "../back";
-import { IdentityThumb } from "./IdentityThumb";
+import { DeckRow } from "./Decks";
 import { DeckViewer } from "./DeckViewer";
 import { type WireDeck, deckSize, fromPrecon, fromWire, savedDecks, toWire } from "../decks";
 import { Icon } from "../icons";
@@ -61,25 +61,16 @@ export function DeckPicker({ side, db, matchups, value, onChange, onEditDecks, s
       {!onlyPrecons && (
         <>
           <span class="label">Your decks</span>
-          <ul class="deck-list">
+          <ul class="deck-library">
             {mine.length === 0 && <li class="hint">No {side === "corp" ? "Corp" : "Runner"} deck of yours yet.</li>}
             {mine.map(({ deck: d, problem }) => (
-              <li>
-                <button class={`with-id ${value?.name === d.name ? "on" : ""}`} disabled={!!problem} onClick={() => onChange({ name: d.name, identity: d.identity, cards: d.cards })}>
-                  <IdentityThumb title={d.identity} db={db} />
-                  <strong>{d.name}</strong>
-                  <span class={problem ? "red" : ""}>{problem ?? d.identity}</span>
-                </button>
-              </li>
+              <DeckRow key={d.id} db={db} stored={d} format={rules ?? "casual"} selected={value?.name === d.name} disabled={!!problem} onOpen={() => onChange({ name: d.name, identity: d.identity, cards: d.cards })} />
             ))}
           </ul>
           {onEditDecks && (
             <button class="deck-editor-link" onClick={onEditDecks}>
               <Icon name="deck" />
-              <span>
-                <strong>Open the deck editor</strong>
-                <span>Build a deck, import one or browse NetrunnerDB</span>
-              </span>
+              <strong>Open the deck editor</strong>
               <Icon name="arrow-right" />
             </button>
           )}
@@ -88,19 +79,12 @@ export function DeckPicker({ side, db, matchups, value, onChange, onEditDecks, s
       {precons.length > 0 && (
         <>
           <span class="label">Precons</span>
-          <ul class="deck-list">
+          <ul class="deck-library">
             {precons.map((m) => {
               const p = m[side];
               const name = matchups.filter((o) => o[side].name === p.name).length > 1 ? `${p.name} · ${m.title}` : p.name;
-              return (
-                <li>
-                  <button class={`with-id ${value?.name === name ? "on" : ""}`} onClick={() => onChange(toWire({ ...fromPrecon(p, db), name }))}>
-                    <IdentityThumb title={p.identity} db={db} />
-                    <strong>{p.name}</strong>
-                    <span>{m.title}</span>
-                  </button>
-                </li>
-              );
+              const wire = toWire({ ...fromPrecon(p, db), name });
+              return <DeckRow db={db} stored={wire} format={rules ?? "casual"} selected={value?.name === name} onOpen={() => onChange(wire)} />;
             })}
           </ul>
         </>

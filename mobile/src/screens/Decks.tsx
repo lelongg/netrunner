@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { Card, CardDb, Deck, Matchup, Side } from "../engine";
-import { type StoredDeck, fromPrecon, fromWire, importNrdb, parseDecklist, putDeck, removeDeck, savedDecks, toWire } from "../decks";
+import { type StoredDeck, type WireDeck, fromPrecon, fromWire, importNrdb, parseDecklist, putDeck, removeDeck, savedDecks, toWire } from "../decks";
 import { type FormatKey, FORMATS, TYPE_ORDER, analyze, costCurve, deckLimit, groupByType, influenceByFaction, influenceOf, isNeutral, legality, subtypeSpread, toText } from "../deckrules";
 import { CardImage, ZoomableCardImage } from "../game/CardImage";
 import { RichText } from "../game/RichText";
@@ -177,7 +177,7 @@ export function Decks({ db, matchups, onClose, initialSide }: { db: CardDb; matc
   );
 }
 
-function DeckRow({ db, stored, onOpen }: { db: CardDb; stored: StoredDeck; onOpen: () => void }) {
+export function DeckRow({ db, stored, onOpen, format, selected, disabled }: { db: CardDb; stored: WireDeck & { format?: string }; onOpen: () => void; format?: FormatKey; selected?: boolean; disabled?: boolean }) {
   const deck = useMemo(() => {
     try {
       return fromWire(stored, db);
@@ -186,10 +186,11 @@ function DeckRow({ db, stored, onOpen }: { db: CardDb; stored: StoredDeck; onOpe
     }
   }, [stored]);
   if (!deck) return null;
-  const a = analyze(deck, formatOf(stored));
+  const fmt = format ?? formatOf(stored);
+  const a = analyze(deck, fmt);
   return (
     <li>
-      <button class={`deck-row faction-${factionKey(deck.identity.faction)}`} onClick={onOpen}>
+      <button class={`deck-row faction-${factionKey(deck.identity.faction)} ${selected ? "on" : ""}`} disabled={disabled} onClick={onOpen}>
         <CardImage class="deck-row-id" code={deck.identity.code} alt={deck.identity.title} size="small" width="52px" />
         <span class="deck-row-main">
           <span class="deck-row-name">{deck.name}</span>
@@ -208,7 +209,7 @@ function DeckRow({ db, stored, onOpen }: { db: CardDb; stored: StoredDeck; onOpe
             {a.pointsRange && <span>{a.points} pts</span>}
           </span>
         </span>
-        <span class={`deck-badge ${a.legal ? "ok" : "bad"}`}>{a.legal ? FORMATS.find((f) => f.key === formatOf(stored))!.label : `${a.problems.length} issue${a.problems.length > 1 ? "s" : ""}`}</span>
+        <span class={`deck-badge ${a.legal ? "ok" : "bad"}`}>{a.legal ? FORMATS.find((f) => f.key === fmt)!.label : `${a.problems.length} issue${a.problems.length > 1 ? "s" : ""}`}</span>
       </button>
     </li>
   );
