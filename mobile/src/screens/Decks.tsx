@@ -216,7 +216,10 @@ export function DeckRow({ db, stored, onOpen, format, selected, disabled }: { db
             )}
           </span>
         </span>
-        <span class={`deck-badge ${a.legal ? "ok" : "bad"}`}>{a.legal ? FORMATS.find((f) => f.key === fmt)!.label : `${a.problems.length} issue${a.problems.length > 1 ? "s" : ""}`}</span>
+        <span class={`deck-badge ${a.legal ? "ok" : "bad"}`}>
+          <Icon name={a.legal ? "check" : "warning"} />
+          {a.legal ? FORMATS.find((f) => f.key === fmt)!.label : `${a.problems.length} issue${a.problems.length > 1 ? "s" : ""}`}
+        </span>
       </button>
     </li>
   );

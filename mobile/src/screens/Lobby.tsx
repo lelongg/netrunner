@@ -10,7 +10,7 @@ import { DeckPicker } from "./DeckPicker";
 import { DeckRow, Decks, DeckView } from "./Decks";
 import { useBackClose } from "../back";
 import { Icon } from "../icons";
-import { type GameFormat, FORMAT_DESC, GAME_FORMATS, dealtFormat, deckFormat } from "../deckrules";
+import { type GameFormat, FORMAT_DESC, GAME_FORMATS, analyze, dealtFormat, deckFormat } from "../deckrules";
 
 const FORMAT_HINT: Partial<Record<GameFormat, string>> = {
   preconstructed: "Preconstructed decks only.",
@@ -161,6 +161,10 @@ function Seat({ label, side, deck, db, matchups, onPick, onSide, locked, inline,
   const [choosing, setChoosing] = useState(false);
   const [viewing, setViewing] = useState(false);
   const current = useMemo(() => (deck ? fromWire(deck, db) : undefined), [deck]);
+  const issues = useMemo(() => {
+    const rules = deckFormat(format);
+    return current && rules ? analyze(current, rules).problems.filter((p) => p.level === "error").map((p) => p.text) : [];
+  }, [current, format]);
   useEffect(() => {
     setChoosing(false);
     setViewing(false);
@@ -192,9 +196,17 @@ function Seat({ label, side, deck, db, matchups, onPick, onSide, locked, inline,
             <DeckRow db={db} stored={deck!} format={deckFormat(format) ?? "casual"} onOpen={() => setViewing(true)} />
           </ul>
           {problem && (
-            <p class="error seat-problem">
-              Not legal in {GAME_FORMATS.find((f) => f.key === format)?.label}: {problem}
-            </p>
+            <div class="seat-issues" role="alert">
+              <span class="seat-issues-head">
+                <Icon name="warning" />
+                Not legal in {GAME_FORMATS.find((f) => f.key === format)?.label}
+              </span>
+              <ul>
+                {(issues.length ? issues : [problem]).map((t) => (
+                  <li>{t}</li>
+                ))}
+              </ul>
+            </div>
           )}
           {!inline && (
             <div class="seat-actions">
