@@ -830,7 +830,10 @@ corp-discard-cards-from-hand-eot = {$username} discards {$cards ->
     [one] 1 card from { -hq } at end of turn.
     *[other] {$cards} from { -hq } at end of turn.
 }
-runner-discard-cards-from-hand-eot = {$username} discards {$cards} from {-stack} at end of turn.
+runner-discard-cards-from-hand-eot = {$username} discards {$cards ->
+    [one] 1 card from { -grip } at end of turn.
+    *[other] {$cards} cards from { -grip } at end of turn.
+}
 
 extra-turns-remaining = {$username} will have {$turns ->
     [one] 1 extra turn remaining.
