@@ -1916,12 +1916,18 @@ form.chat input {
   flex: 1;
   min-width: 0;
   min-height: 36px;
-  padding: 0 10px;
+  padding: 0 38px 0 12px;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' fill='none' stroke='%2322d3ee' stroke-width='1.6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 12px 8px;
   font: inherit;
   font-size: 12px;
   letter-spacing: 0.06em;
   color: var(--cyan);
-  background: var(--panel);
+  background-color: var(--panel);
   border: 1px solid var(--line-2);
 }
 
