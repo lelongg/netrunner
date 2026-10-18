@@ -17,7 +17,7 @@ export function useProbe(probes: Probe[], probe: Prober | undefined, stamp: unkn
       live = false;
     };
   }, [key, stamp, probe]);
-  return result && result.key === key && result.stamp === stamp ? result.out : null;
+  return result && result.key === key ? result.out : null;
 }
 
 export function useChecked(commands: Command[], probe: Prober | undefined, stamp: unknown): Command[] {
@@ -32,7 +32,7 @@ export function useChecked(commands: Command[], probe: Prober | undefined, stamp
   return commands.flatMap((c) => {
     if (!c.check) return [c];
     const ok = known?.[i++]?.ok;
-    const enabled = c.enabled !== false && ok !== false;
+    const enabled = c.enabled !== false && (ok ?? c.guess ?? true);
     if (!enabled && c.check === "hide") return [];
     return [{ ...c, enabled }];
   });

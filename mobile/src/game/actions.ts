@@ -11,6 +11,7 @@ export interface Command {
   choose?: string;
   confirm?: string;
   check?: "disable" | "hide";
+  guess?: boolean;
 }
 
 export const pendingChoice: { value?: string } = {};
@@ -144,10 +145,10 @@ export function cardCommands(card: any, view: any, side: Side): Command[] {
     if (side === "corp") {
       for (const a of actionList(card, view, side)) {
         const me = view[side] ?? {};
-        const enabled = a === "advance" ? me.click > 0 && me.credit > 0 : undefined;
         const rezCost = card["current-rez-cost"] ?? card.cost;
+        const guess = a === "advance" ? me.click > 0 && me.credit > 0 : a === "rez" ? (me.credit ?? 0) >= Number(rezCost ?? 0) : undefined;
         const label = a === "rez" && rezCost != null ? `${ACTION_LABELS[a]} · ${rezCost}[credit]` : a === "advance" ? `${ACTION_LABELS[a]} · 1[click] 1[credit]` : ACTION_LABELS[a];
-        out.push({ label, command: a, args: { card: ref }, kind: a === "trash" ? "danger" : "normal", enabled, check: a === "trash" ? undefined : "disable" });
+        out.push({ label, command: a, args: { card: ref }, kind: a === "trash" ? "danger" : "normal", guess, check: a === "trash" ? undefined : "disable" });
       }
     } else if (card.type === "Program" && z === "rig") {
       out.push({ label: ACTION_LABELS.trash, command: "trash", args: { card: ref }, kind: "danger" });
@@ -263,7 +264,7 @@ export function runCommands(view: any, side: Side, autoContinue = false): Comman
   const out: Command[] = [];
   const ice = currentIce(view);
   if (side === "corp") {
-    if (run?.phase === "approach-ice" && ice && !ice.rezzed) out.push({ label: `Rez ${ice.title ?? "ice"}${(ice["current-rez-cost"] ?? ice.cost) != null ? ` · ${ice["current-rez-cost"] ?? ice.cost}[credit]` : ""}`, command: "rez", args: { card: cardRef(ice), "press-continue": autoContinue }, kind: "primary", check: "disable" });
+    if (run?.phase === "approach-ice" && ice && !ice.rezzed) out.push({ label: `Rez ${ice.title ?? "ice"}${(ice["current-rez-cost"] ?? ice.cost) != null ? ` · ${ice["current-rez-cost"] ?? ice.cost}[credit]` : ""}`, command: "rez", args: { card: cardRef(ice), "press-continue": autoContinue }, kind: "primary", guess: (view.corp?.credit ?? 0) >= Number(ice["current-rez-cost"] ?? ice.cost ?? 0), check: "disable" });
     const fire = (run?.phase === "encounter-ice" || enc) && ice && runnerPassed(view, ice) && (ice.subroutines ?? []).some((s: any) => !s.broken && !s.fired && s.resolve !== false);
     if (fire) out.push({ label: "Fire subs", command: "unbroken-subroutines", args: { card: cardRef(ice) }, kind: "primary" });
     else if (enc) {
