@@ -10,7 +10,7 @@
    [game.core.effects :refer [any-effects is-disabled-reg? get-effects]]
    [game.core.installing :refer [corp-can-pay-and-install?
                                  runner-can-pay-and-install?]]
-   [game.core.payment :refer [can-pay? ->c merge-costs]]
+   [game.core.payment :refer [can-pay? ->c]]
    [game.core.play-instants :refer [can-play-instant?]]
    [game.core.winning :refer [agenda-points-required-to-win]]
    [game.utils :refer [dissoc-in]]
@@ -70,12 +70,10 @@
     card))
 
 (defn ability-playable? [ability ability-idx state side card]
-  (let [eid {:source card
+  (let [cost (card-ability-cost state side ability card)
+        eid {:source card
              :source-type :ability
-             :source-info {:ability-idx ability-idx}}
-        break-bonus (when-let [f (:break-cost-bonus ability)]
-                      (try (f state side eid card nil) (catch #?(:clj Exception :cljs :default) _ nil)))
-        cost (merge-costs [(card-ability-cost state side ability card) (:break-cost ability) break-bonus])]
+             :source-info {:ability-idx ability-idx}}]
     (if (and (or (active? card)
                  (:autoresolve ability))
              ;; using the reg instead of any-effect here because this function gets called
