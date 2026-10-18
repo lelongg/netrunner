@@ -10,6 +10,7 @@ export interface Command {
   then?: "install-list";
   choose?: string;
   confirm?: string;
+  check?: "disable" | "hide";
 }
 
 export const pendingChoice: { value?: string } = {};
@@ -125,15 +126,16 @@ export function cardCommands(card: any, view: any, side: Side): Command[] {
   }
 
   if (mine && !prompt) {
-    const fromHand = (z === "hand" && card.playable) || card["playable-as-if-in-hand"];
+    const fromHand = z === "hand" || card["playable-as-if-in-hand"];
     const flashback = z === "discard" && card["flashback-playable"];
+    const hinted = flashback || !!card.playable || !!card["playable-as-if-in-hand"];
     if (fromHand || flashback) {
       const command = flashback ? "flashback" : "play";
       if (side === "corp" && card.type !== "Operation") {
-        out.push({ label: "Install", command: "generate-install-list", args: { card: ref }, kind: "primary", then: "install-list" });
+        if (hinted) out.push({ label: "Install", command: "generate-install-list", args: { card: ref }, kind: "primary", then: "install-list" });
       } else {
         const verb = card.type === "Operation" || card.type === "Event" ? "Play" : "Install";
-        out.push({ label: flashback ? `${verb} (flashback)` : verb, command, args: { card: ref }, kind: "primary" });
+        out.push({ label: flashback ? `${verb} (flashback)` : verb, command, args: { card: ref }, kind: "primary", enabled: hinted, check: "hide" });
       }
     }
   }
@@ -146,23 +148,23 @@ export function cardCommands(card: any, view: any, side: Side): Command[] {
         const enabled = a === "advance" ? me.click > 0 && me.credit > 0 : undefined;
         const rezCost = card["current-rez-cost"] ?? card.cost;
         const label = a === "rez" && rezCost != null ? `${ACTION_LABELS[a]} · ${rezCost}[credit]` : ACTION_LABELS[a];
-        out.push({ label, command: a, args: { card: ref }, kind: a === "trash" ? "danger" : "normal", enabled });
+        out.push({ label, command: a, args: { card: ref }, kind: a === "trash" ? "danger" : "normal", enabled, check: a === "trash" ? undefined : "disable" });
       }
     } else if (card.type === "Program" && z === "rig") {
       out.push({ label: ACTION_LABELS.trash, command: "trash", args: { card: ref }, kind: "danger" });
     }
     (card.abilities ?? []).forEach((ab: any, i: number) => {
-      out.push(ab.dynamic ? { label: abilityLabel(ab, card), command: "dynamic-ability", args: { card: ref, dynamic: ab.dynamic, source: ab.source, index: ab.index }, enabled: !!ab.playable } : { label: abilityLabel(ab, card), command: "ability", args: { card: ref, ability: i }, enabled: !!ab.playable, choose: typeof ab.label === "string" && ab.label.startsWith("Toggle auto-resolve") ? CYCLE[autoSetting(card)] : undefined });
+      out.push(ab.dynamic ? { label: abilityLabel(ab, card), command: "dynamic-ability", args: { card: ref, dynamic: ab.dynamic, source: ab.source, index: ab.index }, enabled: !!ab.playable, check: "disable" } : { label: abilityLabel(ab, card), command: "ability", args: { card: ref, ability: i }, enabled: !!ab.playable, check: "disable", choose: typeof ab.label === "string" && ab.label.startsWith("Toggle auto-resolve") ? CYCLE[autoSetting(card)] : undefined });
     });
   }
 
-  if (!mine && side === "corp") (card["corp-abilities"] ?? []).forEach((ab: any, i: number) => out.push({ label: abilityLabel(ab), command: "corp-ability", args: { card: ref, ability: i }, enabled: ab.playable !== false }));
-  if (!mine && side === "runner") (card["runner-abilities"] ?? []).forEach((ab: any, i: number) => out.push({ label: abilityLabel(ab), command: "runner-ability", args: { card: ref, ability: i }, enabled: ab.playable !== false }));
+  if (!mine && side === "corp") (card["corp-abilities"] ?? []).forEach((ab: any, i: number) => out.push({ label: abilityLabel(ab), command: "corp-ability", args: { card: ref, ability: i }, enabled: ab.playable !== false, check: "disable" }));
+  if (!mine && side === "runner") (card["runner-abilities"] ?? []).forEach((ab: any, i: number) => out.push({ label: abilityLabel(ab), command: "runner-ability", args: { card: ref, ability: i }, enabled: ab.playable !== false, check: "disable" }));
 
   const subs: any[] = card.subroutines ?? [];
   if (side === "corp" && mine && subs.length && z === "servers" && runnerPassed(view, card)) {
     if (card.rezzed && subs.some((s) => !s.fired && !s.broken)) out.push({ label: "Fire unbroken subroutines", command: "unbroken-subroutines", args: { card: ref } });
-    subs.forEach((s, i) => out.push({ label: `${s.label ?? `Subroutine ${i + 1}`}${s.broken ? " (broken)" : ""}`, command: "subroutine", args: { card: ref, subroutine: i } }));
+    subs.forEach((s, i) => !s.broken && !s.fired && out.push({ label: s.label ?? `Subroutine ${i + 1}`, command: "subroutine", args: { card: ref, subroutine: i } }));
   }
   return out;
 }
@@ -262,7 +264,7 @@ export function runCommands(view: any, side: Side, autoContinue = false): Comman
   const out: Command[] = [];
   const ice = currentIce(view);
   if (side === "corp") {
-    if (run?.phase === "approach-ice" && ice && !ice.rezzed) out.push({ label: `Rez ${ice.title ?? "ice"}${ice.cost != null ? ` · ${ice.cost}[credit]` : ""}`, command: "rez", args: { card: cardRef(ice), "press-continue": autoContinue }, kind: "primary" });
+    if (run?.phase === "approach-ice" && ice && !ice.rezzed) out.push({ label: `Rez ${ice.title ?? "ice"}${(ice["current-rez-cost"] ?? ice.cost) != null ? ` · ${ice["current-rez-cost"] ?? ice.cost}[credit]` : ""}`, command: "rez", args: { card: cardRef(ice), "press-continue": autoContinue }, kind: "primary", check: "disable" });
     if ((run?.phase === "encounter-ice" || enc) && ice) {
       const subs: any[] = ice.subroutines ?? [];
       out.push({
@@ -304,6 +306,32 @@ export function runCommands(view: any, side: Side, autoContinue = false): Comman
       kind: "danger",
     });
   return out;
+}
+
+export type BreakPlan = { ice: unknown; breaker: unknown; want: string[]; stage: "pump" | "break" | "pick"; steps: number };
+
+export function breakStep(view: any, side: Side, p: BreakPlan, render: (msg: unknown) => string): { command: string; args: unknown } | null {
+  const cur = currentIce(view);
+  if (!view.encounters || cur?.cid !== p.ice || ++p.steps > 24) return null;
+  const left = (cur.subroutines ?? []).filter((s: any) => !s.broken && !s.fired && p.want.includes(s.label));
+  const pr = promptOf(view, side);
+  if (pr && pr["prompt-type"] !== "run") {
+    if (!/^Break a subroutine/i.test(render(pr.msg))) return null;
+    const choices: any[] = Array.isArray(pr.choices) ? pr.choices : [];
+    const pick = choices.find((c) => left.some((s: any) => s.label === c.value)) ?? choices.find((c) => c.value === "Done");
+    return pick ? { command: "choice", args: { eid: pr.eid, choice: { uuid: pick.uuid } } } : null;
+  }
+  const card = findCard(view, p.breaker);
+  const abilities: any[] = card?.abilities ?? [];
+  if (p.stage === "pump") {
+    p.stage = "break";
+    const pump = abilities.find((a) => a.dynamic === "auto-pump" && a.playable);
+    if (pump) return { command: "dynamic-ability", args: { card: cardRef(card), dynamic: pump.dynamic, source: pump.source, index: pump.index } };
+  }
+  const i = abilities.findIndex((a) => !a.dynamic && /^break /i.test(a.label ?? "") && a.playable);
+  if (!left.length || i < 0) return null;
+  p.stage = "pick";
+  return { command: "ability", args: { card: cardRef(card), ability: i } };
 }
 
 export function findCard(view: any, cid: unknown): any {

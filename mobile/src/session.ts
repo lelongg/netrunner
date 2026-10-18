@@ -2,7 +2,7 @@ import type { CardDb, Deck, EngineApi, Side } from "./engine";
 import { HeuristicBot } from "./bot/heuristic.ts";
 import { type WireDeck, engineDeck, fromPrecon, fromWire, toWire } from "./decks";
 import { type GameFormat, analyze, dealtFormat, deckFormat, isGameFormat } from "./deckrules";
-import { type GameHost, type LocalEntry, type Op, type Seat as ViewSeat, makeHost } from "./game/runner";
+import { type GameHost, type LocalEntry, type Op, type Probe, type ProbeResult, type Seat as ViewSeat, makeHost } from "./game/runner";
 import { owesMove } from "./game/actions";
 import { archive } from "./history";
 import { RelayTransport, relayUrl, createGame, forgetTicket, joinGame, rejoinLink, storedTicket, watchLink } from "./net/relay";
@@ -723,6 +723,12 @@ export class Session {
 
   settled() {
     return this.queue;
+  }
+
+  probe(side: Side, probes: Probe[]): Promise<ProbeResult[]> {
+    const host = this.host;
+    if (!host || !probes.length) return Promise.resolve(probes.map(() => ({ ok: false })));
+    return this.queue.then(() => host.probe(side, probes));
   }
 
   private boot(setup: unknown, seed: number[]) {

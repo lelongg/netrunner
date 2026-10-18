@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import { useLoop } from "../fx/ui";
 import type { Side } from "../engine";
 import { type Command, cardCommands, cardRef, pendingChoice } from "./actions";
+import { type Prober, useChecked } from "./legal";
 import { CardImage, ZoomableCardImage } from "./CardImage";
 import { visibleCode } from "./CardTile";
 import { Pager } from "./Pager";
@@ -115,6 +116,8 @@ function CardBack({ side }: { side: string }) {
 }
 
 interface Props {
+  stamp?: unknown;
+  probe?: Prober;
   card: any;
   view: any;
   side: Side;
@@ -169,12 +172,12 @@ function SheetInfo({ card, code, full, side, view }: { card: any; code?: string;
   );
 }
 
-export function CardSheet({ card, view, side, db, send, onClose, disabled, index = 0, count = 1, slide, onStep, readOnly, neighbors, siblings, onJump }: Props) {
+export function CardSheet({ card, view, stamp, probe, side, db, send, onClose, disabled, index = 0, count = 1, slide, onStep, readOnly, neighbors, siblings, onJump }: Props) {
   const [installing, setInstalling] = useState(false);
   const owner = card.side === (side === "corp" ? "Corp" : "Runner");
   const code = visibleCode(card, owner);
   const full = code ? db.byTitle.get(card.title) : undefined;
-  const commands = readOnly ? [] : cardCommands(card, view, side);
+  const commands = useChecked(readOnly ? [] : cardCommands(card, view, side), readOnly ? undefined : probe, stamp ?? view);
   const gallery = (siblings ?? [card]).flatMap((c) => {
     const vc = visibleCode(c, c.side === (side === "corp" ? "Corp" : "Runner"));
     return vc ? [{ card: c, item: { code: vc, alt: c.title as string } }] : [];

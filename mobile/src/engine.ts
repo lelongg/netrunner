@@ -41,6 +41,10 @@ export interface GameHandle {
   readonly __game: unique symbol;
 }
 
+export interface Snapshot {
+  readonly __snapshot: unique symbol;
+}
+
 export interface ActResult {
   ok: boolean;
 }
@@ -52,6 +56,10 @@ export interface EngineApi {
   createGame(setup: unknown): GameHandle;
   view(game: GameHandle, side: Side | "spectator"): any;
   act(game: GameHandle, side: Side, command: string, args: unknown): ActResult;
+  checkpoint(game: GameHandle): Snapshot;
+  attempt(game: GameHandle, side: Side, command: string, args: unknown): void;
+  restore(game: GameHandle, snapshot: Snapshot): void;
+  unchanged(game: GameHandle, snapshot: Snapshot): boolean;
   say(game: GameHandle, side: Side, user: unknown, text: string): ActResult;
   notify(game: GameHandle, text: string): ActResult;
   concede(game: GameHandle, side: Side): ActResult;

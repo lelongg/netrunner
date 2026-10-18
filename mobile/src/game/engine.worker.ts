@@ -1,7 +1,7 @@
 import { type Card, type EngineApi, importEngine } from "../engine";
-import { GameRunner, type Op } from "./runner";
+import { GameRunner, type Op, type Probe } from "./runner";
 
-type Request = { k: "init"; base: string } | { k: "run"; id: number; game: number; ops: Op[]; sides: ("corp" | "runner" | "spectator")[] } | { k: "drop"; game: number };
+type Request = { k: "init"; base: string } | { k: "run"; id: number; game: number; ops: Op[]; sides: ("corp" | "runner" | "spectator")[] } | { k: "probe"; id: number; game: number; side: "corp" | "runner"; probes: Probe[] } | { k: "drop"; game: number };
 
 let engine: Promise<EngineApi> | null = null;
 const games = new Map<number, GameRunner>();
@@ -33,7 +33,7 @@ self.onmessage = async (event: MessageEvent<Request>) => {
     const api = await engine!;
     let runner = games.get(msg.game);
     if (!runner) games.set(msg.game, (runner = new GameRunner(api)));
-    const result = runner.run(msg.ops, msg.sides);
+    const result = msg.k === "probe" ? runner.probe(msg.side, msg.probes) : runner.run(msg.ops, msg.sides);
     (self as unknown as Worker).postMessage({ id: msg.id, result });
   } catch (e) {
     (self as unknown as Worker).postMessage({ id: msg.id, error: e instanceof Error ? e.message : String(e) });

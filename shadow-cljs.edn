@@ -15,6 +15,10 @@
                                         createGame engine.api/create-game
                                         view engine.api/view
                                         act engine.api/act
+                                        checkpoint engine.api/checkpoint
+                                        attempt engine.api/attempt
+                                        restore engine.api/restore
+                                        unchanged engine.api/unchanged?
                                         say engine.api/say
                                         notify engine.api/notify
                                         concede engine.api/concede!

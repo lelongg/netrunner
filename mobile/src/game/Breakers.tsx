@@ -1,5 +1,6 @@
 import { useState } from "preact/hooks";
 import { type Command, cardCommands, findCard } from "./actions";
+import { type Prober, useChecked, useProbe } from "./legal";
 import { Icon } from "../icons";
 import { CardImage } from "./CardImage";
 import { glyphs } from "./Glyphs";
@@ -25,33 +26,28 @@ function splitCost(label: string): [string, string] {
   return i > 0 && i < 40 ? [label.slice(0, i).trim(), label.slice(i + 1).trim()] : ["", label];
 }
 
-const credits = (label: unknown) => {
-  const text = String(label ?? "");
-  const m = text.match(/^(\d+) \[Credits\]$/);
-  return m ? Number(m[1]) : text ? null : 0;
-};
-
-function partialCost(card: any, ice: any, wanted: number): number | null {
-  const abilities: any[] = card.abilities ?? [];
-  const brk = abilities.find((a) => !a.dynamic && /^break /i.test(a.label ?? ""));
-  if (!brk) return null;
-  const per = /any number/i.test(brk.label) ? Infinity : Number(String(brk.label).match(/\d+/)?.[0] ?? 1);
-  const str = Number(card["current-strength"] ?? card.strength ?? 0);
-  const pump = str < Number(ice["current-strength"] ?? ice.strength ?? 0) ? credits(abilities.find((a) => a.dynamic === "auto-pump")?.["cost-label"]) : 0;
-  const each = credits(brk["cost-label"]);
-  if (pump == null || each == null) return null;
-  return pump + Math.ceil(wanted / per) * each;
-}
-
-export function Breakers({ view, side, ice, send, onTap, disabled, skip, onPartial }: { view: any; side: Side; ice: any; send: (command: string, args?: unknown) => void; onTap: (card: any) => void; disabled: boolean; skip?: Set<number>; onPartial?: (breaker: any, subs: string[]) => void }) {
+export function Breakers({ view, stamp, probe, side, ice, send, onTap, disabled, skip, onPartial }: { view: any; stamp?: unknown; probe?: Prober; side: Side; ice: any; send: (command: string, args?: unknown) => void; onTap: (card: any) => void; disabled: boolean; skip?: Set<number>; onPartial?: (breaker: any, subs: string[]) => void }) {
   const [open, setOpen] = useState(false);
   const unbroken = (ice.subroutines ?? []).filter((s: any) => !s.broken && !s.fired && s.resolve !== false);
   const wanted = (ice.subroutines ?? []).filter((s: any, i: number) => !s.broken && !s.fired && s.resolve !== false && !skip?.has(i)).length;
   const partial = wanted < unbroken.length;
   const wantedLabels: string[] = (ice.subroutines ?? []).filter((s: any, i: number) => !s.broken && !s.fired && s.resolve !== false && !skip?.has(i)).map((s: any) => s.label);
   const cards = installed(view);
+  const involved = [ice, ...hostedOn(view, ice), ...cards];
+  const raw = involved.map((card) => cardCommands(card, view, side));
+  const flat = useChecked(raw.flat(), probe, stamp ?? view);
+  const byCard = new Map<unknown, Command[]>();
+  let at = 0;
+  involved.forEach((card, i) => {
+    byCard.set(card.cid, flat.slice(at, at + raw[i].length));
+    at += raw[i].length;
+  });
+  const cardCommandsOf = (card: any) => byCard.get(card.cid) ?? [];
+  const breakerCards = cards.filter((c) => (c.subtypes ?? []).includes("Icebreaker"));
+  const plans = useProbe(partial && wanted ? breakerCards.map((c) => ({ k: "break", ice: ice.cid, breaker: c.cid, want: wantedLabels })) : [], probe, stamp ?? view);
+  const planOf = (card: any) => plans?.[breakerCards.indexOf(card)];
   const onIce = hostedOn(view, ice).flatMap((card) =>
-    cardCommands(card, view, side)
+    cardCommandsOf(card)
       .filter((cmd) => cmd.enabled !== false && (cmd.command === "ability" || cmd.command === "dynamic-ability"))
       .map((cmd) => ({ card, cmd })),
   );
@@ -59,13 +55,13 @@ export function Breakers({ view, side, ice, send, onTap, disabled, skip, onParti
   const others = cards
     .filter((c) => !breakers.includes(c))
     .flatMap((card) =>
-      cardCommands(card, view, side)
+      cardCommandsOf(card)
         .filter((cmd) => cmd.enabled !== false && (cmd.command === "ability" || cmd.command === "dynamic-ability"))
         .map((cmd) => ({ card, cmd })),
     );
   if (!unbroken.length) return null;
   const all = breakers.map((card) => {
-    const cmds = cardCommands(card, view, side);
+    const cmds = cardCommandsOf(card);
     const full = cmds.find((c) => c.command === "dynamic-ability" && (c.args as any).dynamic === "auto-pump-and-break");
     const ab = full && (card.abilities ?? []).find((a: any) => a.dynamic === "auto-pump-and-break");
     const manual = cmds.filter((c) => c !== full && c.enabled !== false && (c.command === "ability" || c.command === "dynamic-ability"));
@@ -74,7 +70,7 @@ export function Breakers({ view, side, ice, send, onTap, disabled, skip, onParti
   const price = (r: (typeof all)[number]) => Number(String(r.ab?.["cost-label"] ?? "").match(/\d+/)?.[0] ?? 0);
   const rows = all.filter((r) => r.full).sort((a, b) => price(a) - price(b));
   const manual: { card: any; cmd: Command }[] = [...all.flatMap((r) => r.manual.map((cmd) => ({ card: r.card, cmd }))), ...others];
-  const fromIce = cardCommands(ice, view, side).filter((c) => c.command === "runner-ability");
+  const fromIce = cardCommandsOf(ice).filter((c) => c.command === "runner-ability");
   if (!rows.length && !manual.length && !fromIce.length && !onIce.length) return null;
   const badPub = view.runner?.["bad-pub-credit"] ?? 0;
   return (
@@ -176,12 +172,12 @@ export function Breakers({ view, side, ice, send, onTap, disabled, skip, onParti
               <span class="brk-desc">{partial ? (wanted ? `${label.startsWith("Match") ? "Match strength, break" : "Break"} ${wanted} of ${unbroken.length}` : "Nothing selected") : label.startsWith("Match") ? "Match strength, break all" : "Break all"}</span>
             </div>
             {full && !(partial && !wanted) && (
-              <button class="brk-go" disabled={disabled || full.enabled === false || (partial && !wanted)} onClick={() => (partial ? onPartial?.(card, wantedLabels) : send(full.command, full.args))}>
+              <button class="brk-go" disabled={disabled || (partial ? !planOf(card)?.ok : full.enabled === false)} onClick={() => (partial ? onPartial?.(card, wantedLabels) : send(full.command, full.args))}>
                 <span class="brk-cost">
                   {partial
                     ? (() => {
-                        const cost = partialCost(card, ice, wanted);
-                        return cost == null ? "" : glyphs(iconize(`${cost} [Credits]`));
+                        const plan = planOf(card);
+                        return plan?.ok && plan.credits != null ? glyphs(iconize(`${plan.credits} [Credits]`)) : "";
                       })()
                     : glyphs(iconize(ab?.["cost-label"] ?? ""))}
                 </span>

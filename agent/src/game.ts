@@ -43,6 +43,7 @@ interface Action {
   amount?: { min: number; max: number };
   text?: boolean;
   say?: string;
+  check?: boolean;
 }
 
 const other = (s: Side): Side => (s === "corp" ? "runner" : "corp");
@@ -475,7 +476,7 @@ export class Agent {
     return (view?.log ?? []).map((e: any) => (e.user === "__system__" ? this.render(e.text) : `${e.user?.username ?? "?"} says: ${this.render(e.text)}`));
   }
 
-  private buildActions(): Action[] {
+  private buildActions(): Omit<Action, "id">[] {
     const s = this.session!;
     const side = s.lobby.mySide;
     const view = s.views[side];
@@ -514,18 +515,18 @@ export class Agent {
         }
         if (ptype === "select" && !(prompt.selectable ?? []).length && choices.every((c: any) => c.value === "Hide")) push({ label: "Close the prompt (no valid target)", command: "say", say: "/close-prompt" });
       }
-      return out.map((a) => ({ ...a, id: this.idFor(a) }));
+      return out;
     }
     const inRun = !!(view.run || view.encounters);
     const base = inRun ? runCommands(view, side) : basicCommands(view, side);
     for (const c of base) {
-      if (c.enabled === false || c.command === "toggle-auto-no-action") continue;
+      if ((c.enabled === false && !c.check) || c.command === "toggle-auto-no-action") continue;
       if (c.command === "generate-runnable-zones") {
         const corp = view.corp ?? {};
         for (const key of ["hq", "rd", "archives", ...remoteKeys(corp.servers)]) push({ label: `Run on ${serverName(key)}`, group: "Run on", short: serverName(key), command: "run", args: { server: serverName(key) } });
         continue;
       }
-      push({ label: this.render(c.label), command: c.command, args: c.args });
+      push({ label: this.render(c.label), command: c.command, args: c.args, check: !!c.check });
     }
     const cards: any[] = [];
     const collect = (x: any) => {
@@ -539,7 +540,7 @@ export class Agent {
     collect(view[other(side)]);
     for (const card of cards) {
       for (const c of cardCommands(card, view, side)) {
-        if (c.enabled === false || c.command === "select" || c.command === "choice") continue;
+        if ((c.enabled === false && !c.check) || c.command === "select" || c.command === "choice") continue;
         if (c.command === "generate-install-list") {
           const servers = view.corp?.servers ?? {};
           const remotes = remoteKeys(servers).map(serverName);
@@ -547,13 +548,26 @@ export class Agent {
           for (const t of targets) push({ label: `Install ${card.title} in ${t}`, group: `Install ${card.title} in`, short: t, command: "play", args: { card: cardRef(card), server: t } });
           continue;
         }
-        push({ label: `${card.title}: ${this.render(c.label)}`, command: c.command, args: c.args });
+        push({ label: `${card.title}: ${this.render(c.label)}`, command: c.command, args: c.args, check: !!c.check });
       }
     }
-    return out.map((a) => ({ ...a, id: this.idFor(a) }));
+    return out;
   }
 
-  private numbered(): Action[] {
+  private async legal(): Promise<Omit<Action, "id">[]> {
+    const s = this.session!;
+    const all = this.buildActions();
+    const checked = all.filter((a) => a.check);
+    if (!checked.length) return all;
+    const results = await s.probe(
+      s.lobby.mySide,
+      checked.map((a) => ({ k: "try", command: a.command, args: a.args ?? null })),
+    );
+    const refused = new Set(checked.filter((_, i) => !results[i]?.ok));
+    return all.filter((a) => !refused.has(a)).map(({ check, ...a }) => a);
+  }
+
+  private async numbered(): Promise<Action[]> {
     const code = this.session?.lobby.code ?? "";
     if (code !== this.idsCode) {
       this.ids.clear();
@@ -561,7 +575,7 @@ export class Agent {
       this.nextId = Number(code && this.store.getItem(`pocket-rig:agent-ids:${code}`)) || 1;
     }
     const first = this.nextId;
-    const actions = this.buildActions();
+    const actions = (await this.legal()).map((a) => ({ ...a, id: this.idFor(a) }));
     if (code && this.nextId !== first) this.store.setItem(`pocket-rig:agent-ids:${code}`, String(this.nextId));
     return actions;
   }
@@ -583,10 +597,10 @@ export class Agent {
   private seen = new Map<string, string>();
   private logSeen = 0;
 
-  private actionsText() {
+  private async actionsText() {
     const s = this.session!;
     const view = s.views[s.lobby.mySide];
-    this.actions = this.numbered();
+    this.actions = await this.numbered();
     this.stamp = this.stampOf();
     const rows: string[] = [];
     for (let i = 0; i < this.actions.length; i++) {
@@ -607,7 +621,7 @@ export class Agent {
     this.logSeen = this.logLines().length;
   }
 
-  describe() {
+  async describe() {
     const s = this.session;
     if (!s) return "Not in a game. Use join_game with a game code, or host_game. If you were in the middle of a game, this server lost its session: call join_game with the game code and your rejoin key.";
     if (!s.lobby.started || !s.views[s.lobby.mySide]) return this.lobbyText();
@@ -616,10 +630,10 @@ export class Agent {
       .filter((t) => t && !/^\s*\[hr\]\s*$/i.test(t))
       .slice(-12);
     this.remember(lines);
-    return `${this.rejoinLine()}${lines.map(([, t]) => t).join("\n")}\n\nRecent log:\n${recent.map((t) => `  ${t}`).join("\n")}\n\n${this.actionsText()}`;
+    return `${this.rejoinLine()}${lines.map(([, t]) => t).join("\n")}\n\nRecent log:\n${recent.map((t) => `  ${t}`).join("\n")}\n\n${await this.actionsText()}`;
   }
 
-  update() {
+  async update() {
     const s = this.session;
     if (!s || !s.lobby.started || !s.views[s.lobby.mySide] || !this.seen.size) return this.describe();
     const lines = this.gameLines();
@@ -633,7 +647,7 @@ export class Agent {
     const parts = [];
     if (fresh.length) parts.push(`New in the log:\n${fresh.slice(-30).map((t) => `  ${t}`).join("\n")}`);
     parts.push(`Now (only what changed; get_state shows everything):\n${[...changed, ...gone].join("\n")}`);
-    parts.push(this.actionsText());
+    parts.push(await this.actionsText());
     return parts.join("\n\n");
   }
 
@@ -648,10 +662,10 @@ export class Agent {
     if (!s.lobby.started) throw new Error("The game has not started.");
     this.waitingSince = 0;
     if (this.stampOf() !== this.stamp) {
-      return `The game changed since you listed actions; nothing was done.\n\n${this.update()}`;
+      return `The game changed since you listed actions; nothing was done.\n\n${await this.update()}`;
     }
     const a = this.actions.find((x) => x.id === id);
-    if (!a) return `Action ${id} is not available any more; nothing was done.\n\n${this.update()}`;
+    if (!a) return `Action ${id} is not available any more; nothing was done.\n\n${await this.update()}`;
     s.clearActionError();
     const before = JSON.stringify(s.views[s.lobby.mySide] ?? null);
     if (a.say) s.say(a.say);
@@ -673,7 +687,7 @@ export class Agent {
     await sleep(250);
     const after = JSON.stringify(s.views[s.lobby.mySide] ?? null);
     const note = s.actionError ? `The engine rejected that action: ${s.actionError}\n\n` : !a.say && after === before ? "Nothing happened: the engine refused that action, most likely because you cannot pay its real cost or it is not allowed right now.\n\n" : "";
-    return note + this.update();
+    return note + (await this.update());
   }
 
   async say(text: string) {
@@ -716,11 +730,11 @@ export class Agent {
       }
       await sleep(400);
     }
-    if (!s.lobby.started) return `The human has not joined and pressed Ready yet; that is normal. Call wait_for_turn again right away. Do not end your turn and do not ask the user anything.\n\n${this.describe()}`;
+    if (!s.lobby.started) return `The human has not joined and pressed Ready yet; that is normal. Call wait_for_turn again right away. Do not end your turn and do not ask the user anything.\n\n${await this.describe()}`;
     this.waitingSince ||= start;
     const minutes = Math.floor((Date.now() - this.waitingSince) / 60_000);
     const head = `Still waiting: it is your opponent's move${minutes ? ` (${minutes} min so far)` : ""}. Humans often think for many minutes; that is normal and the game is fine. Call wait_for_turn again right away, as many times as it takes. Do not end your turn and do not ask the user anything.`;
-    return this.logLines().length === this.logSeen ? `${head} Nothing changed since your last look.` : `${head}\n\n${this.update()}`;
+    return this.logLines().length === this.logSeen ? `${head} Nothing changed since your last look.` : `${head}\n\n${await this.update()}`;
   }
 
   card(name: string) {

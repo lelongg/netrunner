@@ -12,7 +12,7 @@
    [game.cards.resources]
    [game.cards.upgrades]
    [game.core.diffs :as diffs]
-   [game.core.process-actions :refer [command-parser process-action]]
+   [game.core.process-actions :refer [checkpoint+clean-up command-parser process-action]]
    [game.core.say :refer [system-say]]
    [game.core.set-up :refer [init-game]]
    [game.core.winning :refer [concede]]
@@ -136,6 +136,49 @@
   (let [side (side-kw side)
         args (normalize-args command (->clj args))]
     (apply-and-diff game #(process-action command % side args))))
+
+(defn- game-part
+  "The game without its history (the log, the events of the turn and of the
+  run, the states kept for undo), the cached views, the action counters and
+  the toasts."
+  [state]
+  (-> state
+      (dissoc :log :history :click-states :turn-state :paid-ability-state :public-states :sequence :eid :turn-events)
+      (update :run #(some-> % (dissoc :events)))
+      (update :corp dissoc :toast)
+      (update :runner dissoc :toast)))
+
+(defn checkpoint
+  "A snapshot of the game to try actions on it and roll them back with
+  restore. Card abilities keep waiting on the game itself, so a try runs on
+  the game and not on a copy. The snapshot also holds the game as an action
+  that does nothing leaves it, since every action ends with the engine's
+  checkpoint."
+  [game]
+  (let [state (.-state game)
+        snapshot @state
+        settled (try
+                  (checkpoint+clean-up state)
+                  (game-part @state)
+                  (finally (reset! state snapshot)))]
+    #js {:state snapshot :settled settled}))
+
+(defn attempt
+  "Applies a command like act without refreshing the views, for a try that
+  restore rolls back."
+  [game side command args]
+  (process-action command (.-state game) (side-kw side) (normalize-args command (->clj args)))
+  nil)
+
+(defn restore [game ^js snapshot]
+  (reset! (.-state game) (.-state snapshot))
+  nil)
+
+(defn unchanged?
+  "Whether the game is as an action that does nothing would leave it: an
+  action the engine refused."
+  [game ^js snapshot]
+  (= (game-part @(.-state game)) (.-settled snapshot)))
 
 (defn say
   [game side user text]

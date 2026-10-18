@@ -1,7 +1,7 @@
-import type { EngineApi, GameHandle, Side } from "../engine";
+import type { EngineApi, GameHandle, Side, Snapshot } from "../engine";
 
 export type Seat = Side | "spectator";
-import { cardRef, promptOf } from "./actions";
+import { type BreakPlan, breakStep, cardRef, findCard, promptOf } from "./actions";
 
 export type LocalEntry = { side: Side; kind: "act"; command: string; args: unknown } | { side: Side; kind: "say"; user?: string; text: string } | { side: Side; kind: "concede" };
 
@@ -12,8 +12,16 @@ export interface RunResult {
   views: Partial<Record<Seat, any>>;
 }
 
+export type Probe = { k: "try"; command: string; args: unknown } | { k: "break"; ice: unknown; breaker: unknown; want: string[] };
+
+export interface ProbeResult {
+  ok: boolean;
+  credits?: number;
+}
+
 export interface GameHost {
   run(ops: Op[], sides: Seat[]): Promise<RunResult>;
+  probe(side: Side, probes: Probe[]): Promise<ProbeResult[]>;
   dispose(): void;
 }
 
@@ -84,6 +92,43 @@ export class GameRunner {
     }
   }
 
+  private tryOn(game: GameHandle, side: Side, command: string, args: unknown, views: boolean) {
+    try {
+      if (views) this.engine.act(game, side, command, this.aligned(game, side, args));
+      else this.engine.attempt(game, side, command, this.aligned(game, side, args));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private trial(game: GameHandle, side: Side, probe: Probe, snapshot: Snapshot): ProbeResult {
+    if (probe.k === "try") return { ok: this.tryOn(game, side, probe.command, probe.args, false) && !this.engine.unchanged(game, snapshot) };
+    const credit = this.engine.view(game, side)[side]?.credit ?? 0;
+    const plan: BreakPlan = { ice: probe.ice, breaker: probe.breaker, want: probe.want, stage: "pump", steps: 0 };
+    const render = (m: unknown) => this.engine.renderMessage(m);
+    for (let next = breakStep(this.engine.view(game, side), side, plan, render); next; next = breakStep(this.engine.view(game, side), side, plan, render)) {
+      if (!this.tryOn(game, side, next.command, next.args, true)) return { ok: false };
+    }
+    const after = this.engine.view(game, side);
+    const ice = findCard(after, probe.ice);
+    const left = (ice?.subroutines ?? []).filter((s: any) => !s.broken && !s.fired && probe.want.includes(s.label));
+    return { ok: !!ice && !left.length, credits: credit - (after[side]?.credit ?? 0) };
+  }
+
+  probe(side: Side, probes: Probe[]): ProbeResult[] {
+    const game = this.game;
+    if (!game) return probes.map(() => ({ ok: false }));
+    const snapshot = this.engine.checkpoint(game);
+    return probes.map((p) => {
+      try {
+        return this.trial(game, side, p, snapshot);
+      } finally {
+        this.engine.restore(game, snapshot);
+      }
+    });
+  }
+
   run(ops: Op[], sides: Seat[]): RunResult {
     const failed: number[] = [];
     ops.forEach((op, i) => {
@@ -107,6 +152,10 @@ export class DirectHost implements GameHost {
 
   run(ops: Op[], sides: Seat[]) {
     return Promise.resolve(this.runner.run(ops, sides));
+  }
+
+  probe(side: Side, probes: Probe[]) {
+    return Promise.resolve(this.runner.probe(side, probes));
   }
 
   dispose() {}
