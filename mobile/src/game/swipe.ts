@@ -105,7 +105,12 @@ export function useSheetPager(sheet: { current: HTMLElement | null }, key: unkno
           const need = el.offsetHeight;
           el.style.height = `${Math.max(need, h.offsetHeight)}px`;
           const box = sheet.current;
-          if (box && need > h.offsetHeight) box.style.minHeight = `${box.offsetHeight + need - h.offsetHeight}px`;
+          if (box && need > h.offsetHeight) {
+            const locked = box.style.minHeight;
+            box.style.minHeight = "";
+            const grown = box.offsetHeight + need - h.offsetHeight;
+            box.style.minHeight = `${Math.max(grown, parseFloat(locked) || 0)}px`;
+          }
         }
         el.style.visibility = show ? "visible" : "hidden";
         el.style.transform = `translateX(${dir * w + dx}px)`;
