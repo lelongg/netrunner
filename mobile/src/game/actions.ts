@@ -146,7 +146,7 @@ export function cardCommands(card: any, view: any, side: Side): Command[] {
         const me = view[side] ?? {};
         const enabled = a === "advance" ? me.click > 0 && me.credit > 0 : undefined;
         const rezCost = card["current-rez-cost"] ?? card.cost;
-        const label = a === "rez" && rezCost != null ? `${ACTION_LABELS[a]} · ${rezCost}[credit]` : ACTION_LABELS[a];
+        const label = a === "rez" && rezCost != null ? `${ACTION_LABELS[a]} · ${rezCost}[credit]` : a === "advance" ? `${ACTION_LABELS[a]} · 1[click] 1[credit]` : ACTION_LABELS[a];
         out.push({ label, command: a, args: { card: ref }, kind: a === "trash" ? "danger" : "normal", enabled, check: a === "trash" ? undefined : "disable" });
       }
     } else if (card.type === "Program" && z === "rig") {
