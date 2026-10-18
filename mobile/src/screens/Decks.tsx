@@ -718,15 +718,18 @@ function DeckList({ deck, format, onQty, onOpen, onBrowse }: { deck: Deck; forma
               return (
                 <li class={`edit-row faction-${factionKey(e.card.faction)} ${l !== "legal" && l !== "restricted" ? "illegal" : ""}`}>
                   <button class="edit-row-main" onClick={() => onOpen(e.card, ordered)}>
-                    <span class="edit-row-title">
-                      {e.card.uniqueness ? "◆ " : ""}
-                      {e.card.title}
-                    </span>
-                    <span class="edit-row-sub">
-                      <Pips n={influenceOf(deck.identity, e.card) * e.qty} />
-                      {l === "banned" && <span class="red">banned</span>}
-                      {l === "rotated" && <span class="red">not in format</span>}
-                      {l === "restricted" && <span class="yellow">restricted</span>}
+                    <CardImage class="edit-row-thumb" code={e.card.code} alt="" size="small" width="30px" lazy />
+                    <span class="edit-row-text">
+                      <span class="edit-row-title">
+                        {e.card.uniqueness ? "◆ " : ""}
+                        {e.card.title}
+                      </span>
+                      <span class="edit-row-sub">
+                        <Pips n={influenceOf(deck.identity, e.card) * e.qty} />
+                        {l === "banned" && <span class="red">banned</span>}
+                        {l === "rotated" && <span class="red">not in format</span>}
+                        {l === "restricted" && <span class="yellow">restricted</span>}
+                      </span>
                     </span>
                   </button>
                   <CardCost card={e.card} />
