@@ -870,12 +870,25 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
   };
   const theirDeck = session.deckFor(opp);
   useEffect(() => {
-    const codes = new Set((theirDeck?.cards ?? []).map((e) => e.card.code).filter(Boolean));
-    for (const code of codes) {
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.src = cardImage(code, "small")!;
-    }
+    const rank = (type: string) => (type === "ICE" ? 0 : type === "Asset" || type === "Upgrade" ? 1 : 2);
+    const cards = [...(theirDeck?.cards ?? [])].sort((a, b) => rank(a.card.type) - rank(b.card.type));
+    const codes = new Set(cards.map((e) => e.card.code).filter(Boolean));
+    if (!codes.size) return;
+    let cancelled = false;
+    const onTable = [...document.querySelectorAll<HTMLImageElement>(".board img")].filter((img) => !img.complete);
+    const settled = Promise.race([Promise.all(onTable.map((img) => img.decode().catch(() => {}))), new Promise((ok) => setTimeout(ok, 4000))]);
+    settled.then(() => {
+      if (cancelled) return;
+      for (const code of codes) {
+        const img = new Image();
+        img.fetchPriority = "low";
+        img.crossOrigin = "anonymous";
+        img.src = cardImage(code, "small")!;
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [theirDeck?.name, opp]);
   const myMove = awaitingMove(view, side);
   const remote = session.lobby.role !== "local" || session.lobby.vsBot;
