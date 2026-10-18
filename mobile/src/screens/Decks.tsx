@@ -10,6 +10,7 @@ import { useBackClose } from "../back";
 import { Icon } from "../icons";
 import { Cta, Ticker, ask, tell } from "../ui";
 import { motionOff } from "../settings";
+import { DeckBrowser } from "./DeckBrowser";
 
 const SIDE_NAME: Record<Side, "Corp" | "Runner"> = { corp: "Corp", runner: "Runner" };
 
@@ -59,6 +60,8 @@ export function Decks({ db, matchups, onClose }: { db: CardDb; matchups: Matchup
   const [editing, setEditing] = useState<StoredDeck | null>(null);
   const [creating, setCreating] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [browsing, setBrowsing] = useState(false);
+  useBackClose(browsing, () => setBrowsing(false));
   useBackClose(true, onClose);
   useBackClose(!!editing, () => {
     setEditing(null);
@@ -126,7 +129,11 @@ export function Decks({ db, matchups, onClose }: { db: CardDb; matchups: Matchup
           ))}
         </div>
         <div class="deck-actions">
-          <Cta onClick={() => setCreating(true)}>New {SIDE_NAME[side]} deck</Cta>
+          <Cta onClick={() => setCreating(true)}>New deck</Cta>
+          <button class="deck-import-btn" onClick={() => setBrowsing(true)}>
+            <Icon name="search" />
+            <span>NRDB</span>
+          </button>
           <button class="deck-import-btn" onClick={() => setImporting(true)}>
             <Icon name="plus" />
             <span>Import</span>
@@ -139,6 +146,19 @@ export function Decks({ db, matchups, onClose }: { db: CardDb; matchups: Matchup
           ))}
         </ul>
       </div>
+      {browsing && (
+        <BrowseSheet
+          db={db}
+          side={side}
+          onClose={() => setBrowsing(false)}
+          onDone={(deck, format) => {
+            const stored = putDeck({ ...toWire(deck), side, format });
+            setBrowsing(false);
+            refresh();
+            setEditing(stored);
+          }}
+        />
+      )}
       {importing && (
         <ImportSheet
           db={db}
@@ -190,6 +210,31 @@ function DeckRow({ db, stored, onOpen }: { db: CardDb; stored: StoredDeck; onOpe
         <span class={`deck-badge ${a.legal ? "ok" : "bad"}`}>{a.legal ? FORMATS.find((f) => f.key === formatOf(stored))!.label : `${a.problems.length} issue${a.problems.length > 1 ? "s" : ""}`}</span>
       </button>
     </li>
+  );
+}
+
+function BrowseSheet({ db, side, onClose, onDone }: { db: CardDb; side: Side; onClose: () => void; onDone: (deck: Deck, format: FormatKey) => void }) {
+  const [format, setFormat] = useState<FormatKey>("standard");
+  return (
+    <div class="sheet-backdrop" onClick={onClose}>
+      <div class="sheet panel deck-choose" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Browse NetrunnerDB decklists">
+        <div class="row">
+          <span class="label">NetrunnerDB · {SIDE_NAME[side]}</span>
+          <button class="ghost" onClick={onClose} aria-label="Close">
+            <Icon name="close" />
+          </button>
+        </div>
+        <section class="format-pick">
+          <span class="label">Format</span>
+          <select value={format} onChange={(e) => setFormat((e.target as HTMLSelectElement).value as FormatKey)} aria-label="Format">
+            {FORMATS.map((f) => (
+              <option value={f.key}>{f.label}</option>
+            ))}
+          </select>
+        </section>
+        <DeckBrowser side={side} db={db} format={format} onPick={(l) => l.deck && onDone(l.deck, format)} />
+      </div>
+    </div>
   );
 }
 

@@ -42,7 +42,7 @@ export function DeckBrowser({ side, db, selected, onPick, format }: Props) {
     setLists([]);
     setWant(10);
     load(1, true);
-  }, [side, faction]);
+  }, [side, faction, format]);
 
   const shown = lists.filter((l) => l.deck && (format ? format === "casual" || analyze(l.deck, format).legal : !standard || l.standard));
   const filtering = !!format && format !== "casual";
