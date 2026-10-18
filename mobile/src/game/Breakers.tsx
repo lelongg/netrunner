@@ -133,8 +133,8 @@ export function Breakers({ view, side, ice, send, onTap, disabled, skip, onParti
             <button class="brk-go" disabled={disabled} onClick={() => send(cmd.command, cmd.args)}>
               <span class="brk-cost">
                 {/^hosted virus counter$/i.test(cost) ? (
-                  <span class="stat" aria-label="1 hosted virus counter">
-                    1<Icon name="virus" />
+                  <span aria-label="1 hosted virus counter">
+                    1<Icon name="virus" class="glyph" />
                   </span>
                 ) : (
                   glyphs(iconize(cost))

@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { ComponentChildren } from "preact";
-import type { CardDb, EngineApi, Side } from "../engine";
+import { type CardDb, type EngineApi, type Side, cardImage } from "../engine";
 import type { Session } from "../session";
 import { Cta, Meter, Ticker, ask, tell } from "../ui";
 import { useFx, iceKind } from "../fx/director";
@@ -868,6 +868,15 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
     setSelected(null);
     setSlide(undefined);
   };
+  const theirDeck = session.deckFor(opp);
+  useEffect(() => {
+    const codes = new Set((theirDeck?.cards ?? []).map((e) => e.card.code).filter(Boolean));
+    for (const code of codes) {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.src = cardImage(code, "small")!;
+    }
+  }, [theirDeck?.name, opp]);
   const myMove = awaitingMove(view, side);
   const remote = session.lobby.role !== "local" || session.lobby.vsBot;
   const canUndo = !watching && undoAllowed(session, view, side, render, handoffLog);
