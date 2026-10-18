@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "preact/hooks";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "preact/hooks";
+import { animate } from "motion";
+import { motionOff } from "../settings";
 import { useLoop } from "../fx/ui";
 import type { CardDb, Matchup, Side } from "../engine";
 import { type WireDeck, fromWire } from "../decks";
@@ -84,6 +86,54 @@ function JoinStatus({ lobby }: { lobby: Session["lobby"] }) {
       )}
       {!lobby.hint && seconds >= 10 && <p class="hint">Still trying. Check your connection.</p>}
     </section>
+  );
+}
+
+function QrZoom({ value, code, from, onClose }: { value: string; code: string; from: HTMLElement | null; onClose: () => void }) {
+  const root = useRef<HTMLDivElement>(null);
+  const qr = useRef<HTMLDivElement>(null);
+  const extra = useRef<HTMLDivElement>(null);
+  const closing = useRef(false);
+  const offset = () => {
+    const a = from?.getBoundingClientRect();
+    const b = qr.current?.getBoundingClientRect();
+    if (!a || !b || !b.width) return null;
+    return { x: a.left + a.width / 2 - (b.left + b.width / 2), y: a.top + a.height / 2 - (b.top + b.height / 2), scale: a.width / b.width };
+  };
+  useLayoutEffect(() => {
+    const o = offset();
+    if (!o || motionOff()) return;
+    if (from) from.style.visibility = "hidden";
+    root.current!.style.backgroundColor = "rgba(0,0,0,0)";
+    animate(root.current!, { backgroundColor: ["rgba(0,0,0,0)", "rgba(0,0,0,0.92)"] }, { duration: 0.25 });
+    qr.current!.style.transform = `translateX(${o.x}px) translateY(${o.y}px) scale(${o.scale})`;
+    animate(qr.current!, { x: [o.x, 0], y: [o.y, 0], scale: [o.scale, 1] }, { type: "spring", visualDuration: 0.38, bounce: 0.18 });
+    extra.current!.style.opacity = "0";
+    animate(extra.current!, { opacity: [0, 1], y: [12, 0] }, { duration: 0.25, delay: 0.18 });
+    return () => {
+      if (from) from.style.visibility = "";
+    };
+  }, []);
+  const close = () => {
+    if (closing.current) return;
+    closing.current = true;
+    const o = offset();
+    if (!o || motionOff()) return onClose();
+    animate(extra.current!, { opacity: 0 }, { duration: 0.12 });
+    animate(root.current!, { backgroundColor: "rgba(0,0,0,0)" }, { duration: 0.28 });
+    animate(qr.current!, { x: o.x, y: o.y, scale: o.scale }, { type: "spring", visualDuration: 0.3, bounce: 0 }).finished.then(onClose, onClose);
+  };
+  useBackClose(true, close);
+  return (
+    <div ref={root} class="qr-zoom" onClick={close} role="dialog" aria-label={`Join game ${code}`}>
+      <div ref={qr} class="qr-zoom-code">
+        <QrCode value={value} label={`QR code to join game ${code}`} />
+      </div>
+      <div ref={extra} class="qr-zoom-extra">
+        <span class="code">{code}</span>
+        <span class="hint">Tap to close</span>
+      </div>
+    </div>
   );
 }
 
@@ -238,7 +288,7 @@ export function Lobby({ session, db, matchups, onLeave, onWatch }: Props) {
   const [editor, setEditor] = useState<Side | null>(null);
   const [copied, setCopied] = useState(false);
   const [qrBig, setQrBig] = useState(false);
-  useBackClose(qrBig, () => setQrBig(false));
+  const qrSmall = useRef<HTMLButtonElement>(null);
   const link = shareLink(lobby.code);
   const opponent = lobby.opponentName ?? "your opponent";
   const inviting = lobby.role === "host" && !lobby.opponentName && lobby.status !== "connected";
@@ -309,13 +359,7 @@ export function Lobby({ session, db, matchups, onLeave, onWatch }: Props) {
           <h1>SETUP</h1>
         </header>
 
-        {qrBig && lobby.code && (
-          <div class="qr-zoom" onClick={() => setQrBig(false)} role="dialog" aria-label={`Join game ${lobby.code}`}>
-            <QrCode value={link} label={`QR code to join game ${lobby.code}`} />
-            <span class="code">{lobby.code}</span>
-            <span class="hint">Tap to close</span>
-          </div>
-        )}
+        {qrBig && lobby.code && <QrZoom value={link} code={lobby.code} from={qrSmall.current} onClose={() => setQrBig(false)} />}
         {inviting && (
           <section class="panel section invite">
             <div class="row">
@@ -324,7 +368,7 @@ export function Lobby({ session, db, matchups, onLeave, onWatch }: Props) {
             </div>
             <div class="invite-body">
               {lobby.code ? (
-                <button class="qr-button" onClick={() => setQrBig(true)} aria-label="Enlarge the QR code">
+                <button ref={qrSmall} class="qr-button" onClick={() => setQrBig(true)} aria-label="Enlarge the QR code">
                   <QrCode value={link} label={`QR code to join game ${lobby.code}`} />
                 </button>
               ) : (

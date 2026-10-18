@@ -6213,6 +6213,17 @@ h1.deck-name {
   width: min(88vw, 70dvh, 520px);
 }
 
+.qr-zoom-code {
+  will-change: transform;
+}
+
+.qr-zoom-extra {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
 .qr-zoom .code {
   font-family: var(--display);
   font-weight: 900;
