@@ -6203,3 +6203,7 @@ h1.deck-name {
   font-size: 56px;
   letter-spacing: 0.08em;
 }
+
+.sheet.swipeable .sheet-head {
+  margin-bottom: auto;
+}
