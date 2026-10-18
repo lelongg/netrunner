@@ -842,7 +842,7 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
   const [deckOpen, setDeckOpen] = useState(false);
   const autoZone = useRef(false);
   const render = (m: unknown) => engine.renderMessage(m);
-  useFx(live, side, render, quiet, session.lobby.role === "spectator");
+  useFx(live, side, render, quiet, session.lobby.role === "spectator", (title) => db.byTitle.get(title)?.code);
   const sendNow = (command: string, args?: unknown) => session.send(command, args, side);
   const watching = session.lobby.role === "spectator";
   const disabled = session.pending || watching;

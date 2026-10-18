@@ -1209,10 +1209,6 @@ textarea:focus {
   color: var(--bg);
 }
 
-.tile:has(.state) .new-tag {
-  top: 15px;
-}
-
 .badges {
   position: absolute;
   left: 2px;
@@ -1237,7 +1233,8 @@ textarea:focus {
 
 .state {
   position: absolute;
-  top: 2px;
+  top: 50%;
+  transform: translateY(-50%);
   left: 2px;
   right: 2px;
   font-size: 7px;

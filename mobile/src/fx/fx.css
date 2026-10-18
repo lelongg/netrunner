@@ -366,6 +366,12 @@
   text-shadow: 0 0 24px var(--tone);
 }
 
+.fx-access-title {
+  font-size: 30px;
+  text-align: center;
+  padding: 0 16px;
+}
+
 .fx-lock {
   position: absolute;
   inset: -7px;

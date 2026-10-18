@@ -318,11 +318,18 @@ function finale(won: boolean, label?: string) {
 }
 
 interface Hit {
-  kind: "break" | "fire" | "damage" | "purge" | "trash-access";
+  kind: "break" | "fire" | "damage" | "purge" | "trash-access" | "access";
+  zone?: string;
   ice?: any;
   breaker?: any;
   text?: string;
   power?: number;
+}
+
+let accessing: { title: string; stop: () => void } | null = null;
+
+function movesCard(text: string, title: string) {
+  return new RegExp(`\\b(?:steals?|trash(?:es)?|adds?) ${title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(text);
 }
 
 function readLog(view: any, from: number, render: (m: unknown) => string): Hit[] {
@@ -343,9 +350,13 @@ function readLog(view: any, from: number, render: (m: unknown) => string): Hit[]
     } else if ((m = text.match(/(\d+)?\s*(net|meat|core|brain) damage/i)) && /\b(suffers?|takes?|deals?|does|trashes)\b/i.test(text)) {
       out.push({ kind: "damage", text: m[2], power: /core|brain/i.test(m[2]) ? 1.6 : 1 });
     } else if (/purges? virus counters/i.test(text)) out.push({ kind: "purge" });
+    else if ((m = text.match(/\b(?:accesses|to access) (.+?) from (.+?)\.?$/i))) out.push({ kind: "access", text: m[1], zone: m[2] });
   }
-  const dmg = out.filter((h) => h.kind === "damage");
-  return dmg.length > 1 ? [...out.filter((h) => h.kind !== "damage"), dmg[0]] : out;
+  const texts = log.slice(from).map((e) => render(e.text));
+  if (accessing && texts.some((t) => movesCard(t, accessing!.title))) accessing.stop();
+  const kept = out.filter((h) => h.kind !== "access" || !texts.some((t) => movesCard(t, h.text ?? "")));
+  const dmg = kept.filter((h) => h.kind === "damage");
+  return dmg.length > 1 ? [...kept.filter((h) => h.kind !== "damage"), dmg[0]] : kept;
 }
 
 function shortText(t: string) {
@@ -543,6 +554,11 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
         buzz([90, 40, 90]);
       }, delay * 1000);
       t += 0.3;
+    } else if (h.kind === "access") {
+      if (me !== "corp" || spectating) continue;
+      const delay = t;
+      setTimeout(() => accessShow(view, h.text ?? "", h.zone ?? ""), delay * 1000);
+      t += 1.5;
     } else if (h.kind === "purge") {
       flash("violet", 0.35);
       ring([innerWidth / 2, innerHeight / 2], "violet", 360);
@@ -680,6 +696,86 @@ function showdown(ice: any) {
   }, hold * 1000);
 }
 
+let codeOf: (title: string) => string | undefined = () => undefined;
+
+function accessSource(view: any, title: string, zone: string): { el: Element | null; card?: any } {
+  const servers = view.corp?.servers ?? {};
+  const key = /^HQ$/i.test(zone) ? "hq" : /^R&D$/i.test(zone) ? "rd" : /^Archives$/i.test(zone) ? "archives" : Object.keys(servers).find((k) => serverName(k) === zone);
+  const pick = (cards: any[] | undefined) => (cards ?? []).find((c) => c.title === title);
+  const installed = key ? pick(servers[key]?.content) : undefined;
+  if (installed) return { el: tileEl(installed.cid), card: installed };
+  if (key === "hq") {
+    const card = pick(view.corp?.hand);
+    return { el: (card && tileEl(card.cid)) ?? anchor("corp-hand"), card };
+  }
+  if (key === "archives") {
+    const card = pick(view.corp?.discard);
+    return { el: anchor("corp-discard"), card };
+  }
+  return { el: key === "rd" ? anchor("corp-deck") : null };
+}
+
+function accessShow(view: any, title: string, zone: string) {
+  const { el, card } = accessSource(view, title, zone);
+  const r = rectOf(el);
+  if (!visible(r)) return;
+  const unseen = /^an unseen card$/i.test(title);
+  const code = unseen ? undefined : (card?.code ?? codeOf(title));
+  const w = Math.min(innerWidth * 0.46, 200);
+  const h = w * (88 / 63);
+  const big = new DOMRect((innerWidth - w) / 2, Math.max(70, innerHeight * 0.4 - h / 2), w, h);
+  const stageEl = node("fx-showdown tone-red");
+  const ghost = node("fx-ghost fx-showcase fx-big", stageEl);
+  place(ghost, big);
+  if (code) {
+    const img = document.createElement("img");
+    img.className = "fx-card-img";
+    img.src = `https://card-images.netrunnerdb.com/v2/large/${code}.jpg`;
+    img.alt = title;
+    ghost.appendChild(img);
+  } else {
+    const back = node("tile back corp", ghost, "div");
+    const label = document.createElement("span");
+    label.className = "back-label";
+    label.textContent = "CORP";
+    back.appendChild(label);
+  }
+  const aura = node("fx-aura tone-red", ghost);
+  const label = node("fx-showdown-label", stageEl);
+  const t1 = document.createElement("span");
+  t1.className = "fx-showdown-kind";
+  t1.textContent = `Runner accesses · ${zone}`;
+  const t2 = document.createElement("span");
+  t2.className = "fx-showdown-title fx-access-title";
+  t2.textContent = unseen ? "Unseen card" : title;
+  label.append(t1, t2);
+  label.style.top = `${big.bottom + 14}px`;
+  ghost.style.transformOrigin = "0 0";
+  const from = { x: r.left - big.left + r.width / 2 - big.width / 2, y: r.top - big.top + r.height / 2 - big.height / 2 };
+  animate(stageEl, { opacity: [0, 1] }, { duration: 0.2 });
+  animate(ghost, { x: [from.x, 0], y: [from.y, 0], scale: [0.35, 1], opacity: [0, 1] }, { type: "spring", visualDuration: 0.4, bounce: 0.25 });
+  animate(aura, { opacity: [0, 0.8, 0.5] }, { duration: 0.5 });
+  animate(t1, { opacity: [0, 1] }, { duration: 0.4, delay: 0.1 });
+  animate(t2, { opacity: [0, 1], y: [12, 0] }, { duration: 0.35, delay: 0.15 });
+  buzz(30);
+  let ended = false;
+  const end = (fast: boolean) => {
+    if (ended) return;
+    ended = true;
+    clearTimeout(timer);
+    if (accessing?.stop === stop) accessing = null;
+    animate(label, { opacity: 0 }, { duration: 0.2 });
+    animate(ghost, fast ? { opacity: 0 } : { x: from.x, y: from.y, scale: 0.35, opacity: 0 }, { duration: fast ? 0.15 : 0.35, ease: [0.5, 0, 0.3, 1] }).finished.then(
+      () => stageEl.remove(),
+      () => stageEl.remove(),
+    );
+    animate(stageEl, { backgroundColor: ["rgba(0,0,0,0.55)", "rgba(0,0,0,0)"] }, { duration: fast ? 0.15 : 0.35 });
+  };
+  const stop = () => end(true);
+  const timer = setTimeout(() => end(false), 1100);
+  accessing = { title, stop };
+}
+
 function persistent(view: any) {
   const ice = currentIce(view);
   const encountering = !!view.encounters || view.run?.phase === "encounter-ice";
@@ -716,8 +812,9 @@ function flipSiblings(rects: Map<unknown, DOMRect>, moved: Set<unknown>) {
   }
 }
 
-export function useFx(view: any, me: Side, render: (m: unknown) => string, quiet = false, watching = false) {
+export function useFx(view: any, me: Side, render: (m: unknown) => string, quiet = false, watching = false, codes?: (title: string) => string | undefined) {
   spectating = watching;
+  codeOf = codes ?? (() => undefined);
   haptics.muted = watching;
   const last = useRef<any>(null);
   const cards = useRef<ReturnType<typeof collect> | null>(null);
