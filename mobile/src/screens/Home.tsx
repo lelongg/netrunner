@@ -178,16 +178,13 @@ export function Home({ ready, error, initialJoin, saves, onResume, onDiscard, on
 
         <nav class="home-nav">
           {[
-            { icon: "deck" as const, title: "Decks", detail: "Build, import and browse decklists", onClick: onDecks },
-            { icon: "history" as const, title: "History", detail: "Finished games and replays", onClick: () => onHistory() },
-            { icon: "book" as const, title: "How to play", detail: "Rules guide and a guided first game", onClick: onGuide },
+            { icon: "deck" as const, title: "Decks", onClick: onDecks },
+            { icon: "history" as const, title: "History", onClick: () => onHistory() },
+            { icon: "book" as const, title: "How to play", onClick: onGuide },
           ].map((row) => (
             <button class="home-nav-row" disabled={!ready} onClick={row.onClick}>
               <Icon name={row.icon} />
-              <span class="home-nav-text">
-                <span class="home-nav-title">{row.title}</span>
-                <span class="home-nav-detail">{row.detail}</span>
-              </span>
+              <span class="home-nav-title">{row.title}</span>
               <Icon name="arrow-right" />
             </button>
           ))}

@@ -3548,23 +3548,12 @@ button:active:not(:disabled) {
   color: var(--muted);
 }
 
-.home-nav-text {
+.home-nav-title {
   flex: 1;
   min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.home-nav-title {
   font-size: 13px;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-}
-
-.home-nav-detail {
-  font-size: 11px;
-  color: var(--muted);
 }
 
 .screen.guide {
