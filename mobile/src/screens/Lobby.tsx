@@ -14,29 +14,24 @@ import { Icon } from "../icons";
 import { type GameFormat, GAME_FORMATS, dealtFormat } from "../deckrules";
 
 const FORMAT_HINT: Partial<Record<GameFormat, string>> = {
-  casual: "Any deck, no restriction.",
   preconstructed: "Preconstructed decks only.",
-  chimera: "Each player is dealt a random deck when the game starts.",
-  "quick-draft": "Both players draft their identity and deck at the start of the game.",
 };
 
 function FormatPicker({ value, onChange }: { value: GameFormat; onChange?: (f: GameFormat) => void }) {
+  const label = GAME_FORMATS.find((f) => f.key === value)?.label;
   return (
-    <section class="panel section format-pick">
-      <div class="row">
-        <span class="label">Format</span>
-        {!onChange && <span class="label cyan">{GAME_FORMATS.find((f) => f.key === value)?.label}</span>}
-      </div>
-      {onChange && (
-        <div class="chips">
+    <section class="format-pick">
+      <span class="label">Format</span>
+      {onChange ? (
+        <select value={value} onChange={(e) => onChange((e.target as HTMLSelectElement).value as GameFormat)} aria-label="Game format">
           {GAME_FORMATS.map((f) => (
-            <button class={value === f.key ? "on" : ""} onClick={() => onChange(f.key)} aria-pressed={value === f.key}>
-              {f.label}
-            </button>
+            <option value={f.key}>{f.label}</option>
           ))}
-        </div>
+        </select>
+      ) : (
+        <span class="label cyan">{label}</span>
       )}
-      <p class="hint">{FORMAT_HINT[value] ?? "Only decks legal in this format can be picked."}</p>
+      {FORMAT_HINT[value] && <p class="hint">{FORMAT_HINT[value]}</p>}
     </section>
   );
 }

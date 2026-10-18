@@ -1904,12 +1904,35 @@ form.chat input {
   color: var(--cyan);
 }
 
-.format-pick .chips {
-  margin-top: 8px;
+.format-pick {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  padding: 0 2px;
+}
+
+.format-pick select {
+  flex: 1;
+  min-width: 0;
+  min-height: 36px;
+  padding: 0 10px;
+  font: inherit;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--cyan);
+  background: var(--panel);
+  border: 1px solid var(--line-2);
+}
+
+.format-pick select option {
+  color: var(--text);
+  background: var(--panel);
 }
 
 .format-pick .hint {
-  margin: 8px 0 0;
+  flex-basis: 100%;
+  margin: 0;
 }
 
 .seat-dealt {
