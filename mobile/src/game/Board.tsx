@@ -814,7 +814,18 @@ function feedText(view: any, side: Side, names: Record<Side, string>, watching =
   return `Turn ${view.turn ?? 0} · ${active === side && !watching ? "your move" : `${names[active] ?? active} to play`}`;
 }
 
-export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, onExit, onWatch, handoffLog, controls, quiet }: Props) {
+function markStaged(node: any, staged: Set<unknown>): any {
+  if (Array.isArray(node)) return node.map((x) => markStaged(x, staged));
+  if (!node || typeof node !== "object") return node;
+  const out: any = {};
+  for (const k in node) out[k] = markStaged(node[k], staged);
+  if (node.cid != null && staged.has(node.cid)) out.selected = true;
+  return out;
+}
+
+export function Board({ session, engine, db, side, view: live, onSwitchSide, onLeave, onExit, onWatch, handoffLog, controls, quiet }: Props) {
+  const [staged, setStaged] = useState<Set<unknown>>(() => new Set());
+  const view = useMemo(() => (staged.size ? markStaged(live, staged) : live), [live, staged]);
   const [selected, setSelected] = useState<any>(null);
   const [showLog, setShowLog] = useState(false);
   const [picking, setPicking] = useState(false);
@@ -829,8 +840,8 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
   const [deckOpen, setDeckOpen] = useState(false);
   const autoZone = useRef(false);
   const render = (m: unknown) => engine.renderMessage(m);
-  useFx(view, side, render, quiet, session.lobby.role === "spectator");
-  const send = (command: string, args?: unknown) => session.send(command, args, side);
+  useFx(live, side, render, quiet, session.lobby.role === "spectator");
+  const sendNow = (command: string, args?: unknown) => session.send(command, args, side);
   const watching = session.lobby.role === "spectator";
   const disabled = session.pending || watching;
   const me = view[side] ?? {};
@@ -872,6 +883,31 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
     autoZone.current = false;
   });
   const promptId = prompt?.eid?.eid;
+  const staging = ptype === "select" && (prompt["select-max"] ?? 1) > 1 && !/^Choose a credit providing card/.test(render(prompt.msg));
+  useEffect(() => setStaged(new Set()), [promptId]);
+  const send = (command: string, args?: any) => {
+    if (!staging || command !== "select") return sendNow(command, args);
+    const cid = args?.card?.cid;
+    const max = prompt["select-max"];
+    setStaged((was) => {
+      const next = new Set(was);
+      if (next.has(cid)) next.delete(cid);
+      else if (next.size < max) next.add(cid);
+      return next;
+    });
+  };
+  const confirmStaged = () => {
+    for (const cid of staged) {
+      const card = findCard(live, cid);
+      if (card) sendNow("select", { card: cardRef(card), eid: prompt.eid });
+    }
+    if (staged.size < prompt["select-max"]) {
+      const done = (prompt.choices ?? []).find?.((c: any) => c?.value === "Done");
+      if (done) sendNow("choice", { eid: prompt.eid, choice: { uuid: done.uuid } });
+    }
+    setStaged(new Set());
+    closeCard();
+  };
   const closePrompt = () => session.say("/close-prompt", side);
 
   useEffect(() => setPicking(false), [!!view.run, promptId, view["active-player"], side]);
@@ -1004,7 +1040,20 @@ export function Board({ session, engine, db, side, view, onSwitchSide, onLeave, 
   } else if (view.winner) {
     panel = <GameOver view={view} side={side} db={db} render={render} onLeave={onLeave} />;
   } else if (prompt && ptype !== "run") {
-    panel = <PromptPanel key={promptId} view={view} side={side} prompt={prompt} render={render} send={send} closePrompt={closePrompt} disabled={disabled} db={db} />;
+    panel = (
+      <PromptPanel
+        key={promptId}
+        view={view}
+        side={side}
+        prompt={prompt}
+        render={render}
+        send={send}
+        closePrompt={closePrompt}
+        disabled={disabled}
+        db={db}
+        staging={staging ? { count: staged.size, onConfirm: confirmStaged, onClear: () => setStaged(new Set()) } : undefined}
+      />
+    );
   } else if (picking && side === "runner") {
     const list: string[] = byServerOrder(me["runnable-list"] ?? [], (x) => x);
     panel = (

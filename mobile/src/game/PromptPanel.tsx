@@ -21,6 +21,7 @@ interface Props {
   closePrompt: () => void;
   disabled: boolean;
   db: { byTitle: Map<string, any> };
+  staging?: { count: number; onConfirm: () => void; onClear: () => void };
 }
 
 function NumberPicker({ min, max, initial, onSubmit, disabled, extra }: { min: number; max: number; initial: number; onSubmit: (n: number) => void; disabled: boolean; extra?: preact.ComponentChildren }) {
@@ -101,7 +102,7 @@ function choiceLabel(value: any, render: (m: unknown) => string) {
   return render(value);
 }
 
-export function PromptPanel({ view, side, prompt, render, send, closePrompt, disabled, db }: Props) {
+export function PromptPanel({ view, side, prompt, render, send, closePrompt, disabled, db, staging }: Props) {
   const ptype = prompt["prompt-type"];
   const choices = prompt.choices;
   const eid = prompt.eid;
@@ -234,6 +235,35 @@ export function PromptPanel({ view, side, prompt, render, send, closePrompt, dis
             onClose={() => setPeek(null)}
           />
         )}
+      </>
+    );
+  } else if (staging) {
+    const max: number = prompt["select-max"];
+    const min: number = prompt["select-all"] ? max : (prompt["select-min"] ?? 0);
+    const ready = staging.count >= min && staging.count <= max;
+    const verb = /^discard/i.test(msg) ? "Discard" : /^trash/i.test(msg) ? "Trash" : "Confirm";
+    body = (
+      <>
+        <div class="select-row">
+          <span class="select-count" aria-live="polite">
+            {max <= 12 && (
+              <span class="select-pips">
+                {Array.from({ length: max }, (_, i) => (
+                  <i class={i < staging.count ? "on" : ""} />
+                ))}
+              </span>
+            )}
+            <b>{staging.count}</b>/{max}
+          </span>
+          {staging.count > 0 && (
+            <button class="select-clear" disabled={disabled} onClick={staging.onClear} aria-label="Clear selection">
+              Clear
+            </button>
+          )}
+          <button class="primary" disabled={disabled || !ready} onClick={staging.onConfirm}>
+            {ready ? `${verb} ${staging.count}` : `Pick ${min - staging.count} more`}
+          </button>
+        </div>
       </>
     );
   } else if (Array.isArray(choices)) {

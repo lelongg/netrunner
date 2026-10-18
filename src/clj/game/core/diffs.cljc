@@ -241,6 +241,9 @@
    :show-discard
    :show-opponent-discard
    :selectable
+   :select-min
+   :select-max
+   :select-all
    :eid
    ;; bad pub
    :offer-bad-pub?

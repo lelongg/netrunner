@@ -108,12 +108,15 @@ export function cardCommands(card: any, view: any, side: Side): Command[] {
 
   if (ptype === "select") {
     const selectable = (prompt.selectable ?? []).includes(card.cid);
+    const max = prompt["select-max"] ?? 1;
+    const picked = max > 1 ? (prompt.selectable ?? []).filter((cid: unknown) => findCard(view, cid)?.selected).length : 0;
     if (selectable || card.selected)
       out.push({
-        label: card.selected ? "Deselect" : "Select",
+        label: `${card.selected ? "Deselect" : "Select"}${max > 1 ? ` · ${picked}/${max}` : ""}`,
         command: "select",
         args: { card: ref, eid: prompt.eid },
         kind: "primary",
+        enabled: card.selected || picked < max,
       });
   } else if (prompt && Array.isArray(prompt.choices) && (prompt.selectable ?? []).includes(card.cid)) {
     const choice = prompt.choices.find((c: any) => c?.value?.cid === card.cid);
