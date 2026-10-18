@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import { type Role, type SavedGame, saveId } from "../session";
 import { Cta, Ticker, ask } from "../ui";
 import { Icon } from "../icons";
+import { SwipeDelete } from "./SwipeDelete";
 import { useBackClose } from "../back";
 import { SettingsMenu } from "./SettingsMenu";
 import { motionOff, onSettings, settings } from "../settings";
@@ -114,26 +115,26 @@ export function Home({ ready, error, initialJoin, saves, onResume, onDiscard, on
                 const { title, detail, status } = describe(save);
                 return (
                   <li key={saveId(save)}>
-                    <button class="game-row" disabled={!ready} onClick={() => (save.summary?.winner ? onHistory(saveId(save)) : onResume(save))}>
-                      <span class="game-main">
-                        <span class="game-title">{title}</span>
-                        <span class="game-detail">{detail}</span>
-                      </span>
-                      <span class="game-meta">
-                        {status && <span class={status === "Your move" ? "yellow" : status === "Won" ? "cyan" : "red"}>{status}</span>}
-                        <span>{save.v === 2 ? save.code : ago(save.savedAt)}</span>
-                      </span>
-                      <Icon name="arrow-right" />
-                    </button>
-                    <button
-                      class="ghost game-delete"
-                      aria-label={`Delete ${title}`}
-                      onClick={async () => {
-                        if (await ask({ title: "Delete this game?", body: `"${title}" is removed from this device and you will not be able to come back to it.`, ok: "Delete", danger: true })) onDiscard(save);
+                    <SwipeDelete
+                      label="Delete"
+                      confirm={async () => {
+                        if (!(await ask({ title: "Delete this game?", body: `"${title}" is removed from this device and you will not be able to come back to it.`, ok: "Delete", danger: true }))) return false;
+                        onDiscard(save);
+                        return true;
                       }}
                     >
-                      <Icon name="close" />
-                    </button>
+                      <button class="game-row" disabled={!ready} onClick={() => (save.summary?.winner ? onHistory(saveId(save)) : onResume(save))}>
+                        <span class="game-main">
+                          <span class="game-title">{title}</span>
+                          <span class="game-detail">{detail}</span>
+                        </span>
+                        <span class="game-meta">
+                          {status && <span class={status === "Your move" ? "yellow" : status === "Won" ? "cyan" : "red"}>{status}</span>}
+                          <span>{save.v === 2 ? save.code : ago(save.savedAt)}</span>
+                        </span>
+                        <Icon name="arrow-right" />
+                      </button>
+                    </SwipeDelete>
                   </li>
                 );
               })}

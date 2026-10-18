@@ -8,6 +8,7 @@ import { CardImage, ZoomableCardImage } from "../game/CardImage";
 import { DeckViewer } from "./DeckViewer";
 import { useBackClose } from "../back";
 import { Icon } from "../icons";
+import { SwipeDelete } from "./SwipeDelete";
 import { Cta, Ticker, ask, tell } from "../ui";
 import { DEFAULT_RELAY, relayUrl } from "../net/relay";
 import { stagger } from "motion";
@@ -157,36 +158,35 @@ export function History({ engine, db, saves, initial, shared, onClose }: { engin
         <ul class="history-list">
           {heads.map((h) => (
             <li key={h.id}>
-              <button class={`history-row ${h.outcome}`} onClick={() => setOpen(h)}>
-                <span class="history-ids">
-                  {SIDES.map((side) => {
-                    const id = h.identities[side];
-                    return id ? <CardImage class={`history-id ${side}`} code={id.code} alt={id.title} size="small" width="44px" /> : <span class={`history-id ${side} blank`} />;
-                  })}
-                </span>
-                <span class="history-main">
-                  <span class={`history-outcome ${h.outcome}`}>{outcomeWord(h)}</span>
-                  <span class="history-title">
-                    {h.script ? (h.script.mode === "local" ? "Local game" : `vs ${h.script.names[other(h.mySide)]}`) : "Game"}
-                    <span class={`who-${h.mySide}`}> · {h.mySide}</span>
-                  </span>
-                  <span class="history-detail">
-                    {sidePoints(h, "corp")}–{sidePoints(h, "runner")} · turn {h.turn} · {dateText(h.endedAt)}
-                  </span>
-                </span>
-                <Icon name="arrow-right" />
-              </button>
-              <button
-                class="ghost game-delete"
-                aria-label="Remove from history"
-                onClick={async () => {
-                  if (!(await ask({ title: "Remove this game?", body: "It disappears from your history on this device.", ok: "Remove", danger: true }))) return;
+              <SwipeDelete
+                label="Remove"
+                confirm={async () => {
+                  if (!(await ask({ title: "Remove this game?", body: "It disappears from your history on this device.", ok: "Remove", danger: true }))) return false;
                   await removeHistory(h.id);
                   setGames(await listHistory());
+                  return true;
                 }}
               >
-                <Icon name="close" />
-              </button>
+                <button class={`history-row ${h.outcome}`} onClick={() => setOpen(h)}>
+                  <span class="history-ids">
+                    {SIDES.map((side) => {
+                      const id = h.identities[side];
+                      return id ? <CardImage class={`history-id ${side}`} code={id.code} alt={id.title} size="small" width="44px" /> : <span class={`history-id ${side} blank`} />;
+                    })}
+                  </span>
+                  <span class="history-main">
+                    <span class={`history-outcome ${h.outcome}`}>{outcomeWord(h)}</span>
+                    <span class="history-title">
+                      {h.script ? (h.script.mode === "local" ? "Local game" : `vs ${h.script.names[other(h.mySide)]}`) : "Game"}
+                      <span class={`who-${h.mySide}`}> · {h.mySide}</span>
+                    </span>
+                    <span class="history-detail">
+                      {sidePoints(h, "corp")}–{sidePoints(h, "runner")} · turn {h.turn} · {dateText(h.endedAt)}
+                    </span>
+                  </span>
+                  <Icon name="arrow-right" />
+                </button>
+              </SwipeDelete>
             </li>
           ))}
         </ul>

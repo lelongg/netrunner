@@ -2488,6 +2488,50 @@ button:active:not(:disabled) {
   gap: 6px;
 }
 
+.swipe-delete {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.swipe-delete-under {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-right: 20px;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--red);
+  background: #ff3b3022;
+  transition: background 0.15s, color 0.15s;
+}
+
+.swipe-delete.armed .swipe-delete-under {
+  color: var(--bg);
+  background: var(--red);
+}
+
+.swipe-delete-under .icon {
+  height: 16px;
+}
+
+.swipe-delete-row {
+  position: relative;
+  display: flex;
+  background: var(--bg);
+  touch-action: pan-y;
+}
+
+.swipe-delete-row > button {
+  flex: 1;
+  min-width: 0;
+}
+
 .game-row {
   flex: 1;
   min-width: 0;
@@ -2544,18 +2588,7 @@ button:active:not(:disabled) {
   color: var(--cyan);
 }
 
-.game-delete {
-  flex: none;
-  width: 44px;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
 
-.game-delete .icon {
-  height: 12px;
-}
 
 .opening {
   height: 100%;
