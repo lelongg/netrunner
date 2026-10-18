@@ -97,16 +97,8 @@ export function Home({ ready, error, initialJoin, saves, onResume, onDiscard, on
         <section class="panel hero">
           <div class="row">
             <span class="label">For Netrunner</span>
-            <span class="hero-links">
-              <button class="ghost hero-history" disabled={!ready} onClick={onDecks}>
-                <Icon name="deck" /> Decks
-              </button>
-              <button class="ghost hero-history" disabled={!ready} onClick={() => onHistory()}>
-                <Icon name="history" /> History
-              </button>
-            </span>
           </div>
-          <h1 style="margin: 0; display: flex; flex-direction: column">
+          <h1 class="home-title">
             <span class="big">POCKET</span>
             <span class="big outline">RIG</span>
           </h1>
@@ -171,18 +163,34 @@ export function Home({ ready, error, initialJoin, saves, onResume, onDiscard, on
           </div>
         </div>
 
-        <button class="primary" disabled={!ready} onClick={onGuide}>
-          How to play
-        </button>
-
-        <div class="home-modes">
-          <button disabled={!ready} onClick={() => go("local", undefined, true)}>
-            Solo
-          </button>
-          <button disabled={!ready} onClick={() => go("local")}>
-            Local game
-          </button>
+        <div class="field">
+          <span class="label">Offline</span>
+          <div class="home-modes">
+            <button disabled={!ready} onClick={() => go("local", undefined, true)}>
+              Solo vs bot
+            </button>
+            <button disabled={!ready} onClick={() => go("local")}>
+              Local game
+            </button>
+          </div>
         </div>
+
+        <nav class="home-nav">
+          {[
+            { icon: "deck" as const, title: "Decks", detail: "Build, import and browse decklists", onClick: onDecks },
+            { icon: "history" as const, title: "History", detail: "Finished games and replays", onClick: () => onHistory() },
+            { icon: "book" as const, title: "How to play", detail: "Rules guide and a guided first game", onClick: onGuide },
+          ].map((row) => (
+            <button class="home-nav-row" disabled={!ready} onClick={row.onClick}>
+              <Icon name={row.icon} />
+              <span class="home-nav-text">
+                <span class="home-nav-title">{row.title}</span>
+                <span class="home-nav-detail">{row.detail}</span>
+              </span>
+              <Icon name="arrow-right" />
+            </button>
+          ))}
+        </nav>
 
         <div class="footer">
           <span>Engine: Jinteki · MIT</span>

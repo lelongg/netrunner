@@ -3437,7 +3437,18 @@ button:active:not(:disabled) {
 }
 
 .screen.home .hero .big {
-  font-size: clamp(34px, 7.5vh, 92px);
+  font-size: min(15vw, 9vh, 92px);
+}
+
+.home-title {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  white-space: nowrap;
+}
+
+.home-title .outline {
+  margin-left: 0.14em;
 }
 
 .screen.home .games {
@@ -3473,6 +3484,56 @@ button:active:not(:disabled) {
 
 .home-modes button {
   flex: 1 1 0;
+}
+
+.home-nav {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--line);
+}
+
+.home-nav-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 4px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: none;
+  text-align: left;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.home-nav-row > .icon:first-child {
+  height: 18px;
+  flex: none;
+  color: var(--cyan);
+}
+
+.home-nav-row > .icon:last-child {
+  height: 12px;
+  flex: none;
+  color: var(--muted);
+}
+
+.home-nav-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.home-nav-title {
+  font-size: 13px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.home-nav-detail {
+  font-size: 11px;
+  color: var(--muted);
 }
 
 .screen.guide {
@@ -3705,21 +3766,6 @@ button.armed {
 .hero .row {
   justify-content: space-between;
   align-items: center;
-}
-
-.hero-history {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 6px;
-  min-height: 0;
-  font-size: 10px;
-  letter-spacing: 0.24em;
-  color: var(--cyan);
-}
-
-.hero-history .icon {
-  height: 13px;
 }
 
 .history-record {
@@ -4505,11 +4551,6 @@ button.armed {
 .faction-neutral,
 .faction-neutral-corp,
 .faction-neutral-runner { --fc: var(--muted); }
-
-.hero-links {
-  display: flex;
-  gap: 2px;
-}
 
 .side-switch {
   display: grid;
