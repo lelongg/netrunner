@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { Card, CardDb, Deck, Matchup, Side } from "../engine";
 import { type StoredDeck, type WireDeck, fromPrecon, fromWire, importNrdb, parseDecklist, putDeck, removeDeck, savedDecks, toWire } from "../decks";
-import { type FormatKey, FORMAT_DESC, FORMATS, TYPE_ORDER, analyze, costCurve, deckLimit, groupByType, influenceByFaction, influenceOf, isNeutral, legality, subtypeSpread, toText } from "../deckrules";
+import { type FormatKey, FORMAT_DESC, FORMATS, deckFormat, TYPE_ORDER, analyze, costCurve, deckLimit, groupByType, influenceByFaction, influenceOf, isNeutral, legality, subtypeSpread, toText } from "../deckrules";
 import { CardImage, ZoomableCardImage } from "../game/CardImage";
 import { RichText } from "../game/RichText";
 import { Pager } from "../game/Pager";
@@ -9,7 +9,7 @@ import { useSheetPager } from "../game/swipe";
 import { useBackClose } from "../back";
 import { Icon } from "../icons";
 import { Cta, Picker, Ticker, ask, tell } from "../ui";
-import { motionOff } from "../settings";
+import { motionOff, settings } from "../settings";
 import { DeckBrowser } from "./DeckBrowser";
 
 const SIDE_NAME: Record<Side, "Corp" | "Runner"> = { corp: "Corp", runner: "Runner" };
@@ -36,6 +36,7 @@ const normalize = (s: string) =>
     .replace(/[̀-ͯ]/g, "")
     .toLowerCase();
 
+const defaultDeckFormat = (): FormatKey => deckFormat(settings.format) ?? "standard";
 const formatOf = (d: { format?: string }): FormatKey => (FORMATS.some((f) => f.key === d.format) ? (d.format as FormatKey) : "standard");
 
 function Pips({ n, max = 5 }: { n: number; max?: number }) {
@@ -101,7 +102,7 @@ export function Decks({ db, matchups, onClose, initialSide }: { db: CardDb; matc
         onClose={() => setCreating(false)}
         onPick={(identity, from) => {
           const base: Deck = from ?? { name: `New ${identity.title.split(":")[0]} deck`, identity, cards: [] };
-          const stored = putDeck({ ...toWire({ ...base, identity }), side, format: from ? "casual" : "standard" });
+          const stored = putDeck({ ...toWire({ ...base, identity }), side, format: from ? "casual" : defaultDeckFormat() });
           setCreating(false);
           refresh();
           setEditing(stored);
@@ -168,7 +169,7 @@ export function Decks({ db, matchups, onClose, initialSide }: { db: CardDb; matc
           onDone={(deck) => {
             const deckSide: Side = deck.identity.side === "Corp" ? "corp" : "runner";
             setSide(deckSide);
-            const stored = putDeck({ ...toWire(deck), side: deckSide, format: "standard" });
+            const stored = putDeck({ ...toWire(deck), side: deckSide, format: defaultDeckFormat() });
             setImporting(false);
             refresh();
             setEditing(stored);
@@ -228,7 +229,7 @@ export function DeckRow({ db, stored, onOpen, format, selected, disabled }: { db
 }
 
 function BrowseSheet({ db, side, onClose, onDone }: { db: CardDb; side: Side; onClose: () => void; onDone: (deck: Deck, format: FormatKey) => void }) {
-  const [format, setFormat] = useState<FormatKey>("standard");
+  const [format, setFormat] = useState<FormatKey>(defaultDeckFormat);
   return (
     <div class="sheet-backdrop" onClick={onClose}>
       <div class="sheet panel deck-choose" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Browse NetrunnerDB decklists">

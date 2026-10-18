@@ -6235,3 +6235,14 @@ h1.deck-name {
 .edit-row-sub .pips {
   flex: none;
 }
+
+.setting-field .picker-btn {
+  justify-content: space-between;
+  min-height: 36px;
+  padding: 0 12px;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--cyan);
+  background: var(--panel);
+  border: 1px solid var(--line-2);
+}

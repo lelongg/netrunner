@@ -1,4 +1,7 @@
+import type { GameFormat } from "./deckrules";
+
 export interface Settings {
+  format: GameFormat;
   animations: boolean;
   glossary: boolean;
   relay: string;
@@ -6,7 +9,7 @@ export interface Settings {
 }
 
 const KEY = "nsg.settings";
-const DEFAULTS: Settings = { animations: true, glossary: true, relay: "", notifications: false };
+const DEFAULTS: Settings = { format: "casual", animations: true, glossary: true, relay: "", notifications: false };
 const listeners = new Set<() => void>();
 
 function load(): Settings {

@@ -8,6 +8,7 @@ import { archive } from "./history";
 import { RelayTransport, relayUrl, createGame, forgetTicket, joinGame, rejoinLink, storedTicket, watchLink } from "./net/relay";
 import type { Entry, LinkStatus, Payload, Seat, Transport } from "./net/types";
 import { type Store, browserStore } from "./store";
+import { settings } from "./settings";
 
 export type Role = "host" | "guest" | "local" | "spectator";
 
@@ -231,7 +232,7 @@ export class Session {
       mySide,
       opponentDeckReady: false,
       started: false,
-      format: "casual",
+      format: role === "local" ? settings.format : "casual",
     };
     if (role === "local") {
       this.restoreDecks();
@@ -283,18 +284,21 @@ export class Session {
         return;
       }
       if (relayUrl()) {
-        const ticket = this.seat === 0 && !code ? await createGame(this.store) : this.seat === 0 ? storedTicket(code!, this.store) : await joinGame(code!, this.store);
+        const fresh = this.seat === 0 && !code;
+        const ticket = fresh ? await createGame(this.store) : this.seat === 0 ? storedTicket(code!, this.store) : await joinGame(code!, this.store);
         if (!ticket) throw new Error("This game was created on another device.");
         if (this.closed) return;
         this.seat = ticket.seat;
         this.patch({ code: ticket.code, role: ticket.seat === 0 ? "host" : "guest" });
         this.transport = new RelayTransport(ticket, this.lastSeq(), handlers, this.store);
+        if (fresh && settings.format !== "casual") this.push({ k: "format", format: settings.format });
       } else {
         const room = code ?? newRoomCode();
         this.patch({ code: room });
         const { PeerTransport } = await import("./net/p2p");
         if (this.closed) return;
         this.transport = new PeerTransport(room, this.seat, [...this.entries], handlers);
+        if (!code && this.seat === 0 && settings.format !== "casual") this.push({ k: "format", format: settings.format });
       }
       this.persist();
     } catch (e) {

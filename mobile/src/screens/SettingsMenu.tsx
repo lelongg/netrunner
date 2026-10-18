@@ -3,7 +3,8 @@ import { DEFAULT_RELAY } from "../net/relay";
 import { onSettings, setSetting, settings } from "../settings";
 import { Icon } from "../icons";
 import { disablePush, enablePush, pushSupported } from "../net/push";
-import { tell } from "../ui";
+import { Picker, tell } from "../ui";
+import { FORMAT_DESC, GAME_FORMATS, type GameFormat } from "../deckrules";
 
 function Toggle({ label, on, onChange }: { label: string; on: boolean; onChange: (on: boolean) => void }) {
   return (
@@ -46,6 +47,10 @@ export function SettingsMenu({ onClose }: { onClose: () => void }) {
             }}
           />
         </label>
+        <div class="setting-field">
+          <span class="label">Default format</span>
+          <Picker title="Default format" value={settings.format} onChange={(f: GameFormat) => setSetting("format", f)} options={GAME_FORMATS.map((f) => ({ key: f.key as GameFormat, label: f.label, hint: FORMAT_DESC[f.key as GameFormat] }))} />
+        </div>
         <Toggle label="Animations" on={settings.animations} onChange={(v) => setSetting("animations", v)} />
         <Toggle label="Glossary" on={settings.glossary} onChange={(v) => setSetting("glossary", v)} />
         {pushSupported() && (
