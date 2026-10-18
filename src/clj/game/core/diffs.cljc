@@ -10,7 +10,7 @@
    [game.core.effects :refer [any-effects is-disabled-reg? get-effects]]
    [game.core.installing :refer [corp-can-pay-and-install?
                                  runner-can-pay-and-install?]]
-   [game.core.payment :refer [can-pay? ->c]]
+   [game.core.payment :refer [can-pay? ->c merge-costs]]
    [game.core.play-instants :refer [can-play-instant?]]
    [game.core.winning :refer [agenda-points-required-to-win]]
    [game.utils :refer [dissoc-in]]
@@ -70,7 +70,7 @@
     card))
 
 (defn ability-playable? [ability ability-idx state side card]
-  (let [cost (card-ability-cost state side ability card)
+  (let [cost (merge-costs [(card-ability-cost state side ability card) (:break-cost ability)])
         eid {:source card
              :source-type :ability
              :source-info {:ability-idx ability-idx}}]
