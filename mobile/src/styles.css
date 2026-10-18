@@ -1895,6 +1895,46 @@ form.chat input {
   margin-left: auto;
 }
 
+.chips .chip-note {
+  margin-left: auto;
+  align-self: center;
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--cyan);
+}
+
+.format-pick .chips {
+  margin-top: 8px;
+}
+
+.format-pick .hint {
+  margin: 8px 0 0;
+}
+
+.seat-dealt {
+  margin: 4px 0 0;
+}
+
+.deck-list button.with-id {
+  display: grid;
+  grid-template-columns: 30px 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 10px;
+  align-items: center;
+}
+
+.deck-list button.with-id .deck-id {
+  grid-row: 1 / 3;
+  width: 30px;
+}
+
+.deck-list button.with-id .deck-id .card-image {
+  width: 30px;
+  aspect-ratio: 300 / 419;
+  border-radius: 2px;
+}
+
 .deck-list button.more {
   align-items: center;
   color: var(--cyan);

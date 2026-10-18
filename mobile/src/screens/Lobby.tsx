@@ -11,6 +11,35 @@ import { DeckViewer } from "./DeckViewer";
 import { CardImage } from "../game/CardImage";
 import { useBackClose } from "../back";
 import { Icon } from "../icons";
+import { type GameFormat, GAME_FORMATS, dealtFormat } from "../deckrules";
+
+const FORMAT_HINT: Partial<Record<GameFormat, string>> = {
+  casual: "Any deck, no restriction.",
+  preconstructed: "Preconstructed decks only.",
+  chimera: "Each player is dealt a random deck when the game starts.",
+  "quick-draft": "Both players draft their identity and deck at the start of the game.",
+};
+
+function FormatPicker({ value, onChange }: { value: GameFormat; onChange?: (f: GameFormat) => void }) {
+  return (
+    <section class="panel section format-pick">
+      <div class="row">
+        <span class="label">Format</span>
+        {!onChange && <span class="label cyan">{GAME_FORMATS.find((f) => f.key === value)?.label}</span>}
+      </div>
+      {onChange && (
+        <div class="chips">
+          {GAME_FORMATS.map((f) => (
+            <button class={value === f.key ? "on" : ""} onClick={() => onChange(f.key)} aria-pressed={value === f.key}>
+              {f.label}
+            </button>
+          ))}
+        </div>
+      )}
+      <p class="hint">{FORMAT_HINT[value] ?? "Only decks legal in this format can be picked."}</p>
+    </section>
+  );
+}
 
 interface Props {
   session: Session;
@@ -68,7 +97,7 @@ function JoinStatus({ lobby }: { lobby: Session["lobby"] }) {
   );
 }
 
-function DeckSheet({ side, db, matchups, value, onPick, onClose }: { side: Side; db: CardDb; matchups: Matchup[]; value?: WireDeck; onPick: (d: WireDeck) => void; onClose: () => void }) {
+function DeckSheet({ side, db, matchups, value, onPick, onClose, format }: { side: Side; db: CardDb; matchups: Matchup[]; value?: WireDeck; onPick: (d: WireDeck) => void; onClose: () => void; format?: GameFormat }) {
   useBackClose(true, onClose);
   return (
     <div class="sheet-backdrop" onClick={onClose}>
@@ -85,6 +114,7 @@ function DeckSheet({ side, db, matchups, value, onPick, onClose }: { side: Side;
           matchups={matchups}
           value={value}
           showCurrent={false}
+          format={format}
           onChange={(d) => {
             onPick(d);
             onClose();
@@ -129,7 +159,8 @@ function NameField({ name, onSave }: { name: string; onSave: (name: string) => v
   );
 }
 
-function Seat({ label, side, deck, db, matchups, onPick, onSide, locked, inline, name, onName }: { label: string; inline?: boolean; name?: string; onName?: (name: string) => void; side: Side; deck?: WireDeck; db: CardDb; matchups: Matchup[]; onPick: (d: WireDeck) => void; onSide?: (s: Side) => void; locked?: boolean }) {
+function Seat({ label, side, deck, db, matchups, onPick, onSide, locked, inline, name, onName, format = "casual", problem }: { label: string; inline?: boolean; name?: string; onName?: (name: string) => void; side: Side; deck?: WireDeck; db: CardDb; matchups: Matchup[]; onPick: (d: WireDeck) => void; onSide?: (s: Side) => void; locked?: boolean; format?: GameFormat; problem?: string | null }) {
+  const dealt = dealtFormat(format);
   const [choosing, setChoosing] = useState(false);
   const [viewing, setViewing] = useState(false);
   const current = useMemo(() => (deck ? fromWire(deck, db) : undefined), [deck]);
@@ -156,7 +187,9 @@ function Seat({ label, side, deck, db, matchups, onPick, onSide, locked, inline,
           ))}
         </div>
       )}
-      {current ? (
+      {dealt ? (
+        <p class="status seat-dealt">{format === "chimera" ? "A random deck is dealt when the game starts." : "The deck is drafted when the game starts."}</p>
+      ) : current ? (
         <>
           <button class="seat-deck-main" onClick={() => setViewing(true)} aria-label={`View deck ${current.name}`}>
             <CardImage class="deck-identity" code={current.identity.code} alt={current.identity.title} size="small" />
@@ -166,6 +199,11 @@ function Seat({ label, side, deck, db, matchups, onPick, onSide, locked, inline,
               <span>{deckSize(current)} cards</span>
             </span>
           </button>
+          {problem && (
+            <p class="error seat-problem">
+              Not legal in {GAME_FORMATS.find((f) => f.key === format)?.label}: {problem}
+            </p>
+          )}
           {!inline && (
             <div class="seat-actions">
               <button onClick={() => setViewing(true)}>View list</button>
@@ -184,8 +222,8 @@ function Seat({ label, side, deck, db, matchups, onPick, onSide, locked, inline,
           </button>
         )
       )}
-      {inline && <DeckPicker side={side} db={db} matchups={matchups} value={deck} showCurrent={false} onChange={onPick} />}
-      {choosing && <DeckSheet side={side} db={db} matchups={matchups} value={deck} onPick={onPick} onClose={() => setChoosing(false)} />}
+      {inline && !dealt && <DeckPicker side={side} db={db} matchups={matchups} value={deck} showCurrent={false} onChange={onPick} format={format} />}
+      {choosing && <DeckSheet side={side} db={db} matchups={matchups} value={deck} format={format} onPick={onPick} onClose={() => setChoosing(false)} />}
       {viewing && current && <DeckViewer deck={current} onClose={() => setViewing(false)} />}
     </section>
   );
@@ -300,9 +338,11 @@ export function Lobby({ session, db, matchups, onLeave, onWatch }: Props) {
           </button>
         )}
 
-        {inLobby && <Seat label={lobby.role === "local" && !lobby.vsBot ? "Player 1" : "You"} name={lobby.myName} onName={(n) => session.setName(n)} inline={lobby.role !== "local" && !inviting} side={lobby.mySide} deck={lobby.myDeck} db={db} matchups={matchups} onPick={(d) => session.setDeck(d)} onSide={lobby.role !== "guest" ? (s) => session.setSide(s) : undefined} />}
+        {inLobby && <FormatPicker value={lobby.format} onChange={lobby.role !== "guest" ? (f) => session.setFormat(f) : undefined} />}
 
-        {lobby.role === "local" && <Seat label={lobby.vsBot ? "Bot" : "Player 2"} side={other(lobby.mySide)} deck={session.localOpponentDeck} db={db} matchups={matchups} onPick={(d) => session.setDeck(d, other(lobby.mySide))} />}
+        {inLobby && <Seat format={lobby.format} problem={session.deckProblem(lobby.myDeck)} label={lobby.role === "local" && !lobby.vsBot ? "Player 1" : "You"} name={lobby.myName} onName={(n) => session.setName(n)} inline={lobby.role !== "local" && !inviting} side={lobby.mySide} deck={lobby.myDeck} db={db} matchups={matchups} onPick={(d) => session.setDeck(d)} onSide={lobby.role !== "guest" ? (s) => session.setSide(s) : undefined} />}
+
+        {lobby.role === "local" && <Seat format={lobby.format} problem={session.deckProblem(session.localOpponentDeck)} label={lobby.vsBot ? "Bot" : "Player 2"} side={other(lobby.mySide)} deck={session.localOpponentDeck} db={db} matchups={matchups} onPick={(d) => session.setDeck(d, other(lobby.mySide))} />}
 
         <div class="lobby-footer">
           {lobby.role === "host" && !inviting && <p class={`status ${lobby.opponentDeckReady ? "connected" : ""}`}>{lobby.opponentDeckReady ? `${opponent} is ready` : `Waiting for ${opponent} to pick a deck…`}</p>}
@@ -316,14 +356,17 @@ export function Lobby({ session, db, matchups, onLeave, onWatch }: Props) {
                 </button>
               </>
             ) : (
-              <Cta disabled={!lobby.myDeck} onClick={() => session.setReady(true)}>
+              <Cta disabled={(!lobby.myDeck && !dealtFormat(lobby.format)) || !!session.deckProblem(lobby.myDeck)} onClick={() => session.setReady(true)}>
                 Ready
               </Cta>
             ))
           ) : (
-            <Cta disabled={!session.canStart} onClick={() => session.start()}>
-              Start game
-            </Cta>
+            <>
+              {!session.canStart && (session.deckProblem(lobby.myDeck) || session.deckProblem(session.localOpponentDeck)) && <p class="status">Every deck must be legal in {GAME_FORMATS.find((f) => f.key === lobby.format)?.label} to start.</p>}
+              <Cta disabled={!session.canStart} onClick={() => session.start()}>
+                Start game
+              </Cta>
+            </>
           )}
         </div>
       </div>

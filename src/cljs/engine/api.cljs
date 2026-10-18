@@ -18,6 +18,7 @@
    [game.core.winning :refer [concede]]
    [game.quotes :as quotes]
    [jinteki.cards :refer [all-cards]]
+   [jinteki.chimera :as chimera]
    [jinteki.i18n :as i18n]
    [jinteki.preconstructed :as precon]))
 
@@ -60,12 +61,33 @@
 (defn load-quotes [quotes]
   (reset! quotes/identity-quotes (js->clj quotes)))
 
+(defn- by-title [deck]
+  {:name (:name deck)
+   :identity (get @all-cards (get-in deck [:identity :title]))
+   :cards (vec (for [{:keys [qty card]} (:cards deck)
+                     :let [c (get @all-cards card)]
+                     :when c]
+                 {:qty qty :card c}))})
+
+(defn- format-decks
+  "Chimera deals both players a random deck, built inside the seeded game setup so
+  every replica deals the same one. A quick draft starts from an empty deck that
+  the draft fills."
+  [format corp runner]
+  (case format
+    "chimera" [(assoc corp :deck (by-title (chimera/make-corp-deck)))
+               (assoc runner :deck (by-title (chimera/make-runner-deck)))]
+    "quick-draft" [(assoc-in corp [:deck :cards] [])
+                   (assoc-in runner [:deck :cards] [])]
+    [corp runner]))
+
 (defn create-game
   "Creates a game from a JS description:
   {gameid, format, corp: {user, deck: {identity, cards: [{qty, card}]}}, runner: {...}}
   Returns an opaque handle."
   [setup]
   (let [{:keys [gameid format corp runner messages] :as setup} (->clj setup)
+        [corp runner] (format-decks format corp runner)
         player (fn [side p] (assoc p :side side))
         state (init-game {:gameid (or gameid (str (random-uuid)))
                           :format (some-> format keyword)

@@ -12,6 +12,21 @@ export const FORMATS = [
 
 export type FormatKey = (typeof FORMATS)[number]["key"];
 
+export const GAME_FORMATS = [
+  ...FORMATS,
+  { key: "preconstructed", label: "Precons" },
+  { key: "chimera", label: "Chimera" },
+  { key: "quick-draft", label: "Quick Draft" },
+] as const;
+
+export type GameFormat = (typeof GAME_FORMATS)[number]["key"];
+
+export const isGameFormat = (f: unknown): f is GameFormat => GAME_FORMATS.some((g) => g.key === f);
+
+export const dealtFormat = (f: GameFormat) => f === "chimera" || f === "quick-draft";
+
+export const deckFormat = (f: GameFormat): FormatKey | null => (FORMATS.some((g) => g.key === f) ? (f as FormatKey) : null);
+
 export const ETERNAL_POINTS = 7;
 
 export const TYPE_ORDER: Record<"Corp" | "Runner", string[]> = {

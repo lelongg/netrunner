@@ -517,7 +517,7 @@
 
 (defn check-quick-draft
   [state format eid]
-  (if (not= format "quick-draft")
+  (if (not= (some-> format name) "quick-draft")
     (effect-completed state nil eid)
     (let [draft-state (generate-quick-draft)]
       (swap! state assoc-in [:runner :agenda-point-req] 6)

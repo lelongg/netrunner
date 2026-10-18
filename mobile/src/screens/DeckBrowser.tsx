@@ -1,17 +1,20 @@
 import { useEffect, useState } from "preact/hooks";
 import type { CardDb, Side } from "../engine";
 import { type Decklist, FACTIONS, fetchDecklists } from "../nrdb";
+import { type FormatKey, FORMATS, analyze } from "../deckrules";
+import { IdentityThumb } from "./IdentityThumb";
 
 interface Props {
   side: Side;
   db: CardDb;
   selected?: string;
   onPick: (list: Decklist) => void;
+  format?: FormatKey;
 }
 
 const day = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
 
-export function DeckBrowser({ side, db, selected, onPick }: Props) {
+export function DeckBrowser({ side, db, selected, onPick, format }: Props) {
   const [faction, setFaction] = useState<string | null>(null);
   const [standard, setStandard] = useState(true);
   const [lists, setLists] = useState<Decklist[]>([]);
@@ -40,7 +43,7 @@ export function DeckBrowser({ side, db, selected, onPick }: Props) {
     load(1, true);
   }, [side, faction]);
 
-  const shown = lists.filter((l) => l.deck && (!standard || l.standard));
+  const shown = lists.filter((l) => l.deck && (format ? format === "casual" || analyze(l.deck, format).legal : !standard || l.standard));
 
   return (
     <div class="deck-browser">
@@ -53,14 +56,19 @@ export function DeckBrowser({ side, db, selected, onPick }: Props) {
             {label}
           </button>
         ))}
-        <button class={`toggle ${standard ? "on" : ""}`} onClick={() => setStandard(!standard)} aria-pressed={standard}>
-          Standard only
-        </button>
+        {format ? (
+          <span class="chip-note">{FORMATS.find((f) => f.key === format)!.label} legal only</span>
+        ) : (
+          <button class={`toggle ${standard ? "on" : ""}`} onClick={() => setStandard(!standard)} aria-pressed={standard}>
+            Standard only
+          </button>
+        )}
       </div>
       <ul class="deck-list">
         {shown.map((l) => (
           <li>
-            <button class={selected === l.name ? "on" : ""} onClick={() => onPick(l)}>
+            <button class={`with-id ${selected === l.name ? "on" : ""}`} onClick={() => onPick(l)}>
+              <IdentityThumb title={l.deck!.identity.title} db={db} />
               <strong>{l.name}</strong>
               <span>
                 {l.deck!.identity.title} · {l.user} · {day(l.created)}

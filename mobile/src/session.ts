@@ -1,6 +1,7 @@
 import type { CardDb, Deck, EngineApi, Side } from "./engine";
 import { HeuristicBot } from "./bot/heuristic.ts";
-import { type WireDeck, engineDeck, fromWire } from "./decks";
+import { type WireDeck, engineDeck, fromPrecon, fromWire, toWire } from "./decks";
+import { type GameFormat, analyze, dealtFormat, deckFormat, isGameFormat } from "./deckrules";
 import { type GameHost, type LocalEntry, type Op, type Seat as ViewSeat, makeHost } from "./game/runner";
 import { owesMove } from "./game/actions";
 import { archive } from "./history";
@@ -29,6 +30,7 @@ export interface LobbyState {
   since?: number;
   players?: Partial<Record<Side, string>>;
   watchers?: number;
+  format: GameFormat;
 }
 
 export type SavedGame =
@@ -176,6 +178,7 @@ interface Table {
   sideSet: boolean;
   decks: [WireDeck | null, WireDeck | null];
   started: boolean;
+  format: GameFormat;
 }
 
 export class Session {
@@ -202,7 +205,7 @@ export class Session {
   private mustAct?: boolean;
   private archived = false;
   private entries: Entry[] = [];
-  private table: Table = { names: [undefined, undefined], creatorSide: "corp", sideSet: false, decks: [null, null], started: false };
+  private table: Table = { names: [undefined, undefined], creatorSide: "corp", sideSet: false, decks: [null, null], started: false, format: "casual" };
   private wantedSide: Side = "corp";
   private link: LinkStatus = { link: "connecting", peer: false };
   private announced = false;
@@ -228,6 +231,7 @@ export class Session {
       mySide,
       opponentDeckReady: false,
       started: false,
+      format: "casual",
     };
     if (role === "local") {
       this.restoreDecks();
@@ -353,9 +357,14 @@ export class Session {
         t.sideSet = true;
         t.decks = [null, null];
         break;
+      case "format":
+        if (seat !== 0 || t.started || !isGameFormat(p.format) || p.format === t.format) break;
+        t.format = p.format;
+        t.decks = [null, null];
+        break;
       case "deck":
         if (t.started) break;
-        t.decks[seat] = p.deck && deckSide(this.db, p.deck) === this.sideOf(seat) ? p.deck : null;
+        t.decks[seat] = p.deck && deckSide(this.db, p.deck) === this.sideOf(seat) && this.allowed(p.deck, t.format) ? p.deck : null;
         break;
       case "start":
         if (seat !== 0 || t.started || !t.decks[0] || !t.decks[1] || !Array.isArray(p.seed) || p.seed.length !== 4) break;
@@ -389,7 +398,7 @@ export class Session {
       return { user: { username: t.names[seat] ?? (seat === 0 ? "Host" : "Guest") }, deck: engineDeck(fromWire(t.decks[seat]!, this.db)) };
     };
     this.deckNames = { corp: t.decks[seatOf("corp")]!.name, runner: t.decks[seatOf("runner")]!.name };
-    this.boot({ gameid: this.lobby.code || "online", format: "casual", corp: player("corp"), runner: player("runner") }, seed);
+    this.boot({ gameid: this.lobby.code || "online", format: t.format, corp: player("corp"), runner: player("runner") }, seed);
     t.started = true;
   }
 
@@ -415,6 +424,7 @@ export class Session {
       ready: this.seat === 1 && !!t.decks[1],
       opponentDeckReady: this.seat === 0 && !!t.decks[1],
       started: t.started,
+      format: t.format,
       players: { [this.sideOf(0)]: t.names[0], [this.sideOf(1)]: t.names[1] },
       watchers: this.link.watchers,
       step: this.link.step,
@@ -555,6 +565,45 @@ export class Session {
     return this.lobby.role === "local" ? this.opponentDeck : undefined;
   }
 
+  private allowed(deck: WireDeck, format: GameFormat) {
+    return !this.problemWith(deck, format);
+  }
+
+  private problemWith(deck: WireDeck, format: GameFormat): string | null {
+    if (dealtFormat(format) || format === "casual") return null;
+    if (format === "preconstructed") {
+      const precon = (this.engine.precons() as any[]).some((m) => (["corp", "runner"] as Side[]).some((s) => m[s].identity === deck.identity && deck.name.startsWith(m[s].name)));
+      return precon ? null : "Only preconstructed decks are allowed in this format";
+    }
+    try {
+      return analyze(fromWire(deck, this.db), deckFormat(format)!).problems.find((p) => p.level === "error")?.text ?? null;
+    } catch (e) {
+      return e instanceof Error ? e.message : "This deck cannot be read";
+    }
+  }
+
+  deckProblem(deck: WireDeck | undefined): string | null {
+    return deck ? this.problemWith(deck, this.lobby.format) : null;
+  }
+
+  private stand(side: Side): WireDeck {
+    const precon = (this.engine.precons() as any[])[0][side];
+    return { ...toWire(fromPrecon(precon, this.db)), name: this.lobby.format === "chimera" ? "Chimera deck" : "Drafted deck" };
+  }
+
+  private effectiveDeck(side: Side, chosen?: WireDeck) {
+    return dealtFormat(this.lobby.format) ? this.stand(side) : chosen;
+  }
+
+  setFormat(format: GameFormat) {
+    if (this.lobby.role === "guest" || this.lobby.started || format === this.lobby.format || !isGameFormat(format)) return;
+    if (this.lobby.role === "local") {
+      this.lobby = { ...this.lobby, format };
+      return this.emit();
+    }
+    this.push({ k: "format", format });
+  }
+
   // ---------- lobby actions ----------
 
   setSide(side: Side) {
@@ -597,31 +646,35 @@ export class Session {
 
   setReady(ready: boolean) {
     if (this.lobby.role !== "guest" || this.lobby.started) return;
-    this.push({ k: "deck", deck: ready && this.lobby.myDeck ? this.lobby.myDeck : null });
+    const deck = this.effectiveDeck(this.lobby.mySide, this.lobby.myDeck);
+    if (ready && deck && this.deckProblem(deck)) return;
+    this.push({ k: "deck", deck: ready && deck ? deck : null });
   }
 
   get canStart() {
-    const { role, myDeck, mySide, started } = this.lobby;
-    if (started || role === "guest" || !myDeck || deckSide(this.db, myDeck) !== mySide) return false;
+    const { role, mySide, started } = this.lobby;
+    const myDeck = this.effectiveDeck(mySide, this.lobby.myDeck);
+    if (started || role === "guest" || !myDeck || deckSide(this.db, myDeck) !== mySide || this.deckProblem(myDeck)) return false;
     if (role === "host") return !!this.table.decks[1];
-    return !!this.opponentDeck && deckSide(this.db, this.opponentDeck) === other(mySide);
+    const theirs = this.effectiveDeck(other(mySide), this.opponentDeck);
+    return !!theirs && deckSide(this.db, theirs) === other(mySide) && !this.deckProblem(theirs);
   }
 
   start() {
     if (!this.canStart) return;
     const seed = Array.from(crypto.getRandomValues(new Uint32Array(4)));
     if (this.lobby.role === "host") {
-      this.push({ k: "deck", deck: this.lobby.myDeck! });
+      this.push({ k: "deck", deck: this.effectiveDeck(this.lobby.mySide, this.lobby.myDeck)! });
       this.push({ k: "start", seed });
       return;
     }
-    const mine = fromWire(this.lobby.myDeck!, this.db);
-    const theirs = fromWire(this.opponentDeck!, this.db);
+    const mine = fromWire(this.effectiveDeck(this.lobby.mySide, this.lobby.myDeck)!, this.db);
+    const theirs = fromWire(this.effectiveDeck(other(this.lobby.mySide), this.opponentDeck)!, this.db);
     const me = { username: this.lobby.myName };
     const them = { username: this.lobby.opponentName ?? "Player 2" };
     const players = this.lobby.mySide === "corp" ? { corp: { user: me, deck: engineDeck(mine) }, runner: { user: them, deck: engineDeck(theirs) } } : { corp: { user: them, deck: engineDeck(theirs) }, runner: { user: me, deck: engineDeck(mine) } };
     this.deckNames = { [this.lobby.mySide]: mine.name, [other(this.lobby.mySide)]: theirs.name };
-    this.boot({ gameid: this.lobby.code, format: "casual", ...players }, seed);
+    this.boot({ gameid: this.lobby.code, format: this.lobby.format, ...players }, seed);
     this.log = [];
     this.lobby = { ...this.lobby, started: true };
     this.makeBot();
@@ -805,6 +858,7 @@ export class Session {
   deckFor(side: Side): Deck | undefined {
     const { role, mySide, myDeck } = this.lobby;
     const name = this.deckNames[side] ?? (side === mySide ? myDeck?.name : undefined);
+    if (isGameFormat((this.setup as { format?: unknown } | undefined)?.format) && dealtFormat((this.setup as { format: GameFormat }).format)) return undefined;
     const fromSetup = (this.setup as Record<Side, { deck?: Omit<Deck, "name"> }> | undefined)?.[side]?.deck;
     if (fromSetup) return { name: name ?? (side === "corp" ? "Corp deck" : "Runner deck"), ...fromSetup };
     if (side === mySide && myDeck) return fromWire(myDeck, this.db);
