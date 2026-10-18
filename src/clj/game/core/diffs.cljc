@@ -70,10 +70,12 @@
     card))
 
 (defn ability-playable? [ability ability-idx state side card]
-  (let [cost (merge-costs [(card-ability-cost state side ability card) (:break-cost ability)])
-        eid {:source card
+  (let [eid {:source card
              :source-type :ability
-             :source-info {:ability-idx ability-idx}}]
+             :source-info {:ability-idx ability-idx}}
+        break-bonus (when-let [f (:break-cost-bonus ability)]
+                      (try (f state side eid card nil) (catch #?(:clj Exception :cljs :default) _ nil)))
+        cost (merge-costs [(card-ability-cost state side ability card) (:break-cost ability) break-bonus])]
     (if (and (or (active? card)
                  (:autoresolve ability))
              ;; using the reg instead of any-effect here because this function gets called
@@ -212,7 +214,9 @@
 
 (defn rez-cost-summary [card state side]
   (if (and (= :corp side) (corp? card) (:installed card) (not (:rezzed card)) (or (ice? card) (asset? card) (upgrade? card)))
-    (assoc card :current-rez-cost (rez-cost state side card))
+    (if-let [cost (try (rez-cost state side card) (catch #?(:clj Exception :cljs :default) _ nil))]
+      (assoc card :current-rez-cost cost)
+      card)
     card))
 
 (defn card-summary [card state side]
