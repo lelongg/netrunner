@@ -1,4 +1,6 @@
 import type { Card, CardDb, Deck, Side } from "./engine";
+import { relayUrl } from "./net/relay";
+import { cardId } from "./cardid";
 
 const API = "https://api.netrunnerdb.com/api/v3/public/decklists";
 const PAGE = 20;
@@ -27,14 +29,7 @@ export interface Decklist {
   standard: boolean;
 }
 
-export const cardId = (title: string) =>
-  title
-    .replace(/['’™®"]/g, "")
-    .normalize("NFKD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_|_$/g, "");
+export { cardId } from "./cardid";
 
 const byId = new WeakMap<CardDb, Map<string, Card>>();
 function lookup(db: CardDb) {
@@ -71,7 +66,50 @@ function toDecklist(item: any, db: CardDb): Decklist {
   };
 }
 
-export async function fetchDecklists(db: CardDb, side: Side, faction: string | null, page: number) {
+function fromIndex(row: any, db: CardDb): Decklist {
+  const missing: string[] = [];
+  const identity = db.byCode.get(String(row.identity));
+  if (!identity) missing.push(String(row.identity));
+  const entries = String(row.cards)
+    .split(",")
+    .filter(Boolean)
+    .flatMap((slot) => {
+      const [code, qty] = slot.split(":");
+      const card = db.byCode.get(code);
+      if (!card) missing.push(code);
+      return card ? [{ qty: Number(qty), card }] : [];
+    });
+  const deck = identity && !missing.length ? { name: row.name, identity, cards: entries } : undefined;
+  return {
+    id: row.id,
+    name: row.name,
+    user: row.user,
+    created: row.created,
+    deck,
+    missing,
+    standard: !!deck && standardLegal(deck.identity) && deck.cards.every((e) => standardLegal(e.card)),
+  };
+}
+
+async function fromRelay(db: CardDb, side: Side, faction: string | null, page: number, format?: string) {
+  const base = relayUrl();
+  if (!base) return null;
+  const params = new URLSearchParams({ side, page: String(page) });
+  if (format) params.set("format", format);
+  if (faction) params.set("faction", faction);
+  try {
+    const res = await fetch(`${base}/decklists?${params}`);
+    if (!res.ok) return null;
+    const json = await res.json();
+    return { items: (json.items as any[]).map((row) => fromIndex(row, db)), hasMore: !!json.hasMore };
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchDecklists(db: CardDb, side: Side, faction: string | null, page: number, format?: string) {
+  const indexed = await fromRelay(db, side, faction, page, format);
+  if (indexed) return indexed;
   const params = new URLSearchParams({ "filter[side_id]": side, sort: "-created_at", "page[size]": String(PAGE), "page[number]": String(page) });
   if (faction) params.set("filter[faction_id]", faction);
   const res = await fetch(`${API}?${params}`);

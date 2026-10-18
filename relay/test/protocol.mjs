@@ -72,6 +72,11 @@ const unknownWatch = await connect("ZZZZZ", null).then(() => "open", () => "refu
 assert(unknownWatch === "refused", "watching an unknown game is refused");
 watcher.ws.close();
 a.ws.close(); b3.ws.close();
+const decks = await fetch(`${BASE}/decklists?side=corp&format=standard`, { headers: { Origin: "http://localhost:4178" } });
+const deckBody = await decks.json();
+assert(decks.status === 200 && Array.isArray(deckBody.items) && typeof deckBody.hasMore === "boolean", "the decklist index answers a format query");
+const badDecks = await fetch(`${BASE}/decklists?side=nobody`, { headers: { Origin: "http://localhost:4178" } });
+assert(badDecks.status === 400, "the decklist index refuses a bad query");
 console.log("all protocol checks passed");
 
 if (process.env.EXPIRY_TEST) {

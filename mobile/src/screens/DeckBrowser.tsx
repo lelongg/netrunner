@@ -27,7 +27,7 @@ export function DeckBrowser({ side, db, selected, onPick, format }: Props) {
     setBusy(true);
     setError(undefined);
     try {
-      const res = await fetchDecklists(db, side, faction, next);
+      const res = await fetchDecklists(db, side, faction, next, format);
       setLists((prev) => (reset ? res.items : [...prev, ...res.items]));
       setHasMore(res.hasMore);
       setPage(next);

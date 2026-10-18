@@ -3,6 +3,7 @@ import { Session, loadSave } from "../../mobile/src/session";
 import { type Store, browserStore } from "../../mobile/src/store";
 import { basicCommands, cardCommands, cardRef, currentIce, findCard, promptOf, runCommands } from "../../mobile/src/game/actions";
 import { type WireDeck, fromPrecon, importNrdb, toWire } from "../../mobile/src/decks";
+import { relayUrl } from "../../mobile/src/net/relay";
 import { FORMATS, GAME_FORMATS, type FormatKey, type GameFormat, analyze, dealtFormat } from "../../mobile/src/deckrules";
 
 export interface Loaded {
@@ -228,8 +229,23 @@ export class Agent {
     return `Preconstructed decks${want ? ` for the ${want}` : ""}:\n${lines.join("\n")}\n\nchoose_deck also accepts a NetrunnerDB deck or decklist URL; find_decks lists recent community decklists legal in a format.`;
   }
 
+  private async indexedDecks(side: Side, format: FormatKey) {
+    const base = relayUrl();
+    if (!base) return null;
+    try {
+      const res = await fetch(`${base}/decklists?${new URLSearchParams({ side, format, page: "1" })}`);
+      if (!res.ok) return null;
+      const { items } = (await res.json()) as { items: any[] };
+      return items.slice(0, 15).map((d) => `- ${d.name} · ${this.db.byCode.get(String(d.identity))?.title ?? "?"} · ${String(d.created).slice(0, 10)} · https://netrunnerdb.com/en/decklist/${d.id}`);
+    } catch {
+      return null;
+    }
+  }
+
   async findDecks(side: Side, format: FormatKey, days = 21) {
     if (!FORMATS.some((f) => f.key === format)) throw new Error(`Unknown format "${format}". Formats: ${FORMATS.map((f) => f.key).join(", ")}.`);
+    const indexed = await this.indexedDecks(side, format);
+    if (indexed?.length) return `Recent NetrunnerDB ${side} decklists legal in ${format} (newest first):\n${indexed.join("\n")}\n\nPass one of these URLs as the deck to host_game, join_game or choose_deck.`;
     const span = Math.max(1, Math.min(30, Math.round(days)));
     const dates = Array.from({ length: span }, (_, i) => new Date(Date.now() - i * 86_400_000).toISOString().slice(0, 10));
     const found: string[] = [];

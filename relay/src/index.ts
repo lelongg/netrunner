@@ -16,6 +16,30 @@ export interface Env {
   REPLAY_LIMIT?: RateLimit;
   REPLAY_LIMIT_ALL?: RateLimit;
   WATCH_LIMIT?: RateLimit;
+  DECKS?: D1Database;
+  DECK_LIMIT?: RateLimit;
+}
+
+const DECK_FORMATS = new Set(["standard", "startup", "core", "eternal", "system-gateway", "throwback"]);
+const DECK_PAGE = 20;
+
+async function listDecklists(env: Env, url: URL) {
+  const side = url.searchParams.get("side");
+  const format = url.searchParams.get("format") ?? "casual";
+  const faction = url.searchParams.get("faction");
+  const page = Math.max(1, Math.min(50, Number(url.searchParams.get("page")) || 1));
+  if (side !== "corp" && side !== "runner") return null;
+  if (format !== "casual" && !DECK_FORMATS.has(format)) return null;
+  if (faction && !/^[a-z_]{1,40}$/.test(faction)) return null;
+  const offset = (page - 1) * DECK_PAGE;
+  const columns = "d.id, d.name, d.user, d.side, d.faction, d.identity, d.created, d.cards";
+  const query =
+    format === "casual"
+      ? env.DECKS!.prepare(`SELECT ${columns} FROM decklists d WHERE d.side = ?1 ${faction ? "AND d.faction = ?2" : ""} ORDER BY d.created DESC LIMIT ${DECK_PAGE + 1} OFFSET ${offset}`)
+      : env.DECKS!.prepare(`SELECT ${columns} FROM deck_formats f JOIN decklists d ON d.id = f.id WHERE f.format = ?3 AND f.side = ?1 ${faction ? "AND f.faction = ?2" : ""} ORDER BY f.created DESC LIMIT ${DECK_PAGE + 1} OFFSET ${offset}`);
+  const params = format === "casual" ? (faction ? [side, faction] : [side]) : faction ? [side, faction, format] : [side, null, format];
+  const { results } = await query.bind(...params).all();
+  return { items: results.slice(0, DECK_PAGE), hasMore: results.length > DECK_PAGE };
 }
 
 type Seat = 0 | 1;
@@ -83,6 +107,16 @@ export default {
         if (seat) return json({ code, ...seat }, 201, origin);
       }
       return json({ error: "Could not allocate a game code" }, 503, origin);
+    }
+
+    if (request.method === "GET" && url.pathname === "/decklists") {
+      if (!env.DECKS) return json({ error: "The decklist index is not configured on this relay" }, 404, origin);
+      if (await limited(env.DECK_LIMIT, request)) return json({ error: "Too many requests, try again in a minute" }, 429, origin);
+      const found = await listDecklists(env, url);
+      if (!found) return json({ error: "Expected side=corp|runner and an optional format, faction and page" }, 400, origin);
+      const res = json(found, 200, origin);
+      res.headers.set("Cache-Control", "public, max-age=600");
+      return res;
     }
 
     if (request.method === "GET" && url.pathname === "/push-key") {

@@ -1,0 +1,49 @@
+name: Decklist index
+
+on:
+  schedule:
+    - cron: "23 4 * * *"
+    - cron: "41 3 3 * *"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "update reads new and edited decklists and continues the first fill; prune drops decklists deleted from NetrunnerDB"
+        type: choice
+        options: [update, prune]
+        default: update
+
+concurrency: decklist-index
+
+jobs:
+  index:
+    name: 'Refresh the NetrunnerDB decklist index'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    defaults:
+      run:
+        working-directory: relay
+    env:
+      HAS_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        if: env.HAS_TOKEN == 'true'
+
+      - uses: actions/setup-node@v4
+        if: env.HAS_TOKEN == 'true'
+        with:
+          node-version: '22'
+
+      - name: Install
+        if: env.HAS_TOKEN == 'true'
+        run: npm ci
+
+      - name: Index decklists
+        if: env.HAS_TOKEN == 'true'
+        run: |
+          scripts/d1-bind.sh
+          npx esbuild scripts/decklists.ts --bundle --platform=node --format=esm --target=node22 --outfile="$RUNNER_TEMP/decklists.mjs" --log-level=warning
+          node "$RUNNER_TEMP/decklists.mjs" "${MODE}"
+        env:
+          MODE: ${{ inputs.mode || (github.event.schedule == '41 3 3 * *' && 'prune') || 'update' }}

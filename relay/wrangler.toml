@@ -18,6 +18,12 @@ new_sqlite_classes = ["GameRoom"]
 tag = "v2"
 new_sqlite_classes = ["ReplayStore"]
 
+[[d1_databases]]
+binding = "DECKS"
+database_name = "netrunner-decklists"
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "decklists-migrations"
+
 [vars]
 EXPIRY_DAYS = "14"
 ALLOWED_ORIGINS = "https://lelongg.github.io,http://localhost:5173,http://localhost:4178"
@@ -50,4 +56,9 @@ simple = { limit = 30, period = 60 }
 [[ratelimits]]
 name = "JOIN_LIMIT"
 namespace_id = "1002"
+simple = { limit = 60, period = 60 }
+
+[[ratelimits]]
+name = "DECK_LIMIT"
+namespace_id = "1007"
 simple = { limit = 60, period = 60 }
