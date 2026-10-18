@@ -906,7 +906,7 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
     autoZone.current = false;
   });
   const promptId = prompt?.eid?.eid;
-  const staging = ptype === "select" && (prompt["select-max"] ?? 1) > 1 && !/^Choose a credit providing card/.test(render(prompt.msg));
+  const staging = ptype === "select" && ((prompt["select-max"] ?? 1) > 1 || !!prompt["select-all"]) && !/^Choose a credit providing card/.test(render(prompt.msg));
   useEffect(() => setStaged(new Set()), [promptId]);
   const send = (command: string, args?: any) => {
     if (!staging || command !== "select") return sendNow(command, args);
