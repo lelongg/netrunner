@@ -10,7 +10,7 @@ import { DeckPicker } from "./DeckPicker";
 import { DeckRow, Decks, DeckView } from "./Decks";
 import { useBackClose } from "../back";
 import { Icon } from "../icons";
-import { type GameFormat, GAME_FORMATS, dealtFormat, deckFormat } from "../deckrules";
+import { type GameFormat, FORMAT_DESC, GAME_FORMATS, dealtFormat, deckFormat } from "../deckrules";
 
 const FORMAT_HINT: Partial<Record<GameFormat, string>> = {
   preconstructed: "Preconstructed decks only.",
@@ -22,7 +22,7 @@ function FormatPicker({ value, onChange }: { value: GameFormat; onChange?: (f: G
     <section class="format-pick">
       <span class="label">Format</span>
       {onChange ? (
-        <Picker title="Game format" value={value} onChange={onChange} options={GAME_FORMATS.map((f) => ({ key: f.key as GameFormat, label: f.label, hint: FORMAT_HINT[f.key as GameFormat] }))} />
+        <Picker title="Game format" value={value} onChange={onChange} options={GAME_FORMATS.map((f) => ({ key: f.key as GameFormat, label: f.label, hint: FORMAT_DESC[f.key as GameFormat] }))} />
       ) : (
         <span class="label cyan">{label}</span>
       )}

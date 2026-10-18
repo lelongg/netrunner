@@ -21,6 +21,19 @@ export const GAME_FORMATS = [
 
 export type GameFormat = (typeof GAME_FORMATS)[number]["key"];
 
+export const FORMAT_DESC: Record<GameFormat, string> = {
+  standard: "The current competitive pool and ban list.",
+  startup: "System Gateway, Elevation and the newest set. Small and beginner friendly.",
+  eternal: "Every card ever printed, with a short ban list.",
+  "system-gateway": "Only the System Gateway starter cards.",
+  core: "System Gateway and Elevation.",
+  throwback: "The classic Fantasy Flight era cycles.",
+  casual: "Any card. Only the basic deckbuilding rules apply.",
+  preconstructed: "Preconstructed decks only.",
+  chimera: "Each player is dealt a random deck when the game starts.",
+  "quick-draft": "Both players draft their deck at the start of the game.",
+};
+
 export const isGameFormat = (f: unknown): f is GameFormat => GAME_FORMATS.some((g) => g.key === f);
 
 export const dealtFormat = (f: GameFormat) => f === "chimera" || f === "quick-draft";

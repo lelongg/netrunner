@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { Card, CardDb, Deck, Matchup, Side } from "../engine";
 import { type StoredDeck, type WireDeck, fromPrecon, fromWire, importNrdb, parseDecklist, putDeck, removeDeck, savedDecks, toWire } from "../decks";
-import { type FormatKey, FORMATS, TYPE_ORDER, analyze, costCurve, deckLimit, groupByType, influenceByFaction, influenceOf, isNeutral, legality, subtypeSpread, toText } from "../deckrules";
+import { type FormatKey, FORMAT_DESC, FORMATS, TYPE_ORDER, analyze, costCurve, deckLimit, groupByType, influenceByFaction, influenceOf, isNeutral, legality, subtypeSpread, toText } from "../deckrules";
 import { CardImage, ZoomableCardImage } from "../game/CardImage";
 import { RichText } from "../game/RichText";
 import { Pager } from "../game/Pager";
@@ -235,7 +235,7 @@ function BrowseSheet({ db, side, onClose, onDone }: { db: CardDb; side: Side; on
         </div>
         <section class="format-pick">
           <span class="label">Format</span>
-          <Picker title="Format" value={format} onChange={setFormat} options={FORMATS.map((f) => ({ key: f.key, label: f.label }))} />
+          <Picker title="Format" value={format} onChange={setFormat} options={FORMATS.map((f) => ({ key: f.key, label: f.label, hint: FORMAT_DESC[f.key] }))} />
         </section>
         <DeckBrowser side={side} db={db} format={format} onPick={(l) => l.deck && onDone(l.deck, format)} />
       </div>
@@ -433,7 +433,7 @@ function FormatSelect({ value, onChange }: { value: FormatKey; onChange: (f: For
   return (
     <div class="format-select">
       <span class="label">Format</span>
-      <Picker title="Format" value={value} onChange={onChange} options={FORMATS.map((f) => ({ key: f.key, label: f.label }))} />
+      <Picker title="Format" value={value} onChange={onChange} options={FORMATS.map((f) => ({ key: f.key, label: f.label, hint: FORMAT_DESC[f.key] }))} />
     </div>
   );
 }
