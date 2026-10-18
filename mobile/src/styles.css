@@ -5253,6 +5253,8 @@ button.armed {
 
 .edit-row-sub {
   display: flex;
+  align-items: center;
+  max-width: 100%;
   gap: 8px;
   font-size: 9px;
   letter-spacing: 0.16em;
@@ -6220,4 +6222,16 @@ h1.deck-name {
 
 .sheet.swipeable .sheet-head {
   margin-bottom: auto;
+}
+
+.edit-row-types {
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.edit-row-sub .pips {
+  flex: none;
 }

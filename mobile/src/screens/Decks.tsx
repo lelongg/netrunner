@@ -725,6 +725,7 @@ function DeckList({ deck, format, onQty, onOpen, onBrowse }: { deck: Deck; forma
                         {e.card.title}
                       </span>
                       <span class="edit-row-sub">
+                        {Array.isArray(e.card.subtypes) && e.card.subtypes.length > 0 && <span class="edit-row-types">{e.card.subtypes.join(" · ")}</span>}
                         <Pips n={influenceOf(deck.identity, e.card) * e.qty} />
                         {l === "banned" && <span class="red">banned</span>}
                         {l === "rotated" && <span class="red">not in format</span>}
