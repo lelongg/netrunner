@@ -237,6 +237,8 @@ export function Lobby({ session, db, matchups, onLeave, onWatch }: Props) {
   const { lobby } = session;
   const [editor, setEditor] = useState<Side | null>(null);
   const [copied, setCopied] = useState(false);
+  const [qrBig, setQrBig] = useState(false);
+  useBackClose(qrBig, () => setQrBig(false));
   const link = shareLink(lobby.code);
   const opponent = lobby.opponentName ?? "your opponent";
   const inviting = lobby.role === "host" && !lobby.opponentName && lobby.status !== "connected";
@@ -307,6 +309,13 @@ export function Lobby({ session, db, matchups, onLeave, onWatch }: Props) {
           <h1>SETUP</h1>
         </header>
 
+        {qrBig && lobby.code && (
+          <div class="qr-zoom" onClick={() => setQrBig(false)} role="dialog" aria-label={`Join game ${lobby.code}`}>
+            <QrCode value={link} label={`QR code to join game ${lobby.code}`} />
+            <span class="code">{lobby.code}</span>
+            <span class="hint">Tap to close</span>
+          </div>
+        )}
         {inviting && (
           <section class="panel section invite">
             <div class="row">
@@ -314,7 +323,13 @@ export function Lobby({ session, db, matchups, onLeave, onWatch }: Props) {
               <span class="label">{lobby.status === "waiting" ? "Waiting for opponent" : "Connecting"}</span>
             </div>
             <div class="invite-body">
-              {lobby.code ? <QrCode value={link} label={`QR code to join game ${lobby.code}`} /> : <div class="qr qr-pending" />}
+              {lobby.code ? (
+                <button class="qr-button" onClick={() => setQrBig(true)} aria-label="Enlarge the QR code">
+                  <QrCode value={link} label={`QR code to join game ${lobby.code}`} />
+                </button>
+              ) : (
+                <div class="qr qr-pending" />
+              )}
               <div class="invite-side">
                 <span class="code">{lobby.code || "·····"}</span>
                 <button class="primary" disabled={!lobby.code} onClick={share}>
