@@ -182,3 +182,52 @@ export function Dialogs() {
     </div>
   );
 }
+
+export function Picker<T extends string>({ value, options, onChange, title, class: className }: { value: T; options: { key: T; label: string; hint?: string }[]; onChange: (v: T) => void; title: string; class?: string }) {
+  const [open, setOpen] = useState(false);
+  useBackClose(open, () => setOpen(false));
+  const current = options.find((o) => o.key === value);
+  return (
+    <>
+      <button type="button" class={`picker-btn ${className ?? ""}`} aria-haspopup="listbox" aria-expanded={open} aria-label={`${title}: ${current?.label ?? value}`} onClick={() => setOpen(true)}>
+        <span>{current?.label ?? value}</span>
+        <svg class="picker-chevron" viewBox="0 0 12 8" aria-hidden="true">
+          <path d="M1 1.5 6 6.5 11 1.5" fill="none" stroke="currentColor" stroke-width="1.6" />
+        </svg>
+      </button>
+      {open && (
+        <div class="sheet-backdrop" onClick={() => setOpen(false)}>
+          <div class="sheet panel picker-sheet" role="listbox" aria-label={title} onClick={(e) => e.stopPropagation()}>
+            <div class="row">
+              <span class="label">{title}</span>
+              <button class="ghost" onClick={() => setOpen(false)} aria-label="Close">
+                <Icon name="close" />
+              </button>
+            </div>
+            <ul class="picker-list">
+              {options.map((o) => (
+                <li>
+                  <button
+                    role="option"
+                    aria-selected={o.key === value}
+                    class={o.key === value ? "on" : ""}
+                    onClick={() => {
+                      setOpen(false);
+                      if (o.key !== value) onChange(o.key);
+                    }}
+                  >
+                    <span class="picker-text">
+                      <span>{o.label}</span>
+                      {o.hint && <span class="picker-hint">{o.hint}</span>}
+                    </span>
+                    {o.key === value && <Icon name="check" />}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}

@@ -1,18 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { useLoop } from "../fx/ui";
 import type { CardDb, Matchup, Side } from "../engine";
-import { type WireDeck, deckSize, fromWire } from "../decks";
+import { type WireDeck, fromWire } from "../decks";
 import type { Session } from "../session";
 import { QrCode } from "../QrCode";
 import { relayUrl } from "../net/relay";
-import { Cta, Ticker } from "../ui";
+import { Cta, Picker, Ticker } from "../ui";
 import { DeckPicker } from "./DeckPicker";
-import { Decks } from "./Decks";
-import { DeckViewer } from "./DeckViewer";
-import { CardImage } from "../game/CardImage";
+import { DeckRow, Decks, DeckView } from "./Decks";
 import { useBackClose } from "../back";
 import { Icon } from "../icons";
-import { type GameFormat, GAME_FORMATS, dealtFormat } from "../deckrules";
+import { type GameFormat, GAME_FORMATS, dealtFormat, deckFormat } from "../deckrules";
 
 const FORMAT_HINT: Partial<Record<GameFormat, string>> = {
   preconstructed: "Preconstructed decks only.",
@@ -24,11 +22,7 @@ function FormatPicker({ value, onChange }: { value: GameFormat; onChange?: (f: G
     <section class="format-pick">
       <span class="label">Format</span>
       {onChange ? (
-        <select value={value} onChange={(e) => onChange((e.target as HTMLSelectElement).value as GameFormat)} aria-label="Game format">
-          {GAME_FORMATS.map((f) => (
-            <option value={f.key}>{f.label}</option>
-          ))}
-        </select>
+        <Picker title="Game format" value={value} onChange={onChange} options={GAME_FORMATS.map((f) => ({ key: f.key as GameFormat, label: f.label, hint: FORMAT_HINT[f.key as GameFormat] }))} />
       ) : (
         <span class="label cyan">{label}</span>
       )}
@@ -194,14 +188,9 @@ function Seat({ label, side, deck, db, matchups, onPick, onSide, locked, inline,
         <p class="status seat-dealt">{format === "chimera" ? "A random deck is dealt when the game starts." : "The deck is drafted when the game starts."}</p>
       ) : current ? (
         <>
-          <button class="seat-deck-main" onClick={() => setViewing(true)} aria-label={`View deck ${current.name}`}>
-            <CardImage class="deck-identity" code={current.identity.code} alt={current.identity.title} size="small" />
-            <span class="deck-current-info">
-              <strong>{current.name}</strong>
-              <span>{current.identity.title}</span>
-              <span>{deckSize(current)} cards</span>
-            </span>
-          </button>
+          <ul class="deck-library">
+            <DeckRow db={db} stored={deck!} format={deckFormat(format) ?? "casual"} onOpen={() => setViewing(true)} />
+          </ul>
           {problem && (
             <p class="error seat-problem">
               Not legal in {GAME_FORMATS.find((f) => f.key === format)?.label}: {problem}
@@ -227,7 +216,7 @@ function Seat({ label, side, deck, db, matchups, onPick, onSide, locked, inline,
       )}
       {inline && !dealt && <DeckPicker side={side} db={db} matchups={matchups} value={deck} showCurrent={false} onChange={onPick} onEditDecks={onEditDecks && (() => onEditDecks(side))} format={format} />}
       {choosing && <DeckSheet side={side} db={db} matchups={matchups} value={deck} format={format} onPick={onPick} onEditDecks={onEditDecks && (() => onEditDecks(side))} onClose={() => setChoosing(false)} />}
-      {viewing && current && <DeckViewer deck={current} onClose={() => setViewing(false)} />}
+      {viewing && current && <DeckView deck={current} format={deckFormat(format) ?? "casual"} onClose={() => setViewing(false)} />}
     </section>
   );
 }

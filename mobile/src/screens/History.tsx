@@ -5,8 +5,8 @@ import { type Archived, archiveFinished, listHistory, removeHistory } from "../h
 import { type Frame, Replay, type Script, type SharedGame, scriptOf, scriptOfShared, shareOf } from "../game/replay";
 import { Board, LogTurns } from "../game/Board";
 import { CardImage, ZoomableCardImage } from "../game/CardImage";
-import { DeckViewer } from "./DeckViewer";
 import { useBackClose } from "../back";
+import { DeckView } from "./Decks";
 import { Icon } from "../icons";
 import { SwipeDelete } from "./SwipeDelete";
 import { Cta, Ticker, ask, tell } from "../ui";
@@ -555,7 +555,7 @@ function Report({ head, engine, db, onClose }: { head: Head; engine: EngineApi; 
 
         {!script && <p class="error">This game cannot be replayed: its start was not recorded on this device.</p>}
       </div>
-      {deck && <DeckViewer deck={deck} onClose={() => setDeck(null)} />}
+      {deck && <DeckView deck={deck} onClose={() => setDeck(null)} />}
     </>
   );
 }

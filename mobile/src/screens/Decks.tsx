@@ -8,7 +8,7 @@ import { Pager } from "../game/Pager";
 import { useSheetPager } from "../game/swipe";
 import { useBackClose } from "../back";
 import { Icon } from "../icons";
-import { Cta, Ticker, ask, tell } from "../ui";
+import { Cta, Picker, Ticker, ask, tell } from "../ui";
 import { motionOff } from "../settings";
 import { DeckBrowser } from "./DeckBrowser";
 
@@ -235,11 +235,7 @@ function BrowseSheet({ db, side, onClose, onDone }: { db: CardDb; side: Side; on
         </div>
         <section class="format-pick">
           <span class="label">Format</span>
-          <select value={format} onChange={(e) => setFormat((e.target as HTMLSelectElement).value as FormatKey)} aria-label="Format">
-            {FORMATS.map((f) => (
-              <option value={f.key}>{f.label}</option>
-            ))}
-          </select>
+          <Picker title="Format" value={format} onChange={setFormat} options={FORMATS.map((f) => ({ key: f.key, label: f.label }))} />
         </section>
         <DeckBrowser side={side} db={db} format={format} onPick={(l) => l.deck && onDone(l.deck, format)} />
       </div>
@@ -435,23 +431,29 @@ function IdentitySheet({ card, list, onGo, onPick, onClose }: { card: Card; list
 
 function FormatSelect({ value, onChange }: { value: FormatKey; onChange: (f: FormatKey) => void }) {
   return (
-    <label class="format-select">
+    <div class="format-select">
       <span class="label">Format</span>
-      <select value={value} onChange={(e) => onChange((e.target as HTMLSelectElement).value as FormatKey)}>
-        {FORMATS.map((f) => (
-          <option value={f.key}>{f.label}</option>
-        ))}
-      </select>
-    </label>
+      <Picker title="Format" value={value} onChange={onChange} options={FORMATS.map((f) => ({ key: f.key, label: f.label }))} />
+    </div>
   );
 }
 
 type Tab = "deck" | "cards" | "stats";
 
-function DeckEditor({ db, initial, onClose, onOpen }: { db: CardDb; initial: StoredDeck; onClose: () => void; onOpen: (d: StoredDeck) => void }) {
-  const [deck, setDeck] = useState<Deck>(() => fromWire(initial, db));
+export function DeckView({ deck, format = "casual", onClose }: { deck: Deck; format?: FormatKey; onClose: () => void }) {
+  const side: Side = deck.identity.side === "Corp" ? "corp" : "runner";
+  useBackClose(true, onClose);
+  return (
+    <div class="deck-view-overlay">
+      <DeckEditor initial={{ ...toWire(deck), side, id: "", format }} deck0={deck} onClose={onClose} readOnly />
+    </div>
+  );
+}
+
+function DeckEditor({ db, initial, deck0, onClose, onOpen, readOnly }: { db?: CardDb; initial: StoredDeck; deck0?: Deck; onClose: () => void; onOpen?: (d: StoredDeck) => void; readOnly?: boolean }) {
+  const [deck, setDeck] = useState<Deck>(() => deck0 ?? fromWire(initial, db!));
   const [format, setFormat] = useState<FormatKey>(formatOf(initial));
-  const [tab, setTab] = useState<Tab>(() => (initial.cards.length ? "deck" : "cards"));
+  const [tab, setTab] = useState<Tab>(() => (initial.cards.length || readOnly ? "deck" : "cards"));
   const [detail, setDetail] = useState<{ card: Card; list: Card[] } | null>(null);
   const open = (card: Card, list: Card[] = [card]) => setDetail({ card, list });
   const [menu, setMenu] = useState(false);
@@ -464,6 +466,7 @@ function DeckEditor({ db, initial, onClose, onOpen }: { db: CardDb; initial: Sto
   const first = useRef(true);
   useEffect(() => {
     if (first.current) return void (first.current = false);
+    if (readOnly) return;
     putDeck({ ...toWire(deck), side, id: initial.id, format });
   }, [deck, format]);
   const a = useMemo(() => analyze(deck, format), [deck, format]);
@@ -487,7 +490,7 @@ function DeckEditor({ db, initial, onClose, onOpen }: { db: CardDb; initial: Sto
     tell("Decklist copied", "Paste it anywhere, or import it on NetrunnerDB.");
   };
 
-  if (changingId)
+  if (changingId && db)
     return (
       <IdentityPicker
         db={db}
@@ -504,17 +507,27 @@ function DeckEditor({ db, initial, onClose, onOpen }: { db: CardDb; initial: Sto
   return (
     <>
       <Ticker>
-        Deck editor <span class={a.legal ? "cyan" : "yellow"}>{a.legal ? "legal" : `${a.problems.length} to fix`}</span>
+        {readOnly ? "Deck list" : "Deck editor"} <span class={a.legal ? "cyan" : "yellow"}>{a.legal ? "legal" : `${a.problems.length} to fix`}</span>
       </Ticker>
       <div class={`screen deck-editor side-${side} faction-${factionKey(deck.identity.faction)}`}>
         <header class="editor-head">
           <button class="ghost" onClick={onClose} aria-label="Back to decks">
             <Icon name="arrow-left" />
           </button>
-          <input class="deck-name" value={deck.name} aria-label="Deck name" maxLength={60} onInput={(e) => setDeck((d) => ({ ...d, name: (e.target as HTMLInputElement).value }))} onBlur={() => !deck.name.trim() && setDeck((d) => ({ ...d, name: "Untitled deck" }))} />
-          <button class="ghost" onClick={() => setMenu(!menu)} aria-label="Deck menu" aria-expanded={menu}>
-            <Icon name={menu ? "close" : "menu"} />
-          </button>
+          {readOnly ? (
+            <h1 class="deck-name">{deck.name}</h1>
+          ) : (
+            <input class="deck-name" value={deck.name} aria-label="Deck name" maxLength={60} onInput={(e) => setDeck((d) => ({ ...d, name: (e.target as HTMLInputElement).value }))} onBlur={() => !deck.name.trim() && setDeck((d) => ({ ...d, name: "Untitled deck" }))} />
+          )}
+          {readOnly ? (
+            <button class="ghost" onClick={share} aria-label="Share decklist">
+              <Icon name="share" />
+            </button>
+          ) : (
+            <button class="ghost" onClick={() => setMenu(!menu)} aria-label="Deck menu" aria-expanded={menu}>
+              <Icon name={menu ? "close" : "menu"} />
+            </button>
+          )}
         </header>
         {menu && (
           <>
@@ -526,7 +539,7 @@ function DeckEditor({ db, initial, onClose, onOpen }: { db: CardDb; initial: Sto
               <button
                 onClick={() => {
                   setMenu(false);
-                  onOpen(putDeck({ ...toWire({ ...deck, name: `${deck.name} (copy)` }), side, format }));
+                  onOpen?.(putDeck({ ...toWire({ ...deck, name: `${deck.name} (copy)` }), side, format }));
                 }}
               >
                 <Icon name="copy" /> Duplicate
@@ -571,7 +584,14 @@ function DeckEditor({ db, initial, onClose, onOpen }: { db: CardDb; initial: Sto
             {a.pointsRange && <Meter label="Agenda pts" value={a.points} goal={a.pointsRange[0]} range={a.pointsRange} over={a.points > a.pointsRange[1]} under={a.points < a.pointsRange[0]} />}
           </div>
           <div class="summary-side">
-            <FormatSelect value={format} onChange={setFormat} />
+            {readOnly ? (
+              <span class="format-static">
+                <span class="label">Format</span>
+                <span>{FORMATS.find((f) => f.key === format)?.label}</span>
+              </span>
+            ) : (
+              <FormatSelect value={format} onChange={setFormat} />
+            )}
             <button class={`legal-chip ${a.legal ? "ok" : "bad"}`} onClick={() => setIssues(!issues)} aria-expanded={issues}>
               <Icon name={a.legal ? "check" : "warning"} />
               {a.legal ? "Legal" : `${a.problems.length} issue${a.problems.length > 1 ? "s" : ""}`}
@@ -587,15 +607,15 @@ function DeckEditor({ db, initial, onClose, onOpen }: { db: CardDb; initial: Sto
         </section>
 
         <div class="tabs editor-tabs" role="tablist">
-          {(["deck", "cards", "stats"] as Tab[]).map((t) => (
+          {((readOnly ? ["deck", "stats"] : ["deck", "cards", "stats"]) as Tab[]).map((t) => (
             <button role="tab" aria-selected={tab === t} class={tab === t ? "on" : ""} onClick={() => setTab(t)}>
               {t === "deck" ? `Deck · ${a.size}` : t === "cards" ? "Add cards" : "Stats"}
             </button>
           ))}
         </div>
 
-        {tab === "deck" && <DeckList deck={deck} format={format} onQty={setQty} onOpen={open} onBrowse={() => setTab("cards")} />}
-        {tab === "cards" && <CardBrowser db={db} deck={deck} format={format} qtyOf={qtyOf} onQty={setQty} onOpen={open} />}
+        {tab === "deck" && <DeckList deck={deck} format={format} onQty={readOnly ? undefined : setQty} onOpen={open} onBrowse={() => setTab("cards")} />}
+        {tab === "cards" && db && <CardBrowser db={db} deck={deck} format={format} qtyOf={qtyOf} onQty={setQty} onOpen={open} />}
         {tab === "stats" && <DeckStats deck={deck} onOpen={open} />}
       </div>
       {detail && (
@@ -605,7 +625,7 @@ function DeckEditor({ db, initial, onClose, onOpen }: { db: CardDb; initial: Sto
           identity={deck.identity}
           format={format}
           qty={qtyOf.get(detail.card.title) ?? 0}
-          onQty={(n) => setQty(detail.card, n)}
+          onQty={readOnly ? undefined : (n) => setQty(detail.card, n)}
           onGo={(card) => setDetail({ ...detail, card })}
           onClose={() => setDetail(null)}
         />
@@ -667,7 +687,7 @@ function CardCost({ card }: { card: Card }) {
   );
 }
 
-function DeckList({ deck, format, onQty, onOpen, onBrowse }: { deck: Deck; format: FormatKey; onQty: (c: Card, n: number) => void; onOpen: (c: Card, list: Card[]) => void; onBrowse: () => void }) {
+function DeckList({ deck, format, onQty, onOpen, onBrowse }: { deck: Deck; format: FormatKey; onQty?: (c: Card, n: number) => void; onOpen: (c: Card, list: Card[]) => void; onBrowse: () => void }) {
   const sections = groupByType(deck);
   const ordered = sections.flatMap((g) => g.entries.map((e) => e.card));
   if (!sections.length)
@@ -705,7 +725,7 @@ function DeckList({ deck, format, onQty, onOpen, onBrowse }: { deck: Deck; forma
                     </span>
                   </button>
                   <CardCost card={e.card} />
-                  <Stepper qty={e.qty} max={deckLimit(e.card)} title={e.card.title} onQty={(n) => onQty(e.card, n)} />
+                  {onQty ? <Stepper qty={e.qty} max={deckLimit(e.card)} title={e.card.title} onQty={(n) => onQty(e.card, n)} /> : <span class="edit-row-qty">{e.qty}×</span>}
                 </li>
               );
             })}
@@ -807,15 +827,20 @@ function CardBrowser({ db, deck, format, qtyOf, onQty, onOpen }: { db: CardDb; d
           <button class={`toggle ${onlyInDeck ? "on" : ""}`} aria-pressed={onlyInDeck} onClick={() => setOnlyInDeck(!onlyInDeck)}>
             In deck
           </button>
-          <label class="sort-select">
+          <div class="sort-select">
             <span class="label">Sort</span>
-            <select value={sort} onChange={(e) => setSort((e.target as HTMLSelectElement).value as typeof sort)}>
-              <option value="type">Type</option>
-              <option value="name">Name</option>
-              <option value="cost">Cost</option>
-              <option value="influence">Influence</option>
-            </select>
-          </label>
+            <Picker
+              title="Sort cards by"
+              value={sort}
+              onChange={setSort}
+              options={[
+                { key: "type", label: "Type" },
+                { key: "name", label: "Name" },
+                { key: "cost", label: "Cost" },
+                { key: "influence", label: "Influence" },
+              ]}
+            />
+          </div>
         </div>
         <span class="hint browser-count">{results.length} cards</span>
       </div>
@@ -999,7 +1024,7 @@ function CardInfo({ card, identity, format }: { card: Card; identity: Card; form
   );
 }
 
-function CardSheet({ card, list, identity, format, qty, onQty, onGo, onClose }: { card: Card; list: Card[]; identity: Card; format: FormatKey; qty: number; onQty: (n: number) => void; onGo: (c: Card) => void; onClose: () => void }) {
+function CardSheet({ card, list, identity, format, qty, onQty, onGo, onClose }: { card: Card; list: Card[]; identity: Card; format: FormatKey; qty: number; onQty?: (n: number) => void; onGo: (c: Card) => void; onClose: () => void }) {
   const index = Math.max(0, list.indexOf(card));
   const step = (dir: -1 | 1) => {
     const next = list[index + dir];
@@ -1033,7 +1058,7 @@ function CardSheet({ card, list, identity, format, qty, onQty, onGo, onClose }: 
         {!isId && (!blocked || qty > 0) && (
           <div class="sheet-stepper">
             <span class="label">In deck</span>
-            <Stepper qty={qty} max={deckLimit(card)} title={card.title} onQty={onQty} />
+            {onQty ? <Stepper qty={qty} max={deckLimit(card)} title={card.title} onQty={onQty} /> : <b class="edit-row-qty">{qty}×</b>}
           </div>
         )}
         <button class="ghost" onClick={onClose}>

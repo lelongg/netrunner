@@ -7,7 +7,8 @@ import { useFx, iceKind } from "../fx/director";
 import { Count, useLoop } from "../fx/ui";
 import { animate } from "../fx/core";
 import { type Command, cardRef, pendingChoice, awaitingMove, basicCommands, currentIce, findCard, otherSide, promptOf, runCommands, siblingsOf } from "./actions";
-import { DeckViewer } from "../screens/DeckViewer";
+import { DeckView } from "../screens/Decks";
+import { deckFormat } from "../deckrules";
 import { CardSheet } from "./CardSheet";
 import { CardTile } from "./CardTile";
 import { PromptPanel } from "./PromptPanel";
@@ -1344,7 +1345,7 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
           {hand.length === 0 && !(watching && me["hand-count"]) && <span class="hint">{side === "runner" ? "Empty grip" : "HQ is empty"}</span>}
         </div>
       </footer>
-      {deckOpen && session.deckFor(side) && <DeckViewer deck={session.deckFor(side)!} onClose={() => setDeckOpen(false)} />}
+      {deckOpen && session.deckFor(side) && <DeckView deck={session.deckFor(side)!} format={deckFormat(session.lobby.format) ?? "casual"} onClose={() => setDeckOpen(false)} />}
       {zone && (
         <ZoneSheet
           zone={zone}

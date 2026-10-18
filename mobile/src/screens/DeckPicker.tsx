@@ -2,8 +2,7 @@ import { useMemo, useState } from "preact/hooks";
 import type { CardDb, Matchup, Side } from "../engine";
 import { CardImage } from "../game/CardImage";
 import { useBackClose } from "../back";
-import { DeckRow } from "./Decks";
-import { DeckViewer } from "./DeckViewer";
+import { DeckRow, DeckView } from "./Decks";
 import { type WireDeck, deckSize, fromPrecon, fromWire, savedDecks, toWire } from "../decks";
 import { Icon } from "../icons";
 import { type GameFormat, FORMATS, analyze, deckFormat } from "../deckrules";
@@ -57,7 +56,7 @@ export function DeckPicker({ side, db, matchups, value, onChange, onEditDecks, s
           <span class="label cyan">View</span>
         </button>
       )}
-      {viewing && current && <DeckViewer deck={current} onClose={() => setViewing(false)} />}
+      {viewing && current && <DeckView deck={current} onClose={() => setViewing(false)} />}
       {!onlyPrecons && (
         <>
           <span class="label">Your decks</span>
