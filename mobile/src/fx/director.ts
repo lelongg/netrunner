@@ -327,6 +327,7 @@ interface Hit {
 }
 
 let accessing: { title: string; stop: () => void } | null = null;
+let stageFreeAt = 0;
 
 function movesCard(text: string, title: string) {
   return new RegExp(`\\b(?:steals?|trash(?:es)?|adds?) ${title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(text);
@@ -469,6 +470,7 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
     const to = pointOf(server) ?? [innerWidth / 2, innerHeight / 3];
     warp(to, "cyan");
     banner("Run", serverName(now.server), "cyan", { size: "xl", hold: 0.45 });
+    stageFreeAt = performance.now() + 1900;
     setTimeout(() => {
       ring(to, "cyan", 220);
       punch(server, 1.04);
@@ -557,7 +559,7 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
     } else if (h.kind === "access") {
       if (me !== "corp" || spectating) continue;
       const delay = t;
-      setTimeout(() => accessShow(view, h.text ?? "", h.zone ?? ""), delay * 1000);
+      setTimeout(() => accessShow(view, h.text ?? "", h.zone ?? ""), Math.max(delay * 1000, stageFreeAt - performance.now()));
       t += 1.5;
     } else if (h.kind === "purge") {
       flash("violet", 0.35);
@@ -734,9 +736,8 @@ function accessShow(view: any, title: string, zone: string) {
     img.alt = title;
     ghost.appendChild(img);
   } else {
-    const back = node("tile back corp", ghost, "div");
+    const back = node("fx-card-back", ghost);
     const label = document.createElement("span");
-    label.className = "back-label";
     label.textContent = "CORP";
     back.appendChild(label);
   }
