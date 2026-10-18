@@ -2804,6 +2804,12 @@ button:active:not(:disabled) {
   line-height: 1;
 }
 
+.brk-cost .icon-virus {
+  height: 0.78em;
+  margin-left: 0.06em;
+  vertical-align: 0;
+}
+
 .brk-verb {
   font-size: 8px;
   font-weight: 700;

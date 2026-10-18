@@ -171,6 +171,7 @@ export function PromptPanel({ view, side, prompt, render, send, closePrompt, dis
     body = <NumberPicker min={0} max={max} initial={0} onSubmit={answer} disabled={disabled} />;
   } else if (pay && Array.isArray(choices)) {
     const done = choices.find((c: any) => c.value === "Done");
+    const bp = Number(prompt["offer-bad-pub?"] || 0);
     body = (
       <>
         {owed != null && (
@@ -188,9 +189,19 @@ export function PromptPanel({ view, side, prompt, render, send, closePrompt, dis
               </button>
             );
           })}
-          {prompt["offer-bad-pub?"] && (
+          {bp > 0 && owed != null && owed > 0 && (() => {
+            const use = Math.min(bp, owed);
+            const rest = owed - use;
+            const label = !rest ? `Pay ${owed}[credit] with bad publicity` : sources.length ? `Use ${use}[credit] bad publicity first` : `Pay ${owed}[credit] · ${use} bad publicity + ${rest} pool`;
+            return (
+              <button class="primary wide" disabled={disabled || (!sources.length && pool < rest)} onClick={() => Array.from({ length: use }, () => send("bad-pub-choice", { eid }))}>
+                {glyphs(iconize(label))}
+              </button>
+            );
+          })()}
+          {bp > 0 && (
             <button disabled={disabled} onClick={() => send("bad-pub-choice", { eid })}>
-              Bad publicity ({view.runner?.["bad-pub-credit"] ?? "?"} available)
+              {glyphs(iconize(`Use 1[credit] bad publicity · ${bp} left`))}
             </button>
           )}
           {done && (
