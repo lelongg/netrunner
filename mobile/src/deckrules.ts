@@ -5,6 +5,7 @@ export const FORMATS = [
   { key: "startup", label: "Startup" },
   { key: "eternal", label: "Eternal" },
   { key: "system-gateway", label: "Gateway" },
+  { key: "core", label: "Core" },
   { key: "throwback", label: "Throwback" },
   { key: "casual", label: "Casual" },
 ] as const;

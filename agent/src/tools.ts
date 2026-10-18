@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { Agent } from "./game";
 
 export const INSTRUCTIONS = `Pocket Rig lets you play Netrunner (the Jinteki rules engine) against a human on their phone.
-Before a game: unless the human already told you, ask them in one short message which side you should play (Corp or Runner) and which deck to use: either a format for you to pick a deck in (standard, startup, eternal, system-gateway, throwback or casual) or a specific NetrunnerDB deck link. Wait for that answer before hosting or joining.
+Before a game: unless the human already told you, ask them in one short message which side you should play (Corp or Runner) and which deck to use: either a format for you to pick a deck in (standard, startup, core, eternal, system-gateway, throwback or casual) or a specific NetrunnerDB deck link. Wait for that answer before hosting or joining.
 Decks: with a format, use find_decks for recent community decklists legal in it, or list_decks with that format for the preconstructed decks, and pick one that suits you. A NetrunnerDB deck or decklist URL can be passed anywhere a deck is asked.
 Joining: join_game with the code the human gives you and your deck; the host starts the game.
 Hosting: host_game with your side and deck, then write the join link to the human in the text of your message (they never see tool results, so the link must be in what you write) and, in the same turn without waiting for any reply, call wait_for_turn: it waits until they have joined, picked a deck and pressed Ready, and the game starts by itself. The human does not want to type anything in this conversation, so never end your turn to wait for them.
@@ -44,7 +44,7 @@ export function registerTools(server: McpServer, agent: () => Promise<Agent>, NA
     },
     ({ side, deck, name }) => run((a) => a.host(name ?? NAME, side, deck)),
   );
-  const format = z.enum(["standard", "startup", "eternal", "system-gateway", "throwback", "casual"]);
+  const format = z.enum(["standard", "startup", "core", "eternal", "system-gateway", "throwback", "casual"]);
   server.registerTool(
     "list_decks",
     { description: "List the preconstructed decks for your side (or the given side). With a format, each deck says whether it is legal in it.", inputSchema: { side: side.optional(), format: format.optional() } },
