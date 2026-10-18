@@ -3,6 +3,7 @@ import { Session, loadSave } from "../../mobile/src/session";
 import { type Store, browserStore } from "../../mobile/src/store";
 import { basicCommands, cardCommands, cardRef, currentIce, findCard, promptOf, runCommands } from "../../mobile/src/game/actions";
 import { type WireDeck, fromPrecon, importNrdb, toWire } from "../../mobile/src/decks";
+import { FORMATS, type FormatKey, analyze } from "../../mobile/src/deckrules";
 
 export interface Loaded {
   engine: EngineApi;
@@ -195,7 +196,7 @@ export class Agent {
     return this.session;
   }
 
-  decks(side?: Side) {
+  decks(side?: Side, format?: FormatKey) {
     const s = this.session;
     const want = side ?? s?.lobby.mySide;
     const lines: string[] = [];
@@ -203,10 +204,48 @@ export class Agent {
       for (const sd of ["corp", "runner"] as Side[]) {
         if (want && sd !== want) continue;
         const d = m[sd];
-        lines.push(`- ${d.name} (${m.title}) · ${sd} · identity: ${d.identity}`);
+        let legal = "";
+        if (format) {
+          try {
+            legal = analyze(fromPrecon(d, this.db), format).legal ? ` · legal in ${format}` : ` · not legal in ${format}`;
+          } catch {}
+        }
+        lines.push(`- ${d.name} (${m.title}) · ${sd} · identity: ${d.identity}${legal}`);
       }
     }
-    return `Preconstructed decks${want ? ` for the ${want}` : ""}:\n${lines.join("\n")}\n\nchoose_deck also accepts a NetrunnerDB deck or decklist URL.`;
+    return `Preconstructed decks${want ? ` for the ${want}` : ""}:\n${lines.join("\n")}\n\nchoose_deck also accepts a NetrunnerDB deck or decklist URL; find_decks lists recent community decklists legal in a format.`;
+  }
+
+  async findDecks(side: Side, format: FormatKey, days = 21) {
+    if (!FORMATS.some((f) => f.key === format)) throw new Error(`Unknown format "${format}". Formats: ${FORMATS.map((f) => f.key).join(", ")}.`);
+    const span = Math.max(1, Math.min(30, Math.round(days)));
+    const dates = Array.from({ length: span }, (_, i) => new Date(Date.now() - i * 86_400_000).toISOString().slice(0, 10));
+    const found: string[] = [];
+    for (let i = 0; i < dates.length && found.length < 15; i += 6) {
+      const pages = await Promise.all(
+        dates.slice(i, i + 6).map((d) =>
+          fetch(`https://netrunnerdb.com/api/2.0/public/decklists/by_date/${d}`)
+            .then((r) => (r.ok ? r.json() : null))
+            .catch(() => null),
+        ),
+      );
+      for (const page of pages as any[]) {
+        for (const list of page?.data ?? []) {
+          const cards = Object.entries<number>(list.cards ?? {}).flatMap(([code, qty]) => {
+            const card = this.db.byCode.get(code);
+            return card ? [{ card, qty }] : [];
+          });
+          const identity = cards.find((e) => e.card.type === "Identity")?.card;
+          if (!identity || String(identity.side).toLowerCase() !== side) continue;
+          const deck = { name: String(list.name ?? "Decklist"), identity, cards: cards.filter((e) => e.card.type !== "Identity") };
+          if (!analyze(deck, format).legal) continue;
+          found.push(`- ${deck.name} · ${identity.title} · ${String(list.date_creation ?? "").slice(0, 10)} · https://netrunnerdb.com/en/decklist/${list.id}`);
+          if (found.length >= 15) break;
+        }
+      }
+    }
+    if (!found.length) return `No ${side} decklist legal in ${format} was published on NetrunnerDB in the last ${span} days. Try more days, another format, or list_decks for the preconstructed decks.`;
+    return `Recent NetrunnerDB ${side} decklists legal in ${format} (newest first):\n${found.slice(0, 15).join("\n")}\n\nPass one of these URLs as the deck to host_game, join_game or choose_deck.`;
   }
 
   private async resolveDeck(nameOrUrl: string, side: Side): Promise<WireDeck> {

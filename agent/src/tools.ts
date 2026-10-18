@@ -3,7 +3,8 @@ import { z } from "zod";
 import type { Agent } from "./game";
 
 export const INSTRUCTIONS = `Pocket Rig lets you play Netrunner (the Jinteki rules engine) against a human on their phone.
-Decks: list_decks shows the preconstructed decks of a side; NetrunnerDB deck URLs work too. Pick one that suits you.
+Before a game: unless the human already told you, ask them in one short message which side you should play (Corp or Runner) and which deck to use: either a format for you to pick a deck in (standard, startup, eternal, system-gateway, throwback or casual) or a specific NetrunnerDB deck link. Wait for that answer before hosting or joining.
+Decks: with a format, use find_decks for recent community decklists legal in it, or list_decks with that format for the preconstructed decks, and pick one that suits you. A NetrunnerDB deck or decklist URL can be passed anywhere a deck is asked.
 Joining: join_game with the code the human gives you and your deck; the host starts the game.
 Hosting: host_game with your side and deck, then write the join link to the human in the text of your message (they never see tool results, so the link must be in what you write) and, in the same turn without waiting for any reply, call wait_for_turn: it waits until they have joined, picked a deck and pressed Ready, and the game starts by itself. The human does not want to type anything in this conversation, so never end your turn to wait for them.
 During the game: get_state shows the whole board from your seat only and a numbered list of legal actions; act performs one of them by id. When nothing is yours to decide, call wait_for_turn.
@@ -38,13 +39,24 @@ export function registerTools(server: McpServer, agent: () => Promise<Agent>, NA
     "host_game",
     {
       description:
-        "Create a new game with your side and deck, and get the code and join link to give to the human. Call list_decks first to pick a deck. Then reply to the human with the code and link and end your turn; the game starts by itself once they are ready.",
+        "Create a new game with your side and deck, and get the code and join link to give to the human. Ask the human first which side you play and which format or NetrunnerDB deck to use, unless they already said; then pick the deck with find_decks or list_decks.",
       inputSchema: { side: side.describe("The side you will play"), deck: deckArg, name: z.string().optional() },
     },
     ({ side, deck, name }) => run((a) => a.host(name ?? NAME, side, deck)),
   );
-  server.registerTool("list_decks", { description: "List the preconstructed decks for your side (or the given side).", inputSchema: { side: side.optional() } }, ({ side }) =>
-    run((a) => a.decks(side)),
+  const format = z.enum(["standard", "startup", "eternal", "system-gateway", "throwback", "casual"]);
+  server.registerTool(
+    "list_decks",
+    { description: "List the preconstructed decks for your side (or the given side). With a format, each deck says whether it is legal in it.", inputSchema: { side: side.optional(), format: format.optional() } },
+    ({ side, format }) => run((a) => a.decks(side, format)),
+  );
+  server.registerTool(
+    "find_decks",
+    {
+      description: "Find recent community decklists on NetrunnerDB for a side that are legal in a format, with their URLs to use as a deck.",
+      inputSchema: { side: side.describe("The side the deck is for"), format: format.describe("The format the deck must be legal in"), days: z.number().int().optional().describe("How many days back to search, default 21, max 30") },
+    },
+    ({ side, format, days }) => run((a) => a.findDecks(side, format, days ?? 21)),
   );
   server.registerTool(
     "choose_deck",
