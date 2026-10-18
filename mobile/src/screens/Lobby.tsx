@@ -371,7 +371,7 @@ export function Lobby({ session, db, matchups, onLeave, onWatch }: Props) {
             ))
           ) : (
             <>
-              {!session.canStart && (session.deckProblem(lobby.myDeck) || session.deckProblem(session.localOpponentDeck)) && <p class="status">Every deck must be legal in {GAME_FORMATS.find((f) => f.key === lobby.format)?.label} to start.</p>}
+              {!session.canStart && (session.deckProblem(lobby.myDeck) || session.deckProblem(session.localOpponentDeck)) && <p class="status">Decks must be {GAME_FORMATS.find((f) => f.key === lobby.format)?.label} legal.</p>}
               <Cta disabled={!session.canStart} onClick={() => session.start()}>
                 Start game
               </Cta>
