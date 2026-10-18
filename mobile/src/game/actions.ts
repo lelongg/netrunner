@@ -267,7 +267,7 @@ export function runCommands(view: any, side: Side, autoContinue = false): Comman
     if ((run?.phase === "encounter-ice" || enc) && ice) {
       const subs: any[] = ice.subroutines ?? [];
       out.push({
-        label: "Fire unbroken subroutines",
+        label: "Fire subs",
         command: "unbroken-subroutines",
         args: { card: cardRef(ice) },
         enabled: runnerPassed(view, ice) && subs.some((s) => !s.broken && !s.fired && s.resolve !== false),
@@ -309,13 +309,18 @@ export function runCommands(view: any, side: Side, autoContinue = false): Comman
 
 export type BreakPlan = { ice: unknown; breaker: unknown; want: string[]; stage: "pump" | "break" | "pick"; steps: number };
 
-export function breakStep(view: any, side: Side, p: BreakPlan, render: (msg: unknown) => string): { command: string; args: unknown } | null {
+export function breakStep(view: any, side: Side, p: BreakPlan, render: (msg: unknown) => string, payFromPool = false): { command: string; args: unknown } | "wait" | null {
   const cur = currentIce(view);
   if (!view.encounters || cur?.cid !== p.ice || ++p.steps > 24) return null;
   const left = (cur.subroutines ?? []).filter((s: any) => !s.broken && !s.fired && p.want.includes(s.label));
   const pr = promptOf(view, side);
+  if (pr && pr["prompt-type"] === "select" && /^Choose a credit providing card/.test(render(pr.msg))) {
+    if (!payFromPool) return "wait";
+    const done = (Array.isArray(pr.choices) ? pr.choices : []).find((c: any) => c.value === "Done");
+    return done ? { command: "choice", args: { eid: pr.eid, choice: { uuid: done.uuid } } } : null;
+  }
   if (pr && pr["prompt-type"] !== "run") {
-    if (!/^Break a subroutine/i.test(render(pr.msg))) return null;
+    if (!/^Break a subroutine/i.test(render(pr.msg)) || (pr.card?.cid != null && pr.card.cid !== p.breaker)) return null;
     const choices: any[] = Array.isArray(pr.choices) ? pr.choices : [];
     const pick = choices.find((c) => left.some((s: any) => s.label === c.value)) ?? choices.find((c) => c.value === "Done");
     return pick ? { command: "choice", args: { eid: pr.eid, choice: { uuid: pick.uuid } } } : null;

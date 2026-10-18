@@ -46,6 +46,9 @@ export function Breakers({ view, stamp, probe, side, ice, send, onTap, disabled,
   const breakerCards = cards.filter((c) => (c.subtypes ?? []).includes("Icebreaker"));
   const plans = useProbe(partial && wanted ? breakerCards.map((c) => ({ k: "break", ice: ice.cid, breaker: c.cid, want: wantedLabels })) : [], probe, stamp ?? view);
   const planOf = (card: any) => plans?.[breakerCards.indexOf(card)];
+  const unbrokenLabels: string[] = (ice.subroutines ?? []).filter((s: any) => !s.broken && !s.fired && s.resolve !== false).map((s: any) => s.label);
+  const reach = useProbe(unbrokenLabels.length ? breakerCards.map((c) => ({ k: "break", ice: ice.cid, breaker: c.cid, want: unbrokenLabels, boost: 99 })) : [], probe, ice.cid);
+  const cannotBreak = (card: any) => reach?.[breakerCards.indexOf(card)]?.ok === false;
   const onIce = hostedOn(view, ice).flatMap((card) =>
     cardCommandsOf(card)
       .filter((cmd) => cmd.enabled !== false && (cmd.command === "ability" || cmd.command === "dynamic-ability"))
@@ -69,7 +72,8 @@ export function Breakers({ view, stamp, probe, side, ice, send, onTap, disabled,
   });
   const price = (r: (typeof all)[number]) => Number(String(r.ab?.["cost-label"] ?? "").match(/\d+/)?.[0] ?? 0);
   const rows = all.filter((r) => r.full).sort((a, b) => price(a) - price(b));
-  const manual: { card: any; cmd: Command }[] = [...all.flatMap((r) => r.manual.map((cmd) => ({ card: r.card, cmd }))), ...others];
+  const usable = all.flatMap((r) => r.manual.map((cmd) => ({ card: r.card, cmd, off: cannotBreak(r.card) })));
+  const manual: { card: any; cmd: Command; off?: boolean }[] = [...usable.filter((m) => !m.off), ...others, ...usable.filter((m) => m.off)];
   const fromIce = cardCommandsOf(ice).filter((c) => c.command === "runner-ability");
   if (!rows.length && !manual.length && !fromIce.length && !onIce.length) return null;
   const badPub = view.runner?.["bad-pub-credit"] ?? 0;
@@ -193,8 +197,8 @@ export function Breakers({ view, stamp, probe, side, ice, send, onTap, disabled,
             {open ? "▾" : "▸"} Other abilities · {manual.length}
           </button>
           {open &&
-            manual.map(({ card, cmd }) => (
-              <button class="brk-ab" disabled={disabled || cmd.enabled === false} onClick={() => send(cmd.command, cmd.args)}>
+            manual.map(({ card, cmd, off }) => (
+              <button class={`brk-ab ${off ? "off" : ""}`} disabled={disabled || cmd.enabled === false} onClick={() => send(cmd.command, cmd.args)}>
                 <span>
                   {card.title} · {glyphs(iconize(cmd.label))}
                 </span>

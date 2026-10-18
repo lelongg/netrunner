@@ -987,7 +987,8 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
   useEffect(() => {
     if (!plan.current || session.pending) return;
     const next = breakStep(view, side, plan.current, render);
-    if (next) send(next.command, next.args);
+    if (next === "wait") plan.current.steps--;
+    else if (next) send(next.command, next.args);
     else plan.current = null;
   }, [view, session.pending, planTick]);
   const toggleSub = (i: number) => {

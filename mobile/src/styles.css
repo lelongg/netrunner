@@ -1209,8 +1209,8 @@ textarea:focus {
   color: var(--bg);
 }
 
-.tile.new .state {
-  right: 28px;
+.tile:has(.state) .new-tag {
+  top: 15px;
 }
 
 .badges {
@@ -2878,6 +2878,10 @@ button:active:not(:disabled) {
   text-transform: none;
   min-height: 34px;
   padding: 6px 10px;
+}
+
+.brk-ab.off {
+  opacity: 0.45;
 }
 
 .encounter.live {
