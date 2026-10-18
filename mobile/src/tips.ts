@@ -17,7 +17,7 @@ const MEANINGS: Record<string, string> = {
   "bad-pub": "Bad publicity · during each run, the Runner gets 1 credit per bad publicity to spend on that run.",
   hand: "Cards in hand.",
   power: "Power counters.",
-  advance: "Advancement counters.",
+  advance: "Advancement counters · placed by advancing a card (the Corp's action for 1 click and 1 credit) or by card effects. An agenda with enough of them can be scored.",
   virus: "Virus counters.",
 };
 

@@ -20,14 +20,17 @@ export function CardImage({ code, alt, size, class: className, lazy, width }: Pr
   const srcSet = `${cardImage(code, "small")} 116w, ${cardImage(code, "medium")} 165w, ${cardImage(code, "large")} 300w`;
   const img = useRef<HTMLImageElement>(null);
   const [state, setState] = useState<"loading" | "loaded" | "error">("loading");
+  const [cached, setCached] = useState(false);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const el = img.current;
-    setState(el?.complete && el.naturalWidth > 0 ? "loaded" : "loading");
+    const ready = !!el?.complete && el.naturalWidth > 0;
+    setCached(ready);
+    setState(ready ? "loaded" : "loading");
   }, [src]);
 
   return (
-    <span class={`card-image ${state} ${className ?? ""}`}>
+    <span class={`card-image ${state} ${cached ? "cached" : ""} ${className ?? ""}`}>
       {size !== "small" && state !== "error" && <img class="card-image-low" crossOrigin="anonymous" src={cardImage(code, "small")} alt="" aria-hidden="true" />}
       <img
         ref={img}

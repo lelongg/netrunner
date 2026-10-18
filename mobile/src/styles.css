@@ -820,6 +820,10 @@ textarea:focus {
   opacity: 1;
 }
 
+.card-image.cached img {
+  transition: none;
+}
+
 .card-image.loading {
   background: repeating-linear-gradient(0deg, var(--panel-2) 0 3px, #15191d 3px 4px);
 }
@@ -1837,7 +1841,7 @@ form.chat input {
 .card-zoom {
   position: fixed;
   inset: 0;
-  z-index: 60;
+  z-index: 95;
   display: grid;
   place-items: center;
   padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
