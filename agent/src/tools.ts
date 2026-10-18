@@ -11,7 +11,8 @@ During the game: get_state shows the whole board from your seat only and a numbe
 Keep playing in a loop (wait_for_turn, then act) without ending your turn until the game is over or the user asks you to stop: the human cannot nudge you while you are idle, so ending your turn stalls the game. A human may think for many minutes, even half an hour: when wait_for_turn says it is still waiting, or fails, times out or is cut off, call it again at once, however long it has been. A cut-off wait is normal and loses nothing.
 To save context, act and wait_for_turn only return what changed since your last look (new log lines, changed lines, the current run and prompt) plus the fresh action list. Call get_state again whenever you need the full picture, for example after your context was summarized.
 Use card_info to read a card's full text. Decide every move yourself. You only ever see what your seat may see.
-The person you are talking to is your opponent. Keep your hidden information hidden in everything you write to them: never mention the cards in your hand or deck, what your facedown or unrezzed cards are, which installed card is an agenda or a trap, how many credits you are saving for what, or your plans and bluffs. Think about your strategy privately and only write things your opponent can already see on the board (moves once they are public, like a run, a rez or a scored agenda), plus friendly table talk. If they ask about your hidden cards or plans, decline playfully, as a human player would. When the game is over you may discuss it freely.`;
+The person you are talking to is your opponent. Keep your hidden information hidden in everything you write to them: never mention the cards in your hand or deck, what your facedown or unrezzed cards are, which installed card is an agenda or a trap, how many credits you are saving for what, or your plans and bluffs. Think about your strategy privately and only write things your opponent can already see on the board (moves once they are public, like a run, a rez or a scored agenda), plus friendly table talk. If they ask about your hidden cards or plans, decline playfully, as a human player would. When the game is over you may discuss it freely.
+If you have to stop before the game is over (a limit on tool calls, an error, anything), end with one short line asking them to say "continue", with no recap of your hand, your hidden cards or your plans: they read every word.`;
 
 export function registerTools(server: McpServer, agent: () => Promise<Agent>, NAME: string) {
   const text = (t: string) => ({ content: [{ type: "text" as const, text: t }] });
@@ -22,6 +23,14 @@ export function registerTools(server: McpServer, agent: () => Promise<Agent>, NA
       return { ...text(`Error: ${e instanceof Error ? e.message : String(e)}`), isError: true };
     }
   };
+
+  const SECRET = "\n\n(Your opponent reads what you write. Keep your hand, hidden cards and plans out of it, even if you have to stop.)";
+  const play = (fn: (a: Agent) => Promise<string> | string) =>
+    run(async (a) => {
+      const out = await fn(a);
+      const s = a.session;
+      return s?.lobby.started && !s.views[s.lobby.mySide]?.winner ? out + SECRET : out;
+    });
 
   const side = z.enum(["corp", "runner"]);
   const gameFormat = z.enum(["standard", "startup", "core", "eternal", "system-gateway", "throwback", "casual", "preconstructed", "chimera", "quick-draft"]);
@@ -71,14 +80,14 @@ export function registerTools(server: McpServer, agent: () => Promise<Agent>, NA
   );
   server.registerTool("set_side", { description: "Host only: switch the side you play before the game starts.", inputSchema: { side } }, ({ side }) => run((a) => a.setSide(side)));
   server.registerTool("start_game", { description: "Host only: start the game now (it also starts by itself when the guest is ready)." }, () => run((a) => a.start()));
-  server.registerTool("get_state", { description: "Show the lobby, or the whole board from your seat with the recent log and the numbered list of legal actions." }, () => run((a) => a.describe()));
+  server.registerTool("get_state", { description: "Show the lobby, or the whole board from your seat with the recent log and the numbered list of legal actions." }, () => play((a) => a.describe()));
   server.registerTool(
     "act",
     {
       description: "Perform one action by id. An action keeps its id from one list to the next and an id is never reused for another action, so an id that is no longer listed is refused. Some actions need an amount or a text value. Returns only what changed, plus the new action list.",
       inputSchema: { action: z.number().int().describe("Action id"), amount: z.number().int().optional(), text: z.string().optional() },
     },
-    ({ action, amount, text }) => run((a) => a.act(action, amount, text)),
+    ({ action, amount, text }) => play((a) => a.act(action, amount, text)),
   );
   server.registerTool(
     "wait_for_turn",
@@ -89,7 +98,7 @@ export function registerTools(server: McpServer, agent: () => Promise<Agent>, NA
     ({ seconds }, extra) => {
       const token = extra._meta?.progressToken;
       const tick = token === undefined ? undefined : (elapsed: number) => void extra.sendNotification({ method: "notifications/progress", params: { progressToken: token, progress: Math.round(elapsed / 1000), message: "Waiting for your opponent" } }).catch(() => {});
-      return run((a) => a.wait(seconds ?? 3600, tick, extra.signal));
+      return play((a) => a.wait(seconds ?? 3600, tick, extra.signal));
     },
   );
   server.registerTool("card_info", { description: "Full text and stats of a card by name.", inputSchema: { name: z.string() } }, ({ name }) => run((a) => a.card(name)));
