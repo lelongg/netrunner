@@ -40,10 +40,17 @@ export function DeckBrowser({ side, db, selected, onPick, format }: Props) {
 
   useEffect(() => {
     setLists([]);
+    setWant(10);
     load(1, true);
   }, [side, faction]);
 
   const shown = lists.filter((l) => l.deck && (format ? format === "casual" || analyze(l.deck, format).legal : !standard || l.standard));
+  const filtering = !!format && format !== "casual";
+  const [want, setWant] = useState(10);
+
+  useEffect(() => {
+    if (filtering && !busy && !error && hasMore && shown.length < want && page < 30) load(page + 1, false);
+  }, [busy, page, shown.length, want]);
 
   return (
     <div class="deck-browser">
@@ -76,10 +83,10 @@ export function DeckBrowser({ side, db, selected, onPick, format }: Props) {
             </button>
           </li>
         ))}
-        {!busy && !error && shown.length === 0 && <li class="hint">No playable decklist on this page.</li>}
+        {!busy && !error && shown.length === 0 && <li class="hint">{format && format !== "casual" ? `No legal decklist in the last ${page * 20} published.` : "No playable decklist on this page."}</li>}
         {hasMore && (
           <li>
-            <button class="more" disabled={busy} onClick={() => load(page + 1, false)}>
+            <button class="more" disabled={busy} onClick={() => (filtering ? setWant(shown.length + 10) : load(page + 1, false))}>
               {busy ? "Loading…" : "Load more"}
             </button>
           </li>
