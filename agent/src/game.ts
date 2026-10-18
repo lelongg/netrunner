@@ -115,15 +115,31 @@ export class Agent {
     this.session?.close();
     this.session = session;
     this.installing = undefined;
+    this.wantReady = false;
+    this.readyFor = "";
     this.ids.clear();
     this.idsCode = "";
     this.unsubscribe = session.subscribe(() => {
       this.autoPass();
       this.autoStart();
+      this.autoReady();
     });
   }
 
   private starting = false;
+
+  private wantReady = false;
+  private readyFor = "";
+
+  private autoReady() {
+    const s = this.session;
+    if (!s || s.lobby.role !== "guest" || s.lobby.started || s.lobby.ready || !this.wantReady) return;
+    const key = `${s.lobby.format}:${s.lobby.myDeck?.name ?? ""}`;
+    if (this.readyFor === key) return;
+    if (!dealtFormat(s.lobby.format) && (!s.lobby.myDeck || s.deckProblem(s.lobby.myDeck))) return;
+    this.readyFor = key;
+    setTimeout(() => this.session === s && !s.lobby.ready && s.setReady(true), 300);
+  }
 
   private autoStart() {
     const s = this.session;
@@ -183,6 +199,7 @@ export class Agent {
       while (Date.now() < end && !s.lobby.opponentName) await sleep(200);
       await sleep(500);
       if (dealtFormat(s.lobby.format)) {
+        this.wantReady = true;
         s.setReady(true);
         await sleep(800);
       } else if (deck) return this.chooseDeck(deck);
@@ -303,6 +320,7 @@ export class Agent {
     s.setDeck(deck);
     if (s.lobby.role === "guest") {
       await sleep(300);
+      this.wantReady = true;
       s.setReady(true);
     }
     await sleep(800);
@@ -334,7 +352,7 @@ export class Agent {
       `Link: ${l.status}${l.error ? ` · error: ${l.error}` : ""}`,
       `Opponent: ${l.opponentName ?? "not joined yet"}${l.opponentName ? ` · deck ${l.opponentDeckReady ? "ready" : "not ready"}` : ""}`,
       `Format: ${l.format}`,
-      `Your deck: ${dealtFormat(l.format) ? (l.format === "chimera" ? "dealt at random when the game starts" : "drafted when the game starts") : l.myDeck ? l.myDeck.name : "none (use list_decks or find_decks, then choose_deck)"}`,
+      `Your deck: ${dealtFormat(l.format) ? (l.format === "chimera" ? "dealt at random when the game starts" : "drafted when the game starts") : l.myDeck ? `${l.myDeck.name}${s.deckProblem(l.myDeck) ? ` (not legal in ${l.format}: ${s.deckProblem(l.myDeck)}; pick another with choose_deck)` : ""}` : "none (use list_decks or find_decks, then choose_deck)"}`,
     ];
     if (l.role === "host") lines.push(s.canStart ? "Starting the game…" : "The game starts by itself as soon as the human has joined, picked a deck and pressed Ready. Write the code and the link below to the human now, then call wait_for_turn right away in the same turn, without waiting for a reply.");
     else lines.push(l.myDeck ? "You are ready; the host starts the game." : "Pick a deck to be ready.");
@@ -635,6 +653,7 @@ export class Agent {
     const a = this.actions.find((x) => x.id === id);
     if (!a) return `Action ${id} is not available any more; nothing was done.\n\n${this.update()}`;
     s.clearActionError();
+    const before = JSON.stringify(s.views[s.lobby.mySide] ?? null);
     if (a.say) s.say(a.say);
     else {
       let args: any = a.args;
@@ -652,7 +671,9 @@ export class Agent {
     await sleep(150);
     while (s.pending && Date.now() < end) await sleep(100);
     await sleep(250);
-    return this.update();
+    const after = JSON.stringify(s.views[s.lobby.mySide] ?? null);
+    const note = s.actionError ? `The engine rejected that action: ${s.actionError}\n\n` : !a.say && after === before ? "Nothing happened: the engine refused that action, most likely because you cannot pay its real cost or it is not allowed right now.\n\n" : "";
+    return note + this.update();
   }
 
   async say(text: string) {

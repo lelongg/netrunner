@@ -5,7 +5,7 @@
    [game.core.board :refer [installable-servers]]
    [game.core.card :refer [active? agenda? asset? corp? event? get-card hardware? ice? in-discard? in-hand? is-public? operation? program? resource? runner? upgrade?]]
    [game.core.card-defs :refer [card-def]]
-   [game.core.cost-fns :refer [card-ability-cost]]
+   [game.core.cost-fns :refer [card-ability-cost rez-cost]]
    [game.core.engine :refer [can-trigger?]]
    [game.core.effects :refer [any-effects is-disabled-reg? get-effects]]
    [game.core.installing :refer [corp-can-pay-and-install?
@@ -150,6 +150,7 @@
    :counter
    :current-advancement-requirement
    :current-points
+   :current-rez-cost
    :current-strength
    :disabled
    :extra-advance-counter
@@ -209,6 +210,11 @@
       (and (seq settings) (keyword? side) (string? (:side card)) (= (name side) (.toLowerCase ^String (:side card))))
       (assoc :autoresolve settings))))
 
+(defn rez-cost-summary [card state side]
+  (if (and (= :corp side) (corp? card) (:installed card) (not (:rezzed card)) (or (ice? card) (asset? card) (upgrade? card)))
+    (assoc card :current-rez-cost (rez-cost state side card))
+    card))
+
 (defn card-summary [card state side]
   (if (is-public? card side)
     (-> (cond-> card
@@ -221,6 +227,7 @@
         (card-abilities-summary state side)
         (autoresolve-summary side)
         (icon-summary state)
+        (rez-cost-summary state side)
         (select-non-nil-keys card-keys))
     (-> (cond-> card
           (:host card) (-> (dissoc-in [:host :hosted])

@@ -143,7 +143,8 @@ export function cardCommands(card: any, view: any, side: Side): Command[] {
       for (const a of actionList(card, view, side)) {
         const me = view[side] ?? {};
         const enabled = a === "advance" ? me.click > 0 && me.credit > 0 : undefined;
-        const label = a === "rez" && card.cost != null ? `${ACTION_LABELS[a]} · ${card.cost}[credit]` : ACTION_LABELS[a];
+        const rezCost = card["current-rez-cost"] ?? card.cost;
+        const label = a === "rez" && rezCost != null ? `${ACTION_LABELS[a]} · ${rezCost}[credit]` : ACTION_LABELS[a];
         out.push({ label, command: a, args: { card: ref }, kind: a === "trash" ? "danger" : "normal", enabled });
       }
     } else if (card.type === "Program" && z === "rig") {

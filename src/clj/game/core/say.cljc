@@ -65,16 +65,19 @@
   [state message]
   (swap! state update :log conj message))
 
+(defn- say-message
+  [state side {:keys [user text]}]
+  (make-message {:user (or user (get-in @state [side :user]))
+                 :text (if (string? text)
+                         (insert-pronouns state side text)
+                         (update text :raw-text #(insert-pronouns state side %)))}))
+
 (defn say
   "Prints a message to the log as coming from the given user."
   ([state side msg] (say state side msg nil))
-  ([state side {:keys [user text]} {:keys [log-side]
-                                    :or {log-side :public}}]
-   (let [author (or user (get-in @state [side :user]))
-         message (make-message {:user author
-                                :text (if (string? text)
-                                        (insert-pronouns state side text)
-                                        (update text :raw-text #(insert-pronouns state side %)))})
+  ([state side msg {:keys [log-side]
+                    :or {log-side :public}}]
+   (let [message (say-message state side msg)
          log-sides (if (vector? log-side) log-side [log-side])]
      (log state (zipmap log-sides (repeat message))))))
 
@@ -261,10 +264,12 @@
      (system-say state side msg' args))))
 
 (defn multi-msg
+  "Logs one entry with a different text per log side, so each side sees only its own version."
   [state side message-map]
-  (doseq [[log-side text] message-map
-          :let [message (prep-msg state side text)]]
-    (system-say state side message {:log-side log-side})))
+  (log state (into {} (for [[log-side text] message-map
+                            :let [message (prep-msg state side text)]]
+                        [log-side (say-message state side (make-system-message (merge {:username nil}
+                                                                                      (if (string? message) {:raw-text message} message))))]))))
 
 (defn enforce-msg
   "Prints a message related to a rules enforcement on a given card.
