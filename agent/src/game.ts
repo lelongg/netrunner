@@ -116,6 +116,7 @@ export class Agent {
     this.session = session;
     this.installing = undefined;
     this.ids.clear();
+    this.idsCode = "";
     this.unsubscribe = session.subscribe(() => {
       this.autoPass();
       this.autoStart();
@@ -524,13 +525,28 @@ export class Agent {
     return out.map((a) => ({ ...a, id: this.idFor(a) }));
   }
 
+  private numbered(): Action[] {
+    const code = this.session?.lobby.code ?? "";
+    if (code !== this.idsCode) {
+      this.ids.clear();
+      this.idsCode = code;
+      this.nextId = Number(code && this.store.getItem(`pocket-rig:agent-ids:${code}`)) || 1;
+    }
+    const first = this.nextId;
+    const actions = this.buildActions();
+    if (code && this.nextId !== first) this.store.setItem(`pocket-rig:agent-ids:${code}`, String(this.nextId));
+    return actions;
+  }
+
   private ids = new Map<string, number>();
+  private idsCode = "";
+  private nextId = 1;
 
   private idFor(a: Omit<Action, "id">) {
     const key = JSON.stringify([a.label, a.command, a.args ?? null, a.say ?? null]);
     let id = this.ids.get(key);
     if (id === undefined) {
-      id = this.ids.size + 1;
+      id = this.nextId++;
       this.ids.set(key, id);
     }
     return id;
@@ -542,7 +558,7 @@ export class Agent {
   private actionsText() {
     const s = this.session!;
     const view = s.views[s.lobby.mySide];
-    this.actions = this.buildActions();
+    this.actions = this.numbered();
     this.stamp = this.stampOf();
     const rows: string[] = [];
     for (let i = 0; i < this.actions.length; i++) {
