@@ -3,7 +3,7 @@ import { Session, loadSave } from "../../mobile/src/session";
 import { type Store, browserStore } from "../../mobile/src/store";
 import { basicCommands, cardCommands, cardRef, currentIce, findCard, promptOf, runCommands } from "../../mobile/src/game/actions";
 import { type WireDeck, fromPrecon, importNrdb, toWire } from "../../mobile/src/decks";
-import { FORMATS, type FormatKey, analyze } from "../../mobile/src/deckrules";
+import { FORMATS, GAME_FORMATS, type FormatKey, type GameFormat, analyze, dealtFormat } from "../../mobile/src/deckrules";
 
 export interface Loaded {
   engine: EngineApi;
@@ -171,23 +171,35 @@ export class Agent {
     if (!save) this.session!.setName(name);
     await this.settleLobby();
     const s = this.session!;
-    if (deck && !s.lobby.started) {
+    if (!s.lobby.started) {
       const end = Date.now() + 10000;
       while (Date.now() < end && !s.lobby.opponentName) await sleep(200);
-      return this.chooseDeck(deck);
+      await sleep(500);
+      if (dealtFormat(s.lobby.format)) {
+        s.setReady(true);
+        await sleep(800);
+      } else if (deck) return this.chooseDeck(deck);
     }
     return this.describe();
   }
 
-  async host(name: string, side: Side, deck: string) {
-    const wire = await this.resolveDeck(deck, side);
+  async host(name: string, side: Side, deck: string | undefined, format: GameFormat = "casual") {
+    if (!GAME_FORMATS.some((f) => f.key === format)) throw new Error(`Unknown format "${format}". Formats: ${GAME_FORMATS.map((f) => f.key).join(", ")}.`);
+    if (!deck && !dealtFormat(format)) throw new Error(`Give a deck: in ${format} you play your own deck.`);
+    const wire = deck && !dealtFormat(format) ? await this.resolveDeck(deck, side) : undefined;
     this.attach(new Session(this.engine, this.db, "host", undefined, name, side, [], this.store));
     await this.settleLobby();
     const s = this.session!;
     s.setSide(side);
     await sleep(500);
-    s.setDeck(wire);
-    await sleep(300);
+    s.setFormat(format);
+    await sleep(500);
+    if (wire) {
+      const problem = s.deckProblem(wire);
+      if (problem) throw new Error(`${wire.name} is not legal in ${format}: ${problem}. Pick another deck with choose_deck.`);
+      s.setDeck(wire);
+      await sleep(300);
+    }
     return this.describe();
   }
 
@@ -262,7 +274,10 @@ export class Agent {
   async chooseDeck(nameOrUrl: string) {
     const s = this.requireSession();
     if (s.lobby.started) throw new Error("The game has already started.");
+    if (dealtFormat(s.lobby.format)) throw new Error(`No deck to pick in ${s.lobby.format}: decks are dealt when the game starts.`);
     const deck = await this.resolveDeck(nameOrUrl, s.lobby.mySide);
+    const problem = s.deckProblem(deck);
+    if (problem) throw new Error(`${deck.name} is not legal in ${s.lobby.format}: ${problem}. Pick another deck.`);
     s.setDeck(deck);
     if (s.lobby.role === "guest") {
       await sleep(300);
@@ -296,7 +311,8 @@ export class Agent {
       `Game ${l.code || "(creating…)"} · you are ${l.myName}, ${l.role === "host" ? "host" : "guest"}, playing ${l.mySide}`,
       `Link: ${l.status}${l.error ? ` · error: ${l.error}` : ""}`,
       `Opponent: ${l.opponentName ?? "not joined yet"}${l.opponentName ? ` · deck ${l.opponentDeckReady ? "ready" : "not ready"}` : ""}`,
-      `Your deck: ${l.myDeck ? l.myDeck.name : "none (use list_decks then choose_deck)"}`,
+      `Format: ${l.format}`,
+      `Your deck: ${dealtFormat(l.format) ? (l.format === "chimera" ? "dealt at random when the game starts" : "drafted when the game starts") : l.myDeck ? l.myDeck.name : "none (use list_decks or find_decks, then choose_deck)"}`,
     ];
     if (l.role === "host") lines.push(s.canStart ? "Starting the game…" : "The game starts by itself as soon as the human has joined, picked a deck and pressed Ready. Write the code and the link below to the human now, then call wait_for_turn right away in the same turn, without waiting for a reply.");
     else lines.push(l.myDeck ? "You are ready; the host starts the game." : "Pick a deck to be ready.");

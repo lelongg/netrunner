@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { Agent } from "./game";
 
 export const INSTRUCTIONS = `Pocket Rig lets you play Netrunner (the Jinteki rules engine) against a human on their phone.
-Before a game: unless the human already told you, ask them in one short message which side you should play (Corp or Runner) and which deck to use: either a format for you to pick a deck in (standard, startup, core, eternal, system-gateway, throwback or casual) or a specific NetrunnerDB deck link. Wait for that answer before hosting or joining.
+Before a game: unless the human already told you, ask them in one short message which side you should play (Corp or Runner), which format the game uses (standard, startup, core, eternal, system-gateway, throwback, casual, preconstructed, chimera or quick-draft) and, if it matters to them, a specific NetrunnerDB deck link for you. Wait for that answer before hosting or joining. In chimera both players are dealt a random deck and in quick-draft both draft theirs during setup, so no deck is needed; in preconstructed only the decks from list_decks are allowed. When joining, the host has already chosen the format: get_state shows it.
 Decks: with a format, use find_decks for recent community decklists legal in it, or list_decks with that format for the preconstructed decks, and pick one that suits you. A NetrunnerDB deck or decklist URL can be passed anywhere a deck is asked.
 Joining: join_game with the code the human gives you and your deck; the host starts the game.
 Hosting: host_game with your side and deck, then write the join link to the human in the text of your message (they never see tool results, so the link must be in what you write) and, in the same turn without waiting for any reply, call wait_for_turn: it waits until they have joined, picked a deck and pressed Ready, and the game starts by itself. The human does not want to type anything in this conversation, so never end your turn to wait for them.
@@ -24,6 +24,7 @@ export function registerTools(server: McpServer, agent: () => Promise<Agent>, NA
   };
 
   const side = z.enum(["corp", "runner"]);
+  const gameFormat = z.enum(["standard", "startup", "core", "eternal", "system-gateway", "throwback", "casual", "preconstructed", "chimera", "quick-draft"]);
 
   const deckArg = z.string().describe('A preconstructed deck name as list_decks shows it (e.g. "System Gateway Starter Runner (Beginner)") or a NetrunnerDB deck URL');
 
@@ -40,9 +41,14 @@ export function registerTools(server: McpServer, agent: () => Promise<Agent>, NA
     {
       description:
         "Create a new game with your side and deck, and get the code and join link to give to the human. Ask the human first which side you play and which format or NetrunnerDB deck to use, unless they already said; then pick the deck with find_decks or list_decks.",
-      inputSchema: { side: side.describe("The side you will play"), deck: deckArg, name: z.string().optional() },
+      inputSchema: {
+        side: side.describe("The side you will play"),
+        format: gameFormat.optional().describe("The game format, default casual. Decks must be legal in it."),
+        deck: deckArg.optional().describe("Your deck; not needed in chimera or quick-draft"),
+        name: z.string().optional(),
+      },
     },
-    ({ side, deck, name }) => run((a) => a.host(name ?? NAME, side, deck)),
+    ({ side, deck, name, format }) => run((a) => a.host(name ?? NAME, side, deck, format)),
   );
   const format = z.enum(["standard", "startup", "core", "eternal", "system-gateway", "throwback", "casual"]);
   server.registerTool(
