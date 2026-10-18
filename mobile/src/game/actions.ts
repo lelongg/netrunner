@@ -264,16 +264,9 @@ export function runCommands(view: any, side: Side, autoContinue = false): Comman
   const ice = currentIce(view);
   if (side === "corp") {
     if (run?.phase === "approach-ice" && ice && !ice.rezzed) out.push({ label: `Rez ${ice.title ?? "ice"}${(ice["current-rez-cost"] ?? ice.cost) != null ? ` · ${ice["current-rez-cost"] ?? ice.cost}[credit]` : ""}`, command: "rez", args: { card: cardRef(ice), "press-continue": autoContinue }, kind: "primary", check: "disable" });
-    if ((run?.phase === "encounter-ice" || enc) && ice) {
-      const subs: any[] = ice.subroutines ?? [];
-      out.push({
-        label: "Fire subs",
-        command: "unbroken-subroutines",
-        args: { card: cardRef(ice) },
-        enabled: runnerPassed(view, ice) && subs.some((s) => !s.broken && !s.fired && s.resolve !== false),
-      });
-    }
-    if (enc) {
+    const fire = (run?.phase === "encounter-ice" || enc) && ice && runnerPassed(view, ice) && (ice.subroutines ?? []).some((s: any) => !s.broken && !s.fired && s.resolve !== false);
+    if (fire) out.push({ label: "Fire subs", command: "unbroken-subroutines", args: { card: cardRef(ice) }, kind: "primary" });
+    else if (enc) {
       out.push({ label: "Continue", command: "continue", enabled: enc["no-action"] !== "corp", kind: "primary" });
     } else if (run) {
       const label = run.phase !== "initiation" && (run["next-phase"] || run.position === 0) ? "No further actions" : corpPassLabel(view);
