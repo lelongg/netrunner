@@ -6132,13 +6132,16 @@ h1.deck-name.long {
 }
 
 .format-static {
+  min-height: 34px;
+  padding: 4px 8px;
   display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 4px 10px;
-  font-size: 12px;
-  border: 1px solid var(--line-2);
-  background: var(--panel);
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--cyan);
+  border: 1px solid var(--cyan);
 }
 
 .edit-row-qty {
