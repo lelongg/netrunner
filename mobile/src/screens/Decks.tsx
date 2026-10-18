@@ -198,15 +198,22 @@ export function DeckRow({ db, stored, onOpen, format, selected, disabled }: { db
             <b>{FACTION_SHORT[deck.identity.faction ?? "Neutral"] ?? deck.identity.faction}</b> · {deck.identity.title}
           </span>
           <span class="deck-row-meta">
-            <span class={a.size < a.minimum ? "red" : ""}>
+            <span class={a.size < a.minimum ? "red" : ""} aria-label={`${a.size} cards, minimum ${a.minimum}`}>
+              <Icon name="deck" />
               {a.size}/{a.minimum}
             </span>
             {a.influenceLimit != null && (
-              <span class={a.influence > a.influenceLimit ? "red" : ""}>
-                {a.influence}/{a.influenceLimit} inf
+              <span class={a.influence > a.influenceLimit ? "red" : ""} aria-label={`${a.influence} of ${a.influenceLimit} influence`}>
+                <i class="inf-pip" />
+                {a.influence}/{a.influenceLimit}
               </span>
             )}
-            {a.pointsRange && <span>{a.points} pts</span>}
+            {a.pointsRange && (
+              <span aria-label={`${a.points} agenda points`}>
+                <Icon name="agenda" />
+                {a.points}
+              </span>
+            )}
           </span>
         </span>
         <span class={`deck-badge ${a.legal ? "ok" : "bad"}`}>{a.legal ? FORMATS.find((f) => f.key === fmt)!.label : `${a.problems.length} issue${a.problems.length > 1 ? "s" : ""}`}</span>

@@ -4746,10 +4746,36 @@ button.armed {
 
 .deck-row-meta {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   font-size: 10px;
   letter-spacing: 0.12em;
   color: var(--muted);
+}
+
+.deck-row-meta > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.deck-row-meta .icon {
+  height: 8px;
+  transform: translateY(-0.5px);
+}
+
+.deck-row-meta .sym {
+  font-size: 8px;
+  line-height: 1;
+  letter-spacing: 0;
+  transform: translateY(-0.75px);
+}
+
+.deck-row-meta .inf-pip {
+  width: 6px;
+  height: 6px;
+  transform: translateY(-0.5px);
+  border-radius: 50%;
+  background: var(--fc, var(--yellow));
 }
 
 .deck-row-meta .red,
