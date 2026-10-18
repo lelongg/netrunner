@@ -48,8 +48,9 @@ function Pips({ n, max = 5 }: { n: number; max?: number }) {
   );
 }
 
-export function Decks({ db, matchups, onClose }: { db: CardDb; matchups: Matchup[]; onClose: () => void }) {
+export function Decks({ db, matchups, onClose, initialSide }: { db: CardDb; matchups: Matchup[]; onClose: () => void; initialSide?: Side }) {
   const [side, setSide] = useState<Side>(() => {
+    if (initialSide) return initialSide;
     try {
       return (localStorage.getItem("nsg.decks.side") as Side) || "corp";
     } catch {

@@ -542,6 +542,52 @@ textarea:focus {
   gap: 10px;
 }
 
+.deck-picker > .label {
+  margin-top: 6px;
+}
+
+.deck-editor-link {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  text-align: left;
+  text-transform: none;
+  letter-spacing: 0;
+  border-color: var(--cyan);
+}
+
+.deck-editor-link > .icon {
+  height: 16px;
+  flex: none;
+  color: var(--cyan);
+}
+
+.deck-editor-link > span {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.deck-editor-link strong {
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-weight: 400;
+}
+
+.deck-editor-link span span {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.deck-list button.with-id:disabled {
+  opacity: 0.55;
+}
+
 .deck-current {
   display: flex;
   gap: 12px;
@@ -2302,8 +2348,13 @@ button:active:not(:disabled) {
   max-height: none;
 }
 
+.deck-choose .deck-picker {
+  overflow-y: auto;
+}
+
 .deck-choose .deck-picker > .deck-list {
-  flex: 1;
+  flex: none;
+  overflow: visible;
 }
 
 .deck-choose .import textarea {

@@ -7,6 +7,7 @@ import { QrCode } from "../QrCode";
 import { relayUrl } from "../net/relay";
 import { Cta, Ticker } from "../ui";
 import { DeckPicker } from "./DeckPicker";
+import { Decks } from "./Decks";
 import { DeckViewer } from "./DeckViewer";
 import { CardImage } from "../game/CardImage";
 import { useBackClose } from "../back";
@@ -92,7 +93,7 @@ function JoinStatus({ lobby }: { lobby: Session["lobby"] }) {
   );
 }
 
-function DeckSheet({ side, db, matchups, value, onPick, onClose, format }: { side: Side; db: CardDb; matchups: Matchup[]; value?: WireDeck; onPick: (d: WireDeck) => void; onClose: () => void; format?: GameFormat }) {
+function DeckSheet({ side, db, matchups, value, onPick, onClose, onEditDecks, format }: { side: Side; db: CardDb; matchups: Matchup[]; value?: WireDeck; onPick: (d: WireDeck) => void; onClose: () => void; onEditDecks?: () => void; format?: GameFormat }) {
   useBackClose(true, onClose);
   return (
     <div class="sheet-backdrop" onClick={onClose}>
@@ -110,6 +111,13 @@ function DeckSheet({ side, db, matchups, value, onPick, onClose, format }: { sid
           value={value}
           showCurrent={false}
           format={format}
+          onEditDecks={
+            onEditDecks &&
+            (() => {
+              onClose();
+              onEditDecks();
+            })
+          }
           onChange={(d) => {
             onPick(d);
             onClose();
@@ -154,7 +162,7 @@ function NameField({ name, onSave }: { name: string; onSave: (name: string) => v
   );
 }
 
-function Seat({ label, side, deck, db, matchups, onPick, onSide, locked, inline, name, onName, format = "casual", problem }: { label: string; inline?: boolean; name?: string; onName?: (name: string) => void; side: Side; deck?: WireDeck; db: CardDb; matchups: Matchup[]; onPick: (d: WireDeck) => void; onSide?: (s: Side) => void; locked?: boolean; format?: GameFormat; problem?: string | null }) {
+function Seat({ label, side, deck, db, matchups, onPick, onSide, locked, inline, name, onName, format = "casual", problem, onEditDecks }: { onEditDecks?: (side: Side) => void; label: string; inline?: boolean; name?: string; onName?: (name: string) => void; side: Side; deck?: WireDeck; db: CardDb; matchups: Matchup[]; onPick: (d: WireDeck) => void; onSide?: (s: Side) => void; locked?: boolean; format?: GameFormat; problem?: string | null }) {
   const dealt = dealtFormat(format);
   const [choosing, setChoosing] = useState(false);
   const [viewing, setViewing] = useState(false);
@@ -217,8 +225,8 @@ function Seat({ label, side, deck, db, matchups, onPick, onSide, locked, inline,
           </button>
         )
       )}
-      {inline && !dealt && <DeckPicker side={side} db={db} matchups={matchups} value={deck} showCurrent={false} onChange={onPick} format={format} />}
-      {choosing && <DeckSheet side={side} db={db} matchups={matchups} value={deck} format={format} onPick={onPick} onClose={() => setChoosing(false)} />}
+      {inline && !dealt && <DeckPicker side={side} db={db} matchups={matchups} value={deck} showCurrent={false} onChange={onPick} onEditDecks={onEditDecks && (() => onEditDecks(side))} format={format} />}
+      {choosing && <DeckSheet side={side} db={db} matchups={matchups} value={deck} format={format} onPick={onPick} onEditDecks={onEditDecks && (() => onEditDecks(side))} onClose={() => setChoosing(false)} />}
       {viewing && current && <DeckViewer deck={current} onClose={() => setViewing(false)} />}
     </section>
   );
@@ -226,6 +234,7 @@ function Seat({ label, side, deck, db, matchups, onPick, onSide, locked, inline,
 
 export function Lobby({ session, db, matchups, onLeave, onWatch }: Props) {
   const { lobby } = session;
+  const [editor, setEditor] = useState<Side | null>(null);
   const [copied, setCopied] = useState(false);
   const link = shareLink(lobby.code);
   const opponent = lobby.opponentName ?? "your opponent";
@@ -271,6 +280,8 @@ export function Lobby({ session, db, matchups, onLeave, onWatch }: Props) {
       </>
     );
   }
+
+  if (editor) return <Decks db={db} matchups={matchups} initialSide={editor} onClose={() => setEditor(null)} />;
 
   return (
     <>
@@ -335,9 +346,9 @@ export function Lobby({ session, db, matchups, onLeave, onWatch }: Props) {
 
         {inLobby && <FormatPicker value={lobby.format} onChange={lobby.role !== "guest" ? (f) => session.setFormat(f) : undefined} />}
 
-        {inLobby && <Seat format={lobby.format} problem={session.deckProblem(lobby.myDeck)} label={lobby.role === "local" && !lobby.vsBot ? "Player 1" : "You"} name={lobby.myName} onName={(n) => session.setName(n)} inline={lobby.role !== "local" && !inviting} side={lobby.mySide} deck={lobby.myDeck} db={db} matchups={matchups} onPick={(d) => session.setDeck(d)} onSide={lobby.role !== "guest" ? (s) => session.setSide(s) : undefined} />}
+        {inLobby && <Seat format={lobby.format} problem={session.deckProblem(lobby.myDeck)} label={lobby.role === "local" && !lobby.vsBot ? "Player 1" : "You"} name={lobby.myName} onName={(n) => session.setName(n)} inline={lobby.role !== "local" && !inviting} side={lobby.mySide} deck={lobby.myDeck} db={db} matchups={matchups} onEditDecks={setEditor} onPick={(d) => session.setDeck(d)} onSide={lobby.role !== "guest" ? (s) => session.setSide(s) : undefined} />}
 
-        {lobby.role === "local" && <Seat format={lobby.format} problem={session.deckProblem(session.localOpponentDeck)} label={lobby.vsBot ? "Bot" : "Player 2"} side={other(lobby.mySide)} deck={session.localOpponentDeck} db={db} matchups={matchups} onPick={(d) => session.setDeck(d, other(lobby.mySide))} />}
+        {lobby.role === "local" && <Seat format={lobby.format} problem={session.deckProblem(session.localOpponentDeck)} label={lobby.vsBot ? "Bot" : "Player 2"} side={other(lobby.mySide)} deck={session.localOpponentDeck} db={db} matchups={matchups} onEditDecks={setEditor} onPick={(d) => session.setDeck(d, other(lobby.mySide))} />}
 
         <div class="lobby-footer">
           {lobby.role === "host" && !inviting && <p class={`status ${lobby.opponentDeckReady ? "connected" : ""}`}>{lobby.opponentDeckReady ? `${opponent} is ready` : `Waiting for ${opponent} to pick a deck…`}</p>}
