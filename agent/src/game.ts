@@ -520,7 +520,7 @@ export class Agent {
     const inRun = !!(view.run || view.encounters);
     const base = inRun ? runCommands(view, side) : basicCommands(view, side);
     for (const c of base) {
-      if ((c.enabled === false && !c.check) || c.command === "toggle-auto-no-action") continue;
+      if (c.enabled === false || c.command === "toggle-auto-no-action") continue;
       if (c.command === "generate-runnable-zones") {
         const corp = view.corp ?? {};
         for (const key of ["hq", "rd", "archives", ...remoteKeys(corp.servers)]) push({ label: `Run on ${serverName(key)}`, group: "Run on", short: serverName(key), command: "run", args: { server: serverName(key) } });
@@ -540,7 +540,7 @@ export class Agent {
     collect(view[other(side)]);
     for (const card of cards) {
       for (const c of cardCommands(card, view, side)) {
-        if ((c.enabled === false && !c.check) || c.command === "select" || c.command === "choice") continue;
+        if (c.enabled === false || c.command === "select" || c.command === "choice") continue;
         if (c.command === "generate-install-list") {
           const servers = view.corp?.servers ?? {};
           const remotes = remoteKeys(servers).map(serverName);

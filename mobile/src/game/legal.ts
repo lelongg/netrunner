@@ -32,7 +32,7 @@ export function useChecked(commands: Command[], probe: Prober | undefined, stamp
   return commands.flatMap((c) => {
     if (!c.check) return [c];
     const ok = known?.[i++]?.ok;
-    const enabled = ok ?? c.enabled !== false;
+    const enabled = c.enabled !== false && ok !== false;
     if (!enabled && c.check === "hide") return [];
     return [{ ...c, enabled }];
   });

@@ -126,16 +126,15 @@ export function cardCommands(card: any, view: any, side: Side): Command[] {
   }
 
   if (mine && !prompt) {
-    const fromHand = z === "hand" || card["playable-as-if-in-hand"];
+    const fromHand = (z === "hand" && card.playable) || card["playable-as-if-in-hand"];
     const flashback = z === "discard" && card["flashback-playable"];
-    const hinted = flashback || !!card.playable || !!card["playable-as-if-in-hand"];
     if (fromHand || flashback) {
       const command = flashback ? "flashback" : "play";
       if (side === "corp" && card.type !== "Operation") {
-        if (hinted) out.push({ label: "Install", command: "generate-install-list", args: { card: ref }, kind: "primary", then: "install-list" });
+        out.push({ label: "Install", command: "generate-install-list", args: { card: ref }, kind: "primary", then: "install-list" });
       } else {
         const verb = card.type === "Operation" || card.type === "Event" ? "Play" : "Install";
-        out.push({ label: flashback ? `${verb} (flashback)` : verb, command, args: { card: ref }, kind: "primary", enabled: hinted, check: "hide" });
+        out.push({ label: flashback ? `${verb} (flashback)` : verb, command, args: { card: ref }, kind: "primary", check: "hide" });
       }
     }
   }
