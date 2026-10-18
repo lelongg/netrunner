@@ -166,7 +166,9 @@ export function Decks({ db, matchups, onClose, initialSide }: { db: CardDb; matc
           side={side}
           onClose={() => setImporting(false)}
           onDone={(deck) => {
-            const stored = putDeck({ ...toWire(deck), side, format: "standard" });
+            const deckSide: Side = deck.identity.side === "Corp" ? "corp" : "runner";
+            setSide(deckSide);
+            const stored = putDeck({ ...toWire(deck), side: deckSide, format: "standard" });
             setImporting(false);
             refresh();
             setEditing(stored);
@@ -255,7 +257,7 @@ function ImportSheet({ db, side, onClose, onDone }: { db: CardDb; side: Side; on
     setError(undefined);
     try {
       const t = text.trim();
-      onDone(/netrunnerdb\.com|^[0-9a-f-]{36}$/i.test(t) ? await importNrdb(t, side, db) : parseDecklist(t, side, db));
+      onDone(/^\S+$/.test(t) && /netrunnerdb\.com|^[0-9a-f-]{36}$/i.test(t) ? await importNrdb(t, side, db) : parseDecklist(t, side, db));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -266,7 +268,7 @@ function ImportSheet({ db, side, onClose, onDone }: { db: CardDb; side: Side; on
     <div class="sheet-backdrop" onClick={onClose}>
       <div class="sheet panel" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Import a deck">
         <div class="row">
-          <span class="label">Import a {SIDE_NAME[side]} deck</span>
+          <span class="label">Import a deck</span>
           <button class="ghost" onClick={onClose} aria-label="Close">
             <Icon name="close" />
           </button>

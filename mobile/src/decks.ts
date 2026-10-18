@@ -21,10 +21,11 @@ function finder(db: CardDb) {
 }
 
 function build(name: string, side: Side, found: Map<Card, number>): Deck {
-  const sideName = side === "corp" ? "Corp" : "Runner";
+  const ids = [...found.keys()].filter((c) => c.type === "Identity");
+  const sideName = ids.some((c) => c.side === (side === "corp" ? "Corp" : "Runner")) || !ids.length ? (side === "corp" ? "Corp" : "Runner") : ids[0].side;
   const entries = [...found.entries()].filter(([c]) => c.side === sideName);
   const identity = entries.find(([c]) => c.type === "Identity")?.[0];
-  if (!identity) throw new Error(`No ${sideName} identity found in this deck`);
+  if (!identity) throw new Error("No identity found in this deck");
   const cards: DeckEntry[] = entries
     .filter(([c]) => c.type !== "Identity")
     .map(([card, qty]) => ({ qty, card }))
@@ -36,6 +37,7 @@ export function parseDecklist(text: string, side: Side, db: CardDb, name = "Impo
   const find = finder(db);
   const found = new Map<Card, number>();
   const unknown: string[] = [];
+  let title0: string | undefined;
   for (const raw of text.split(/\r?\n/)) {
     const line = raw.trim();
     if (!line || /^(#|\/\/)/.test(line)) continue;
@@ -45,9 +47,10 @@ export function parseDecklist(text: string, side: Side, db: CardDb, name = "Impo
     const title = before ? before[2] : after ? after[1] : line;
     const card = find(title);
     if (card) found.set(card, (found.get(card) ?? 0) + qty);
+    else if (!found.size && !unknown.length && !before && !after) title0 = line;
     else if (!/^[A-Za-z ]+\(\d+\)$/.test(line)) unknown.push(title);
   }
-  const deck = build(name, side, found);
+  const deck = build(title0 ?? name, side, found);
   if (unknown.length) console.warn("Unknown cards", unknown);
   return deck;
 }
