@@ -464,8 +464,12 @@ export class Session {
     if (before && !now && !view?.winner && this.lastAuthor === this.seat && this.transport instanceof RelayTransport) this.transport.nudge(this.lobby.myName);
   }
 
+  get seatTicket() {
+    return this.transport instanceof RelayTransport ? this.transport.seatTicket : undefined;
+  }
+
   get rejoinUrl(): string | undefined {
-    const ticket = this.transport instanceof RelayTransport ? this.transport.seatTicket : undefined;
+    const ticket = this.seatTicket;
     return ticket && rejoinLink(ticket);
   }
 

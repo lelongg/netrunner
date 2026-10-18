@@ -12,6 +12,7 @@ Keep playing in a loop (wait_for_turn, then act) without ending your turn until 
 To save context, act and wait_for_turn only return what changed since your last look (new log lines, changed lines, the current run and prompt) plus the fresh action list. Call get_state again whenever you need the full picture, for example after your context was summarized.
 Use card_info to read a card's full text. Decide every move yourself. You only ever see what your seat may see.
 The person you are talking to is your opponent. Keep your hidden information hidden in everything you write to them: never mention the cards in your hand or deck, what your facedown or unrezzed cards are, which installed card is an agenda or a trap, how many credits you are saving for what, or your plans and bluffs. Think about your strategy privately and only write things your opponent can already see on the board (moves once they are public, like a run, a rez or a scored agenda), plus friendly table talk. If they ask about your hidden cards or plans, decline playfully, as a human player would. When the game is over you may discuss it freely.
+If a call says you are not in a game while you were playing one, this server lost its session: call join_game with the game code and the rejoin key from your last get_state, then carry on. Never write the rejoin key to the human.
 If you have to stop before the game is over (a limit on tool calls, an error, anything), end with one short line asking them to say "continue", with no recap of your hand, your hidden cards or your plans: they read every word.`;
 
 export function registerTools(server: McpServer, agent: () => Promise<Agent>, NAME: string) {
@@ -40,10 +41,10 @@ export function registerTools(server: McpServer, agent: () => Promise<Agent>, NA
   server.registerTool(
     "join_game",
     {
-      description: "Join a Pocket Rig game with its 5-letter code (or rejoin one this server already played). With a deck, you are ready right away.",
-      inputSchema: { code: z.string().describe("Game code, e.g. K7QPA"), deck: deckArg.optional(), name: z.string().optional().describe("Your player name") },
+      description: "Join a Pocket Rig game with its 5-letter code, or take your seat back in a game you were already playing. With a deck, you are ready right away. To take your seat back after a call said you are not in a game, pass the rejoin key that host_game, join_game and get_state showed you.",
+      inputSchema: { code: z.string().describe("Game code, e.g. K7QPA"), deck: deckArg.optional(), name: z.string().optional().describe("Your player name"), rejoin_key: z.string().optional().describe("Your rejoin key for this game, to take your seat back") },
     },
-    ({ code, deck, name }) => run((a) => a.join(code, name ?? NAME, deck)),
+    ({ code, deck, name, rejoin_key }) => run((a) => a.join(code, name ?? NAME, deck, rejoin_key)),
   );
   server.registerTool(
     "host_game",

@@ -3,7 +3,7 @@ import { Session, loadSave } from "../../mobile/src/session";
 import { type Store, browserStore } from "../../mobile/src/store";
 import { basicCommands, cardCommands, cardRef, currentIce, findCard, promptOf, runCommands } from "../../mobile/src/game/actions";
 import { type WireDeck, fromPrecon, importNrdb, toWire } from "../../mobile/src/decks";
-import { relayUrl } from "../../mobile/src/net/relay";
+import { relayUrl, storeTicket } from "../../mobile/src/net/relay";
 import { FORMATS, GAME_FORMATS, type FormatKey, type GameFormat, analyze, dealtFormat } from "../../mobile/src/deckrules";
 
 export interface Loaded {
@@ -166,8 +166,13 @@ export class Agent {
     await sleep(600);
   }
 
-  async join(code: string, name: string, deck?: string) {
+  async join(code: string, name: string, deck?: string, rejoinKey?: string) {
     const upper = code.trim().toUpperCase();
+    if (rejoinKey) {
+      const m = rejoinKey.trim().match(/^([A-Z2-9]{5})\.([01])\.(\S+)$/);
+      if (!m || m[1] !== upper) throw new Error("That rejoin key does not belong to this game.");
+      storeTicket({ code: upper, seat: Number(m[2]) as 0 | 1, token: m[3] }, this.store);
+    }
     const save = loadSave(upper, this.store);
     this.attach(save ? Session.resume(this.engine, this.db, save, this.store) : new Session(this.engine, this.db, "guest", upper, name, undefined, [], this.store));
     if (!save) this.session!.setName(name);
@@ -206,7 +211,7 @@ export class Agent {
   }
 
   private requireSession() {
-    if (!this.session) throw new Error("Not in a game. Use join_game or host_game first.");
+    if (!this.session) throw new Error("Not in a game. Use join_game or host_game first. If you were in the middle of a game, this server lost its session: call join_game with the game code and your rejoin key.");
     return this.session;
   }
 
@@ -334,7 +339,12 @@ export class Agent {
     if (l.role === "host") lines.push(s.canStart ? "Starting the game…" : "The game starts by itself as soon as the human has joined, picked a deck and pressed Ready. Write the code and the link below to the human now, then call wait_for_turn right away in the same turn, without waiting for a reply.");
     else lines.push(l.myDeck ? "You are ready; the host starts the game." : "Pick a deck to be ready.");
     if (l.role === "host" && l.code) lines.unshift(`Join link for the human: ${this.joinLink()} (code ${l.code}). They only see what you write in your message, never tool results, so copy this link into your reply.`);
-    return lines.join("\n");
+    return this.rejoinLine() + lines.join("\n");
+  }
+
+  private rejoinLine() {
+    const t = this.session?.seatTicket;
+    return t ? `Rejoin key: ${t.code}.${t.seat}.${t.token} (private, never write it to the human; if a call ever says you are not in a game, call join_game with the code and this key)\n` : "";
   }
 
   private joinLink() {
@@ -581,14 +591,14 @@ export class Agent {
 
   describe() {
     const s = this.session;
-    if (!s) return "Not in a game. Use join_game with a game code, or host_game.";
+    if (!s) return "Not in a game. Use join_game with a game code, or host_game. If you were in the middle of a game, this server lost its session: call join_game with the game code and your rejoin key.";
     if (!s.lobby.started || !s.views[s.lobby.mySide]) return this.lobbyText();
     const lines = this.gameLines();
     const recent = this.logLines()
       .filter((t) => t && !/^\s*\[hr\]\s*$/i.test(t))
       .slice(-12);
     this.remember(lines);
-    return `${lines.map(([, t]) => t).join("\n")}\n\nRecent log:\n${recent.map((t) => `  ${t}`).join("\n")}\n\n${this.actionsText()}`;
+    return `${this.rejoinLine()}${lines.map(([, t]) => t).join("\n")}\n\nRecent log:\n${recent.map((t) => `  ${t}`).join("\n")}\n\n${this.actionsText()}`;
   }
 
   update() {
