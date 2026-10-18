@@ -21,7 +21,7 @@ interface Props {
   closePrompt: () => void;
   disabled: boolean;
   db: { byTitle: Map<string, any> };
-  staging?: { count: number; onConfirm: () => void; onClear: () => void };
+  staging?: { count: number; onConfirm: () => void };
 }
 
 function NumberPicker({ min, max, initial, onSubmit, disabled, extra }: { min: number; max: number; initial: number; onSubmit: (n: number) => void; disabled: boolean; extra?: preact.ComponentChildren }) {
@@ -244,26 +244,9 @@ export function PromptPanel({ view, side, prompt, render, send, closePrompt, dis
     const verb = /^discard/i.test(msg) ? "Discard" : /^trash/i.test(msg) ? "Trash" : "Confirm";
     body = (
       <>
-        <div class="select-row">
-          <span class="select-count" aria-live="polite">
-            {max <= 12 && (
-              <span class="select-pips">
-                {Array.from({ length: max }, (_, i) => (
-                  <i class={i < staging.count ? "on" : ""} />
-                ))}
-              </span>
-            )}
-            <b>{staging.count}</b>/{max}
-          </span>
-          {staging.count > 0 && (
-            <button class="select-clear" disabled={disabled} onClick={staging.onClear} aria-label="Clear selection">
-              Clear
-            </button>
-          )}
-          <button class="primary" disabled={disabled || !ready} onClick={staging.onConfirm}>
-            {ready ? `${verb} ${staging.count}` : `Pick ${min - staging.count} more`}
-          </button>
-        </div>
+        <button class="primary wide select-go" disabled={disabled || !ready} onClick={staging.onConfirm}>
+          {ready ? `${verb} ${staging.count} ${staging.count === 1 ? "card" : "cards"}` : `Pick ${min - staging.count} more`}
+        </button>
       </>
     );
   } else if (Array.isArray(choices)) {
@@ -305,6 +288,26 @@ export function PromptPanel({ view, side, prompt, render, send, closePrompt, dis
   const accessed = !!code && /^You accessed /.test(msg);
 
   const full = accessed ? db.byTitle.get(source.title) : undefined;
+  const selMax: number = prompt["select-max"];
+  const msgLine = staging ? (
+    <div class="prompt-msg-row">
+      <p class="prompt-msg">{glyphs(msg)}</p>
+      <span class="select-count" aria-live="polite">
+        {selMax <= 12 && (
+          <span class="select-pips">
+            {Array.from({ length: selMax }, (_, i) => (
+              <i class={i < staging.count ? "on" : ""} />
+            ))}
+          </span>
+        )}
+        <span>
+          <b>{staging.count}</b>/{selMax}
+        </span>
+      </span>
+    </div>
+  ) : (
+    <p class="prompt-msg">{glyphs(msg)}</p>
+  );
 
   return (
     <section class={`prompt prompt-${ptype ?? "other"} ${accessed ? "accessed" : ""}`}>
@@ -319,16 +322,16 @@ export function PromptPanel({ view, side, prompt, render, send, closePrompt, dis
               </span>
             )}
             <span class="prompt-card">{source.title}</span>
-            {full?.text ? <RichText class="card-text" text={full.text} /> : <p class="prompt-msg">{glyphs(msg)}</p>}
+            {full?.text ? <RichText class="card-text" text={full.text} /> : msgLine}
           </div>
         </div>
       ) : (
         <>
           {source && <span class="prompt-card">{source.title}</span>}
-          <p class="prompt-msg">{glyphs(msg)}</p>
+          {msgLine}
         </>
       )}
-      {full?.text && <p class="prompt-msg">{glyphs(msg)}</p>}
+      {full?.text && msgLine}
       {body}
     </section>
   );

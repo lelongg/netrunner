@@ -1119,15 +1119,11 @@ textarea:focus {
   background: var(--text);
 }
 
-.select-row {
+.prompt-msg-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 6px;
-}
-
-.select-row .primary {
-  flex: 1;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .select-count {
@@ -1144,8 +1140,8 @@ textarea:focus {
   font-size: 16px;
 }
 
-.select-clear {
-  padding-inline: 10px;
+.select-go {
+  margin-top: 8px;
 }
 
 .select-pips {

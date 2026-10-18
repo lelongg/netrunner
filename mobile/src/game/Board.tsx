@@ -1051,7 +1051,7 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
         closePrompt={closePrompt}
         disabled={disabled}
         db={db}
-        staging={staging ? { count: staged.size, onConfirm: confirmStaged, onClear: () => setStaged(new Set()) } : undefined}
+        staging={staging ? { count: staged.size, onConfirm: confirmStaged } : undefined}
       />
     );
   } else if (picking && side === "runner") {
