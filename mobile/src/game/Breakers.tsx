@@ -1,5 +1,5 @@
 import { useState } from "preact/hooks";
-import { type Command, cardCommands } from "./actions";
+import { type Command, cardCommands, findCard } from "./actions";
 import { Icon } from "../icons";
 import { CardImage } from "./CardImage";
 import { glyphs } from "./Glyphs";
@@ -17,6 +17,8 @@ function installed(view: any): any[] {
   for (const k of ["program", "hardware", "resource"]) walk(rig[k] ?? []);
   return out;
 }
+
+const hostedOn = (view: any, ice: any): any[] => ((findCard(view, ice.cid) ?? ice).hosted ?? []).filter((c: any) => c.side === "Runner");
 
 function splitCost(label: string): [string, string] {
   const i = label.indexOf(":");
@@ -48,6 +50,11 @@ export function Breakers({ view, side, ice, send, onTap, disabled, skip, onParti
   const partial = wanted < unbroken.length;
   const wantedLabels: string[] = (ice.subroutines ?? []).filter((s: any, i: number) => !s.broken && !s.fired && s.resolve !== false && !skip?.has(i)).map((s: any) => s.label);
   const cards = installed(view);
+  const onIce = hostedOn(view, ice).flatMap((card) =>
+    cardCommands(card, view, side)
+      .filter((cmd) => cmd.enabled !== false && (cmd.command === "ability" || cmd.command === "dynamic-ability"))
+      .map((cmd) => ({ card, cmd })),
+  );
   const breakers = cards.filter((c) => (c.subtypes ?? []).includes("Icebreaker"));
   const others = cards
     .filter((c) => !breakers.includes(c))
@@ -68,7 +75,7 @@ export function Breakers({ view, side, ice, send, onTap, disabled, skip, onParti
   const rows = all.filter((r) => r.full).sort((a, b) => price(a) - price(b));
   const manual: { card: any; cmd: Command }[] = [...all.flatMap((r) => r.manual.map((cmd) => ({ card: r.card, cmd }))), ...others];
   const fromIce = cardCommands(ice, view, side).filter((c) => c.command === "runner-ability");
-  if (!rows.length && !manual.length && !fromIce.length) return null;
+  if (!rows.length && !manual.length && !fromIce.length && !onIce.length) return null;
   const badPub = view.runner?.["bad-pub-credit"] ?? 0;
   return (
     <div class="breakers">
@@ -94,6 +101,46 @@ export function Breakers({ view, side, ice, send, onTap, disabled, skip, onParti
             <button class="brk-go" disabled={disabled || cmd.enabled === false} onClick={() => send(cmd.command, cmd.args)}>
               <span class="brk-cost">{glyphs(iconize(cost))}</span>
               <span class="brk-verb">Use</span>
+            </button>
+          </div>
+        );
+      })}
+      {onIce.map(({ card, cmd }) => {
+        const [cost, effect] = splitCost(cmd.label);
+        return (
+          <div class="brk best">
+            <button class="brk-card" onClick={() => onTap(card)} aria-label={card.title}>
+              {card.code && <CardImage code={card.code} alt={card.title} size="small" width="30px" />}
+            </button>
+            <div class="brk-text">
+              <span class="brk-head-line">
+                <span class="brk-name">{card.title}</span>
+                <span class="brk-meta">
+                  {(card.subtypes ?? []).join(" · ")}
+                  {card.counter?.virus != null && (
+                    <>
+                      {" · "}
+                      <span class="stat" aria-label={`${card.counter.virus} virus counters`}>
+                        <Icon name="virus" />
+                        {card.counter.virus}
+                      </span>
+                    </>
+                  )}
+                </span>
+              </span>
+              <span class="brk-desc">{glyphs(iconize(effect))}</span>
+            </div>
+            <button class="brk-go" disabled={disabled} onClick={() => send(cmd.command, cmd.args)}>
+              <span class="brk-cost">
+                {/^hosted virus counter$/i.test(cost) ? (
+                  <span class="stat" aria-label="1 hosted virus counter">
+                    1<Icon name="virus" />
+                  </span>
+                ) : (
+                  glyphs(iconize(cost))
+                )}
+              </span>
+              <span class="brk-verb">{/^break/i.test(effect) ? "Break" : "Use"}</span>
             </button>
           </div>
         );
