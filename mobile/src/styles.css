@@ -6164,9 +6164,12 @@ button.armed {
 h1.deck-name {
   margin: 0;
   border-bottom: none;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.05;
+  overflow-wrap: anywhere;
+}
+
+h1.deck-name.long {
+  font-size: 20px;
 }
 
 .format-static {

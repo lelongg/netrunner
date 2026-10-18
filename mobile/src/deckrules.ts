@@ -38,9 +38,16 @@ const listed = (names: string[]) => (names.length > 1 ? `${names.slice(0, -1).jo
 
 export function applyFormatPools(pools: Partial<Record<GameFormat, { cycles: string[] }>>) {
   const cycles = (f: GameFormat) => pools[f]?.cycles ?? [];
-  if (cycles("standard").length) FORMAT_DESC.standard = `${listed(cycles("standard"))}, with the current ban list.`;
-  if (cycles("startup").length) FORMAT_DESC.startup = `${listed(cycles("startup"))}. Small and beginner friendly.`;
-  if (cycles("core").length) FORMAT_DESC.core = `${listed(cycles("core"))}.`;
+  const describe = (f: GameFormat, base?: GameFormat) => {
+    const own = cycles(f);
+    if (!own.length) return;
+    const from = base ? cycles(base) : [];
+    const extra = own.filter((c) => !from.includes(c));
+    FORMAT_DESC[f] = base && from.length && from.every((c) => own.includes(c)) && extra.length ? `${GAME_FORMATS.find((g) => g.key === base)!.label} + ${listed(extra)}.` : `${listed(own)}.`;
+  };
+  describe("core");
+  describe("startup", "core");
+  describe("standard", "startup");
 }
 
 export const isGameFormat = (f: unknown): f is GameFormat => GAME_FORMATS.some((g) => g.key === f);

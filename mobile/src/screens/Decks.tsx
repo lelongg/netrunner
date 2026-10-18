@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "preact/hooks";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { Card, CardDb, Deck, Matchup, Side } from "../engine";
 import { type StoredDeck, type WireDeck, fromPrecon, fromWire, importNrdb, parseDecklist, putDeck, removeDeck, savedDecks, toWire } from "../decks";
 import { type FormatKey, FORMAT_DESC, FORMATS, deckFormat, TYPE_ORDER, analyze, costCurve, deckLimit, groupByType, influenceByFaction, influenceOf, isNeutral, legality, subtypeSpread, toText } from "../deckrules";
@@ -180,6 +180,28 @@ export function Decks({ db, matchups, onClose, initialSide }: { db: CardDb; matc
   );
 }
 
+function FitText({ text, class: className }: { text: string; class: string }) {
+  const el = useRef<HTMLSpanElement>(null);
+  useLayoutEffect(() => {
+    const node = el.current;
+    if (!node) return;
+    const fit = () => {
+      node.style.fontSize = "";
+      let size = parseFloat(getComputedStyle(node).fontSize);
+      while (node.scrollWidth > node.clientWidth && size > 13) node.style.fontSize = `${--size}px`;
+    };
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(node.parentElement ?? node);
+    return () => observer.disconnect();
+  }, [text]);
+  return (
+    <span ref={el} class={className} title={text}>
+      {text}
+    </span>
+  );
+}
+
 export function DeckRow({ db, stored, onOpen, format, selected, disabled }: { db: CardDb; stored: WireDeck & { format?: string }; onOpen: () => void; format?: FormatKey; selected?: boolean; disabled?: boolean }) {
   const deck = useMemo(() => {
     try {
@@ -196,7 +218,7 @@ export function DeckRow({ db, stored, onOpen, format, selected, disabled }: { db
       <button class={`deck-row faction-${factionKey(deck.identity.faction)} ${selected ? "on" : ""}`} disabled={disabled} onClick={onOpen}>
         <CardImage class="deck-row-id" code={deck.identity.code} alt={deck.identity.title} size="small" width="40px" />
         <span class="deck-row-main">
-          <span class="deck-row-name">{deck.name}</span>
+          <FitText class="deck-row-name" text={deck.name} />
           <span class="deck-row-id-name">
             <b>{FACTION_SHORT[deck.identity.faction ?? "Neutral"] ?? deck.identity.faction}</b> · {deck.identity.title}
           </span>
@@ -521,7 +543,7 @@ function DeckEditor({ db, initial, deck0, onClose, onOpen, readOnly }: { db?: Ca
             <Icon name="arrow-left" />
           </button>
           {readOnly ? (
-            <h1 class="deck-name">{deck.name}</h1>
+            <h1 class={`deck-name ${deck.name.length > 22 ? "long" : ""}`}>{deck.name}</h1>
           ) : (
             <input class="deck-name" value={deck.name} aria-label="Deck name" maxLength={60} onInput={(e) => setDeck((d) => ({ ...d, name: (e.target as HTMLInputElement).value }))} onBlur={() => !deck.name.trim() && setDeck((d) => ({ ...d, name: "Untitled deck" }))} />
           )}
