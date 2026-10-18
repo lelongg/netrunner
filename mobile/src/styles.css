@@ -3774,7 +3774,6 @@ button:active:not(:disabled) {
   place-items: center;
   padding: 16px;
   background: #000b;
-  backdrop-filter: blur(3px);
 }
 
 .dialog {
@@ -4716,7 +4715,7 @@ button.armed {
 
 .deck-row-id {
   flex: none;
-  width: 52px;
+  width: 40px;
 }
 
 .deck-row-main {

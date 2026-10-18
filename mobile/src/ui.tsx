@@ -149,7 +149,11 @@ export function Dialogs() {
   }, [current]);
   useLayoutEffect(() => {
     if (!current || motionOff()) return;
-    if (backdrop.current) animate(backdrop.current, { opacity: [0, 1] }, { duration: 0.18 });
+    if (backdrop.current) {
+      backdrop.current.style.backgroundColor = "rgba(0,0,0,0)";
+      animate(backdrop.current, { backgroundColor: ["rgba(0,0,0,0)", "rgba(0,0,0,0.75)"] }, { duration: 0.18 });
+    }
+    if (box.current) box.current.style.opacity = "0";
     if (box.current) animate(box.current, { opacity: [0, 1], transform: ["translateY(16px) scale(0.96)", "translateY(0px) scale(1)"] }, { type: "spring", visualDuration: 0.28, bounce: 0.2 });
   }, [current]);
   const close = (yes: boolean) => {

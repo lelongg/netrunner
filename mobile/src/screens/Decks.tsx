@@ -191,7 +191,7 @@ export function DeckRow({ db, stored, onOpen, format, selected, disabled }: { db
   return (
     <li>
       <button class={`deck-row faction-${factionKey(deck.identity.faction)} ${selected ? "on" : ""}`} disabled={disabled} onClick={onOpen}>
-        <CardImage class="deck-row-id" code={deck.identity.code} alt={deck.identity.title} size="small" width="52px" />
+        <CardImage class="deck-row-id" code={deck.identity.code} alt={deck.identity.title} size="small" width="40px" />
         <span class="deck-row-main">
           <span class="deck-row-name">{deck.name}</span>
           <span class="deck-row-id-name">

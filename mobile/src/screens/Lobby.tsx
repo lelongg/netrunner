@@ -239,7 +239,9 @@ export function Lobby({ session, db, matchups, onLeave, onWatch }: Props) {
   const link = shareLink(lobby.code);
   const opponent = lobby.opponentName ?? "your opponent";
   const inviting = lobby.role === "host" && !lobby.opponentName && lobby.status !== "connected";
-  const inLobby = lobby.role === "local" || (lobby.status !== "connecting" && lobby.status !== "closed");
+  const reached = useRef(false);
+  if (lobby.status !== "connecting" && lobby.status !== "closed") reached.current = true;
+  const inLobby = lobby.role === "local" || (lobby.status !== "closed" && (lobby.status !== "connecting" || reached.current));
 
   const share = async () => {
     try {
