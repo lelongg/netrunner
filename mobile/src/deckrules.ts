@@ -34,6 +34,15 @@ export const FORMAT_DESC: Record<GameFormat, string> = {
   "quick-draft": "Both players draft their deck at the start of the game.",
 };
 
+const listed = (names: string[]) => (names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}` : (names[0] ?? ""));
+
+export function applyFormatPools(pools: Partial<Record<GameFormat, { cycles: string[] }>>) {
+  const cycles = (f: GameFormat) => pools[f]?.cycles ?? [];
+  if (cycles("standard").length) FORMAT_DESC.standard = `${listed(cycles("standard"))}, with the current ban list.`;
+  if (cycles("startup").length) FORMAT_DESC.startup = `${listed(cycles("startup"))}. Small and beginner friendly.`;
+  if (cycles("core").length) FORMAT_DESC.core = `${listed(cycles("core"))}.`;
+}
+
 export const isGameFormat = (f: unknown): f is GameFormat => GAME_FORMATS.some((g) => g.key === f);
 
 export const dealtFormat = (f: GameFormat) => f === "chimera" || f === "quick-draft";

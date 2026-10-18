@@ -1,3 +1,5 @@
+import { applyFormatPools } from "./deckrules";
+
 export type Side = "corp" | "runner";
 
 export interface Card {
@@ -81,6 +83,9 @@ export function loadEngine() {
   loading ??= (async () => {
     const enginePromise = importEngine();
     const [engine, cards, codes, ...ftl] = await Promise.all([enginePromise, fetchText("data/cards.json").then((t) => JSON.parse(t) as Card[]), fetchText("data/codes.json").then((t) => JSON.parse(t) as Record<string, string>), fetchText("i18n/en/messages.ftl"), fetchText("i18n/en/ui.ftl")]);
+    fetchText("data/formats.json")
+      .then((t) => applyFormatPools(JSON.parse(t)))
+      .catch(() => {});
     engine.loadCards(cards);
     engine.loadDictionary("en", ftl[0] + "\n" + ftl[1]);
     engine.setLanguage("en");

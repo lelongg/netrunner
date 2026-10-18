@@ -27,6 +27,37 @@ await writeFile(new URL("cards.json", OUT), JSON.stringify(cards));
 await writeFile(new URL("codes.json", OUT), JSON.stringify(codes));
 console.log(`${cards.length} cards, ${Object.keys(codes).length} printings written`);
 
+const NRDB = "https://api.netrunnerdb.com/api/v3/public";
+const nrdb = async (path) => {
+  const res = await fetch(`${NRDB}/${path}`, { headers: { "User-Agent": "PocketRig/1.0 (+https://github.com/lelongg/netrunner)" } });
+  if (!res.ok) throw new Error(`${path}: ${res.status}`);
+  return (await res.json()).data;
+};
+const FORMAT_KEYS = { standard: "standard", startup: "startup", core: "core", system_gateway: "system-gateway", eternal: "eternal" };
+const pools = {};
+try {
+  const cycles = new Map((await nrdb("card_cycles?page[size]=200")).map((c) => [c.id, c.attributes]));
+  for (const format of await nrdb("formats")) {
+    const key = FORMAT_KEYS[format.id];
+    const snapshotId = format.attributes.active_snapshot_id;
+    if (!key || !snapshotId) continue;
+    const snapshot = (await nrdb(`snapshots/${snapshotId}`)).attributes;
+    const pool = (await nrdb(`card_pools/${snapshot.card_pool_id}`)).attributes;
+    const ids = pool.card_cycle_ids ?? [];
+    pools[key] = {
+      since: snapshot.date_start,
+      cycles: ids
+        .map((id) => ({ name: cycles.get(id)?.name ?? id, released: cycles.get(id)?.date_release ?? "" }))
+        .sort((a, b) => a.released.localeCompare(b.released))
+        .map((c) => c.name),
+    };
+  }
+  console.log(`format pools: ${Object.entries(pools).map(([k, v]) => `${k} (${v.cycles.length})`).join(", ")}`);
+} catch (e) {
+  console.warn(`format pools unavailable: ${e.message}`);
+}
+await writeFile(new URL("formats.json", OUT), JSON.stringify(pools));
+
 for (const lang of LANGS) {
   const dir = new URL(`${lang}/`, I18N_OUT);
   await mkdir(dir, { recursive: true });
