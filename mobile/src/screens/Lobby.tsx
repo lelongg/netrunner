@@ -206,7 +206,7 @@ function NameField({ name, onSave }: { name: string; onSave: (name: string) => v
   );
 }
 
-function Seat({ label, side, deck, db, matchups, onPick, onSide, locked, inline, name, onName, format = "casual", problem, onEditDecks }: { onEditDecks?: (side: Side) => void; label: string; inline?: boolean; name?: string; onName?: (name: string) => void; side: Side; deck?: WireDeck; db: CardDb; matchups: Matchup[]; onPick: (d: WireDeck) => void; onSide?: (s: Side) => void; locked?: boolean; format?: GameFormat; problem?: string | null }) {
+function Seat({ label, side, deck, db, matchups, onPick, onSide, locked, name, onName, format = "casual", problem, onEditDecks }: { onEditDecks?: (side: Side) => void; label: string; name?: string; onName?: (name: string) => void; side: Side; deck?: WireDeck; db: CardDb; matchups: Matchup[]; onPick: (d: WireDeck) => void; onSide?: (s: Side) => void; locked?: boolean; format?: GameFormat; problem?: string | null }) {
   const dealt = dealtFormat(format);
   const [choosing, setChoosing] = useState(false);
   const [viewing, setViewing] = useState(false);
@@ -221,7 +221,7 @@ function Seat({ label, side, deck, db, matchups, onPick, onSide, locked, inline,
   }, [side]);
   useBackClose(viewing, () => setViewing(false));
   return (
-    <section class={`panel section seat ${inline ? "inline" : ""}`}>
+    <section class="panel section seat">
       <div class="row">
         <span class="label seat-label">
           {label}
@@ -243,7 +243,7 @@ function Seat({ label, side, deck, db, matchups, onPick, onSide, locked, inline,
       ) : current ? (
         <>
           <ul class="deck-library">
-            <DeckRow db={db} stored={deck!} format={deckFormat(format) ?? "casual"} onOpen={() => setViewing(true)} />
+            <DeckRow db={db} stored={deck!} format={deckFormat(format) ?? "casual"} onOpen={() => setViewing(true)} issuesOnly />
           </ul>
           {problem && (
             <div class="seat-issues" role="alert">
@@ -258,25 +258,20 @@ function Seat({ label, side, deck, db, matchups, onPick, onSide, locked, inline,
               </ul>
             </div>
           )}
-          {!inline && (
-            <div class="seat-actions">
+          <div class="seat-actions">
               <button onClick={() => setViewing(true)}>View list</button>
               {!locked && (
                 <button class="primary" onClick={() => setChoosing(true)}>
                   Change deck
                 </button>
               )}
-            </div>
-          )}
+          </div>
         </>
       ) : (
-        !inline && (
-          <button class="primary" onClick={() => setChoosing(true)}>
-            Choose a deck
-          </button>
-        )
+        <button class="primary" onClick={() => setChoosing(true)}>
+          Choose a deck
+        </button>
       )}
-      {inline && !dealt && <DeckPicker side={side} db={db} matchups={matchups} value={deck} showCurrent={false} onChange={onPick} onEditDecks={onEditDecks && (() => onEditDecks(side))} format={format} />}
       {choosing && <DeckSheet side={side} db={db} matchups={matchups} value={deck} format={format} onPick={onPick} onEditDecks={onEditDecks && (() => onEditDecks(side))} onClose={() => setChoosing(false)} />}
       {viewing && current && <DeckView deck={current} format={deckFormat(format) ?? "casual"} onClose={() => setViewing(false)} />}
     </section>
@@ -351,7 +346,7 @@ export function Lobby({ session, db, matchups, onLeave, onWatch }: Props) {
           </>
         )}
       </Ticker>
-      <div class={`screen lobby ${lobby.role !== "local" && !inviting ? "fill" : ""}`}>
+      <div class="screen lobby">
         <header class="screen-head">
           <button class="ghost" onClick={onLeave} aria-label="Back to home">
             <Icon name="arrow-left" />
@@ -408,7 +403,7 @@ export function Lobby({ session, db, matchups, onLeave, onWatch }: Props) {
 
         {inLobby && <FormatPicker value={lobby.format} onChange={lobby.role !== "guest" ? (f) => session.setFormat(f) : undefined} />}
 
-        {inLobby && <Seat format={lobby.format} problem={session.deckProblem(lobby.myDeck)} label={lobby.role === "local" && !lobby.vsBot ? "Player 1" : "You"} name={lobby.myName} onName={(n) => session.setName(n)} inline={lobby.role !== "local" && !inviting} side={lobby.mySide} deck={lobby.myDeck} db={db} matchups={matchups} onEditDecks={setEditor} onPick={(d) => session.setDeck(d)} onSide={lobby.role !== "guest" ? (s) => session.setSide(s) : undefined} />}
+        {inLobby && <Seat format={lobby.format} problem={session.deckProblem(lobby.myDeck)} label={lobby.role === "local" && !lobby.vsBot ? "Player 1" : "You"} name={lobby.myName} onName={(n) => session.setName(n)} side={lobby.mySide} deck={lobby.myDeck} db={db} matchups={matchups} onEditDecks={setEditor} onPick={(d) => session.setDeck(d)} onSide={lobby.role !== "guest" ? (s) => session.setSide(s) : undefined} />}
 
         {lobby.role === "local" && <Seat format={lobby.format} problem={session.deckProblem(session.localOpponentDeck)} label={lobby.vsBot ? "Bot" : "Player 2"} side={other(lobby.mySide)} deck={session.localOpponentDeck} db={db} matchups={matchups} onEditDecks={setEditor} onPick={(d) => session.setDeck(d, other(lobby.mySide))} />}
 

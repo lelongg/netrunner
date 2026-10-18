@@ -63,7 +63,7 @@ export function DeckPicker({ side, db, matchups, value, onChange, onEditDecks, s
           <ul class="deck-library">
             {mine.length === 0 && <li class="hint">No {side === "corp" ? "Corp" : "Runner"} deck of yours yet.</li>}
             {mine.map(({ deck: d, problem }) => (
-              <DeckRow key={d.id} db={db} stored={d} format={rules ?? "casual"} selected={value?.name === d.name} disabled={!!problem} onOpen={() => onChange({ name: d.name, identity: d.identity, cards: d.cards })} />
+              <DeckRow key={d.id} db={db} stored={d} format={rules ?? "casual"} selected={value?.name === d.name} disabled={!!problem} issuesOnly onOpen={() => onChange({ name: d.name, identity: d.identity, cards: d.cards })} />
             ))}
           </ul>
           {onEditDecks && (
@@ -83,7 +83,7 @@ export function DeckPicker({ side, db, matchups, value, onChange, onEditDecks, s
               const p = m[side];
               const name = matchups.filter((o) => o[side].name === p.name).length > 1 ? `${p.name} · ${m.title}` : p.name;
               const wire = toWire({ ...fromPrecon(p, db), name });
-              return <DeckRow db={db} stored={wire} format={rules ?? "casual"} selected={value?.name === name} onOpen={() => onChange(wire)} />;
+              return <DeckRow db={db} stored={wire} format={rules ?? "casual"} selected={value?.name === name} onOpen={() => onChange(wire)} issuesOnly />;
             })}
           </ul>
         </>

@@ -202,7 +202,7 @@ function FitText({ text, class: className }: { text: string; class: string }) {
   );
 }
 
-export function DeckRow({ db, stored, onOpen, format, selected, disabled }: { db: CardDb; stored: WireDeck & { format?: string }; onOpen: () => void; format?: FormatKey; selected?: boolean; disabled?: boolean }) {
+export function DeckRow({ db, stored, onOpen, format, selected, disabled, issuesOnly }: { db: CardDb; stored: WireDeck & { format?: string }; onOpen: () => void; format?: FormatKey; selected?: boolean; disabled?: boolean; issuesOnly?: boolean }) {
   const deck = useMemo(() => {
     try {
       return fromWire(stored, db);
@@ -241,10 +241,10 @@ export function DeckRow({ db, stored, onOpen, format, selected, disabled }: { db
             )}
           </span>
         </span>
-        <span class={`deck-badge ${a.legal ? "ok" : "bad"}`}>
+        {!(issuesOnly && a.legal) && <span class={`deck-badge ${a.legal ? "ok" : "bad"}`}>
           <Icon name={a.legal ? "check" : "warning"} />
           {a.legal ? FORMATS.find((f) => f.key === fmt)!.label : `${a.problems.length} issue${a.problems.length > 1 ? "s" : ""}`}
-        </span>
+        </span>}
       </button>
     </li>
   );
@@ -613,10 +613,7 @@ function DeckEditor({ db, initial, deck0, onClose, onOpen, readOnly }: { db?: Ca
           </div>
           <div class="summary-side">
             {readOnly ? (
-              <span class="format-static">
-                <span class="label">Format</span>
-                <span>{FORMATS.find((f) => f.key === format)?.label}</span>
-              </span>
+              <span class="format-static">{FORMATS.find((f) => f.key === format)?.label}</span>
             ) : (
               <FormatSelect value={format} onChange={setFormat} />
             )}

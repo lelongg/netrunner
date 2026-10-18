@@ -2378,36 +2378,6 @@ button:active:not(:disabled) {
   letter-spacing: 0.04em;
 }
 
-.lobby.fill {
-  height: calc(100dvh - 23px - env(safe-area-inset-top));
-  box-sizing: border-box;
-}
-
-.lobby.fill .seat.inline {
-  flex: 1;
-  min-height: 300px;
-}
-
-.seat.inline .deck-picker {
-  flex: 1;
-  min-height: 0;
-}
-
-.seat.inline .deck-picker > .deck-list,
-.seat.inline .deck-browser {
-  flex: 1;
-  min-height: 0;
-}
-
-.seat.inline .deck-browser > .deck-list {
-  flex: 1;
-  min-height: 0;
-}
-
-.seat.inline .deck-list {
-  max-height: none;
-}
-
 .seat-actions {
   display: flex;
   gap: 8px;
