@@ -10,6 +10,7 @@ function connect(code, tok, since = 0) {
 }
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const entries = (inbox) => inbox.flatMap((m) => (m.t === "entry" ? [m.e] : m.t === "entries" ? m.list : []));
+const until = async (ok, ms = 5000) => { for (const end = Date.now() + ms; !ok() && Date.now() < end; ) await wait(50); };
 
 const created = await post("/games");
 assert(created.status === 201 && /^[A-Z2-9]{5}$/.test(created.body.code) && created.body.seat === 0, `create game ${created.body.code}`);
@@ -30,7 +31,7 @@ for (let i = 0; i < 5; i++) {
   a.ws.send(JSON.stringify({ t: "append", p: { k: "act", n: i } }));
   b.ws.send(JSON.stringify({ t: "append", p: { k: "act", n: 100 + i } }));
 }
-await wait(500);
+await until(() => entries(a.inbox).length >= 10 && entries(b.inbox).length >= 10);
 const ea = entries(a.inbox), eb = entries(b.inbox);
 assert(ea.length === 10 && eb.length === 10, "both players receive all 10 entries");
 assert(JSON.stringify(ea) === JSON.stringify(eb), "both see the same order");
