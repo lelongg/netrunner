@@ -116,6 +116,7 @@ function CardBack({ side }: { side: string }) {
 }
 
 interface Props {
+  confirm?: { label: string; onConfirm: () => void };
   stamp?: unknown;
   probe?: Prober;
   card: any;
@@ -172,7 +173,7 @@ function SheetInfo({ card, code, full, side, view }: { card: any; code?: string;
   );
 }
 
-export function CardSheet({ card, view, stamp, probe, side, db, send, onClose, disabled, index = 0, count = 1, slide, onStep, readOnly, neighbors, siblings, onJump }: Props) {
+export function CardSheet({ confirm, card, view, stamp, probe, side, db, send, onClose, disabled, index = 0, count = 1, slide, onStep, readOnly, neighbors, siblings, onJump }: Props) {
   const [installing, setInstalling] = useState(false);
   const owner = card.side === (side === "corp" ? "Corp" : "Runner");
   const code = visibleCode(card, owner);
@@ -262,6 +263,11 @@ export function CardSheet({ card, view, stamp, probe, side, db, send, onClose, d
                 {glyphs(iconize(c.label))}
               </button>
             ))}
+            {confirm && (
+              <button class="primary sheet-confirm" disabled={disabled} onClick={confirm.onConfirm}>
+                {confirm.label}
+              </button>
+            )}
             <button class="ghost" onClick={onClose}>
               Close
             </button>

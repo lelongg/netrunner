@@ -965,6 +965,15 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
     setStaged(new Set());
     closeCard();
   };
+  const stagedConfirm = (() => {
+    if (!staging || !staged.size) return undefined;
+    const max: number = prompt["select-max"];
+    const min: number = prompt["select-all"] ? max : (prompt["select-min"] ?? 0);
+    if (staged.size < min || staged.size > max) return undefined;
+    const msg = render(prompt.msg);
+    const verb = /^discard/i.test(msg) ? "Discard" : /^trash/i.test(msg) ? "Trash" : "Confirm";
+    return { label: `${verb} ${staged.size} ${staged.size === 1 ? "card" : "cards"}`, onConfirm: confirmStaged };
+  })();
   const closePrompt = () => session.say("/close-prompt", side);
 
   useEffect(() => setPicking(false), [!!view.run, promptId, view["active-player"], side]);
@@ -1363,7 +1372,7 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
         />
       )}
       {current && (
-        <CardSheet card={current} view={view} stamp={live} probe={prober} side={side} db={db} send={send} disabled={disabled} readOnly={watching} index={Math.max(0, position)} count={siblings.length} slide={slide} onStep={step} onClose={closeCard} neighbors={{ prev: siblings[position - 1], next: siblings[position + 1] }}
+        <CardSheet confirm={stagedConfirm} card={current} view={view} stamp={live} probe={prober} side={side} db={db} send={send} disabled={disabled} readOnly={watching} index={Math.max(0, position)} count={siblings.length} slide={slide} onStep={step} onClose={closeCard} neighbors={{ prev: siblings[position - 1], next: siblings[position + 1] }}
           siblings={siblings}
           onJump={(c) => {
             setSlide(undefined);
