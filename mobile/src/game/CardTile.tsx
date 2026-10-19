@@ -79,9 +79,11 @@ export function CardTile({
             {strength}
           </span>}
         {code && shownCost != null && (
-          <span class={`badge corner cost ${card.cost == null || shownCost === card.cost ? "same" : shownCost < card.cost ? "cheaper" : "dearer"}`}>
+          <span class="badge corner cost" aria-label={`cost ${shownCost}${card.cost != null && shownCost !== card.cost ? `, printed ${card.cost}` : ""}`}>
             <Icon name="credit" class="glyph" />
             {shownCost}
+            {card.cost != null && shownCost < card.cost && <span class="cost-delta down">▾</span>}
+            {card.cost != null && shownCost > card.cost && <span class="cost-delta up">▴</span>}
           </span>
         )}
         {usable && (

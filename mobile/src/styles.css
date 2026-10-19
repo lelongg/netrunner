@@ -2223,8 +2223,8 @@ button:active:not(:disabled) {
   padding: 1px 3px;
 }
 
-.badge.cost.same {
-  color: #7fb0ff;
+.badge.cost {
+  color: var(--yellow);
 }
 
 .tile.sideways .badge.corner.cost {
@@ -2232,12 +2232,10 @@ button:active:not(:disabled) {
   right: 1px;
 }
 
-.badge.cost.cheaper {
-  color: var(--green, #4ade80);
-}
-
-.badge.cost.dearer {
-  color: var(--red);
+.cost-delta {
+  margin-left: 1px;
+  font-size: 9px;
+  line-height: 1;
 }
 
 .tile.sideways .badge.corner {
