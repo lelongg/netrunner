@@ -92,7 +92,8 @@
       ability)))
 
 (def ability-keys
-  [:cost-label
+  [:action
+   :cost-label
    :dynamic
    :index
    :keep-menu-open
@@ -101,9 +102,19 @@
    :playable
    :source])
 
+(defn- action-summary
+  "Marks abilities that are actions: flagged so in the card definition or
+  paid with clicks (not lost clicks)."
+  [ability state side card]
+  (let [clicks (try
+                 (some #(= :click (:cost/type %)) (card-ability-cost state side ability card))
+                 (catch #?(:clj Exception :cljs :default) _ nil))]
+    (assoc ability :action (boolean (or (:action ability) clicks)))))
+
 (defn ability-summary [state side card ab-idx ability]
   (-> ability
       (ability-playable? ab-idx state side card)
+      (action-summary state side card)
       (select-non-nil-keys ability-keys)))
 
 (defn abilities-summary [abilities card state side]
