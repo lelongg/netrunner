@@ -1260,7 +1260,7 @@ textarea:focus {
 }
 
 .badge.str {
-  color: var(--cyan);
+  color: var(--text);
 }
 
 .state {

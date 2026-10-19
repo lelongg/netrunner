@@ -41,6 +41,7 @@ export function CardTile({
   const dim = owner && card.side === "Corp" && zone0(card) === "servers" && !card.rezzed && card.type !== "Agenda";
   const sideways = (card.zone ?? []).includes("ices");
   const strength = (card.type === "ICE" || (card.subtypes ?? []).includes?.("Icebreaker")) && (card["current-strength"] ?? card.strength);
+  const strDelta = strength != null && strength !== false && card.strength != null ? (strength < card.strength ? <span class="cost-delta down">▾</span> : strength > card.strength ? <span class="cost-delta up">▴</span> : null) : null;
   const shownCost: number | undefined = card["current-cost"] ?? (dim ? card["current-rez-cost"] : undefined);
   const verified = useContext(Verified);
   const usable = owner && !dim && zone0(card) !== "hand" && (card.abilities ?? []).some((a: any) => a.playable) && (!verified || verified.has(card.cid));
@@ -78,11 +79,13 @@ export function CardTile({
           {!sideways && strength != null && strength !== false && <span class="badge str">
               <Icon name="strength" class="glyph" />
               {strength}
+              {strDelta}
             </span>}
         </div>
         {sideways && strength != null && strength !== false && <span class="badge str corner">
             <Icon name="strength" class="glyph" />
             {strength}
+            {strDelta}
           </span>}
         {code && shownCost != null && (
           <span class="badge corner cost" aria-label={`cost ${shownCost}${card.cost != null && shownCost !== card.cost ? `, printed ${card.cost}` : ""}`}>
