@@ -18,7 +18,7 @@ import { Icon, type IconName } from "../icons";
 import { glyphs } from "./Glyphs";
 import { Breakers } from "./Breakers";
 import { Coach } from "./Coach";
-import { type Prober, useChecked } from "./legal";
+import { type Prober, Verified, useChecked, useVerified } from "./legal";
 import { CardImage, ZoomableCardImage } from "./CardImage";
 import { withTerms } from "./RichText";
 import { motionOff } from "../settings";
@@ -847,6 +847,7 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
   const watching = session.lobby.role === "spectator";
   const disabled = session.pending || watching;
   const prober = useMemo<Prober | undefined>(() => (watching || controls ? undefined : (probes) => session.probe(side, probes)), [session, side, watching, !!controls]);
+  const verified = useVerified(live, side, prober, live);
   const turnCommands = useChecked(view.run || view.encounters ? runCommands(view, side) : basicCommands(view, side), prober, live);
   const me = view[side] ?? {};
   const opp = otherSide(side);
@@ -1124,6 +1125,7 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
   const hand: any[] = [...(me.hand ?? []), ...(me.discard ?? []).filter((c: any) => c["flashback-playable"])];
 
   return (
+    <Verified.Provider value={verified}>
     <div class={`board side-${side} ${ptype === "select" ? "selecting" : ""} ${view.run ? "in-run" : ""}`}>
       <ScoreBar view={view} />
       <Ticker
@@ -1342,5 +1344,6 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
       {session.lobby.tutorial && <Coach session={session} view={view} side={side} />}
       {showLog && <Log view={view} render={render} names={names} onSay={(t) => session.say(t, side)} onClose={() => setShowLog(false)} />}
     </div>
+    </Verified.Provider>
   );
 }

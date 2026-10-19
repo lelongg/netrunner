@@ -1,5 +1,7 @@
-import { useEffect, useState } from "preact/hooks";
-import type { Command } from "./actions";
+import { createContext } from "preact";
+import { useEffect, useRef, useState } from "preact/hooks";
+import type { Side } from "../engine";
+import { type Command, cardRef } from "./actions";
 import type { Probe, ProbeResult } from "./runner";
 import { quietUntil } from "../fx/director";
 
@@ -43,4 +45,45 @@ export function useChecked(commands: Command[], probe: Prober | undefined, stamp
     if (!enabled && c.check === "hide") return [];
     return [{ ...c, enabled }];
   });
+}
+
+export const Verified = createContext<Set<unknown> | null>(null);
+
+export function useVerified(view: any, side: Side, probe: Prober | undefined, stamp: unknown): Set<unknown> | null {
+  const owners: unknown[] = [];
+  const probes: Probe[] = [];
+  const trusted: unknown[] = [];
+  const seen = new Set<unknown>();
+  const visit = (card: any) => {
+    if (!card || typeof card !== "object") return;
+    if (Array.isArray(card)) return card.forEach(visit);
+    if (card.cid != null && card.zone && !seen.has(card.cid)) {
+      seen.add(card.cid);
+      const zone = card.zone[0];
+      if (zone === "hand" && card.playable) {
+        if (side === "corp" && card.type !== "Operation") trusted.push(card.cid);
+        else {
+          owners.push(card.cid);
+          probes.push({ k: "try", command: "play", args: { card: cardRef(card) } });
+        }
+      } else if (zone !== "hand" && zone !== "deck" && zone !== "discard") {
+        (card.abilities ?? []).forEach((ab: any, i: number) => {
+          if (!ab.playable) return;
+          owners.push(card.cid);
+          probes.push({ k: "try", command: ab.dynamic ? "dynamic-ability" : "ability", args: ab.dynamic ? { card: cardRef(card), dynamic: ab.dynamic, source: ab.source, index: ab.index } : { card: cardRef(card), ability: i } });
+        });
+      }
+    }
+    for (const [k, v] of Object.entries(card)) if (k !== "abilities" && k !== "subroutines" && k !== "log" && v && typeof v === "object") visit(v);
+  };
+  visit(view?.[side]);
+  const results = useProbe(probes, probe, stamp);
+  const last = useRef<Set<unknown> | null>(null);
+  if (!probe) return null;
+  if (results) {
+    const ok = new Set<unknown>(trusted);
+    results.forEach((r, i) => r.ok && ok.add(owners[i]));
+    last.current = ok;
+  }
+  return last.current ?? new Set(trusted);
 }

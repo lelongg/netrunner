@@ -1,4 +1,6 @@
+import { useContext } from "preact/hooks";
 import { CardImage } from "./CardImage";
+import { Verified } from "./legal";
 import { advancement, isFaceup, zone0 } from "./actions";
 import { ICON_SET, Icon, type IconName } from "../icons";
 
@@ -40,7 +42,9 @@ export function CardTile({
   const sideways = (card.zone ?? []).includes("ices");
   const strength = (card.type === "ICE" || (card.subtypes ?? []).includes?.("Icebreaker")) && (card["current-strength"] ?? card.strength);
   const shownCost: number | undefined = card["current-cost"] ?? (dim ? card["current-rez-cost"] : undefined);
-  const usable = owner && !dim && zone0(card) !== "hand" && (card.abilities ?? []).some((a: any) => a.playable);
+  const verified = useContext(Verified);
+  const usable = owner && !dim && zone0(card) !== "hand" && (card.abilities ?? []).some((a: any) => a.playable) && (!verified || verified.has(card.cid));
+  const playable = !!card.playable && (!verified || verified.has(card.cid));
   const classes = [
     "tile",
     `tile-${size}`,
@@ -49,7 +53,7 @@ export function CardTile({
     dim ? "unrezzed" : "",
     card.selected ? "selected" : "",
     selectable ? "selectable" : "",
-    card.playable ? "playable" : "",
+    playable ? "playable" : "",
     usable ? "usable" : "",
     card.new ? "new" : "",
     ice ? "ice" : "",
