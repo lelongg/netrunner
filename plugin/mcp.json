@@ -1,0 +1,14 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+  "mcpServers": {
+    "pocket-rig": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["${PLUGIN_ROOT}/launch.mjs"],
+      "cwd": "${PLUGIN_ROOT}",
+      "env": {
+        "POCKET_RIG_HOME": "${PLUGIN_DATA}"
+      }
+    }
+  }
+}

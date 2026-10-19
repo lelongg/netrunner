@@ -31,6 +31,11 @@ adds a `play-netrunner` skill. Install it from any Claude Code session:
 
 The session needs Node 20+ and network access to `lelongg.github.io` and the relay.
 
+The same folder is also an [Agent Plugins](https://agent-plugins.org) package, which self-hosted
+LibreChat loads with the same server and skill: copy `plugin/` to LibreChat's plugin directory
+(`DEPLOYMENT_PLUGINS_DIR`, `./plugin` by default) as `pocket-rig/` and restart LibreChat. The
+LibreChat API host needs the same Node and network access.
+
 ### From this repository (Claude Code, including cloud sessions from your phone)
 
 The repository's [`.mcp.json`](../.mcp.json) declares the server, so any Claude Code session

@@ -1,0 +1,6 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "pocket-rig",
+  "version": "0.1.0",
+  "description": "Play Netrunner against a human on Pocket Rig: the rules engine runs on your server, no hosted MCP needed."
+}
