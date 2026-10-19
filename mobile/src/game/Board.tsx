@@ -3,7 +3,7 @@ import type { ComponentChildren } from "preact";
 import { type CardDb, type EngineApi, type Side, cardImage } from "../engine";
 import type { Session } from "../session";
 import { Cta, Meter, Ticker, ask, tell } from "../ui";
-import { useFx, iceKind } from "../fx/director";
+import { useFx, iceKind, quietUntil } from "../fx/director";
 import { Count, useLoop } from "../fx/ui";
 import { animate } from "../fx/core";
 import { type BreakPlan, type Command, breakStep, cardRef, pendingChoice, awaitingMove, basicCommands, currentIce, findCard, otherSide, promptOf, runCommands, siblingsOf } from "./actions";
@@ -45,7 +45,7 @@ interface ClickMark {
 
 const clickMarks = new WeakMap<Session, Map<string, ClickMark>>();
 const UNDO = /undo-click/i;
-const FORCED = new Set(["start-turn", "unbroken-subroutines", "end-phase-12", "phase-12-pass-priority"]);
+const FORCED = new Set(["start-turn", "unbroken-subroutines", "end-phase-12", "phase-12-pass-priority", "continue", "start-next-phase"]);
 const REVEALING = /\b(draws?|accesses|reveals?|looks? at|search(es)?|mills?|to make a run|breach(es)?|trash(es)? the top)\b/i;
 
 function undoAllowed(session: Session, view: any, side: Side, render: (m: unknown) => string, handoffLog = 0) {
@@ -858,7 +858,7 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
       : null;
   useEffect(() => {
     if (!forced) return;
-    const t = setTimeout(() => send(forced.command, forced.args), 700);
+    const t = setTimeout(() => send(forced.command, forced.args), Math.max(700, quietUntil - performance.now() + 300));
     return () => clearTimeout(t);
   }, [forced?.command, live, verified]);
   const me = view[side] ?? {};

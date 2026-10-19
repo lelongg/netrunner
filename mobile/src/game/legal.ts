@@ -57,7 +57,14 @@ export function useVerified(view: any, side: Side, probe: Prober | undefined, st
   const visit = (card: any) => {
     if (!card || typeof card !== "object") return;
     if (Array.isArray(card)) return card.forEach(visit);
-    if (card.cid != null && card.zone && !seen.has(card.cid)) {
+    if (card.cid != null && card.zone && !seen.has(card.cid) && card.side !== (side === "corp" ? "Corp" : "Runner")) {
+      seen.add(card.cid);
+      const theirs: any[] = card[side === "corp" ? "corp-abilities" : "runner-abilities"] ?? [];
+      theirs.forEach((_ab: any, i: number) => {
+        owners.push(card.cid);
+        probes.push({ k: "try", command: side === "corp" ? "corp-ability" : "runner-ability", args: { card: cardRef(card), ability: i } });
+      });
+    } else if (card.cid != null && card.zone && !seen.has(card.cid)) {
       seen.add(card.cid);
       const zone = card.zone[0];
       if (zone === "hand" && card.playable) {
@@ -79,7 +86,8 @@ export function useVerified(view: any, side: Side, probe: Prober | undefined, st
     }
     for (const [k, v] of Object.entries(card)) if (k !== "abilities" && k !== "subroutines" && k !== "log" && v && typeof v === "object") visit(v);
   };
-  visit(view?.[side]);
+  visit(view?.corp);
+  visit(view?.runner);
   const results = useProbe(probes, probe, stamp);
   const last = useRef<Set<unknown> | null>(null);
   if (!probe) return null;
