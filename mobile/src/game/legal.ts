@@ -1,7 +1,7 @@
 import { createContext } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { Side } from "../engine";
-import { type Command, cardRef } from "./actions";
+import { type Command, advancement, cardRef } from "./actions";
 import type { Probe, ProbeResult } from "./runner";
 import { quietUntil } from "../fx/director";
 
@@ -74,6 +74,9 @@ export function useVerified(view: any, side: Side, probe: Prober | undefined, st
           owners.push(card.cid);
           probes.push({ k: "try", command: "play", args: { card: cardRef(card) } });
         }
+      } else if (side === "corp" && zone === "servers" && card.type === "Agenda" && !inRun && advancement(card) >= (card["current-advancement-requirement"] ?? card.advancementcost ?? Infinity)) {
+        owners.push(card.cid);
+        probes.push({ k: "try", command: "score", args: { card: cardRef(card) } });
       } else if (side === "corp" && zone === "servers" && !card.rezzed && (card.type === "Asset" || card.type === "Upgrade")) {
         owners.push(card.cid);
         probes.push({ k: "try", command: "rez", args: { card: cardRef(card) } });

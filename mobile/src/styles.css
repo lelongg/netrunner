@@ -1153,6 +1153,17 @@ textarea:focus {
   color: var(--cyan);
 }
 
+.tile.scorable {
+  border-color: var(--yellow);
+  box-shadow: 0 0 12px rgb(246 224 58 / 0.45);
+}
+
+.tile.scorable .state {
+  color: var(--bg);
+  background: var(--yellow);
+  font-weight: 700;
+}
+
 .usable-mark {
   position: absolute;
   bottom: 2px;

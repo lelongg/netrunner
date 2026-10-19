@@ -585,6 +585,17 @@
   pointer-events: none;
 }
 
+.fx-gate-full {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+}
+
+.fx-gate-full .fx-gate-half {
+  border-width: 0;
+  box-shadow: inset 0 0 60px var(--tone);
+}
+
 .fx-gate-half {
   position: absolute;
   top: 0;

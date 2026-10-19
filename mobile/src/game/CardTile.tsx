@@ -47,6 +47,7 @@ export function CardTile({
   const usable = owner && !dim && zone0(card) !== "hand" && (card.abilities ?? []).some((a: any) => a.playable) && (!verified || verified.has(card.cid));
   const playable = !!card.playable && (!verified || verified.has(card.cid));
   const rezzable = dim && !ice && !!verified?.has(card.cid);
+  const scorable = owner && card.type === "Agenda" && zone0(card) === "servers" && !!verified?.has(card.cid);
   const classes = [
     "tile",
     `tile-${size}`,
@@ -58,6 +59,7 @@ export function CardTile({
     playable ? "playable" : "",
     usable ? "usable" : "",
     rezzable ? "rezzable" : "",
+    scorable ? "scorable" : "",
     card.new ? "new" : "",
     ice ? "ice" : "",
     sideways ? "sideways" : "",
@@ -102,7 +104,7 @@ export function CardTile({
         )}
         {card.new && <span class="new-tag">New</span>}
         {dim && <span class="state">unrezzed</span>}
-        {owner && card.side === "Corp" && zone0(card) === "servers" && !isFaceup(card) && card.type === "Agenda" && <span class="state">facedown</span>}
+        {scorable ? <span class="state">score</span> : owner && card.side === "Corp" && zone0(card) === "servers" && !isFaceup(card) && card.type === "Agenda" && <span class="state">facedown</span>}
       </button>
       {hosted.length > 0 && (
         <div class="hosted">

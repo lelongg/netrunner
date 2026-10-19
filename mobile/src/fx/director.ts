@@ -3,7 +3,7 @@ import type { Side } from "../engine";
 import { currentIce } from "../game/actions";
 import { serverName } from "../game/text";
 import { type Plan, collect, play, prepare } from "./cards";
-import { type Point, type Tone, anchor, animate, banner, burst, buzz, haptics, coins, done, flash, floater, gate, glitch, layer, lunge, mid, node, place, pointOf, punch, rays, rectOf, reduced, ring, shake, slash, stamp, tileEl, vignette, visible, wrapEl, scoreSegment } from "./core";
+import { type Point, type Tone, anchor, animate, banner, burst, buzz, haptics, coins, done, flash, floater, gate, gateOpen, glitch, layer, lunge, mid, node, place, pointOf, punch, rays, rectOf, reduced, ring, shake, slash, stamp, tileEl, vignette, visible, wrapEl, scoreSegment } from "./core";
 
 export type IceKind = "sentry" | "gate" | "barrier" | "other";
 
@@ -577,16 +577,10 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
 
   if (prev.server && !now.server) {
     cameraTo(null, 1);
-    const server = document.querySelector(`[data-server="${prev.server}"]`);
-    const at = pointOf(server) ?? [innerWidth / 2, innerHeight / 3];
     const lines = (view.log ?? []).slice(prev.log).map((e: any) => render(e.text));
     if (prev.phase === "success") return;
     if (lines.some((l: string) => /\bbreach(es)?\b/i.test(l))) {
-      banner("Breach", serverName(prev.server), "cyan", { size: "xl", hold: 0.5 });
-      ring(at, "cyan", 260);
-      rays(at, "cyan", 380, 1);
-      burst(at, "cyan", 24, 110, { size: 5, gravity: 20 });
-      buzz([30, 30, 30, 30, 80]);
+      breached(serverName(prev.server), me);
     } else {
       const jacked = lines.some((l: string) => /jacks? out/i.test(l));
       setTimeout(() => {
@@ -595,16 +589,18 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
       }, t * 1000);
     }
   } else if (now.phase === "success" && prev.phase !== "success" && now.server) {
-    const server = document.querySelector(".server.running");
-    const at = pointOf(server);
-    banner("Breach", serverName(now.server), "cyan", { size: "xl", hold: 0.5 });
-    if (at) {
-      ring(at, "cyan", 260);
-      rays(at, "cyan", 380, 1);
-      burst(at, "cyan", 24, 110, { size: 5, gravity: 20 });
-    }
-    buzz([30, 30, 30, 30, 80]);
+    breached(serverName(now.server), me);
   }
+}
+
+function breached(server: string, me: Side) {
+  const corp = me === "corp";
+  gateOpen(corp ? "red" : "cyan");
+  setTimeout(() => {
+    banner(corp ? "Breached" : "Breach", server, corp ? "red" : "cyan", { size: "xl", hold: 0.5 });
+    if (corp) shake(0.5);
+  }, 320);
+  buzz(corp ? [80, 40, 80] : [30, 30, 30, 30, 80]);
 }
 
 function findIn(view: any, cid: unknown): any {
