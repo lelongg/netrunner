@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
+import { skipTutorial } from "../tutorial";
 import type { Side } from "../engine";
 import type { Session } from "../session";
 import { animate } from "../fx/core";
@@ -118,7 +119,13 @@ export function Coach({ session, view, side }: { session: Session; view: any; si
         <span class="label cyan">Tutorial · {STEPS.indexOf(step) + 1}/{STEPS.length}</span>
         <p>{withTerms(iconize(step.text))}</p>
         <div class="coach-actions">
-          <button class="ghost" onClick={() => done(STEPS.map((s) => s.id))}>
+          <button
+            class="ghost"
+            onClick={() => {
+              done(STEPS.map((s) => s.id));
+              skipTutorial();
+            }}
+          >
             Skip tutorial
           </button>
           <button class="primary" onClick={() => done([step.id])}>

@@ -408,6 +408,10 @@ textarea:focus {
   gap: 8px;
 }
 
+.screen-head .guide-skip {
+  margin-left: auto;
+}
+
 .screen-head h1 {
   margin: 0;
   font-family: var(--display);

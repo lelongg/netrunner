@@ -126,7 +126,7 @@ function SidePick({ side, db, onPick }: { side: Side; db: CardDb; onPick: () => 
   );
 }
 
-export function Guide({ db, onClose, onPlay }: { db: CardDb; onClose: () => void; onPlay: (side: Side) => void }) {
+export function Guide({ db, onClose, onPlay, firstRun }: { db: CardDb; onClose: () => void; onPlay: (side: Side) => void; firstRun?: boolean }) {
   const [index, setIndex] = useState(0);
   const body = useRef<HTMLDivElement>(null);
   const entering = useRef<-1 | 1 | 0>(0);
@@ -257,6 +257,11 @@ export function Guide({ db, onClose, onPlay }: { db: CardDb; onClose: () => void
             <Icon name="arrow-left" />
           </button>
           <h1>HOW TO PLAY</h1>
+          {firstRun && (
+            <button class="ghost guide-skip" onClick={onClose}>
+              Skip
+            </button>
+          )}
         </header>
         <Pager index={index} count={PAGES.length} onStep={go} />
         <div class="guide-track">

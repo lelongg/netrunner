@@ -16,6 +16,7 @@ import { Handoff } from "./screens/Handoff";
 import { Home } from "./screens/Home";
 import { Lobby } from "./screens/Lobby";
 import { Guide } from "./screens/Guide";
+import { markTutorial, skipTutorial, tutorialState } from "./tutorial";
 import { fromPrecon, toWire } from "./decks";
 import { type Role, type SavedGame, Session, clearSave, listSaves, loadSave, newRoomCode, saveId } from "./session";
 import "./styles.css";
@@ -115,7 +116,8 @@ function App() {
     if (autoPass) session!.send("continue", null, "corp");
   }, [autoPass, corpView?.log?.length, corpView?.run?.phase, corpView?.run?.position]);
 
-  const [guide, setGuide] = useState(false);
+  const [guide, setGuide] = useState(() => !joinParam && !gameParam && !watchParam && !replayParam && tutorialState() === null);
+  const firstRun = guide && tutorialState() === null;
   const [archive, setArchive] = useState<string | boolean>(false);
   const [decks, setDecks] = useState(false);
   const [sharedReplay, setSharedReplay] = useState(replayParam ? { code: replayParam, relay: replayRelay } : undefined);
@@ -236,8 +238,13 @@ function App() {
     return (
       <Guide
         db={loaded.db}
-        onClose={() => setGuide(false)}
+        firstRun={firstRun}
+        onClose={() => {
+          if (firstRun) skipTutorial();
+          setGuide(false);
+        }}
         onPlay={(side) => {
+          markTutorial("done");
           setGuide(false);
           setOpening("tutorial");
           afterPaint(() => {
