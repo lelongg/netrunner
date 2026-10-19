@@ -75,6 +75,12 @@ export function CardTile({
             <Icon name="strength" class="glyph" />
             {strength}
           </span>}
+        {code && card["current-cost"] != null && card.cost != null && card["current-cost"] !== card.cost && (
+          <span class={`badge corner cost ${card["current-cost"] < card.cost ? "cheaper" : "dearer"}`}>
+            <Icon name="credit" class="glyph" />
+            {card["current-cost"]}
+          </span>
+        )}
         {card.new && <span class="new-tag">New</span>}
         {dim && <span class="state">unrezzed</span>}
         {owner && card.side === "Corp" && zone0(card) === "servers" && !isFaceup(card) && card.type === "Agenda" && <span class="state">facedown</span>}

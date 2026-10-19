@@ -2195,6 +2195,21 @@ button:active:not(:disabled) {
   height: var(--tile-w);
 }
 
+.tile .badge.corner.cost {
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  padding: 1px 3px;
+}
+
+.badge.cost.cheaper {
+  color: var(--green, #4ade80);
+}
+
+.badge.cost.dearer {
+  color: var(--red);
+}
+
 .tile.sideways .badge.corner {
   position: absolute;
   top: 1px;
