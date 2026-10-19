@@ -243,8 +243,8 @@
 .fx-glow,
 .fx-aura {
   position: absolute;
-  inset: -10px;
-  border-radius: 14px;
+  inset: 0;
+  border-radius: inherit;
   box-shadow:
     0 0 0 2px var(--tone),
     0 0 40px 6px var(--tone),
