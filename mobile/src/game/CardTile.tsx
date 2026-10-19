@@ -45,6 +45,7 @@ export function CardTile({
   const verified = useContext(Verified);
   const usable = owner && !dim && zone0(card) !== "hand" && (card.abilities ?? []).some((a: any) => a.playable) && (!verified || verified.has(card.cid));
   const playable = !!card.playable && (!verified || verified.has(card.cid));
+  const rezzable = dim && !ice && !!verified?.has(card.cid);
   const classes = [
     "tile",
     `tile-${size}`,
@@ -55,6 +56,7 @@ export function CardTile({
     selectable ? "selectable" : "",
     playable ? "playable" : "",
     usable ? "usable" : "",
+    rezzable ? "rezzable" : "",
     card.new ? "new" : "",
     ice ? "ice" : "",
     sideways ? "sideways" : "",
@@ -90,7 +92,7 @@ export function CardTile({
             {card.cost != null && shownCost > card.cost && <span class="cost-delta up">▴</span>}
           </span>
         )}
-        {usable && (
+        {(usable || rezzable) && (
           <span class="usable-mark" aria-hidden="true">
             <Icon name="bolt" />
           </span>

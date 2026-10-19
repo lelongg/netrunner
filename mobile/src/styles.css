@@ -1132,9 +1132,14 @@ textarea:focus {
 }
 
 .tile.playable,
-.tile.usable {
+.tile.usable,
+.tile.rezzable {
   border-color: var(--cyan);
   box-shadow: 0 0 10px rgb(34 211 238 / 0.35);
+}
+
+.tile.rezzable .state {
+  color: var(--cyan);
 }
 
 .usable-mark {
