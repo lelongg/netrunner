@@ -1,6 +1,7 @@
 import { useEffect, useState } from "preact/hooks";
 import type { Command } from "./actions";
 import type { Probe, ProbeResult } from "./runner";
+import { quietUntil } from "../fx/director";
 
 export type Prober = (probes: Probe[]) => Promise<ProbeResult[]>;
 
@@ -15,8 +16,9 @@ export function useProbe(probes: Probe[], probe: Prober | undefined, stamp: unkn
       probe(probes)
         .then((out) => live && setResult({ key, stamp, out }))
         .catch(() => {});
-    const timer = known ? setTimeout(run, 400) : undefined;
-    if (!known) run();
+    const wait = Math.max(known ? 400 : 0, quietUntil - performance.now());
+    const timer = wait > 0 ? setTimeout(run, wait) : undefined;
+    if (wait <= 0) run();
     return () => {
       live = false;
       clearTimeout(timer);

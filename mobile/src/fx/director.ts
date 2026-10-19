@@ -629,8 +629,10 @@ function showdown(ice: any) {
   if (!el || !visible(r) || reduced()) return;
   const kind = iceKind(ice);
   const tone = KIND_TONE[kind];
-  const w = Math.min(innerWidth * 0.5, 220);
-  const h = w * (88 / 63);
+  quietUntil = performance.now() + 1800;
+  const sideways = el.classList.contains("sideways");
+  const w = sideways ? Math.min(innerWidth * 0.8, 320) : Math.min(innerWidth * 0.5, 220);
+  const h = sideways ? w * (63 / 88) : w * (88 / 63);
   const big = new DOMRect((innerWidth - w) / 2, Math.max(70, innerHeight * 0.42 - h / 2), w, h);
   const stageEl = node(`fx-showdown tone-${tone}`);
   const ghost = node("fx-ghost fx-showcase", stageEl);
@@ -638,14 +640,22 @@ function showdown(ice: any) {
   const face = el.cloneNode(true) as HTMLElement;
   face.removeAttribute("data-cid");
   face.style.opacity = "";
+  if (sideways) {
+    face.style.setProperty("--tile-w", `${h}px`);
+    face.style.setProperty("--tile-h", `${w}px`);
+  }
   const img = face.querySelector("img");
   if (img && ice.code) {
     const hi = new Image();
-    hi.onload = () => {
-      img.removeAttribute("srcset");
-      img.src = hi.src;
-    };
+    hi.crossOrigin = "anonymous";
     hi.src = `https://card-images.netrunnerdb.com/v2/large/${ice.code}.jpg`;
+    hi.decode().then(
+      () => {
+        img.removeAttribute("srcset");
+        img.src = hi.src;
+      },
+      () => {},
+    );
   }
   ghost.appendChild(face);
   const aura = node(`fx-aura tone-${tone}`, ghost);
@@ -697,6 +707,8 @@ function showdown(ice: any) {
     animate(stageEl, { backgroundColor: ["rgba(0,0,0,0.55)", "rgba(0,0,0,0)"] }, { duration: 0.38 });
   }, hold * 1000);
 }
+
+export let quietUntil = 0;
 
 let codeOf: (title: string) => string | undefined = () => undefined;
 
