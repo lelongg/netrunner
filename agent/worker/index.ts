@@ -14,6 +14,7 @@ export interface Env {
   SITE: string;
   NAME?: string;
   IDLE_HOURS?: string;
+  BUILD?: string;
 }
 
 const SESSION_HEADER = "x-pocket-rig-session";
@@ -39,6 +40,7 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
+    if (url.pathname === "/version") return new Response(env.BUILD ?? "", { headers: { "Content-Type": "text/plain", ...CORS } });
     if (url.pathname !== "/mcp") {
       return new Response(`Pocket Rig MCP server. Add ${url.origin}/mcp to your MCP client as a remote (Streamable HTTP) server.\n`, { headers: { "Content-Type": "text/plain; charset=utf-8" } });
     }
