@@ -1,6 +1,7 @@
 ---
 name: play-netrunner
 description: Play a game of Netrunner against a human on Pocket Rig through the pocket-rig MCP tools. Use when the user asks to play Netrunner or Pocket Rig, gives a Pocket Rig game code or join link, or asks to continue a game.
+compatibility: Requires the pocket-rig MCP server (plugin/launch.mjs in lelongg/netrunner).
 ---
 
 # Play Netrunner on Pocket Rig
