@@ -104,7 +104,7 @@ const PAGES: Page[] = [
     title: "Playing here",
     body: [
       "Tap any card to read it and to see what you can do with it. Your main actions are the buttons above your hand.",
-      "Tap an icon or an underlined word to see what it means. Tap the line above the buttons to read the full log.",
+      "Tap an icon or an underlined word to see what it means. Tap the Live feed at the top of the screen to read the full log.",
     ],
   },
   { kicker: "Your move", title: "Choose your side", body: [], choice: true },
