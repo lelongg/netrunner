@@ -5,9 +5,9 @@ description: Play a game of Netrunner against a human on Pocket Rig through the 
 
 # Play Netrunner on Pocket Rig
 
-The `pocket-rig` MCP server of this plugin runs the Jinteki rules engine inside this session and
-talks to the game through the Pocket Rig relay, like a phone does. Its own instructions cover the
-rules of the table; this is the order to follow.
+The `pocket-rig` MCP server (bundled with the Claude Code plugin, or configured in your client)
+runs the Jinteki rules engine and talks to the game through the Pocket Rig relay, like a phone
+does. Its own instructions cover the rules of the table; this is the order to follow.
 
 1. If the user has not said so, ask in one short message which side you play (Corp or Runner) and
    which format (standard, startup, core, eternal, system-gateway, throwback, casual,
