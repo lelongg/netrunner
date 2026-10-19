@@ -3,9 +3,6 @@ main = "worker/index.ts"
 compatibility_date = "2026-09-01"
 compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]
 
-[limits]
-cpu_ms = 300000
-
 [[durable_objects.bindings]]
 name = "SESSION"
 class_name = "McpSession"
