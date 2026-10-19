@@ -328,6 +328,11 @@ export class Session {
     this.transport?.send(p);
   }
 
+  get lastActAt(): number | undefined {
+    for (let i = this.entries.length - 1; i >= 0; i--) if (this.entries[i].p.k === "act") return this.entries[i].at;
+    return undefined;
+  }
+
   private receive(list: Entry[]) {
     let changed = false;
     for (const entry of list) {

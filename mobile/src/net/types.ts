@@ -19,6 +19,7 @@ export type Tagged = Payload & { id: string };
 export interface Entry {
   seq: number;
   seat: Seat;
+  at?: number;
   p: Tagged;
 }
 

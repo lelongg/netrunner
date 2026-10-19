@@ -174,6 +174,17 @@ textarea:focus {
   text-transform: uppercase;
 }
 
+.status.waiting {
+  flex: 1 1 100%;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.status.waiting time {
+  font-variant-numeric: tabular-nums;
+}
+
 .big {
   font-family: var(--display);
   font-weight: 900;
@@ -6336,7 +6347,10 @@ h1.deck-name.long {
 
 .auto-press {
   position: relative;
-  animation: auto-tap 0.18s ease-out var(--auto-ms) both;
+}
+
+.auto-press.auto-fire {
+  animation: auto-fire 0.26s ease-out both;
 }
 
 .auto-press::after {
@@ -6362,9 +6376,19 @@ h1.deck-name.long {
   }
 }
 
-@keyframes auto-tap {
-  50% {
-    transform: scale(0.96);
-    filter: brightness(1.3);
+@keyframes auto-fire {
+  0% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  35% {
+    transform: scale(0.93);
+    filter: brightness(1.9);
+    box-shadow: 0 0 0 2px currentColor;
+  }
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+    box-shadow: none;
   }
 }

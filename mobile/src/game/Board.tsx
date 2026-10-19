@@ -45,6 +45,27 @@ interface ClickMark {
 
 const clickMarks = new WeakMap<Session, Map<string, ClickMark>>();
 const UNDO = /undo-click/i;
+function Waiting({ name, lastAct }: { name: string; lastAct?: number }) {
+  const shown = useRef(Date.now());
+  const since = lastAct ?? shown.current;
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const s = Math.max(0, Math.floor((now - since) / 1000));
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const elapsed = s >= 3600 ? `${Math.floor(s / 3600)}:${pad(Math.floor(s / 60) % 60)}:${pad(s % 60)}` : `${Math.floor(s / 60)}:${pad(s % 60)}`;
+  return (
+    <span class="status waiting">
+      <span>Waiting for {name}…</span>
+      <time>{elapsed}</time>
+    </span>
+  );
+}
+
+const AUTO_FIRE_MS = 260;
+
 function autoTarget(steps: { command: string; args?: any }[]): HTMLElement | null {
   const last = steps[steps.length - 1];
   if (last.command === "select") return document.querySelector(".select-go");
@@ -937,10 +958,12 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
     const target = autoTarget(forced.steps);
     target?.style.setProperty("--auto-ms", `${delay}ms`);
     target?.classList.add("auto-press");
-    const t = setTimeout(() => forced.steps.forEach((step) => sendNow(step.command, step.args)), delay);
+    const press = setTimeout(() => target?.classList.add("auto-fire"), delay);
+    const fire = setTimeout(() => forced.steps.forEach((step) => sendNow(step.command, step.args)), target ? delay + AUTO_FIRE_MS : delay);
     return () => {
-      clearTimeout(t);
-      target?.classList.remove("auto-press");
+      clearTimeout(press);
+      clearTimeout(fire);
+      target?.classList.remove("auto-press", "auto-fire");
     };
   }, [forcedKey, live]);
   useEffect(() => {
@@ -1170,7 +1193,7 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
               {glyphs(iconize(armed === c.command && c.confirm ? c.confirm : c.label))}
             </button>
           ))}
-          {commands.length === 0 && <span class="status">Waiting for {names[opp]}…</span>}
+          {commands.length === 0 && <Waiting name={names[opp]} lastAct={session.lastActAt} />}
         </div>
       </section>
     );

@@ -334,8 +334,8 @@ export class GameRoom extends DurableObject<Env> {
     else if (++burst.n > BURST_MAX) return this.reject(ws, "Too many messages, slow down");
     if (this.lastSeq() >= MAX_ENTRIES) return this.reject(ws, "This game has reached its size limit");
     const body = JSON.stringify(msg.p);
-    const { seq } = this.sql.exec<{ seq: number }>("INSERT INTO entries (seat, body, at) VALUES (?, ?, ?) RETURNING seq", seat, body, Date.now()).one();
-    const out = `{"t":"entry","e":{"seq":${seq},"seat":${seat},"p":${body}}}`;
+    const { seq } = this.sql.exec<{ seq: number }>("INSERT INTO entries (seat, body, at) VALUES (?, ?, ?) RETURNING seq", seat, body, now).one();
+    const out = `{"t":"entry","e":{"seq":${seq},"seat":${seat},"at":${now},"p":${body}}}`;
     for (const socket of this.ctx.getWebSockets()) {
       try {
         socket.send(out);
@@ -369,10 +369,10 @@ export class GameRoom extends DurableObject<Env> {
     let from = since;
     for (;;) {
       const rows = this.sql
-        .exec<{ seq: number; seat: number; body: string }>("SELECT seq, seat, body FROM entries WHERE seq > ? ORDER BY seq LIMIT ?", from, RESYNC_CHUNK)
+        .exec<{ seq: number; seat: number; body: string; at: number }>("SELECT seq, seat, body, at FROM entries WHERE seq > ? ORDER BY seq LIMIT ?", from, RESYNC_CHUNK)
         .toArray();
       if (!rows.length) return;
-      ws.send(`{"t":"entries","list":[${rows.map((r) => `{"seq":${r.seq},"seat":${r.seat},"p":${r.body}}`).join(",")}]}`);
+      ws.send(`{"t":"entries","list":[${rows.map((r) => `{"seq":${r.seq},"seat":${r.seat},"at":${r.at},"p":${r.body}}`).join(",")}]}`);
       if (rows.length < RESYNC_CHUNK) return;
       from = rows[rows.length - 1].seq;
     }
