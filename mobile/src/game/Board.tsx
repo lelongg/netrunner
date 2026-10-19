@@ -45,6 +45,14 @@ interface ClickMark {
 
 const clickMarks = new WeakMap<Session, Map<string, ClickMark>>();
 const UNDO = /undo-click/i;
+function autoTarget(steps: { command: string; args?: any }[]): HTMLElement | null {
+  const last = steps[steps.length - 1];
+  if (last.command === "select") return document.querySelector(".select-go");
+  if (last.command !== "choice") return document.querySelector(`[data-cmd="${last.command}"]`);
+  const uuid = last.args?.choice?.uuid;
+  return uuid ? document.querySelector(`[data-choice="${uuid}"]`) ?? document.querySelector(".select-go") : document.querySelector(".number-picker .submit");
+}
+
 const FORCED = new Set(["start-turn", "unbroken-subroutines", "end-phase-12", "phase-12-pass-priority", "continue", "start-next-phase", "end-turn", "end-post-discard", "post-discard-pass-priority"]);
 const REVEALING = /\b(draws?|accesses|reveals?|looks? at|search(es)?|mills?|to make a run|breach(es)?|trash(es)? the top)\b/i;
 
@@ -925,8 +933,15 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
   const forcedKey = forced ? JSON.stringify(forced.steps) : "";
   useEffect(() => {
     if (!forced) return;
-    const t = setTimeout(() => forced.steps.forEach((step) => sendNow(step.command, step.args)), Math.max(forced.wait, quietUntil - performance.now() + 300));
-    return () => clearTimeout(t);
+    const delay = Math.max(forced.wait, quietUntil - performance.now() + 300);
+    const target = autoTarget(forced.steps);
+    target?.style.setProperty("--auto-ms", `${delay}ms`);
+    target?.classList.add("auto-press");
+    const t = setTimeout(() => forced.steps.forEach((step) => sendNow(step.command, step.args)), delay);
+    return () => {
+      clearTimeout(t);
+      target?.classList.remove("auto-press");
+    };
   }, [forcedKey, live]);
   useEffect(() => {
     if (myMove && remote) navigator.vibrate?.(40);
@@ -1128,6 +1143,7 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
         <div class="buttons">
           {lead && (
             <Cta
+              cmd={lead.command}
               disabled={disabled || lead.enabled === false}
               onClick={() => {
                 if (lead.confirm && armed !== lead.command) return setArmed(lead.command);
@@ -1141,6 +1157,7 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
           )}
           {others.map((c) => (
             <button
+              data-cmd={c.command}
               class={`${armed === c.command && c.confirm ? "danger armed" : c.kind === "danger" ? "danger" : c.kind === "primary" ? "primary" : ""} ${c.label.replace(/\[[^\]]+\]/g, "#").length > 13 ? "wide" : ""}`}
               disabled={disabled || c.enabled === false}
               onClick={() => {

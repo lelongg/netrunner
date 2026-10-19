@@ -6333,3 +6333,38 @@ h1.deck-name.long {
   background: var(--panel);
   border: 1px solid var(--line-2);
 }
+
+.auto-press {
+  position: relative;
+  animation: auto-tap 0.18s ease-out var(--auto-ms) both;
+}
+
+.auto-press::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: currentColor;
+  opacity: 0.8;
+  transform-origin: left;
+  pointer-events: none;
+  animation: auto-fill var(--auto-ms) linear both;
+}
+
+@keyframes auto-fill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes auto-tap {
+  50% {
+    transform: scale(0.96);
+    filter: brightness(1.3);
+  }
+}

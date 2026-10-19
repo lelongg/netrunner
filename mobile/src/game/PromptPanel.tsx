@@ -227,7 +227,7 @@ export function PromptPanel({ view, side, prompt, render, send, closePrompt, dis
         {others.length > 0 && (
           <div class="choices">
             {others.map((c: any) => (
-              <button disabled={disabled} onClick={() => answer({ uuid: c.uuid })}>
+              <button data-choice={c.uuid} disabled={disabled} onClick={() => answer({ uuid: c.uuid })}>
                 {glyphs(iconize(choiceLabel(c.value, render)))}
               </button>
             ))}
@@ -269,6 +269,7 @@ export function PromptPanel({ view, side, prompt, render, send, closePrompt, dis
             .filter((c: any) => c.value !== "Hide")
             .map((c: any) => (
               <button
+                data-choice={c.uuid}
                 class={ptype === "select" ? "primary wide" : ""}
                 disabled={disabled}
                 onClick={() => {
