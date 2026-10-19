@@ -199,9 +199,20 @@ export function Guide({ db, onClose, onPlay }: { db: CardDb; onClose: () => void
     const corp = root?.querySelector<HTMLElement>(".side-pick.corp");
     const runner = root?.querySelector<HTMLElement>(".side-pick.runner");
     const vs = root?.querySelector<HTMLElement>(".versus");
-    if (corp) animate(corp, { x: [-innerWidth, 0] }, { type: "spring", visualDuration: 0.5, bounce: 0.2, delay: 0.1 });
-    if (runner) animate(runner, { x: [innerWidth, 0] }, { type: "spring", visualDuration: 0.5, bounce: 0.2, delay: 0.1 });
-    if (vs) animate(vs, { transform: ["translate(-50%, -50%) rotate(-8deg) scale(3)", "translate(-50%, -50%) rotate(-8deg) scale(1)"], opacity: [0, 1] }, { duration: 0.35, delay: 0.5, ease: [0.2, 1.4, 0.4, 1] });
+    const slide = (el: HTMLElement, from: number) => {
+      el.style.transform = `translateX(${from}px)`;
+      animate(el, { transform: [`translateX(${from}px)`, "translateX(0px)"] }, { duration: 0.5, delay: 0.1, ease: [0.2, 1.15, 0.4, 1] }).finished.then(
+        () => (el.style.transform = ""),
+        () => (el.style.transform = ""),
+      );
+    };
+    if (corp) slide(corp, -innerWidth);
+    if (runner) slide(runner, innerWidth);
+    if (vs) vs.style.opacity = "0";
+    if (vs) animate(vs, { transform: ["translate(-50%, -50%) rotate(-8deg) scale(3)", "translate(-50%, -50%) rotate(-8deg) scale(1)"], opacity: [0, 1] }, { duration: 0.35, delay: 0.5, ease: [0.2, 1.4, 0.4, 1] }).finished.then(
+        () => (vs.style.opacity = ""),
+        () => (vs.style.opacity = ""),
+      );
   }, [index]);
   const renderPage = (i: number, role: string) => {
     const q = PAGES[i];
