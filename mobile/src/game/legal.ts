@@ -79,7 +79,7 @@ export function useVerified(view: any, side: Side, probe: Prober | undefined, st
         probes.push({ k: "try", command: "rez", args: { card: cardRef(card) } });
       } else if (zone !== "hand" && zone !== "deck" && zone !== "discard") {
         (card.abilities ?? []).forEach((ab: any, i: number) => {
-          if (!ab.playable || (inRun && /\[click\]/i.test(String(ab["cost-label"] ?? "")))) return;
+          if (!ab.playable || (inRun && /\[click\]/i.test(String(ab["cost-label"] ?? "").replace(/lose (\[click\])+/gi, "")))) return;
           owners.push(card.cid);
           probes.push({ k: "try", command: ab.dynamic ? "dynamic-ability" : "ability", args: ab.dynamic ? { card: cardRef(card), dynamic: ab.dynamic, source: ab.source, index: ab.index } : { card: cardRef(card), ability: i } });
         });
