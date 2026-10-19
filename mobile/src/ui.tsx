@@ -21,10 +21,20 @@ export function Ticker({ children, action, onFeed, feedKey }: { children: Compon
   const text = useRef<HTMLSpanElement>(null);
   const [width, setWidth] = useState(0);
   const track = useRef<HTMLSpanElement>(null);
+  const fresh = useRef(false);
+  useEffect(() => {
+    const el = text.current;
+    if (!el || motionOff() || !fresh.current) {
+      fresh.current = true;
+      return;
+    }
+    const anim = animate(el, { y: ["70%", "0%"], opacity: [0, 1] }, { duration: 0.3, ease: [0.2, 0.8, 0.3, 1] });
+    return () => anim.cancel();
+  }, [feedKey]);
   useEffect(() => {
     const el = track.current;
     if (!width || !el || motionOff()) return;
-    const anim = animate(el, { transform: ["translateX(0%)", "translateX(-50%)"] }, { duration: Math.max(6, width / 40), repeat: Infinity, ease: "linear" });
+    const anim = animate(el, { x: ["0%", "-50%"] }, { duration: Math.max(6, width / 40), repeat: Infinity, ease: "linear", delay: 1.5 });
     return () => {
       anim.cancel();
       el.style.transform = "";
