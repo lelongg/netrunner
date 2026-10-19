@@ -391,15 +391,15 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
     const el = anchor(`${s}-credits`);
     const at = pointOf(el);
     if (!at) continue;
-    punch(el, delta > 0 ? 1.3 : 1.15);
+    punch(el!.closest(".big") ?? el, delta > 0 ? 1.3 : 1.15);
     if (delta > 0) {
       const from: Point = focus ?? [at[0] + (Math.random() - 0.5) * 30, at[1] + 70];
       coins(from, at, delta, "gold");
-      floater([at[0], at[1] - 18], `+${delta}`, "gold", 50, true);
+      floater([at[0], el!.getBoundingClientRect().top - 14], `+${delta}`, "gold", 30, true);
       setTimeout(() => burst(at, "gold", 10, 40, { size: 4, gravity: 0 }), 500);
     } else {
       if (focus) coins(at, focus, -delta, "gold");
-      floater([at[0], at[1] + 10], `−${-delta}`, "white", -40);
+      floater([at[0], el!.getBoundingClientRect().bottom + 12], `−${-delta}`, "white", -30);
     }
   }
 
