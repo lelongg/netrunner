@@ -4,7 +4,7 @@ import { type Store, browserStore } from "../../mobile/src/store";
 import { basicCommands, cardCommands, cardRef, currentIce, findCard, promptOf, runCommands } from "../../mobile/src/game/actions";
 import { type WireDeck, fromPrecon, importNrdb, toWire } from "../../mobile/src/decks";
 import { relayUrl, storeTicket } from "../../mobile/src/net/relay";
-import { FORMATS, GAME_FORMATS, type FormatKey, type GameFormat, analyze, dealtFormat } from "../../mobile/src/deckrules";
+import { FORMATS, GAME_FORMATS, type FormatKey, type GameFormat, analyze, dealtFormat, deckFormat } from "../../mobile/src/deckrules";
 
 export interface Loaded {
   engine: EngineApi;
@@ -48,6 +48,14 @@ interface Action {
 
 const other = (s: Side): Side => (s === "corp" ? "runner" : "corp");
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const shuffle = <T>(xs: T[]) => {
+  const a = [...xs];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+};
 const SERVER_NAMES: Record<string, string> = { hq: "HQ", rd: "R&D", archives: "Archives" };
 const serverName = (key: string) => SERVER_NAMES[key] ?? (key.startsWith("remote") ? `Server ${key.slice(6)}` : key);
 
@@ -211,7 +219,7 @@ export class Agent {
   async host(name: string, side: Side, deck: string | undefined, format: GameFormat = "casual") {
     if (!GAME_FORMATS.some((f) => f.key === format)) throw new Error(`Unknown format "${format}". Formats: ${GAME_FORMATS.map((f) => f.key).join(", ")}.`);
     if (!deck && !dealtFormat(format)) throw new Error(`Give a deck: in ${format} you play your own deck.`);
-    const wire = deck && !dealtFormat(format) ? await this.resolveDeck(deck, side) : undefined;
+    const wire = deck && !dealtFormat(format) ? await this.resolveDeck(deck, side, format) : undefined;
     this.attach(new Session(this.engine, this.db, "host", undefined, name, side, [], this.store));
     await this.settleLobby();
     const s = this.session!;
@@ -237,7 +245,7 @@ export class Agent {
     const s = this.session;
     const want = side ?? s?.lobby.mySide;
     const lines: string[] = [];
-    for (const m of this.engine.precons() as any[]) {
+    for (const m of shuffle(this.engine.precons() as any[])) {
       for (const sd of ["corp", "runner"] as Side[]) {
         if (want && sd !== want) continue;
         const d = m[sd];
@@ -253,17 +261,42 @@ export class Agent {
     return `Preconstructed decks${want ? ` for the ${want}` : ""}:\n${lines.join("\n")}\n\nchoose_deck also accepts a NetrunnerDB deck or decklist URL; find_decks lists recent community decklists legal in a format.`;
   }
 
-  private async indexedDecks(side: Side, format: FormatKey) {
+  private async indexedItems(side: Side, format: FormatKey) {
     const base = relayUrl();
     if (!base) return null;
-    try {
-      const res = await fetch(`${base}/decklists?${new URLSearchParams({ side, format, page: "1" })}`);
-      if (!res.ok) return null;
-      const { items } = (await res.json()) as { items: any[] };
-      return items.slice(0, 15).map((d) => `- ${d.name} · ${this.db.byCode.get(String(d.identity))?.title ?? "?"} · ${String(d.created).slice(0, 10)} · https://netrunnerdb.com/en/decklist/${d.id}`);
-    } catch {
-      return null;
+    const pages = await Promise.all(
+      ["1", "2", "3"].map((page) =>
+        fetch(`${base}/decklists?${new URLSearchParams({ side, format, page })}`)
+          .then((res) => (res.ok ? (res.json() as Promise<{ items: any[] }>) : null))
+          .catch(() => null),
+      ),
+    );
+    if (!pages[0]) return null;
+    return shuffle(pages.flatMap((p) => p?.items ?? []));
+  }
+
+  private async indexedDecks(side: Side, format: FormatKey) {
+    const items = await this.indexedItems(side, format);
+    return items?.slice(0, 15).map((d) => `- ${d.name} · ${this.db.byCode.get(String(d.identity))?.title ?? "?"} · ${String(d.created).slice(0, 10)} · https://netrunnerdb.com/en/decklist/${d.id}`) ?? null;
+  }
+
+  private async randomDeck(side: Side, format: GameFormat): Promise<WireDeck> {
+    const key = deckFormat(format);
+    if (key && key !== "casual") {
+      for (const d of ((await this.indexedItems(side, key)) ?? []).slice(0, 4)) {
+        try {
+          const deck = await importNrdb(`https://netrunnerdb.com/en/decklist/${d.id}`, side, this.db);
+          if (analyze(deck, key).legal) return toWire(deck);
+        } catch {}
+      }
     }
+    const precons = shuffle((this.engine.precons() as any[]).map((m) => ({ ...m[side], name: `${m[side].name} (${m.title})` })));
+    const fits = precons.find((d) => {
+      const deck = fromPrecon(d, this.db);
+      return !key || key === "casual" || analyze(deck, key).legal;
+    });
+    if (!fits) throw new Error(`No ${side} deck legal in ${format} could be found. Pick one with find_decks or list_decks.`);
+    return toWire(fromPrecon(fits, this.db));
   }
 
   async findDecks(side: Side, format: FormatKey, days = 21) {
@@ -297,10 +330,11 @@ export class Agent {
       }
     }
     if (!found.length) return `No ${side} decklist legal in ${format} was published on NetrunnerDB in the last ${span} days. Try more days, another format, or list_decks for the preconstructed decks.`;
-    return `Recent NetrunnerDB ${side} decklists legal in ${format} (newest first):\n${found.slice(0, 15).join("\n")}\n\nPass one of these URLs as the deck to host_game, join_game or choose_deck.`;
+    return `Recent NetrunnerDB ${side} decklists legal in ${format} (newest first):\n${shuffle(found).slice(0, 15).join("\n")}\n\nPass one of these URLs as the deck to host_game, join_game or choose_deck.`;
   }
 
-  private async resolveDeck(nameOrUrl: string, side: Side): Promise<WireDeck> {
+  private async resolveDeck(nameOrUrl: string, side: Side, format: GameFormat): Promise<WireDeck> {
+    if (/^\s*random\s*$/i.test(nameOrUrl)) return this.randomDeck(side, format);
     if (/netrunnerdb\.com/.test(nameOrUrl)) return toWire(await importNrdb(nameOrUrl, side, this.db));
     const wanted = nameOrUrl.trim().toLowerCase();
     for (const m of this.engine.precons() as any[]) {
@@ -315,7 +349,7 @@ export class Agent {
     const s = this.requireSession();
     if (s.lobby.started) throw new Error("The game has already started.");
     if (dealtFormat(s.lobby.format)) throw new Error(`No deck to pick in ${s.lobby.format}: decks are dealt when the game starts.`);
-    const deck = await this.resolveDeck(nameOrUrl, s.lobby.mySide);
+    const deck = await this.resolveDeck(nameOrUrl, s.lobby.mySide, s.lobby.format);
     const problem = s.deckProblem(deck);
     if (problem) throw new Error(`${deck.name} is not legal in ${s.lobby.format}: ${problem}. Pick another deck.`);
     s.setDeck(deck);

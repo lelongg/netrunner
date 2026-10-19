@@ -15,7 +15,9 @@ does. Its own instructions cover the rules of the table; this is the order to fo
    preconstructed, chimera or quick-draft), or which NetrunnerDB deck to use. When they give a
    game code, the host has already chosen the format: join first and read it from `get_state`.
 2. Pick a deck with `find_decks` (recent community decklists for a format) or `list_decks`
-   (preconstructed decks), unless the format deals decks (chimera, quick-draft).
+   (preconstructed decks), unless the format deals decks (chimera, quick-draft). Vary it from
+   game to game: unless the user asked for a deck, pass `"random"` as the deck and the server
+   picks one legal in the format, rather than taking the first one listed.
 3. Join with `join_game(code, deck)`, or host with `host_game(side, deck)` and write the join
    link in your message, then call `wait_for_turn` in the same turn.
 4. Loop without ending your turn: `wait_for_turn`, decide, `act`, until the game is over or the
