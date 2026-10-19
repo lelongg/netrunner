@@ -1319,6 +1319,7 @@ textarea:focus {
 }
 
 .buttons button.cta,
+.buttons button.wide,
 .choices button.wide {
   flex-basis: 100%;
 }

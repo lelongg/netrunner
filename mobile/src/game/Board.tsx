@@ -1101,7 +1101,7 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
           )}
           {others.map((c) => (
             <button
-              class={armed === c.command && c.confirm ? "danger armed" : c.kind === "danger" ? "danger" : c.kind === "primary" ? "primary" : ""}
+              class={`${armed === c.command && c.confirm ? "danger armed" : c.kind === "danger" ? "danger" : c.kind === "primary" ? "primary" : ""} ${c.label.replace(/\[[^\]]+\]/g, "#").length > 13 ? "wide" : ""}`}
               disabled={disabled || c.enabled === false}
               onClick={() => {
                 if (c.confirm && armed !== c.command) return setArmed(c.command);
