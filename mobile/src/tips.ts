@@ -81,13 +81,7 @@ function hide() {
   animate(el, { opacity: [1, 0] }, { duration: 0.15 }).finished.then(() => el.remove(), () => el.remove());
 }
 
-function show(text: string, anchor: Element) {
-  hide();
-  const el = document.createElement("div");
-  el.className = "tip";
-  el.setAttribute("role", "tooltip");
-  el.textContent = text;
-  document.body.appendChild(el);
+function position(el: HTMLElement, anchor: Element) {
   const r = anchor.getBoundingClientRect();
   const w = el.offsetWidth;
   const h = el.offsetHeight;
@@ -95,6 +89,26 @@ function show(text: string, anchor: Element) {
   const above = r.top - h - 8 > 8;
   el.style.left = `${left}px`;
   el.style.top = `${above ? r.top - h - 8 : r.bottom + 8}px`;
+  return above;
+}
+
+function follow(e: Event) {
+  const target = e.target;
+  if (!current || !currentAnchor || !(target instanceof Node) || !target.contains(currentAnchor)) return;
+  if (!currentAnchor.isConnected) return hide();
+  const r = currentAnchor.getBoundingClientRect();
+  if (r.bottom < 0 || r.top > innerHeight) return hide();
+  position(current, currentAnchor);
+}
+
+function show(text: string, anchor: Element) {
+  hide();
+  const el = document.createElement("div");
+  el.className = "tip";
+  el.setAttribute("role", "tooltip");
+  el.textContent = text;
+  document.body.appendChild(el);
+  const above = position(el, anchor);
   current = el;
   currentAnchor = anchor;
   animate(el, { opacity: [0, 1], transform: [`translateY(${above ? 6 : -6}px) scale(0.92)`, "translateY(0px) scale(1)"] }, { duration: 0.22, ease: [0.2, 1.3, 0.4, 1] });
@@ -113,5 +127,5 @@ export function installTips() {
     }
     if (hit) show(MEANINGS[hit.key] ?? hit.key, hit.anchor);
   }, true);
-  addEventListener("scroll", hide, { capture: true, passive: true });
+  addEventListener("scroll", follow, { capture: true, passive: true });
 }
