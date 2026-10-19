@@ -2,7 +2,7 @@
   "mcpServers": {
     "pocket-rig": {
       "command": "node",
-      "args": ["agent/launch.mjs"]
+      "args": ["plugin/launch.mjs"]
     }
   }
 }

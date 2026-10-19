@@ -1,0 +1,8 @@
+{
+  "name": "pocket-rig",
+  "version": "0.1.0",
+  "description": "Play Netrunner against a human on Pocket Rig: the rules engine runs in your session, no hosted server needed.",
+  "author": { "name": "lelongg" },
+  "homepage": "https://lelongg.github.io/netrunner/",
+  "repository": "https://github.com/lelongg/netrunner"
+}

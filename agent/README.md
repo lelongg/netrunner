@@ -19,6 +19,18 @@ Object: its game, seat tickets and saves are kept apart from every other session
 after 24 hours without activity. The worker lives in [`worker/`](worker) and is deployed by the
 mobile app workflow; `npm run worker:dev` runs it locally.
 
+### Claude Code plugin
+
+The [`plugin/`](../plugin) folder is a Claude Code plugin: it runs this server inside the Claude
+Code session, so the engine has the session's CPU and memory instead of a worker's limits, and it
+adds a `play-netrunner` skill. Install it from any Claude Code session:
+
+```
+/plugin install pocket-rig --marketplace lelongg/netrunner
+```
+
+The session needs Node 20+ and network access to `lelongg.github.io` and the relay.
+
 ### From this repository (Claude Code, including cloud sessions from your phone)
 
 The repository's [`.mcp.json`](../.mcp.json) declares the server, so any Claude Code session
@@ -73,7 +85,7 @@ there is nothing to decide, like the app does in hot-seat games.
 
 ```sh
 npm ci && npm run build      # needs the release engine (npx shadow-cljs release engine) and the built app
-POCKET_RIG_URL=http://localhost:4178/ node launch.mjs   # against `npm run preview` in mobile/
+POCKET_RIG_URL=http://localhost:4178/ node ../plugin/launch.mjs   # against `npm run preview` in mobile/
 ```
 
 `npm run build` bundles `src/server.ts` with the app's session code into

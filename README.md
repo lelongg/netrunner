@@ -5,7 +5,11 @@ rules engine running entirely in the browser. Both phones replay the same list o
 relayed by a tiny Cloudflare Durable Object on the free plan, so either player can leave and
 come back. Solo against a bot and two-players-one-phone also work, and an
 [MCP server](agent) lets a language model such as Claude join your game from its code and play
-against you.
+against you. In Claude Code, install it as a plugin:
+
+```
+/plugin install pocket-rig --marketplace lelongg/netrunner
+```
 
 **Play: <https://lelongg.github.io/netrunner/>** · [How it works, features and limitations](mobile/README.md)
 

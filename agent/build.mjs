@@ -28,5 +28,5 @@ await build({
   logLevel: "warning",
 });
 copyFileSync(new URL("../mobile/engine/engine.js", import.meta.url), `${out}engine.mjs`);
-copyFileSync(new URL("launch.mjs", import.meta.url), `${out}launch.mjs`);
+copyFileSync(new URL("../plugin/launch.mjs", import.meta.url), `${out}launch.mjs`);
 console.log(`agent built in ${out}`);

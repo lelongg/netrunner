@@ -1,0 +1,14 @@
+{
+  "name": "pocket-rig",
+  "description": "Pocket Rig, a Netrunner client for phones, as a Claude Code plugin: play against a human from any Claude Code session.",
+  "owner": {
+    "name": "lelongg"
+  },
+  "plugins": [
+    {
+      "name": "pocket-rig",
+      "source": "./plugin",
+      "description": "Play Netrunner against a human on Pocket Rig: the rules engine runs in your session, no hosted server needed."
+    }
+  ]
+}
