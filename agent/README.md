@@ -23,7 +23,7 @@ mobile app workflow; `npm run worker:dev` runs it locally.
 
 The [`plugin/`](../plugin) folder is a Claude Code plugin: it runs this server inside the Claude
 Code session, so the engine has the session's CPU and memory instead of a worker's limits, and it
-adds a `play-netrunner` skill. Install it from any Claude Code session:
+adds a `pocket-rig` skill. Install it from any Claude Code session:
 
 ```
 /plugin install pocket-rig --marketplace lelongg/netrunner
