@@ -3,7 +3,7 @@ import { type CardDb, type Side, cardImage } from "../engine";
 import { ZoomableCardImage } from "../game/CardImage";
 import { Pager } from "../game/Pager";
 import { withTerms } from "../game/RichText";
-import { useDragPager } from "../game/swipe";
+import { type Peek, useDragPager } from "../game/swipe";
 import { iconize } from "../game/text";
 import { useBackClose } from "../back";
 import { animate } from "../fx/core";
@@ -148,11 +148,36 @@ export function Guide({ db, onClose, onPlay }: { db: CardDb; onClose: () => void
     entering.current = dir;
     setIndex(next);
   };
-  const page = () => body.current?.querySelector<HTMLElement>(".guide-page");
-  const drag = useDragPager(page, (dir) => index + dir >= 0 && index + dir < PAGES.length, go);
+  const page = () => body.current?.querySelector<HTMLElement>(".guide-page.current");
+  const peekOf = (dir: -1 | 1) => body.current?.querySelector<HTMLElement>(`.guide-page.peek.${dir === 1 ? "next" : "prev"}`);
+  const swiped = useRef(false);
+  const peek: Peek = {
+    move: (dx) => {
+      const w = (page()?.getBoundingClientRect().width ?? 0) + 24;
+      for (const dir of [-1, 1] as const) {
+        const el = peekOf(dir);
+        if (!el) continue;
+        el.style.visibility = (dir === 1 ? dx < 0 : dx > 0) ? "visible" : "hidden";
+        el.style.transform = `translateX(${dir * w + dx}px)`;
+      }
+    },
+    release: (dir) => {
+      if (dir) swiped.current = true;
+    },
+    gap: 24,
+  };
+  const drag = useDragPager(page, (dir) => index + dir >= 0 && index + dir < PAGES.length, go, peek);
   useLayoutEffect(() => {
     const dir = entering.current;
     entering.current = 0;
+    for (const d of [-1, 1] as const) {
+      const el = peekOf(d);
+      if (el) el.style.visibility = "hidden";
+    }
+    if (swiped.current) {
+      swiped.current = false;
+      return;
+    }
     const el = page();
     if (!dir || !el || motionOff()) return;
     const from = dir * el.getBoundingClientRect().width * 0.6;
@@ -173,7 +198,34 @@ export function Guide({ db, onClose, onPlay }: { db: CardDb; onClose: () => void
     if (runner) animate(runner, { x: [innerWidth, 0] }, { type: "spring", visualDuration: 0.5, bounce: 0.2, delay: 0.1 });
     if (vs) animate(vs, { transform: ["translate(-50%, -50%) rotate(-8deg) scale(3)", "translate(-50%, -50%) rotate(-8deg) scale(1)"], opacity: [0, 1] }, { duration: 0.35, delay: 0.5, ease: [0.2, 1.4, 0.4, 1] });
   }, [index]);
-  const p = PAGES[index];
+  const renderPage = (i: number, role: string) => {
+    const q = PAGES[i];
+    return q.choice ? (
+          <div key={`${role}:${i}`} class={`guide-page guide-choice ${role}`} aria-hidden={role !== "current" || undefined}>
+            <SidePick side="corp" db={db} onPick={() => onPlay("corp")} />
+            <span class="versus" aria-hidden="true">
+              VS
+            </span>
+            <SidePick side="runner" db={db} onPick={() => onPlay("runner")} />
+          </div>
+        ) : (
+          <section key={`${role}:${i}`} class={`panel section guide-page ${role}`} aria-hidden={role !== "current" || undefined}>
+            <span class="label cyan">{q.kicker}</span>
+            <h2>{q.title}</h2>
+            {q.cards && (
+              <div class="guide-cards">
+                {q.cards.map((title) => {
+                  const code = db.byTitle.get(title)?.code;
+                  return code ? <ZoomableCardImage code={code} alt={title} size="small" width="88px" /> : null;
+                })}
+              </div>
+            )}
+            {q.body.map((t) => (
+              <p>{withTerms(iconize(t))}</p>
+            ))}
+          </section>
+        );
+  };
   const last = index === PAGES.length - 1;
   return (
     <>
@@ -191,31 +243,11 @@ export function Guide({ db, onClose, onPlay }: { db: CardDb; onClose: () => void
           <h1>HOW TO PLAY</h1>
         </header>
         <Pager index={index} count={PAGES.length} onStep={go} />
-        {p.choice ? (
-          <div key={index} class="guide-page guide-choice">
-            <SidePick side="corp" db={db} onPick={() => onPlay("corp")} />
-            <span class="versus" aria-hidden="true">
-              VS
-            </span>
-            <SidePick side="runner" db={db} onPick={() => onPlay("runner")} />
-          </div>
-        ) : (
-          <section key={index} class="panel section guide-page">
-            <span class="label cyan">{p.kicker}</span>
-            <h2>{p.title}</h2>
-            {p.cards && (
-              <div class="guide-cards">
-                {p.cards.map((title) => {
-                  const code = db.byTitle.get(title)?.code;
-                  return code ? <ZoomableCardImage code={code} alt={title} size="small" width="88px" /> : null;
-                })}
-              </div>
-            )}
-            {p.body.map((t) => (
-              <p>{withTerms(iconize(t))}</p>
-            ))}
-          </section>
-        )}
+        <div class="guide-track">
+          {index > 0 && renderPage(index - 1, "peek prev")}
+          {renderPage(index, "current")}
+          {index < PAGES.length - 1 && renderPage(index + 1, "peek next")}
+        </div>
         <div class="guide-dots" aria-hidden="true">
           {PAGES.map((_, i) => (
             <i class={i === index ? "on" : ""} />

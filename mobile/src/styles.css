@@ -3569,10 +3569,26 @@ button:active:not(:disabled) {
   padding-bottom: calc(16px + env(safe-area-inset-bottom));
 }
 
+.screen.guide .guide-track {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
 .screen.guide .guide-page {
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
+}
+
+.screen.guide .guide-page.peek {
+  position: absolute;
+  inset: 0;
+  visibility: hidden;
+  pointer-events: none;
+  overflow: hidden;
 }
 
 .screen.guide .guide-dots,
