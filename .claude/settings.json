@@ -1,0 +1,6 @@
+{
+  "permissions": {
+    "allow": ["mcp__pocket-rig", "mcp__plugin_pocket-rig_pocket-rig"]
+  },
+  "enabledMcpjsonServers": ["pocket-rig"]
+}
