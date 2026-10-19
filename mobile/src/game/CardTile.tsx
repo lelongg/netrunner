@@ -39,6 +39,8 @@ export function CardTile({
   const dim = owner && card.side === "Corp" && zone0(card) === "servers" && !card.rezzed && card.type !== "Agenda";
   const sideways = (card.zone ?? []).includes("ices");
   const strength = (card.type === "ICE" || (card.subtypes ?? []).includes?.("Icebreaker")) && (card["current-strength"] ?? card.strength);
+  const shownCost: number | undefined = card["current-cost"] ?? (dim ? card["current-rez-cost"] : undefined);
+  const usable = owner && !dim && zone0(card) !== "hand" && (card.abilities ?? []).some((a: any) => a.playable);
   const classes = [
     "tile",
     `tile-${size}`,
@@ -48,6 +50,7 @@ export function CardTile({
     card.selected ? "selected" : "",
     selectable ? "selectable" : "",
     card.playable ? "playable" : "",
+    usable ? "usable" : "",
     card.new ? "new" : "",
     ice ? "ice" : "",
     sideways ? "sideways" : "",
@@ -75,10 +78,15 @@ export function CardTile({
             <Icon name="strength" class="glyph" />
             {strength}
           </span>}
-        {code && card["current-cost"] != null && card.cost != null && card["current-cost"] !== card.cost && (
-          <span class={`badge corner cost ${card["current-cost"] < card.cost ? "cheaper" : "dearer"}`}>
+        {code && shownCost != null && (
+          <span class={`badge corner cost ${card.cost == null || shownCost === card.cost ? "same" : shownCost < card.cost ? "cheaper" : "dearer"}`}>
             <Icon name="credit" class="glyph" />
-            {card["current-cost"]}
+            {shownCost}
+          </span>
+        )}
+        {usable && (
+          <span class="usable-mark" aria-hidden="true">
+            <Icon name="bolt" />
           </span>
         )}
         {card.new && <span class="new-tag">New</span>}
