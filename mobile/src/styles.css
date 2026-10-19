@@ -1004,7 +1004,7 @@ textarea:focus {
   justify-items: center;
   row-gap: 4px;
   min-width: calc(var(--tile-w) + 8px);
-  padding: 4px;
+  padding: 8px;
   border: 1px solid transparent;
 }
 
@@ -2185,7 +2185,36 @@ button:active:not(:disabled) {
 }
 
 .server .ices > * + * {
-  margin-top: calc(var(--tile-w) * -0.62);
+  margin-top: 0;
+}
+
+.tile.sideways {
+  --tile-w: 46px;
+  --tile-h: 65px;
+  width: var(--tile-h);
+  height: var(--tile-w);
+}
+
+.tile.sideways .badge.corner {
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  padding: 1px 2px;
+  font-size: 8px;
+}
+
+.tile.sideways .new-tag {
+  top: auto;
+  bottom: 2px;
+}
+
+.tile.sideways .card-image {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--tile-w);
+  height: var(--tile-h);
+  transform: translate(-50%, -50%) rotate(90deg);
 }
 
 .server .ices > *:hover,
@@ -3064,6 +3093,16 @@ button:active:not(:disabled) {
 
 .enc-card {
   position: relative;
+  width: 88px;
+  height: 63px;
+}
+
+.enc-card .card-image {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 63px;
+  transform: translate(-50%, -50%) rotate(90deg);
 }
 
 .enc-cleared {

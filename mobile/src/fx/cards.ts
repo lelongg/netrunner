@@ -20,6 +20,7 @@ interface Move {
   to?: Info;
   src: DOMRect | null;
   clone: HTMLElement | null;
+  sideways?: boolean;
 }
 
 export interface Plan {
@@ -91,6 +92,7 @@ export function prepare(prev: Map<unknown, Info>, next: Map<unknown, Info>): Pla
     if (el && visible(r)) {
       m.src = r;
       m.clone = el.cloneNode(true) as HTMLElement;
+      m.sideways = el.classList.contains("sideways");
     } else {
       const fallback = m.from ? zoneAnchor(m.from) : m.to && head(m.to.zone) === "hand" ? pile(`${m.to.holder}-deck`) : m.to ? (anchor(`${m.to.owner}-hand`) ?? pile(`${m.to.owner}-deck`)) : null;
       const fr = cardShaped(rectOf(fallback));
@@ -175,9 +177,16 @@ function queue(fn: () => Promise<void>) {
 
 const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
-function flyTo(ghost: HTMLElement, from: DOMRect, to: DOMRect, opts: { duration?: number; delay?: number; lift?: number; tilt?: number; ease?: any; endScale?: number } = {}) {
-  const dx = to.left - from.left;
-  const dy = to.top - from.top;
+function upright(r: DOMRect) {
+  return new DOMRect(r.left + (r.width - r.height) / 2, r.top + (r.height - r.width) / 2, r.height, r.width);
+}
+
+function flyTo(ghost: HTMLElement, from: DOMRect, to: DOMRect, opts: { duration?: number; delay?: number; lift?: number; tilt?: number; ease?: any; endScale?: number; turn?: [number, number] } = {}) {
+  const centred = !!opts.turn;
+  const dx = centred ? to.left + to.width / 2 - (from.left + from.width / 2) : to.left - from.left;
+  const dy = centred ? to.top + to.height / 2 - (from.top + from.height / 2) : to.top - from.top;
+  if (centred) ghost.style.transformOrigin = "50% 50%";
+  const [r0, r1] = opts.turn ?? [0, 0];
   const sx = (to.width / from.width) * (opts.endScale ?? 1);
   const sy = (to.height / from.height) * (opts.endScale ?? 1);
   const lift = opts.lift ?? Math.min(80, Math.hypot(dx, dy) * 0.25);
@@ -189,7 +198,7 @@ function flyTo(ghost: HTMLElement, from: DOMRect, to: DOMRect, opts: { duration?
       y: [0, dy * 0.5 - lift, dy],
       scaleX: [1, ((1 + sx) / 2) * 1.12, sx],
       scaleY: [1, ((1 + sy) / 2) * 1.12, sy],
-      rotate: [0, tilt, 0],
+      rotate: [r0, (r0 + r1) / 2 + tilt, r1],
     },
     { duration: opts.duration ?? 0.52, delay: opts.delay ?? 0, ease: opts.ease ?? [0.35, 0.05, 0.25, 1] },
   );
@@ -345,20 +354,25 @@ export function play(plan: Plan, me: Side, lines: string[] = []) {
       });
       continue;
     }
-    const face = info?.code ? synth(info, true) : (m.clone ?? synth(info, false));
-    const ghost = ghostFrom(face, src, kind === "trash" ? "fx-burn" : "");
-    ghost.style.transformOrigin = "0 0";
+    const toSide = !!destEl?.classList.contains("sideways");
+    const turn: [number, number] | undefined = m.sideways || toSide ? [m.sideways ? 90 : 0, toSide ? 90 : 0] : undefined;
+    const from = m.sideways ? upright(src) : src;
+    const to = toSide ? upright(dest) : dest;
+    const face = info?.code ? synth(info, true) : m.sideways ? synth(info, false) : (m.clone ?? synth(info, false));
+    const ghost = ghostFrom(face, from, kind === "trash" ? "fx-burn" : "");
+    ghost.style.transformOrigin = turn ? "50% 50%" : "0 0";
+    if (turn) ghost.style.transform = `rotate(${turn[0]}deg)`;
     hide(destEl);
     if (kind === "trash") {
       burst(mid(src), "orange", 10, 40, { size: 4, gravity: -30 });
-      flyTo(ghost, src, dest, { delay, duration: 0.55, tilt: 18, lift: 40 }).finished.then(() => {
+      flyTo(ghost, from, to, { delay, duration: 0.55, tilt: 18, lift: 40, turn }).finished.then(() => {
         ghost.remove();
         show(destEl);
         burst(mid(dest), "orange", 8, 30, { size: 3, gravity: -40 });
       });
       continue;
     }
-    flyTo(ghost, src, dest, { delay, duration: kind === "install" ? 0.5 : 0.45 }).finished.then(() => {
+    flyTo(ghost, from, to, { delay, duration: kind === "install" ? 0.5 : 0.45, turn }).finished.then(() => {
       ghost.remove();
       if (kind === "install") land(destEl, info, info?.type === "ICE" || info?.owner !== me);
       else show(destEl);

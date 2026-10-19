@@ -194,6 +194,13 @@
   animation: none;
 }
 
+.fx-showcase .tile.sideways .card-image {
+  position: static;
+  width: 100%;
+  height: 100%;
+  transform: none;
+}
+
 .fx-ghost .tile img,
 .fx-card-img {
   width: 100%;

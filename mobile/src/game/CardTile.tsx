@@ -37,6 +37,7 @@ export function CardTile({
   const hiddenToMe = !code;
   const ice = card.type === "ICE";
   const dim = owner && card.side === "Corp" && zone0(card) === "servers" && !card.rezzed && card.type !== "Agenda";
+  const sideways = (card.zone ?? []).includes("ices");
   const strength = (card.type === "ICE" || (card.subtypes ?? []).includes?.("Icebreaker")) && (card["current-strength"] ?? card.strength);
   const classes = [
     "tile",
@@ -49,6 +50,7 @@ export function CardTile({
     card.playable ? "playable" : "",
     card.new ? "new" : "",
     ice ? "ice" : "",
+    sideways ? "sideways" : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -64,11 +66,15 @@ export function CardTile({
               {n}
             </span>
           ))}
-          {strength != null && strength !== false && <span class="badge str">
+          {!sideways && strength != null && strength !== false && <span class="badge str">
               <Icon name="strength" class="glyph" />
               {strength}
             </span>}
         </div>
+        {sideways && strength != null && strength !== false && <span class="badge str corner">
+            <Icon name="strength" class="glyph" />
+            {strength}
+          </span>}
         {card.new && <span class="new-tag">New</span>}
         {dim && <span class="state">unrezzed</span>}
         {owner && card.side === "Corp" && zone0(card) === "servers" && !isFaceup(card) && card.type === "Agenda" && <span class="state">facedown</span>}
