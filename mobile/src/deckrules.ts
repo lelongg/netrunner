@@ -69,8 +69,11 @@ export function influenceOf(identity: Card, card: Card) {
   return card.faction === identity.faction || isNeutral(card) ? 0 : Number(card.factioncost ?? 0);
 }
 
+const starterOnly = (card: Card) => /^Starter game only\./.test(String(card.text ?? ""));
+
 export function legality(card: Card, format: FormatKey): "legal" | "banned" | "rotated" | "restricted" {
   if (format === "casual") return "legal";
+  if (starterOnly(card)) return "banned";
   const f = (card.format as Record<string, { legal?: boolean; banned?: boolean; rotated?: boolean; restricted?: boolean }> | undefined)?.[format];
   if (!f || f.rotated) return "rotated";
   if (f.banned) return "banned";
@@ -127,7 +130,8 @@ export function analyze(deck: Deck, format: FormatKey): Analysis {
     const name = FORMATS.find((f) => f.key === format)!.label;
     for (const c of [identity, ...deck.cards.map((e) => e.card)]) {
       const l = legality(c, format);
-      if (l === "banned") problems.push({ level: "error", text: `${c.title} is banned in ${name}` });
+      if (starterOnly(c)) problems.push({ level: "error", text: `${c.title} is for starter games only` });
+      else if (l === "banned") problems.push({ level: "error", text: `${c.title} is banned in ${name}` });
       else if (l === "rotated") problems.push({ level: "error", text: `${c.title} is not in ${name}` });
     }
     const restricted = deck.cards.filter((e) => legality(e.card, format) === "restricted");

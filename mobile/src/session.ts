@@ -521,7 +521,7 @@ export class Session {
   }
 
   startTutorial(side: Side, mine: WireDeck, theirs: WireDeck) {
-    this.lobby = { ...this.lobby, vsBot: true, opponentName: "Bot", tutorial: true, mySide: side, myDeck: mine };
+    this.lobby = { ...this.lobby, vsBot: true, opponentName: "Bot", tutorial: true, mySide: side, myDeck: mine, format: "casual" };
     this.opponentDeck = theirs;
     this.lobby.opponentDeckReady = true;
     this.start();
