@@ -45,7 +45,7 @@ interface ClickMark {
 
 const clickMarks = new WeakMap<Session, Map<string, ClickMark>>();
 const UNDO = /undo-click/i;
-const FORCED = new Set(["start-turn", "unbroken-subroutines", "end-phase-12", "phase-12-pass-priority", "continue", "start-next-phase"]);
+const FORCED = new Set(["start-turn", "unbroken-subroutines", "end-phase-12", "phase-12-pass-priority", "continue", "start-next-phase", "end-turn", "end-post-discard", "post-discard-pass-priority"]);
 const REVEALING = /\b(draws?|accesses|reveals?|looks? at|search(es)?|mills?|to make a run|breach(es)?|trash(es)? the top)\b/i;
 
 function undoAllowed(session: Session, view: any, side: Side, render: (m: unknown) => string, handoffLog = 0) {
@@ -852,15 +852,6 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
   const turnCommands = useChecked(view.run || view.encounters ? runCommands(view, side) : basicCommands(view, side), prober, live);
   const choices = turnCommands.filter((c) => c.enabled !== false && c.command !== "toggle-auto-no-action");
   const openPrompt = promptOf(view, side);
-  const forced =
-    !disabled && !session.lobby.tutorial && !(session.lobby.role === "local" && !session.lobby.vsBot) && choices.length === 1 && FORCED.has(choices[0].command) && (!openPrompt || openPrompt["prompt-type"] === "run") && verified?.size === 0
-      ? choices[0]
-      : null;
-  useEffect(() => {
-    if (!forced) return;
-    const t = setTimeout(() => send(forced.command, forced.args), Math.max(700, quietUntil - performance.now() + 300));
-    return () => clearTimeout(t);
-  }, [forced?.command, live, verified]);
   const me = view[side] ?? {};
   const opp = otherSide(side);
   const prompt = watching ? undefined : promptOf(view, side);
@@ -910,6 +901,33 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
   const myMove = awaitingMove(view, side);
   const remote = session.lobby.role !== "local" || session.lobby.vsBot;
   const canUndo = !watching && undoAllowed(session, view, side, render, handoffLog);
+  const allowAuto = !disabled && !session.lobby.tutorial && !(session.lobby.role === "local" && !session.lobby.vsBot) && verified?.size === 0;
+  const forced: { steps: { command: string; args?: unknown }[]; wait: number } | null = (() => {
+    if (!allowAuto) return null;
+    const pt = openPrompt?.["prompt-type"];
+    if (!openPrompt || pt === "run") return choices.length === 1 && FORCED.has(choices[0].command) && !(choices[0].command === "end-turn" && canUndo) ? { steps: [choices[0]], wait: 700 } : null;
+    const eid = openPrompt.eid;
+    const options = openPrompt.choices;
+    if (pt === "trace" && Number(options ?? 0) === 0) return { steps: [{ command: "choice", args: { eid, choice: 0 } }], wait: 700 };
+    const selectable: unknown[] = openPrompt.selectable ?? [];
+    if (Array.isArray(options) && options.length === 1 && !selectable.length && /^(steal|no action)$/i.test(String(options[0]?.value))) return { steps: [{ command: "choice", args: { eid, choice: { uuid: options[0].uuid } } }], wait: 1600 };
+    if (pt === "select" && selectable.length) {
+      const max: number = openPrompt["select-max"] ?? 1;
+      const min: number = openPrompt["select-all"] ? max : (openPrompt["select-min"] ?? 0);
+      if (min < selectable.length || max < selectable.length) return null;
+      const steps: { command: string; args?: unknown }[] = selectable.map((cid) => ({ command: "select", args: { card: cardRef(findCard(live, cid)), eid } }));
+      const done = Array.isArray(options) ? options.find((c: any) => c?.value === "Done") : undefined;
+      if (selectable.length < max && done) steps.push({ command: "choice", args: { eid, choice: { uuid: done.uuid } } });
+      return { steps, wait: 900 };
+    }
+    return null;
+  })();
+  const forcedKey = forced ? JSON.stringify(forced.steps) : "";
+  useEffect(() => {
+    if (!forced) return;
+    const t = setTimeout(() => forced.steps.forEach((step) => sendNow(step.command, step.args)), Math.max(forced.wait, quietUntil - performance.now() + 300));
+    return () => clearTimeout(t);
+  }, [forcedKey, live]);
   useEffect(() => {
     if (myMove && remote) navigator.vibrate?.(40);
   }, [myMove]);

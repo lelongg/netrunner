@@ -54,6 +54,7 @@ export function useVerified(view: any, side: Side, probe: Prober | undefined, st
   const probes: Probe[] = [];
   const trusted: unknown[] = [];
   const seen = new Set<unknown>();
+  const inRun = !!(view?.run || view?.encounters);
   const visit = (card: any) => {
     if (!card || typeof card !== "object") return;
     if (Array.isArray(card)) return card.forEach(visit);
@@ -67,7 +68,7 @@ export function useVerified(view: any, side: Side, probe: Prober | undefined, st
     } else if (card.cid != null && card.zone && !seen.has(card.cid)) {
       seen.add(card.cid);
       const zone = card.zone[0];
-      if (zone === "hand" && card.playable) {
+      if (zone === "hand" && card.playable && !inRun) {
         if (side === "corp" && card.type !== "Operation") trusted.push(card.cid);
         else {
           owners.push(card.cid);
@@ -78,7 +79,7 @@ export function useVerified(view: any, side: Side, probe: Prober | undefined, st
         probes.push({ k: "try", command: "rez", args: { card: cardRef(card) } });
       } else if (zone !== "hand" && zone !== "deck" && zone !== "discard") {
         (card.abilities ?? []).forEach((ab: any, i: number) => {
-          if (!ab.playable) return;
+          if (!ab.playable || (inRun && /\[click\]/i.test(String(ab["cost-label"] ?? "")))) return;
           owners.push(card.cid);
           probes.push({ k: "try", command: ab.dynamic ? "dynamic-ability" : "ability", args: ab.dynamic ? { card: cardRef(card), dynamic: ab.dynamic, source: ab.source, index: ab.index } : { card: cardRef(card), ability: i } });
         });
@@ -91,7 +92,8 @@ export function useVerified(view: any, side: Side, probe: Prober | undefined, st
   const results = useProbe(probes, probe, stamp);
   const last = useRef<Set<unknown> | null>(null);
   if (!probe) return null;
-  if (results) {
+  if (!probes.length) last.current = new Set(trusted);
+  else if (results) {
     const ok = new Set<unknown>(trusted);
     results.forEach((r, i) => r.ok && ok.add(owners[i]));
     last.current = ok;
