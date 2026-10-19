@@ -7,17 +7,22 @@ export type Prober = (probes: Probe[]) => Promise<ProbeResult[]>;
 export function useProbe(probes: Probe[], probe: Prober | undefined, stamp: unknown): ProbeResult[] | null {
   const key = JSON.stringify(probes);
   const [result, setResult] = useState<{ key: string; stamp: unknown; out: ProbeResult[] } | null>(null);
+  const known = result?.key === key;
   useEffect(() => {
     if (!probe || !probes.length) return;
     let live = true;
-    probe(probes)
-      .then((out) => live && setResult({ key, stamp, out }))
-      .catch(() => {});
+    const run = () =>
+      probe(probes)
+        .then((out) => live && setResult({ key, stamp, out }))
+        .catch(() => {});
+    const timer = known ? setTimeout(run, 400) : undefined;
+    if (!known) run();
     return () => {
       live = false;
+      clearTimeout(timer);
     };
   }, [key, stamp, probe]);
-  return result && result.key === key ? result.out : null;
+  return known ? result!.out : null;
 }
 
 export function useChecked(commands: Command[], probe: Prober | undefined, stamp: unknown): Command[] {
