@@ -966,13 +966,13 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
     closeCard();
   };
   const stagedConfirm = (() => {
-    if (!staging || !staged.size) return undefined;
+    if (!staging) return undefined;
     const max: number = prompt["select-max"];
     const min: number = prompt["select-all"] ? max : (prompt["select-min"] ?? 0);
-    if (staged.size < min || staged.size > max) return undefined;
+    const ready = staged.size >= min && staged.size <= max && staged.size > 0;
     const msg = render(prompt.msg);
     const verb = /^discard/i.test(msg) ? "Discard" : /^trash/i.test(msg) ? "Trash" : "Confirm";
-    return { label: `${verb} ${staged.size} ${staged.size === 1 ? "card" : "cards"}`, onConfirm: confirmStaged };
+    return { label: ready ? `${verb} ${staged.size} ${staged.size === 1 ? "card" : "cards"}` : `Pick ${Math.max(1, min - staged.size)} more`, ready, onConfirm: confirmStaged };
   })();
   const closePrompt = () => session.say("/close-prompt", side);
 

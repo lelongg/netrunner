@@ -116,7 +116,7 @@ function CardBack({ side }: { side: string }) {
 }
 
 interface Props {
-  confirm?: { label: string; onConfirm: () => void };
+  confirm?: { label: string; ready: boolean; onConfirm: () => void };
   stamp?: unknown;
   probe?: Prober;
   card: any;
@@ -258,16 +258,16 @@ export function CardSheet({ confirm, card, view, stamp, probe, side, db, send, o
           </div>
         ) : (
           <div class="sheet-actions">
+            {confirm && (
+              <button class="primary sheet-confirm" disabled={disabled || !confirm.ready} onClick={confirm.onConfirm}>
+                {confirm.label}
+              </button>
+            )}
             {commands.map((c) => (
               <button class={c.kind === "danger" ? "danger" : c.kind === "primary" ? "primary" : ""} disabled={disabled || c.enabled === false} onClick={() => run(c)}>
                 {glyphs(iconize(c.label))}
               </button>
             ))}
-            {confirm && (
-              <button class="primary sheet-confirm" disabled={disabled} onClick={confirm.onConfirm}>
-                {confirm.label}
-              </button>
-            )}
             <button class="ghost" onClick={onClose}>
               Close
             </button>
