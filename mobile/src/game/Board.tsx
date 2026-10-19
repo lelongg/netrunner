@@ -45,6 +45,7 @@ interface ClickMark {
 
 const clickMarks = new WeakMap<Session, Map<string, ClickMark>>();
 const UNDO = /undo-click/i;
+const FORCED = new Set(["start-turn", "unbroken-subroutines", "end-phase-12", "phase-12-pass-priority"]);
 const REVEALING = /\b(draws?|accesses|reveals?|looks? at|search(es)?|mills?|to make a run|breach(es)?|trash(es)? the top)\b/i;
 
 function undoAllowed(session: Session, view: any, side: Side, render: (m: unknown) => string, handoffLog = 0) {
@@ -849,6 +850,17 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
   const prober = useMemo<Prober | undefined>(() => (watching || controls ? undefined : (probes) => session.probe(side, probes)), [session, side, watching, !!controls]);
   const verified = useVerified(live, side, prober, live);
   const turnCommands = useChecked(view.run || view.encounters ? runCommands(view, side) : basicCommands(view, side), prober, live);
+  const choices = turnCommands.filter((c) => c.enabled !== false && c.command !== "toggle-auto-no-action");
+  const openPrompt = promptOf(view, side);
+  const forced =
+    !disabled && !session.lobby.tutorial && !(session.lobby.role === "local" && !session.lobby.vsBot) && choices.length === 1 && FORCED.has(choices[0].command) && (!openPrompt || openPrompt["prompt-type"] === "run") && verified?.size === 0
+      ? choices[0]
+      : null;
+  useEffect(() => {
+    if (!forced) return;
+    const t = setTimeout(() => send(forced.command, forced.args), 700);
+    return () => clearTimeout(t);
+  }, [forced?.command, live, verified]);
   const me = view[side] ?? {};
   const opp = otherSide(side);
   const prompt = watching ? undefined : promptOf(view, side);

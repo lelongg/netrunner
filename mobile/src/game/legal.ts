@@ -66,6 +66,9 @@ export function useVerified(view: any, side: Side, probe: Prober | undefined, st
           owners.push(card.cid);
           probes.push({ k: "try", command: "play", args: { card: cardRef(card) } });
         }
+      } else if (side === "corp" && zone === "servers" && !card.rezzed && (card.type === "Asset" || card.type === "Upgrade")) {
+        owners.push(card.cid);
+        probes.push({ k: "try", command: "rez", args: { card: cardRef(card) } });
       } else if (zone !== "hand" && zone !== "deck" && zone !== "discard") {
         (card.abilities ?? []).forEach((ab: any, i: number) => {
           if (!ab.playable) return;
