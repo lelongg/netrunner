@@ -154,9 +154,14 @@ export function Guide({ db, onClose, onPlay }: { db: CardDb; onClose: () => void
   const peek: Peek = {
     move: (dx) => {
       const w = (page()?.getBoundingClientRect().width ?? 0) + 24;
+      const cur = page();
+      if (cur) cur.style.opacity = "";
       for (const dir of [-1, 1] as const) {
         const el = peekOf(dir);
-        if (!el) continue;
+        if (!el) {
+          if (cur && (dir === 1 ? dx < 0 : dx > 0)) cur.style.opacity = String(1 - (0.7 * Math.min(Math.abs(dx), w)) / w);
+          continue;
+        }
         el.style.visibility = (dir === 1 ? dx < 0 : dx > 0) ? "visible" : "hidden";
         el.style.transform = `translateX(${dir * w + dx}px)`;
       }
@@ -244,9 +249,9 @@ export function Guide({ db, onClose, onPlay }: { db: CardDb; onClose: () => void
         </header>
         <Pager index={index} count={PAGES.length} onStep={go} />
         <div class="guide-track">
-          {index > 0 && renderPage(index - 1, "peek prev")}
+          {index > 0 && !PAGES[index - 1].choice && renderPage(index - 1, "peek prev")}
           {renderPage(index, "current")}
-          {index < PAGES.length - 1 && renderPage(index + 1, "peek next")}
+          {index < PAGES.length - 1 && !PAGES[index + 1].choice && renderPage(index + 1, "peek next")}
         </div>
         <div class="guide-dots" aria-hidden="true">
           {PAGES.map((_, i) => (
