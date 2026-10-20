@@ -702,7 +702,11 @@ function CardCost({ card }: { card: Card }) {
   if (card.type === "Agenda")
     return (
       <span class="row-cost" aria-label={`advance ${card.advancementcost}, ${card.agendapoints} points`}>
-        {String(card.advancementcost)}/{String(card.agendapoints)}
+        {String(card.advancementcost)}
+        <Icon name="advance" class="glyph" />
+        <span class="row-cost-sep">/</span>
+        {String(card.agendapoints)}
+        <Icon name="agenda" class="glyph" />
       </span>
     );
   if (card.cost == null) return null;

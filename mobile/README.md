@@ -172,6 +172,7 @@ so use ones meant for browsers.
 - Netrunner is published by [Null Signal Games](https://nullsignal.games). Card names, text
   and art belong to their respective owners.
 - Fonts: Big Shoulders Display and Space Mono (SIL Open Font License).
-- Sounds: the jinteki.net sound bank, with the per-sound sources and licences in [`public/sound/attributions.txt`](public/sound/attributions.txt), plus the Pocket Rig pack (the `snake_case` files) made for this project.
-- Music: the Pocket Rig adaptive loops in [`public/music`](public/music), made for this project.
+- Sound & Music: sound effects (the `snake_case` files in [`public/sound`](public/sound)) and adaptive music ([`public/music`](public/music)) generated procedurally with Claude (Anthropic). Additional recordings from Kenney's Casino Audio, RPG Audio, UI Audio and Digital Audio packs, [kenney.nl](https://kenney.nl), CC0 license.
+- Classic sounds: the jinteki.net sound bank, with the per-sound sources and licences in [`public/sound/attributions.txt`](public/sound/attributions.txt).
+- Board grid adapted from the [React Bits](https://reactbits.dev) CursorGrid by David Haz, MIT + Commons Clause.
 - Peer-to-peer matchmaking: [Trystero](https://github.com/dmotz/trystero).

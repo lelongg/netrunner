@@ -16,6 +16,7 @@ interface Props {
   onDiscard: (save: SavedGame) => void;
   onStart: (role: Role, name: string, code?: string, vsBot?: boolean) => void;
   onGuide: () => void;
+  onCredits: () => void;
   onHistory: (id?: string) => void;
   onDecks: () => void;
 }
@@ -70,7 +71,7 @@ function storedName() {
   }
 }
 
-export function Home({ ready, error, initialJoin, saves, onResume, onDiscard, onStart, onGuide, onHistory, onDecks }: Props) {
+export function Home({ ready, error, initialJoin, saves, onResume, onDiscard, onStart, onGuide, onCredits, onHistory, onDecks }: Props) {
   const [code, setCode] = useState(initialJoin ?? "");
   const codeRest = useRef<HTMLSpanElement>(null);
   const [animations, setAnimations] = useState(settings.animations);
@@ -194,6 +195,9 @@ export function Home({ ready, error, initialJoin, saves, onResume, onDiscard, on
           <span>Engine: Jinteki · MIT</span>
           <span>Cards: NetrunnerDB</span>
           <span>Not affiliated with Null Signal Games</span>
+          <button class="footer-link" onClick={onCredits}>
+            Credits
+          </button>
         </div>
       </div>
     </>

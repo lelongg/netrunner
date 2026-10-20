@@ -9,6 +9,7 @@ import { installTips } from "./tips";
 import { installMotion, useLoop } from "./fx/ui";
 import { unlockSound } from "./sound";
 import { dive } from "./fx/dive";
+import { Credits } from "./screens/Credits";
 import { initMusic, setMood } from "./music";
 import { installUiSounds, uiSound } from "./uisound";
 import { startEngineWorker } from "./game/workerHost";
@@ -121,6 +122,7 @@ function App() {
     if (autoPass) session!.send("continue", null, "corp");
   }, [autoPass, corpView?.log?.length, corpView?.run?.phase, corpView?.run?.position]);
 
+  const [credits, setCredits] = useState(false);
   const [guide, setGuide] = useState(() => !joinParam && !gameParam && !watchParam && !replayParam && tutorialState() === null);
   const firstRun = guide && tutorialState() === null;
   const [archive, setArchive] = useState<string | boolean>(false);
@@ -239,6 +241,7 @@ function App() {
       />
     );
 
+  if (credits && !session) return <Credits onClose={() => setCredits(false)} />;
   if (guide && loaded && !session)
     return (
       <Guide
@@ -273,6 +276,7 @@ function App() {
     return (
       <Home
         onGuide={() => setGuide(true)}
+        onCredits={() => setCredits(true)}
         onHistory={(id) => setArchive(id ?? true)}
         onDecks={() => setDecks(true)}
         ready={!!loaded}

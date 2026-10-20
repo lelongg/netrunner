@@ -6755,3 +6755,60 @@ h1.deck-name.long {
   background: linear-gradient(135deg, var(--cyan), var(--corp));
   opacity: 0.4;
 }
+
+.footer-link {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: var(--cyan);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.credits {
+  gap: 12px;
+  padding-top: 12px;
+}
+
+.credits .section {
+  gap: 8px;
+}
+
+.credits h2 {
+  margin: 0;
+}
+
+.credits p {
+  margin: 0;
+  line-height: 1.55;
+  color: var(--text-2);
+}
+
+.credits a {
+  color: var(--cyan);
+}
+
+.credits-list {
+  margin: 0;
+  padding-left: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-2);
+}
+
+.credits-note {
+  text-align: center;
+  margin: 8px 0 24px;
+}
+
+.row-cost-sep {
+  margin: 0 3px;
+  color: var(--muted);
+}
