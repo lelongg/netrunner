@@ -265,7 +265,7 @@ export function banner(title: string, sub: string, tone: Tone | "white" = "cyan"
   }
   const dir = opts.from === "right" ? 1 : -1;
   animate(band, { x: [`${dir * 110}%`, "0%"], skewX: [dir * 18, 0] }, { type: "spring", visualDuration: 0.38, bounce: 0.3 });
-  animate(t, { letterSpacing: ["0.6em", "0.04em"], opacity: [0, 1] }, { duration: 0.45, ease: [0.2, 0.9, 0.3, 1] });
+  animate(t, { scaleX: [1.7, 1], opacity: [0, 1] }, { duration: 0.45, ease: [0.2, 0.9, 0.3, 1] });
   const out = animate(band, { x: ["0%", `${-dir * 120}%`], opacity: [1, 0] }, { duration: 0.28, delay: 0.38 + hold, ease: "easeIn" });
   done(out, el);
 }
@@ -307,9 +307,11 @@ export function coins(from: Point, to: Point, n: number, tone: Tone = "gold", de
   }
 }
 
-export function lunge(source: HTMLElement | null, target: Point, opts: { tone?: Tone; reach?: number; onHit?: () => void } = {}) {
+export function lunge(source: HTMLElement | null, target: Point | (() => Point | null), opts: { tone?: Tone; reach?: number; onHit?: () => void } = {}) {
   const r = rectOf(source);
-  if (!source || !visible(r) || reduced()) {
+  const aim = typeof target === "function" ? target : () => target;
+  const first = aim();
+  if (!source || !visible(r) || !first || reduced()) {
     opts.onHit?.();
     return;
   }
@@ -321,12 +323,31 @@ export function lunge(source: HTMLElement | null, target: Point, opts: { tone?: 
   ghost.appendChild(face);
   const from = mid(r);
   const reach = opts.reach ?? 0.82;
-  const dx = (target[0] - from[0]) * reach;
-  const dy = (target[1] - from[1]) * reach;
-  const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
-  const tilt = Math.max(-25, Math.min(25, (angle - 90) * 0.25));
+  let last = first;
+  const offset = () => {
+    last = aim() ?? last;
+    return [(last[0] - from[0]) * reach, (last[1] - from[1]) * reach] as const;
+  };
+  const [dx0, dy0] = offset();
+  const tilt = Math.max(-25, Math.min(25, ((Math.atan2(dy0, dx0) * 180) / Math.PI - 90) * 0.25));
+  const pose = (x: number, y: number, scale: number, rotate: number) => (ghost.style.transform = `translate(${x}px, ${y}px) scale(${scale}) rotate(${rotate}deg)`);
   source.style.opacity = "0.35";
-  animate(ghost, { x: [0, -dx * 0.08, dx], y: [0, -dy * 0.08 - 14, dy], scale: [1, 1.18, 1.05], rotate: [0, -tilt, tilt] }, { duration: 0.34, times: [0, 0.35, 1], ease: [0.5, 0, 0.9, 0.6] })
+  let dx = dx0,
+    dy = dy0;
+  motion(0, 1, {
+    duration: 0.34,
+    ease: [0.5, 0, 0.9, 0.6],
+    onUpdate: (p: number) => {
+      [dx, dy] = offset();
+      if (p < 0.35) {
+        const k = p / 0.35;
+        pose(-dx * 0.08 * k, (-dy * 0.08 - 14) * k, 1 + 0.18 * k, -tilt * k);
+      } else {
+        const k = (p - 0.35) / 0.65;
+        pose(-dx * 0.08 + dx * 1.08 * k, -dy * 0.08 - 14 + (dy * 1.08 + 14) * k, 1.18 - 0.13 * k, -tilt + 2 * tilt * k);
+      }
+    },
+  })
     .finished.then(() => {
       opts.onHit?.();
       return animate(ghost, { x: [dx, 0], y: [dy, 0], scale: [1.05, 1], rotate: [tilt, 0] }, { type: "spring", visualDuration: 0.4, bounce: 0.35 }).finished;
@@ -346,8 +367,9 @@ export function lunge(source: HTMLElement | null, target: Point, opts: { tone?: 
 export function slash(at: Point, tone: Tone = "cyan", size = 90, angle = -35) {
   if (reduced()) return;
   const el = node(`fx-slash tone-${tone}`);
-  el.style.left = `${at[0] - size / 2}px`;
-  el.style.top = `${at[1] - 2}px`;
+  const rad = (angle * Math.PI) / 180;
+  el.style.left = `${at[0] - (size / 2) * Math.cos(rad)}px`;
+  el.style.top = `${at[1] - 2 - (size / 2) * Math.sin(rad)}px`;
   el.style.width = `${size}px`;
   done(animate(el, { rotate: [angle, angle], scaleX: [0, 1.15, 1.15], opacity: [1, 1, 0] }, { duration: 0.45, times: [0, 0.3, 1], ease: "easeOut" }), el);
 }

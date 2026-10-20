@@ -566,7 +566,8 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
         if (!target) return;
         const breakerEl = h.breaker ? tileEl(h.breaker.cid) : null;
         const style = breakStyle(h.breaker, h.ice);
-        lunge(breakerEl, target, { onHit: () => breakHit(style, target, iceEl, h.power ?? 1) });
+        const live = () => pointOf(tileEl(h.ice.cid));
+        lunge(breakerEl, live, { onHit: () => breakHit(style, live() ?? target, tileEl(h.ice.cid) ?? iceEl, h.power ?? 1) });
       }, delay * 1000);
       t += 0.45;
     } else if (h.kind === "fire" && h.ice) {

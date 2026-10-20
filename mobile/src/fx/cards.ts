@@ -1,6 +1,6 @@
 import { cardImage } from "../engine";
 import type { Side } from "../engine";
-import { anchor, animate, points, scoreSegments, banner, burst, buzz, done, flash, layer, mid, node, place, punch, rays, rectOf, reduced, ring, shake, tileEl, visible, type Point, type Tone } from "./core";
+import { anchor, animate, points, scoreSegments, banner, burst, buzz, done, flash, floater, layer, mid, node, place, punch, rays, rectOf, reduced, ring, shake, tileEl, visible, type Point, type Tone } from "./core";
 
 interface Info {
   cid: unknown;
@@ -364,8 +364,21 @@ export function play(plan: Plan, me: Side, lines: string[] = []) {
     if (turn) ghost.style.transform = `rotate(${turn[0]}deg)`;
     hide(destEl);
     if (kind === "trash") {
-      burst(mid(src), "orange", 10, 40, { size: 4, gravity: -30 });
-      flyTo(ghost, from, to, { delay, duration: 0.55, tilt: 18, lift: 40, turn }).finished.then(() => {
+      const installed = ["rig", "servers", "onhost", "current"].includes(head(m.from?.zone) ?? "");
+      let start = delay;
+      if (installed) {
+        const at = mid(src);
+        animate(ghost, { x: [0, -4, 5, -5, 4, -2, 0], filter: ["brightness(1) sepia(0)", "brightness(1.6) sepia(1) hue-rotate(-30deg) saturate(4)", "brightness(1.3) sepia(1) hue-rotate(-30deg) saturate(3)"] }, { duration: 0.3, delay });
+        setTimeout(() => {
+          burst(at, "red", 18, 70, { size: 6, shards: true, gravity: 80 });
+          burst(at, "orange", 14, 50, { size: 4, gravity: -60 });
+          floater([Math.max(80, Math.min(innerWidth - 80, at[0])), at[1] - 30], "Trashed", "red", 40, true);
+          shake(0.35);
+          buzz([30, 20, 50]);
+        }, (delay + 0.26) * 1000);
+        start = delay + 0.3;
+      } else burst(mid(src), "orange", 10, 40, { size: 4, gravity: -30 });
+      flyTo(ghost, from, to, { delay: start, duration: 0.55, tilt: 18, lift: 40, turn }).finished.then(() => {
         ghost.remove();
         show(destEl);
         burst(mid(dest), "orange", 8, 30, { size: 3, gravity: -40 });
