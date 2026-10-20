@@ -1,4 +1,4 @@
-import { type Point, anchor, animate, burst, buzz, coins, done, flash, floater, node, pointOf, punch, rays, reduced, ring, shake, slash, stamp, vignette } from "./core";
+import { type Point, anchor, animate, burst, buzz, coins, done, flash, floater, node, pointOf, punch, rays, reduced, ring, shake, slash, vignette } from "./core";
 
 const SVG = "http://www.w3.org/2000/svg";
 
@@ -1023,7 +1023,6 @@ export function snare(r: DOMRect | null) {
   setTimeout(() => {
     flash("red", 0.18, 0.3);
     shake(1);
-    stamp([at[0], at[1] - 70], "Snare!", "red");
     buzz([100, 30, 60]);
   }, 200);
   for (const j of [top, bottom]) done(animate(j, { opacity: [1, 1, 0] }, { duration: 1.2, times: [0, 0.75, 1] }), j);
