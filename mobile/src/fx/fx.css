@@ -1901,3 +1901,208 @@
   stroke-width: 6;
   filter: drop-shadow(0 0 8px #2b6cff);
 }
+
+.fx-glyph {
+  display: grid;
+  place-items: center;
+  font-family: var(--display);
+  font-weight: 900;
+  line-height: 1;
+}
+
+.fx-strip {
+  background: linear-gradient(180deg, #f1ede4, #c9c3b4);
+  box-shadow: 0 0 4px rgb(0 0 0 / 0.6);
+}
+
+.fx-tide {
+  border-radius: 40% 40% 6px 6px / 12% 12% 6px 6px;
+  background: linear-gradient(180deg, rgb(165 243 252 / 0.9), rgb(43 108 255 / 0.6));
+  box-shadow: 0 0 18px rgb(34 211 238 / 0.6);
+}
+
+.fx-stroke.dig path {
+  stroke: #ff9f1c;
+  filter: drop-shadow(0 0 6px #ff9f1c);
+}
+
+.fx-stroke.noise path {
+  stroke: #ff3b30;
+  stroke-width: 3;
+  filter: drop-shadow(0 0 6px #ff3b30);
+}
+
+.fx-stroke.geo path {
+  stroke: #a5f3fc;
+  stroke-width: 2.5;
+  filter: drop-shadow(0 0 5px #22d3ee);
+}
+
+.fx-stroke.trend path {
+  stroke: #ff6b5e;
+  stroke-width: 6;
+  filter: drop-shadow(0 0 6px #ff3b30);
+}
+
+.fx-stroke.silk path {
+  stroke: #f1ede4;
+  stroke-width: 1.5;
+  filter: drop-shadow(0 0 4px #fff);
+}
+
+.fx-stroke.myco path {
+  stroke: #a7f3c4;
+  stroke-width: 2;
+  filter: drop-shadow(0 0 5px #3ddc84);
+}
+
+.fx-stroke.paint path {
+  stroke: #7fb0ff;
+  stroke-width: 14;
+  opacity: 0.85;
+}
+
+.fx-stroke.check path {
+  stroke: #3ddc84;
+  stroke-width: 10;
+  filter: drop-shadow(0 0 6px #3ddc84);
+}
+
+.fx-stroke.scale path {
+  stroke: #ff8a80;
+  stroke-width: 3;
+  filter: drop-shadow(0 0 5px #ff3b30);
+}
+
+.fx-feather.white {
+  background: linear-gradient(90deg, #fff, #d6e4ff);
+  box-shadow: 0 0 6px #fff;
+}
+
+.fx-awning {
+  transform-origin: 50% 0;
+  border-radius: 0 0 10px 10px;
+  background: repeating-linear-gradient(90deg, #ff3b30 0 12px, #f1ede4 12px 24px);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.5);
+}
+
+.fx-lid {
+  transform-origin: 0 100%;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #8a5a2a, #4a2a10);
+  border: 2px solid #ffd166;
+}
+
+.fx-diamond.gold {
+  background: linear-gradient(135deg, #fff6b0, #f6e03a 50%, #b88a00);
+  box-shadow: 0 0 18px #f6e03a;
+}
+
+.fx-chroma {
+  border-radius: 6px;
+  background: linear-gradient(135deg, rgb(255 59 48 / 0.5), rgb(61 220 132 / 0.5), rgb(43 108 255 / 0.5));
+  mix-blend-mode: screen;
+}
+
+.fx-drone {
+  border-radius: 4px;
+  background: #d6e4ff;
+  box-shadow:
+    -18px -4px 0 -4px #a5f3fc,
+    18px -4px 0 -4px #a5f3fc,
+    0 0 12px #22d3ee;
+}
+
+.fx-forbid {
+  border-radius: 50%;
+  border: 8px solid #ff3b30;
+  background: linear-gradient(45deg, transparent 45%, #ff3b30 45% 55%, transparent 55%);
+  box-shadow: 0 0 18px rgb(255 59 48 / 0.7);
+}
+
+.fx-figure {
+  border-radius: 50% 50% 6px 6px / 30% 30% 6px 6px;
+  background: radial-gradient(circle at 50% 18%, #d6e4ff 0 18%, transparent 19%), linear-gradient(180deg, transparent 38%, #7fb0ff 38%);
+  filter: drop-shadow(0 0 6px #2b6cff);
+}
+
+.fx-bite {
+  border-radius: 50%;
+  background: #0b0f14;
+  box-shadow: inset 0 0 0 3px #7fb0ff;
+}
+
+.fx-hypno.green {
+  background: repeating-conic-gradient(rgb(61 220 132 / 0.75) 0 15deg, rgb(10 40 20 / 0.4) 15deg 30deg);
+}
+
+.fx-ant {
+  width: 6px;
+  height: 4px;
+  border-radius: 2px;
+  background: #ffd166;
+  box-shadow: 0 0 4px #ff9f1c;
+}
+
+.fx-flask {
+  clip-path: polygon(35% 0, 65% 0, 65% 35%, 100% 100%, 0 100%, 35% 35%);
+  background: linear-gradient(180deg, rgb(214 228 255 / 0.3) 50%, rgb(61 220 132 / 0.7) 50%);
+}
+
+.fx-feed {
+  overflow: hidden;
+  border-radius: 6px;
+  border: 2px solid #ff3b30;
+  background: rgb(20 6 6 / 0.85);
+}
+
+.fx-feed-strip {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px;
+}
+
+.fx-feed-line {
+  height: 8px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #ff3b30, #ff8a80 60%, transparent);
+}
+
+.fx-steam {
+  border-radius: 50%;
+  background: radial-gradient(circle, rgb(255 255 255 / 0.7), transparent 70%);
+}
+
+.fx-tongue {
+  transform-origin: 0 50%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #ff6fae, #ff3b30);
+  box-shadow: 0 0 8px #ff6fae;
+}
+
+.fx-tier {
+  border-radius: 3px;
+  background: linear-gradient(180deg, #ffd166, #b88a00);
+  box-shadow: 0 0 10px rgb(246 224 58 / 0.5);
+}
+
+.fx-swatter {
+  border-radius: 10px;
+  background:
+    linear-gradient(rgb(199 146 255 / 0.6) 2px, transparent 2px) 0 0 / 10px 10px,
+    linear-gradient(90deg, rgb(199 146 255 / 0.6) 2px, transparent 2px) 0 0 / 10px 10px;
+  border: 3px solid #c792ff;
+}
+
+.fx-crown {
+  clip-path: polygon(0 100%, 0 20%, 20% 60%, 35% 0, 50% 55%, 65% 0, 80% 60%, 100% 20%, 100% 100%);
+  background: linear-gradient(180deg, #fff6b0, #f6e03a 50%, #b88a00);
+  filter: drop-shadow(0 0 8px #f6e03a);
+}
+
+.fx-frame {
+  border: 3px solid #7fb0ff;
+  border-radius: 4px;
+  box-shadow: 0 0 16px rgb(127 176 255 / 0.6);
+}
