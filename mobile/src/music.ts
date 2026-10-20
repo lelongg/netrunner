@@ -104,7 +104,10 @@ function apply() {
     gain.cancelScheduledValues(now);
     gain.setValueAtTime(gain.value, now);
     const target = mix[layer] ?? 0;
-    gain.linearRampToValueAtTime(target, now + (layer === "menu" && target > gain.value ? MENU_FADE_IN : FADE));
+    if (layer === "menu" && target > gain.value) {
+      const from = gain.value;
+      gain.setValueCurveAtTime(Float32Array.from({ length: 64 }, (_, i) => from + (target - from) * (i / 63) ** 3), now + 0.01, MENU_FADE_IN);
+    } else gain.linearRampToValueAtTime(target, now + FADE);
   }
   stopTimer = window.setTimeout(() => {
     if (!wantGame) stop(game);
