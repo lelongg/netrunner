@@ -736,3 +736,131 @@
   background: #7fb0ff;
   opacity: calc(0.8 - var(--i) * 0.14);
 }
+
+.fx-reels {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: rgb(6 7 8 / 0.92);
+  border: 2px solid var(--yellow);
+  box-shadow: 0 0 18px rgb(246 224 58 / 0.6);
+}
+
+.fx-reel {
+  flex: 1;
+  overflow: hidden;
+  background: #111;
+  border: 1px solid #333;
+}
+
+.fx-reel-strip {
+  display: flex;
+  flex-direction: column;
+}
+
+.fx-reel-cell {
+  flex: none;
+  display: grid;
+  place-items: center;
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 30px;
+  line-height: 1;
+  color: #ddd;
+}
+
+.fx-reel-cell.seven {
+  color: var(--yellow);
+  text-shadow: 0 0 10px var(--yellow);
+}
+
+.fx-splat {
+  mix-blend-mode: screen;
+  filter: blur(0.5px);
+  box-shadow: 0 0 12px currentColor;
+}
+
+.fx-eeg {
+  left: 0;
+  right: 0;
+  top: 40%;
+  height: 90px;
+}
+
+.fx-eeg svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.fx-eeg polyline {
+  fill: none;
+  stroke: #e87bff;
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  vector-effect: non-scaling-stroke;
+  filter: drop-shadow(0 0 6px #c792ff) drop-shadow(0 0 2px #fff);
+}
+
+.fx-step {
+  width: 9px;
+  height: 15px;
+  margin: -7px 0 0 -4px;
+  border-radius: 50% 50% 45% 45%;
+  background: #ff3b30;
+  box-shadow: 0 0 10px #ff3b30;
+}
+
+.fx-lock-shackle {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  top: 0;
+  height: 38px;
+  border: 7px solid #a5f3fc;
+  border-bottom: none;
+  border-radius: 20px 20px 0 0;
+  box-shadow: 0 0 12px #22d3ee;
+}
+
+.fx-lock-body {
+  position: absolute;
+  top: 34px;
+  bottom: 0;
+  width: 50%;
+  background: linear-gradient(180deg, #22d3ee, #0e7490);
+  box-shadow: 0 0 16px #22d3ee;
+}
+
+.fx-lock-body.l {
+  left: 0;
+  border-radius: 6px 0 0 6px;
+}
+
+.fx-lock-body.r {
+  right: 0;
+  border-radius: 0 6px 6px 0;
+}
+
+.fx-gauge {
+  border: 1px solid #555;
+  background: #111;
+  overflow: hidden;
+}
+
+.fx-gauge-fill {
+  height: 100%;
+  transform-origin: 0 50%;
+  background: linear-gradient(90deg, #3ddc84, #f6e03a 55%, #ff3b30);
+  box-shadow: 0 0 12px rgb(255 59 48 / 0.6);
+}
+
+.fx-rocket {
+  width: 18px;
+  height: 34px;
+  clip-path: polygon(50% 0, 100% 70%, 80% 100%, 20% 100%, 0 70%);
+  background: linear-gradient(180deg, #fff, #ff9f1c);
+  filter: drop-shadow(0 0 8px #ff9f1c);
+}

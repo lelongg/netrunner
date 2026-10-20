@@ -1,5 +1,5 @@
 import { cardImage } from "../engine";
-import { hedgeFund, orbitalStrike } from "./signatures";
+import { orbitalStrike, signature } from "./signatures";
 import { play as sound } from "../sound";
 import type { Side } from "../engine";
 import { anchor, animate, points, scoreSegments, banner, burst, buzz, done, flash, floater, layer, mid, node, place, punch, rays, rectOf, reduced, ring, shake, tileEl, visible, type Point, type Tone } from "./core";
@@ -283,7 +283,7 @@ async function showcase(m: Move, kind: Kind, me: Side) {
   const arrive = animate(ghost, { x: [src.left - big.left, 0], y: [src.top - big.top, 0], scaleX: [sx, 1], scaleY: [sy, 1], rotate: [mine ? 0 : -12, 0], opacity: [0.4, 1] }, { type: "spring", visualDuration: 0.42, bounce: 0.28 });
   await Promise.race([arrive.finished, new Promise((r) => setTimeout(r, 300))]);
   const center = mid(big);
-  if (kind === "play" && info?.title === "Hedge Fund") hedgeFund(big);
+  if (kind === "play") signature(info?.title, big);
   if (kind === "score" && info?.title === "Orbital Superiority") {
     const runner = rectOf(anchor("runner-panel"));
     setTimeout(() => orbitalStrike(visible(runner) ? mid(runner) : [innerWidth / 2, 90]), 1750);
