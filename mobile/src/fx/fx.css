@@ -2634,3 +2634,43 @@
   stroke-width: 6;
   filter: drop-shadow(0 0 8px #ff9f1c);
 }
+
+.fx-camflash {
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff, rgb(255 255 255 / 0.4) 40%, transparent 70%);
+}
+
+.fx-pole {
+  background: #c9c5bc;
+}
+
+.fx-flag {
+  transform-origin: 0 50%;
+  background: linear-gradient(90deg, #2b6cff, #7fb0ff);
+  box-shadow: 0 0 12px rgb(127 176 255 / 0.6);
+  clip-path: polygon(0 0, 100% 0, 85% 50%, 100% 100%, 0 100%);
+}
+
+.fx-advtoken {
+  border-radius: 50%;
+  background: radial-gradient(circle, #d6e4ff, #2b6cff);
+  box-shadow: 0 0 8px #7fb0ff;
+}
+
+.fx-cheque {
+  border-radius: 4px;
+  background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+  border: 2px solid #3ddc84;
+  box-shadow: 0 8px 20px rgb(0 0 0 / 0.5);
+}
+
+.fx-stroke.ink path {
+  stroke: #0b2a6b;
+  stroke-width: 3;
+}
+
+.fx-breath {
+  border-radius: 50%;
+  border: 2px solid rgb(241 237 228 / 0.7);
+  box-shadow: 0 0 20px rgb(246 224 58 / 0.3);
+}
