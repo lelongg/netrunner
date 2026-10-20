@@ -91,13 +91,13 @@ function runnerTarget(me: Side): Point {
   return me === "runner" ? [innerWidth / 2, innerHeight - 120] : [innerWidth / 2, 90];
 }
 
-function iceByTitle(view: any, title: string): any {
-  const current = currentIce(view);
+function iceByTitle(view: any, title: string, before?: Snap): any {
+  const current = currentIce(view) ?? (before?.ice != null ? findIn(view, before.ice) : undefined);
   if (current?.title && title.includes(current.title)) return current;
-  const runServer = view.run?.server?.[0];
+  const runServer = view.run?.server?.[0] ?? before?.server;
   const servers = Object.entries<any>(view.corp?.servers ?? {}).sort(([a], [b]) => Number(b === runServer) - Number(a === runServer));
   let best: any;
-  for (const [, server] of servers) for (const c of server?.ices ?? []) if (c?.title && title.includes(c.title) && (!best || c.title.length > best.title.length)) best = c;
+  for (const [, server] of servers) for (const c of server?.ices ?? []) if (c?.rezzed && c.title && title.includes(c.title) && (!best || c.title.length > best.title.length)) best = c;
   return best;
 }
 
@@ -413,7 +413,7 @@ function movesCard(text: string, title: string) {
   return new RegExp(`\\b(?:steals?|trash(?:es)?|adds?) ${title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(text);
 }
 
-function readLog(view: any, from: number, render: (m: unknown) => string): Hit[] {
+function readLog(view: any, from: number, render: (m: unknown) => string, before?: Snap): Hit[] {
   const log: any[] = view.log ?? [];
   if (log.length - from > 16) return [];
   const out: Hit[] = [];
@@ -424,9 +424,9 @@ function readLog(view: any, from: number, render: (m: unknown) => string): Hit[]
     if ((m = text.match(/\bbreak (.*?)subroutines? on (.+?)(?: \(|\.?$)/i))) {
       const name = text.match(/use (.+?) to break/i)?.[1] ?? text.match(/strength of (.+?) to \d+/i)?.[1];
       const all = /\ball\b/i.test(m[1]);
-      out.push({ kind: "break", ice: iceByTitle(view, m[2]), breaker: name ? runnerCard(view, name) : undefined, power: all ? 3 : 1 });
+      out.push({ kind: "break", ice: iceByTitle(view, m[2], before), breaker: name ? runnerCard(view, name) : undefined, power: all ? 3 : 1 });
     } else if ((m = text.match(/^.+? uses (.+?) to (.+?)\.?$/i)) && !/\brez\b/i.test(m[2])) {
-      const ice = iceByTitle(view, m[1]);
+      const ice = iceByTitle(view, m[1], before);
       if (ice && ice.title === m[1]) out.push({ kind: "fire", ice, text: m[2] });
     } else if ((m = text.match(/(\d+)?\s*(net|meat|core|brain) damage/i)) && /\b(suffers?|takes?|deals?|does|trashes)\b/i.test(text)) {
       out.push({ kind: "damage", text: m[2], power: /core|brain/i.test(m[2]) ? 1.6 : 1 });
@@ -641,7 +641,7 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
     }
   }
 
-  const hits = readLog(view, prev.log, render);
+  const hits = readLog(view, prev.log, render, prev);
   let t = busy;
   for (const h of hits) {
     if (h.kind === "break" && h.ice) {
