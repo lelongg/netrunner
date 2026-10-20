@@ -17,6 +17,7 @@ import { Handoff } from "./screens/Handoff";
 import { Home } from "./screens/Home";
 import { Lobby } from "./screens/Lobby";
 import { Guide } from "./screens/Guide";
+import { FxLab } from "./screens/FxLab";
 import { markTutorial, skipTutorial, tutorialState } from "./tutorial";
 import { fromPrecon, toWire } from "./decks";
 import { type Role, type SavedGame, Session, clearSave, listSaves, loadSave, newRoomCode, saveId } from "./session";
@@ -399,11 +400,15 @@ installMotion();
 unlockSound();
 startEngineWorker();
 render(
-  <>
-    <App />
-    <UpdateBanner />
-    <Dialogs />
-  </>,
+  new URLSearchParams(location.search).has("animations") ? (
+    <FxLab />
+  ) : (
+    <>
+      <App />
+      <UpdateBanner />
+      <Dialogs />
+    </>
+  ),
   document.getElementById("app")!,
 );
 

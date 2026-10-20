@@ -3164,126 +3164,134 @@ export function nanomanagement(card: DOMRect) {
   setTimeout(() => floater([at[0], card.top + 20], "+2 clicks", "blue", 40, true), 600);
 }
 
+export const SCORE: Record<string, (r: DOMRect) => void> = {
+  "Breaking News": breakingNews,
+  "Global Food Initiative": globalFood,
+  "Project Vitruvius": vitruvius,
+  "AstroScript Pilot Program": astroscript,
+  "Project Beale": beale,
+  "Offworld Office": offworldOffice,
+  "Hostile Takeover": hostileTakeover,
+  "NAPD Contract": napdContract,
+  "Efficiency Committee": efficiencyCommittee,
+  "Luminal Transubstantiation": luminal,
+  "Longevity Serum": longevitySerum,
+  "Tomorrow's Headline": tomorrowsHeadline,
+  "Above the Law": aboveTheLaw,
+  "Superconducting Hub": superconductingHub,
+  "Aggressive Trendsetting": aggressiveTrendsetting,
+  "Project Ingatan": projectIngatan,
+  "Proprionegation": proprionegation,
+  "Sericulture Expansion": sericulture,
+  "Embedded Reporting": embeddedReporting,
+  "Next Big Thing": nextBigThing,
+  "Greenmail": greenmail,
+  "Off the Books": offTheBooks,
+  "Melies City Luxury Line": meliesLuxury,
+  "Lotus Haze": lotusHaze,
+  "Witch Hunt": witchHunt,
+  "Sacrifice Zone Expansion": sacrificeZone,
+};
+
 export function scoreSignature(title: string | undefined, card: DOMRect) {
-  const t = plain(title);
-  if (t === "Global Food Initiative") globalFood(card);
-  else if (t === "Breaking News") breakingNews();
-  else if (t === "Project Vitruvius") vitruvius(card);
-  else if (t === "AstroScript Pilot Program") astroscript(card);
-  else if (t === "Project Beale") beale(card);
-  else if (t === "Offworld Office") offworldOffice(card);
-  else if (t === "Hostile Takeover") hostileTakeover(card);
-  else if (t === "NAPD Contract") napdContract(card);
-  else if (t === "Efficiency Committee") efficiencyCommittee(card);
-  else if (t === "Luminal Transubstantiation") luminal(card);
-  else if (t === "Longevity Serum") longevitySerum(card);
-  else if (t === "Tomorrow's Headline") tomorrowsHeadline(card);
-  else if (t === "Above the Law") aboveTheLaw(card);
-  else if (t === "Superconducting Hub") superconductingHub(card);
-  else if (t === "Aggressive Trendsetting") aggressiveTrendsetting(card);
-  else if (t === "Project Ingatan") projectIngatan(card);
-  else if (t === "Proprionegation") proprionegation(card);
-  else if (t === "Sericulture Expansion") sericulture(card);
-  else if (t === "Embedded Reporting") embeddedReporting(card);
-  else if (t === "Next Big Thing") nextBigThing(card);
-  else if (t === "Greenmail") greenmail(card);
-  else if (t === "Off the Books") offTheBooks(card);
-  else if (t === "Melies City Luxury Line") meliesLuxury(card);
-  else if (t === "Lotus Haze") lotusHaze(card);
-  else if (t === "Witch Hunt") witchHunt(card);
-  else if (t === "Sacrifice Zone Expansion") sacrificeZone(card);
+  SCORE[plain(title)]?.(card);
 }
 
+export const REZ: Record<string, (r: DOMRect) => void> = {
+  "Border Control": borderControl,
+  "Palisade": palisade,
+  "Bran 1.0": bran,
+  "Funhouse": funhouse,
+  "Enigma": enigma,
+  "Tollbooth": tollbooth,
+  "Pop-up Window": popUpWindow,
+  "Wraparound": wraparound,
+  "Eli 1.0": eli,
+  "Architect": architect,
+  "Ice Wall": iceWall,
+  "PAD Campaign": padCampaign,
+  "SanSan City Grid": sansan,
+  "Spin Doctor": spinDoctor,
+  "Cyberdex Virus Suite": cyberdex,
+  "Turnpike": turnpike,
+  "Ichi 1.0": ichi,
+  "Cobra": cobra,
+  "Archangel": archangel,
+  "Rashida Jaheem": rashida,
+  "Jackson Howard": jacksonHoward,
+  "Jeeves Model Bioroids": jeeves,
+  "Commercial Bankers Group": commercialBankers,
+  "Resistor": resistor,
+  "IP Block": ipBlock,
+  "Wall of Static": wallOfStatic,
+  "Archer": archer,
+  "Data Raven": dataRaven,
+  "Vanilla": vanilla,
+  "Nico Campaign": nicoCampaign,
+  "Ansel 1.0": ansel,
+  "Manegarm Skunkworks": manegarm,
+  "Diviner": diviner,
+  "Ping": ping,
+  "AMAZE Amusements": amaze,
+  "Clearinghouse": clearinghouse,
+  "Ballista": ballista,
+  "Pharos": pharos,
+  "Malapert Data Vault": malapert,
+  "Whitespace": whitespace,
+  "Humanoid Resources": humanoidResources,
+  "Otto Campaign": ottoCampaign,
+  "Byte!": byte,
+  "Phat Gioan Baotixita": phatGioan,
+  "Idiosyncresis": idiosyncresis,
+  "Public Access Plaza": publicAccessPlaza,
+  "Anthill Excavation Contract": anthill,
+  "Plutus": plutus,
+  "Bumi 1.0": bumi,
+  "Scatter Field": scatterField,
+  "Empiricist": empiricist,
+  "Mycoweb": mycoweb,
+  "Semak-samun": semakSamun,
+  "Doomscroll": doomscroll,
+  "N-Pot": nPot,
+  "Biawak": biawak,
+  "Kessleroid": kessleroid,
+  "Syailendra": syailendra,
+  "Flyswatter": flyswatter,
+  "Lamplighter": lamplighter,
+  "Mercia B4LL4RD": mercia,
+  "Mitra Aman": mitraAman,
+  "Mahkota Langit Grid": mahkotaLangit,
+  "Synchrocyclotron": synchrocyclotron,
+  "Ansel 2.0": ansel2,
+  "Reverb": reverb,
+  "Sleipnir": sleipnir,
+  "Vertigo": vertigo,
+  "Perfect Recall": perfectRecall,
+  "Esca": esca,
+  "ezaM": ezam,
+  "Knowledge Seeker": knowledgeSeeker,
+  "Lionsmane": lionsmane,
+  "Vicsek": vicsek,
+  "The Red Room": redRoom,
+  "Magistrate Revontulet": magistrate,
+  "Nihilo Agent": nihilo,
+  "Grubber": grubber,
+  "Lethe": lethe,
+  "Paywall": paywall,
+  "Hype Machine": hypeMachine,
+  "Luana Campos": luanaCampos,
+  "Event Horizon": eventHorizon,
+  "Flywheel": flywheel,
+  "Tocsin": tocsin,
+  "Flagship": flagship,
+  "Shackleton Grid": shackleton,
+};
+
 export function rezSignature(title: string | undefined, r: DOMRect) {
-  const t = plain(title);
-  if (t === "Palisade") palisade(r);
-  else if (t === "Bran 1.0") bran(r);
-  else if (t === "Funhouse") funhouse(r);
-  else if (t === "Enigma") enigma(r);
-  else if (t === "Tollbooth") tollbooth(r);
-  else if (t === "Pop-up Window") popUpWindow(r);
-  else if (t === "Wraparound") wraparound(r);
-  else if (t === "Border Control") borderControl();
-  else if (t === "Eli 1.0") eli(r);
-  else if (t === "Architect") architect(r);
-  else if (t === "Ice Wall") iceWall(r);
-  else if (t === "PAD Campaign") padCampaign(r);
-  else if (t === "SanSan City Grid") sansan(r);
-  else if (t === "Spin Doctor") spinDoctor(r);
-  else if (t === "Cyberdex Virus Suite") cyberdex(r);
-  else if (t === "Turnpike") turnpike(r);
-  else if (t === "Ichi 1.0") ichi(r);
-  else if (t === "Cobra") cobra(r);
-  else if (t === "Archangel") archangel(r);
-  else if (t === "Rashida Jaheem") rashida(r);
-  else if (t === "Jackson Howard") jacksonHoward(r);
-  else if (t === "Jeeves Model Bioroids") jeeves(r);
-  else if (t === "Commercial Bankers Group") commercialBankers(r);
-  else if (t === "Resistor") resistor(r);
-  else if (t === "IP Block") ipBlock(r);
-  else if (t === "Wall of Static") wallOfStatic(r);
-  else if (t === "Archer") archer(r);
-  else if (t === "Data Raven") dataRaven(r);
-  else if (t === "Vanilla") vanilla(r);
-  else if (t === "Nico Campaign") nicoCampaign(r);
-  else if (t === "Ansel 1.0") ansel(r);
-  else if (t === "Manegarm Skunkworks") manegarm(r);
-  else if (t === "Diviner") diviner(r);
-  else if (t === "Ping") ping(r);
-  else if (t === "AMAZE Amusements") amaze(r);
-  else if (t === "Clearinghouse") clearinghouse(r);
-  else if (t === "Ballista") ballista(r);
-  else if (t === "Pharos") pharos(r);
-  else if (t === "Malapert Data Vault") malapert(r);
-  else if (t === "Whitespace") whitespace(r);
-  else if (t === "Humanoid Resources") humanoidResources(r);
-  else if (t === "Otto Campaign") ottoCampaign(r);
-  else if (t === "Byte!") byte(r);
-  else if (t === "Phat Gioan Baotixita") phatGioan(r);
-  else if (t === "Idiosyncresis") idiosyncresis(r);
-  else if (t === "Public Access Plaza") publicAccessPlaza(r);
-  else if (t === "Anthill Excavation Contract") anthill(r);
-  else if (t === "Plutus") plutus(r);
-  else if (t === "Bumi 1.0") bumi(r);
-  else if (t === "Scatter Field") scatterField(r);
-  else if (t === "Empiricist") empiricist(r);
-  else if (t === "Mycoweb") mycoweb(r);
-  else if (t === "Semak-samun") semakSamun(r);
-  else if (t === "Doomscroll") doomscroll(r);
-  else if (t === "N-Pot") nPot(r);
-  else if (t === "Biawak") biawak(r);
-  else if (t === "Kessleroid") kessleroid(r);
-  else if (t === "Syailendra") syailendra(r);
-  else if (t === "Flyswatter") flyswatter(r);
-  else if (t === "Lamplighter") lamplighter(r);
-  else if (t === "Mercia B4LL4RD") mercia(r);
-  else if (t === "Mitra Aman") mitraAman(r);
-  else if (t === "Mahkota Langit Grid") mahkotaLangit(r);
-  else if (t === "Synchrocyclotron") synchrocyclotron(r);
-  else if (t === "Ansel 2.0") ansel2(r);
-  else if (t === "Reverb") reverb(r);
-  else if (t === "Sleipnir") sleipnir(r);
-  else if (t === "Vertigo") vertigo(r);
-  else if (t === "Perfect Recall") perfectRecall(r);
-  else if (t === "Esca") esca(r);
-  else if (t === "ezaM") ezam(r);
-  else if (t === "Knowledge Seeker") knowledgeSeeker(r);
-  else if (t === "Lionsmane") lionsmane(r);
-  else if (t === "Vicsek") vicsek(r);
-  else if (t === "The Red Room") redRoom(r);
-  else if (t === "Magistrate Revontulet") magistrate(r);
-  else if (t === "Nihilo Agent") nihilo(r);
-  else if (t === "Grubber") grubber(r);
-  else if (t === "Lethe") lethe(r);
-  else if (t === "Paywall") paywall(r);
-  else if (t === "Hype Machine") hypeMachine(r);
-  else if (t === "Luana Campos") luanaCampos(r);
-  else if (t === "Event Horizon") eventHorizon(r);
-  else if (t === "Flywheel") flywheel(r);
-  else if (t === "Tocsin") tocsin(r);
-  else if (t === "Flagship") flagship(r);
-  else if (t === "Shackleton Grid") shackleton(r);
+  REZ[plain(title)]?.(r);
 }
+
+export const FIRE = ["Karuna", "Urtica Cipher", "Tithe", "Anoetic Void"];
 
 export function fireSignature(title: string | undefined, ice: DOMRect | null, runner: Point) {
   const t = plain(title);
@@ -3293,175 +3301,181 @@ export function fireSignature(title: string | undefined, ice: DOMRect | null, ru
   else if (t === "Anoetic Void" && ice) anoeticVoid(ice);
 }
 
+export const INSTALL: Record<string, (r: DOMRect) => void> = {
+  "Mayfly": mayfly,
+  "Botulus": botulus,
+  "Carmen": carmen,
+  "Docklands Pass": docklandsPass,
+  "Daily Casts": dailyCasts,
+  "Femme Fatale": femmeFatale,
+  "Plascrete Carapace": plascrete,
+  "Parasite": parasite,
+  "Earthrise Hotel": earthrise,
+  "Datasucker": datasucker,
+  "Black Orchestra": blackOrchestra,
+  "MKUltra": mkultra,
+  "D4v1d": david,
+  "Hippo": hippo,
+  "Clone Chip": cloneChip,
+  "R&D Interface": rdInterface,
+  "Desperado": desperado,
+  "Stargate": stargate,
+  "Corroder": corroder,
+  "Paperclip": paperclip,
+  "Liberated Account": liberatedAccount,
+  "Self-modifying Code": selfModifyingCode,
+  "Mimic": mimic,
+  "Street Peddler": streetPeddler,
+  "Yog.0": yog,
+  "The Turning Wheel": turningWheel,
+  "Aumakua": aumakua,
+  "Clot": clot,
+  "Imp": imp,
+  "Same Old Thing": sameOldThing,
+  "Astrolabe": astrolabe,
+  "Atman": atman,
+  "Fermenter": fermenter,
+  "Faerie": faerie,
+  "Sneakdoor Beta": sneakdoor,
+  "Turntable": turntable,
+  "Ice Carver": iceCarver,
+  "Carnivore": carnivore,
+  "Buzzsaw": buzzsaw,
+  "Cookbook": cookbook,
+  "Pennyshaver": pennyshaver,
+  "Marjanah": marjanah,
+  "Tranquilizer": tranquilizer,
+  "Red Team": redTeam,
+  "DZMZ Optimizer": dzmz,
+  "Pantograph": pantograph,
+  "Conduit": conduit,
+  "Echelon": echelon,
+  "Unity": unity,
+  "Telework Contract": teleworkContract,
+  "T400 Memory Diamond": t400,
+  "Smartware Distributor": smartware,
+  "Verbal Plasticity": verbalPlasticity,
+  "Bling": bling,
+  "Gourmand": gourmand,
+  "Hantu": hantu,
+  "Rising Tide": risingTide,
+  "Cacophony": cacophony,
+  "Rent Rioters": rentRioters,
+  "Detente": detente,
+  "Maglectric Rapid (748 Mod)": maglectric,
+  "Sang Kancil": sangKancil,
+  "Fransofia Ward": fransofia,
+  "Open Market": openMarket,
+  "GAMEDRAGON™ Pro": gamedragon,
+  "Madani": madani,
+  "Azimat": azimat,
+  "Chromatophores": chromatophores,
+  "Devadatta Drone": devadatta,
+  "Principia": principia,
+  "\"Knickknack\" O'Brian": knickknack,
+  "Side Hustle": sideHustle,
+  "The Tungsten Tailor": tungstenTailor,
+  "Corsair": corsair,
+  "Lampades": lampades,
+  "Hackerspace": hackerspace,
+  "Nurse Hanh": nurseHanh,
+  "Stick and Poke": stickAndPoke,
+  "Borrowed Goods": borrowedGoods,
+  "Rotary": rotary,
+  "Baker": baker,
+  "Underdome Irregulars": underdome,
+  "Methuselah": methuselah,
+  "Touchstone": touchstone,
+  "Read-Write Share": readWriteShare,
+  "Sipa": sipa,
+  "Stowaway": stowaway,
+  "Word on the Street": wordOnTheStreet,
+};
+
 export function installSignature(title: string | undefined, r: DOMRect) {
-  const t = plain(title);
-  if (t === "Mayfly") mayfly(r);
-  else if (t === "Botulus") botulus(r);
-  else if (t === "Carmen") carmen(r);
-  else if (t === "Docklands Pass") docklandsPass(r);
-  else if (t === "Daily Casts") dailyCasts(r);
-  else if (t === "Femme Fatale") femmeFatale(r);
-  else if (t === "Plascrete Carapace") plascrete(r);
-  else if (t === "Parasite") parasite(r);
-  else if (t === "Earthrise Hotel") earthrise(r);
-  else if (t === "Datasucker") datasucker(r);
-  else if (t === "Black Orchestra") blackOrchestra(r);
-  else if (t === "MKUltra") mkultra(r);
-  else if (t === "D4v1d") david(r);
-  else if (t === "Hippo") hippo(r);
-  else if (t === "Clone Chip") cloneChip(r);
-  else if (t === "R&D Interface") rdInterface(r);
-  else if (t === "Desperado") desperado(r);
-  else if (t === "Stargate") stargate(r);
-  else if (t === "Corroder") corroder(r);
-  else if (t === "Paperclip") paperclip(r);
-  else if (t === "Liberated Account") liberatedAccount(r);
-  else if (t === "Self-modifying Code") selfModifyingCode(r);
-  else if (t === "Mimic") mimic(r);
-  else if (t === "Street Peddler") streetPeddler(r);
-  else if (t === "Yog.0") yog(r);
-  else if (t === "The Turning Wheel") turningWheel(r);
-  else if (t === "Aumakua") aumakua(r);
-  else if (t === "Clot") clot(r);
-  else if (t === "Imp") imp(r);
-  else if (t === "Same Old Thing") sameOldThing(r);
-  else if (t === "Astrolabe") astrolabe(r);
-  else if (t === "Atman") atman(r);
-  else if (t === "Fermenter") fermenter(r);
-  else if (t === "Faerie") faerie(r);
-  else if (t === "Sneakdoor Beta") sneakdoor(r);
-  else if (t === "Turntable") turntable(r);
-  else if (t === "Ice Carver") iceCarver(r);
-  else if (t === "Carnivore") carnivore(r);
-  else if (t === "Buzzsaw") buzzsaw(r);
-  else if (t === "Cookbook") cookbook(r);
-  else if (t === "Pennyshaver") pennyshaver(r);
-  else if (t === "Marjanah") marjanah(r);
-  else if (t === "Tranquilizer") tranquilizer(r);
-  else if (t === "Red Team") redTeam(r);
-  else if (t === "DZMZ Optimizer") dzmz(r);
-  else if (t === "Pantograph") pantograph(r);
-  else if (t === "Conduit") conduit(r);
-  else if (t === "Echelon") echelon(r);
-  else if (t === "Unity") unity(r);
-  else if (t === "Telework Contract") teleworkContract(r);
-  else if (t === "T400 Memory Diamond") t400(r);
-  else if (t === "Smartware Distributor") smartware(r);
-  else if (t === "Verbal Plasticity") verbalPlasticity(r);
-  else if (t === "Bling") bling(r);
-  else if (t === "Gourmand") gourmand(r);
-  else if (t === "Hantu") hantu(r);
-  else if (t === "Rising Tide") risingTide(r);
-  else if (t === "Cacophony") cacophony(r);
-  else if (t === "Rent Rioters") rentRioters(r);
-  else if (t === "Detente") detente(r);
-  else if (t === "Maglectric Rapid (748 Mod)") maglectric(r);
-  else if (t === "Sang Kancil") sangKancil(r);
-  else if (t === "Fransofia Ward") fransofia(r);
-  else if (t === "Open Market") openMarket(r);
-  else if (t === "GAMEDRAGON™ Pro") gamedragon(r);
-  else if (t === "Madani") madani(r);
-  else if (t === "Azimat") azimat(r);
-  else if (t === "Chromatophores") chromatophores(r);
-  else if (t === "Devadatta Drone") devadatta(r);
-  else if (t === "Principia") principia(r);
-  else if (t === "\"Knickknack\" O'Brian") knickknack(r);
-  else if (t === "Side Hustle") sideHustle(r);
-  else if (t === "The Tungsten Tailor") tungstenTailor(r);
-  else if (t === "Corsair") corsair(r);
-  else if (t === "Lampades") lampades(r);
-  else if (t === "Hackerspace") hackerspace(r);
-  else if (t === "Nurse Hanh") nurseHanh(r);
-  else if (t === "Stick and Poke") stickAndPoke(r);
-  else if (t === "Borrowed Goods") borrowedGoods(r);
-  else if (t === "Rotary") rotary(r);
-  else if (t === "Baker") baker(r);
-  else if (t === "Underdome Irregulars") underdome(r);
-  else if (t === "Methuselah") methuselah(r);
-  else if (t === "Touchstone") touchstone(r);
-  else if (t === "Read-Write Share") readWriteShare(r);
-  else if (t === "Sipa") sipa(r);
-  else if (t === "Stowaway") stowaway(r);
-  else if (t === "Word on the Street") wordOnTheStreet(r);
+  INSTALL[plain(title)]?.(r);
 }
 
-export function signature(name: string | undefined, card: DOMRect) {
-  const title = plain(name);
-  if (title === "Hedge Fund") hedgeFund(card);
-  else if (title === "Sure Gamble") sureGamble(card);
-  else if (title === "Creative Commission") creativeCommission(card);
-  else if (title === "Neurospike") neurospike();
-  else if (title === "Public Trail") publicTrail(card);
-  else if (title === "Jailbreak") jailbreak(card);
-  else if (title === "Overclock") overclock(card);
-  else if (title === "Seamless Launch") seamlessLaunch(card);
-  else if (title === "Retribution") retribution();
-  else if (title === "Dirty Laundry") dirtyLaundry(card);
-  else if (title === "Stimhack") stimhack(card);
-  else if (title === "Hard-Hitting News") hardHittingNews(card);
-  else if (title === "Biotic Labor") bioticLabor(card);
-  else if (title === "Account Siphon") accountSiphon(card);
-  else if (title === "IPO") ipo(card);
-  else if (title === "Closed Accounts") closedAccounts();
-  else if (title === "Diesel") diesel(card);
-  else if (title === "Inside Job") insideJob(card);
-  else if (title === "I've Had Worse") iveHadWorse(card);
-  else if (title === "Legwork") legwork(card);
-  else if (title === "Sweeps Week") sweepsWeek(card);
-  else if (title === "Levy AR Lab Access") levy(card);
-  else if (title === "Special Order") specialOrder(card);
-  else if (title === "Archived Memories") archivedMemories(card);
-  else if (title === "Psychographics") psychographics();
-  else if (title === "Rebirth") rebirth(card);
-  else if (title === "Pinhole Threading") pinhole(card);
-  else if (title === "Inject") inject(card);
-  else if (title === "Exchange of Information") exchangeOfInformation(card);
-  else if (title === "Emergency Shutdown") emergencyShutdown();
-  else if (title === "Deja Vu") dejaVu(card);
-  else if (title === "Scorched Earth") scorchedEarth();
-  else if (title === "Mad Dash") madDash();
-  else if (title === "Violet Level Clearance") violetClearance(card);
-  else if (title === "Wildcat Strike") wildcatStrike(card);
-  else if (title === "Mutual Favor") mutualFavor(card);
-  else if (title === "Tread Lightly") treadLightly(card);
-  else if (title === "VRcation") vrcation(card);
-  else if (title === "Sprint") sprint(card);
-  else if (title === "Hansei Review") hanseiReview(card);
-  else if (title === "Predictive Planogram") predictivePlanogram(card);
-  else if (title === "Government Subsidy") governmentSubsidy(card);
-  else if (title === "Charm Offensive") charmOffensive(card);
-  else if (title === "Scrounge") scrounge(card);
-  else if (title === "Shred") shred(card);
-  else if (title === "Clean Getaway") cleanGetaway(card);
-  else if (title === "Lie Low") lieLow(card);
-  else if (title === "Maintenance Access") maintenanceAccess(card);
-  else if (title === "Transfer of Wealth") transferOfWealth(card);
-  else if (title === "Illumination") illumination(card);
-  else if (title === "Ritual") ritual(card);
-  else if (title === "Nanomanagement") nanomanagement(card);
-  else if (title === "Top-Down Solutions") topDownSolutions(card);
-  else if (title === "Peer Review") peerReview(card);
-  else if (title === "Bigger Picture") biggerPicture(card);
-  else if (title === "IP Enforcement") ipEnforcement(card);
-  else if (title === "Touch-ups") touchUps(card);
-  else if (title === "Key Performance Indicators") kpi(card);
-  else if (title === "Measured Response") measuredResponse(card);
-  else if (title === "Petty Cash") pettyCash(card);
-  else if (title === "Chain Reaction") chainReaction(card);
-  else if (title === "Take a Dive") takeADive(card);
-  else if (title === "Kompromat") kompromat(card);
-  else if (title === "Sell Out") sellOut(card);
-  else if (title === "Tailgate") tailgate(card);
-  else if (title === "Aircheck") aircheck(card);
-  else if (title === "Beta Build") betaBuild(card);
-  else if (title === "Caveat Emptor") caveatEmptor(card);
-  else if (title === "realloc()") realloc(card);
-  else if (title === "Retirement Plan") retirementPlan(card);
-  else if (title === "Cultivate") cultivate(card);
-  else if (title === "Unleash") unleash(card);
-  else if (title === "Flood the Market") floodTheMarket(card);
-  else if (title === "Scapegoat") scapegoat(card);
-  else if (title === "Myoshu") myoshu(card);
-  else if (title === "Reanimation Protocol") reanimationProtocol(card);
-  else if (title === "Vulture Fund") vultureFund(card);
+export const PLAY: Record<string, (r: DOMRect) => void> = {
+  "Hedge Fund": hedgeFund,
+  "Sure Gamble": sureGamble,
+  "Creative Commission": creativeCommission,
+  "Neurospike": neurospike,
+  "Public Trail": publicTrail,
+  "Jailbreak": jailbreak,
+  "Overclock": overclock,
+  "Seamless Launch": seamlessLaunch,
+  "Retribution": retribution,
+  "Dirty Laundry": dirtyLaundry,
+  "Stimhack": stimhack,
+  "Hard-Hitting News": hardHittingNews,
+  "Biotic Labor": bioticLabor,
+  "Account Siphon": accountSiphon,
+  "IPO": ipo,
+  "Closed Accounts": closedAccounts,
+  "Diesel": diesel,
+  "Inside Job": insideJob,
+  "I've Had Worse": iveHadWorse,
+  "Legwork": legwork,
+  "Sweeps Week": sweepsWeek,
+  "Levy AR Lab Access": levy,
+  "Special Order": specialOrder,
+  "Archived Memories": archivedMemories,
+  "Psychographics": psychographics,
+  "Rebirth": rebirth,
+  "Pinhole Threading": pinhole,
+  "Inject": inject,
+  "Exchange of Information": exchangeOfInformation,
+  "Emergency Shutdown": emergencyShutdown,
+  "Deja Vu": dejaVu,
+  "Scorched Earth": scorchedEarth,
+  "Mad Dash": madDash,
+  "Violet Level Clearance": violetClearance,
+  "Wildcat Strike": wildcatStrike,
+  "Mutual Favor": mutualFavor,
+  "Tread Lightly": treadLightly,
+  "VRcation": vrcation,
+  "Sprint": sprint,
+  "Hansei Review": hanseiReview,
+  "Predictive Planogram": predictivePlanogram,
+  "Government Subsidy": governmentSubsidy,
+  "Charm Offensive": charmOffensive,
+  "Scrounge": scrounge,
+  "Shred": shred,
+  "Clean Getaway": cleanGetaway,
+  "Lie Low": lieLow,
+  "Maintenance Access": maintenanceAccess,
+  "Transfer of Wealth": transferOfWealth,
+  "Illumination": illumination,
+  "Ritual": ritual,
+  "Nanomanagement": nanomanagement,
+  "Top-Down Solutions": topDownSolutions,
+  "Peer Review": peerReview,
+  "Bigger Picture": biggerPicture,
+  "IP Enforcement": ipEnforcement,
+  "Touch-ups": touchUps,
+  "Key Performance Indicators": kpi,
+  "Measured Response": measuredResponse,
+  "Petty Cash": pettyCash,
+  "Chain Reaction": chainReaction,
+  "Take a Dive": takeADive,
+  "Kompromat": kompromat,
+  "Sell Out": sellOut,
+  "Tailgate": tailgate,
+  "Aircheck": aircheck,
+  "Beta Build": betaBuild,
+  "Caveat Emptor": caveatEmptor,
+  "realloc()": realloc,
+  "Retirement Plan": retirementPlan,
+  "Cultivate": cultivate,
+  "Unleash": unleash,
+  "Flood the Market": floodTheMarket,
+  "Scapegoat": scapegoat,
+  "Myoshu": myoshu,
+  "Reanimation Protocol": reanimationProtocol,
+  "Vulture Fund": vultureFund,
+};
+
+export function signature(title: string | undefined, card: DOMRect) {
+  PLAY[plain(title)]?.(card);
 }

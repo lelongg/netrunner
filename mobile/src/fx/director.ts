@@ -19,7 +19,7 @@ export function iceKind(ice: any): IceKind {
 
 export const KIND_TONE: Record<IceKind, Tone> = { sentry: "red", gate: "blue", barrier: "orange", other: "violet" };
 
-interface Snap {
+export interface Snap {
   credits: Record<Side, number>;
   clicks: Record<Side, number>;
   points: Record<Side, number>;
@@ -401,7 +401,7 @@ function finale(won: boolean, label?: string) {
   done(animate(el, { opacity: [1, 1, 0] }, { duration: 3.6, times: [0, 0.85, 1] }), el);
 }
 
-interface Hit {
+export interface Hit {
   kind: "break" | "fire" | "damage" | "purge" | "trash-access" | "access";
   zone?: string;
   ice?: any;
@@ -939,6 +939,18 @@ function showdown(ice: any) {
     );
     animate(stageEl, { backgroundColor: ["rgba(0,0,0,0.55)", "rgba(0,0,0,0)"] }, { duration: 0.38 });
   }, hold * 1000);
+}
+
+export function replayFx(before: any, after: any, me: Side, lines: string[] = [], plan?: Plan) {
+  const view = { ...after, log: [...(before.log ?? []), ...lines.map((text) => ({ user: "__system__", text }))] };
+  const prev = snap(before);
+  const now = snap(view);
+  const render = (m: unknown) => String(m);
+  const hits = readLog(view, prev.log, render, prev);
+  layer();
+  if (plan) play(plan, me, lines);
+  events(prev, now, view, me, render, null, hits);
+  sounds(prev, now, view, me, lines, Number(before?.["sfx-current-id"] ?? 0), plan ? moveKinds(plan, me, lines) : [], hits);
 }
 
 export let quietUntil = 0;

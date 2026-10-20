@@ -3,7 +3,7 @@ import { installSignature, orbitalStrike, scoreSignature, signature } from "./si
 import type { Side } from "../engine";
 import { anchor, animate, points, scoreSegments, banner, burst, buzz, done, flash, floater, layer, mid, node, place, punch, rays, rectOf, reduced, ring, shake, tileEl, visible, type Point, type Tone } from "./core";
 
-interface Info {
+export interface Info {
   cid: unknown;
   zone: string;
   holder: Side;
@@ -15,7 +15,7 @@ interface Info {
   points: number;
 }
 
-interface Move {
+export interface Move {
   cid: unknown;
   from?: Info;
   to?: Info;
