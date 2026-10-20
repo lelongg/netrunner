@@ -570,13 +570,13 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
       }, delay * 1000);
       t += 0.45;
     } else if (h.kind === "fire" && h.ice) {
-      const iceEl = tileEl(h.ice.cid);
-      const at = runnerTarget(me);
       const delay = t;
       const tone = KIND_TONE[iceKind(h.ice)];
       const text = h.text ?? "";
-      const icePoint = pointOf(iceEl);
       setTimeout(() => {
+        const iceEl = tileEl(h.ice.cid);
+        const at = runnerTarget(me);
+        const icePoint = pointOf(iceEl);
         if (/end the run/i.test(text)) {
           punch(iceEl, 1.12);
           gate(wrapEl(h.ice.cid) ?? iceEl, tone);
