@@ -28,6 +28,7 @@ export interface CursorGridProps {
   pulseSpeed?: number;
   ambient?: number;
   fps?: number;
+  tempo?: number;
   edgeFade?: number;
   intro?: boolean;
   lightMode?: boolean;
@@ -58,6 +59,7 @@ type Settings = {
   pulseSpeed: number;
   ambient: number;
   fps: number;
+  tempo: number;
   edgeFade: number;
   intro: boolean;
   dpr?: number;
@@ -71,12 +73,6 @@ type Program = { program: WebGLProgram; uniforms: Record<string, WebGLUniformLoc
 
 const INTRO_SECONDS = 1.4;
 const STYLES: Record<string, number> = { lines: 0, dashed: 1, dots: 2, crosses: 3 };
-
-const FALLOFF_CURVES: Record<string, (t: number) => number> = {
-  linear: t => t,
-  smooth: t => t * t * (3 - 2 * t),
-  sharp: t => t * t * t
-};
 
 const VERTEX = `#version 300 es
 void main() {
@@ -108,6 +104,11 @@ uniform float uSpotlight;
 uniform float uPresence;
 uniform float uEdgeFade;
 uniform float uReveal;
+uniform vec4 uPulses[8];
+uniform int uPulseCount;
+uniform float uBand;
+uniform float uTime;
+uniform float uField;
 
 out vec4 outColor;
 
@@ -151,6 +152,17 @@ void main() {
     vy *= step(edge.x, arm);
   }
   float mark = max(vx, vy);
+
+  float wave = 0.0;
+  for (int i = 0; i < 8; i++) {
+    if (i >= uPulseCount) break;
+    vec4 p = uPulses[i];
+    float off = length(pos - p.xy) - p.z;
+    float t = off > 0.0 ? off / (uBand * 0.6) : off / (uBand * 1.4);
+    wave = max(wave, p.w * exp(-t * t));
+  }
+  float n = (sin(g.x * 0.55 + uTime * 0.35) + sin(g.y * 0.4 - uTime * 0.27) + sin((g.x + g.y) * 0.3 + uTime * 0.19) + sin(length(g - vec2(uCells) * 0.5 - vec2(sin(uTime * 0.07) * float(uCells.x), 0.0)) * 0.45 - uTime * 0.5)) / 4.0;
+  float field = smoothstep(0.15, 1.0, n) * uField;
 
   vec2 toMouse = pos - uMouse;
   float spot = exp(-dot(toMouse, toMouse) / max(uRadius * uRadius, 1.0) * 1.6) * uSpotlight * uPresence;
@@ -202,7 +214,8 @@ void main() {
   litAlpha *= fade;
   fillAlpha *= fade;
 
-  float cellAlpha = clamp(max(litAlpha, fillAlpha), 0.0, 1.0);
+  float edgeGlow = mark * max(wave, field) * uMaxOpacity * fade * shown;
+  float cellAlpha = clamp(max(max(litAlpha, fillAlpha), edgeGlow), 0.0, 1.0);
   float alpha = cellAlpha + gridAlpha * (1.0 - cellAlpha);
   vec3 premul = uColor * cellAlpha + uGridColor * gridAlpha * (1.0 - cellAlpha);
   outColor = vec4(premul, alpha);
@@ -291,6 +304,7 @@ const CursorGrid = ({
   pulseSpeed = 600,
   ambient = 0,
   fps = 0,
+  tempo = 1,
   edgeFade = 0.2,
   intro = true,
   lightMode = false,
@@ -325,6 +339,7 @@ const CursorGrid = ({
     pulseSpeed: Math.max(1, pulseSpeed),
     ambient: clamp(ambient, 0, 1),
     fps: Math.max(0, fps),
+    tempo: Math.max(0.1, tempo),
     edgeFade: clamp(edgeFade, 0, 0.5),
     intro,
     dpr
@@ -364,14 +379,17 @@ const CursorGrid = ({
     const mouse = { x: 0, y: 0 };
     const pulses: Pulse[] = [];
     let levels = new Float32Array(0);
-    let waves = new Float32Array(0);
     let targets = new Float32Array(0);
     let touched = new Float32Array(0);
     let pixels = new Uint8Array(0);
-    let field = new Float32Array(0);
     const walkers: Walker[] = [];
     let nextRipple = 2;
     let drawn = 0;
+    let pace = 0;
+    const pickSpeed = () => {
+      const roll = Math.random();
+      return roll < 0.45 ? 1.2 + Math.random() * 2 : roll < 0.85 ? 4 + Math.random() * 4 : 11 + Math.random() * 7;
+    };
     let presence = 0;
     let clock = 0;
     let introClock = settingsRef.current.intro && !reduce ? 0 : 1;
@@ -400,82 +418,12 @@ const CursorGrid = ({
       view.cellSize = size;
       if (resized) {
         levels = new Float32Array(cols * rows);
-        waves = new Float32Array(cols * rows);
         targets = new Float32Array(cols * rows);
         touched = new Float32Array(cols * rows).fill(-1e9);
         pixels = new Uint8Array(cols * rows);
-        field = new Float32Array(cols * rows);
         walkers.length = 0;
         gl.bindTexture(gl.TEXTURE_2D, stateTexture);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, cols, rows, 0, gl.RED, gl.UNSIGNED_BYTE, pixels);
-      }
-      dirty = true;
-    };
-
-    const light = (index: number, value: number) => {
-      if (value > targets[index]) targets[index] = value;
-      touched[index] = clock;
-    };
-
-    const energize = (x: number, y: number) => {
-      const s = settingsRef.current;
-      const size = s.cellSize;
-      if (s.highlight === 'cell') {
-        const col = Math.floor((x - grid.offX) / size);
-        const row = Math.floor((y - grid.offY) / size);
-        if (col >= 0 && row >= 0 && col < grid.cols && row < grid.rows) light(row * grid.cols + col, 1);
-        return;
-      }
-      const r = s.radius;
-      const ease = FALLOFF_CURVES[s.falloff] ?? FALLOFF_CURVES.linear;
-      const minCol = Math.max(0, Math.floor((x - r - grid.offX) / size));
-      const maxCol = Math.min(grid.cols - 1, Math.floor((x + r - grid.offX) / size));
-      const minRow = Math.max(0, Math.floor((y - r - grid.offY) / size));
-      const maxRow = Math.min(grid.rows - 1, Math.floor((y + r - grid.offY) / size));
-      for (let row = minRow; row <= maxRow; row++) {
-        for (let col = minCol; col <= maxCol; col++) {
-          const cx = grid.offX + col * size + size / 2;
-          const cy = grid.offY + row * size + size / 2;
-          const dist = Math.hypot(cx - x, cy - y);
-          if (dist > r) continue;
-          const value = ease(1 - dist / r);
-          if (value > 0) light(row * grid.cols + col, value);
-        }
-      }
-    };
-
-    const sweepPulses = (s: Settings) => {
-      const size = s.cellSize;
-      const ahead = size * 0.6;
-      const behind = size * 1.4;
-      const far = Math.hypot(view.width, view.height);
-      waves.fill(0);
-      for (let k = pulses.length - 1; k >= 0; k--) {
-        const pulse = pulses[k];
-        const ringR = (clock - pulse.t0) * s.pulseSpeed;
-        if (ringR - behind * 2 > far) {
-          pulses.splice(k, 1);
-          continue;
-        }
-        if (ringR < 0) continue;
-        const envelope = pulse.strength * Math.pow(Math.max(0, 1 - ringR / (far + behind)), 0.6);
-        const outer = ringR + ahead * 2;
-        const minCol = Math.max(0, Math.floor((pulse.x - outer - grid.offX) / size));
-        const maxCol = Math.min(grid.cols - 1, Math.floor((pulse.x + outer - grid.offX) / size));
-        const minRow = Math.max(0, Math.floor((pulse.y - outer - grid.offY) / size));
-        const maxRow = Math.min(grid.rows - 1, Math.floor((pulse.y + outer - grid.offY) / size));
-        for (let row = minRow; row <= maxRow; row++) {
-          for (let col = minCol; col <= maxCol; col++) {
-            const cx = grid.offX + col * size + size / 2;
-            const cy = grid.offY + row * size + size / 2;
-            const off = Math.hypot(cx - pulse.x, cy - pulse.y) - ringR;
-            if (off > ahead * 2 || off < -behind * 2) continue;
-            const t = off > 0 ? off / ahead : off / behind;
-            const value = envelope * Math.exp(-t * t);
-            const index = row * grid.cols + col;
-            if (value > waves[index]) waves[index] = value;
-          }
-        }
       }
       dirty = true;
     };
@@ -492,7 +440,7 @@ const CursorGrid = ({
       gl.bindTexture(gl.TEXTURE_2D, stateTexture);
       if (dirty) {
         for (let i = 0; i < levels.length; i++)
-          pixels[i] = Math.round(clamp(Math.max(levels[i], waves[i], field[i]), 0, 1) * 255);
+          pixels[i] = Math.round(clamp(levels[i], 0, 1) * 255);
         gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, grid.cols, grid.rows, gl.RED, gl.UNSIGNED_BYTE, pixels);
         dirty = false;
       }
@@ -518,6 +466,19 @@ const CursorGrid = ({
       gl.uniform1f(u.uPresence, presence);
       gl.uniform1f(u.uEdgeFade, s.edgeFade);
       gl.uniform1f(u.uReveal, introClock >= 1 ? 1 : 1 - Math.pow(1 - introClock, 2.2));
+      const far = Math.hypot(view.width, view.height);
+      const ring = new Float32Array(32);
+      const count = Math.min(pulses.length, 8);
+      for (let k = 0; k < count; k++) {
+        const pulse = pulses[pulses.length - 1 - k];
+        const radius = Math.max(0, (clock - pulse.t0) * s.pulseSpeed);
+        ring.set([pulse.x * ratio, pulse.y * ratio, radius * ratio, pulse.strength * Math.pow(Math.max(0, 1 - radius / far), 0.6)], k * 4);
+      }
+      gl.uniform4fv(u['uPulses[0]'] ?? u.uPulses, ring);
+      gl.uniform1i(u.uPulseCount, count);
+      gl.uniform1f(u.uBand, s.cellSize * ratio);
+      gl.uniform1f(u.uTime, pace);
+      gl.uniform1f(u.uField, s.ambient > 0 && !reduce ? 0.45 + 0.45 * s.ambient : 0);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
       gl.bindVertexArray(null);
     };
@@ -540,7 +501,7 @@ const CursorGrid = ({
       const y = side === 2 ? 0 : side === 3 ? rows : 1 + Math.floor(Math.random() * (rows - 1));
       const dx = side === 0 ? 1 : side === 1 ? -1 : 0;
       const dy = side === 2 ? 1 : side === 3 ? -1 : 0;
-      walkers.push({ x, y, dx, dy, progress: 0, speed: 2.5 + Math.random() * 4, life: 10 + Math.random() * 25, strength: 0.6 + Math.random() * 0.4, trail: [x, y], drain: TAIL });
+      walkers.push({ x, y, dx, dy, progress: 0, speed: pickSpeed(), life: 10 + Math.random() * 25, strength: 0.6 + Math.random() * 0.4, trail: [x, y], drain: TAIL });
     };
 
     const paintSignals = (s: Settings) => {
@@ -596,11 +557,11 @@ const CursorGrid = ({
       for (let k = walkers.length - 1; k >= 0; k--) {
         const w = walkers[k];
         if (w.life <= 0) {
-          w.drain -= dt * w.speed;
+          w.drain -= dt * w.speed * s.tempo;
           if (w.drain <= 0) walkers.splice(k, 1);
           continue;
         }
-        w.progress += dt * w.speed;
+        w.progress += dt * w.speed * s.tempo;
         while (w.progress >= 1 && w.life > 0) {
           w.progress -= 1;
           w.x += w.dx;
@@ -608,6 +569,7 @@ const CursorGrid = ({
           w.trail.push(w.x, w.y);
           if (w.trail.length > 16) w.trail.splice(0, 2);
           w.life -= 1;
+          w.speed = clamp(w.speed * (0.8 + Math.random() * 0.4), 0.8, 20);
           const out = w.x <= 0 || w.y <= 0 || w.x >= cols || w.y >= rows;
           if (out && (w.x + w.dx < 0 || w.y + w.dy < 0 || w.x + w.dx > cols || w.y + w.dy > rows)) w.life = 0;
           if (w.life <= 0) {
@@ -623,19 +585,10 @@ const CursorGrid = ({
           }
         }
       }
-      nextRipple -= dt * s.ambient;
+      nextRipple -= dt * s.ambient * s.tempo;
       if (nextRipple <= 0) {
         nextRipple = 3 + Math.random() * 5;
-        pulses.push({ x: Math.random() * view.width, y: Math.random() * view.height, t0: clock, strength: 0.25 * s.ambient + 0.1 });
-      }
-      const t = clock;
-      for (let row = 0; row < rows; row++) {
-        for (let col = 0; col < cols; col++) {
-          const n = Math.sin(col * 0.55 + t * 0.35) + Math.sin(row * 0.4 - t * 0.27) + Math.sin((col + row) * 0.3 + t * 0.19) + Math.sin(Math.hypot(col - cols * 0.5 - Math.sin(t * 0.07) * cols, row - rows * 0.5) * 0.45 - t * 0.5);
-          const v = n / 4;
-          const blob = v > 0.15 ? (v - 0.15) / 0.85 : 0;
-          field[row * cols + col] = blob * blob * (3 - 2 * blob) * (0.25 + 0.4 * s.ambient);
-        }
+        pulses.push({ x: Math.random() * view.width, y: Math.random() * view.height, t0: clock, strength: 0.5 + 0.3 * s.ambient });
       }
       dirty = true;
     };
@@ -652,6 +605,7 @@ const CursorGrid = ({
       const dt = last ? clamp((now - last) / 1000, 0, 1 / 20) : 1 / 60;
       last = now;
       clock += dt;
+      pace += dt * settingsRef.current.tempo;
       if (introClock < 1) introClock = Math.min(1, introClock + dt / INTRO_SECONDS);
 
       const follow = 1 - Math.exp(-dt / 0.07);
@@ -661,11 +615,8 @@ const CursorGrid = ({
       presence += (presenceGoal - presence) * (1 - Math.exp(-dt / 0.25));
 
       if (s.ambient > 0 && !reduce && levels.length) simulate(dt, s);
-      if (pulses.length) sweepPulses(s);
-      else if (waves.length && waves.some(value => value > 0)) {
-        waves.fill(0);
-        dirty = true;
-      }
+      const far = Math.hypot(view.width, view.height) + s.cellSize * 3;
+      for (let k = pulses.length - 1; k >= 0; k--) if ((clock - pulses[k].t0) * s.pulseSpeed > far) pulses.splice(k, 1);
 
       const holdSeconds = s.holdTime / 1000;
       const fadeStep = dt / (s.fadeDuration / 1000);
@@ -718,7 +669,6 @@ const CursorGrid = ({
         mouse.x = x;
         mouse.y = y;
       }
-      energize(x, y);
       wake();
     };
 
