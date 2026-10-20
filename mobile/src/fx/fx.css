@@ -2798,3 +2798,9 @@
   background: linear-gradient(90deg, #8a1a14, #ff3b30);
   box-shadow: 0 0 8px #ff3b30;
 }
+
+.fx-seal {
+  border-radius: 46% 54% 50% 50%;
+  background: radial-gradient(circle at 40% 35%, #ff8a80, #c4161c 50%, #6b0a0a);
+  box-shadow: 0 0 10px rgb(196 22 28 / 0.6);
+}
