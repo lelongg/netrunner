@@ -401,7 +401,10 @@ unlockSound();
 startEngineWorker();
 render(
   new URLSearchParams(location.search).has("animations") ? (
-    <FxLab />
+    <>
+      <FxLab />
+      <UpdateBanner />
+    </>
   ) : (
     <>
       <App />

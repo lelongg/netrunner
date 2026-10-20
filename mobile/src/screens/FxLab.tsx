@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "preact/hooks";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "preact/hooks";
 import { cardImage, type Side } from "../engine";
 import { Count } from "../fx/ui";
 import { Meter } from "../ui";
@@ -41,6 +41,7 @@ interface Model {
   encounter?: { cid: string; count: number };
   winner?: Side;
   face?: string;
+  hidden?: string[];
 }
 
 interface Move {
@@ -366,11 +367,11 @@ function generic(byPlain: Map<string, Card>, plainEvent: string, plainAgenda: st
   ];
 }
 
-function Tile({ s, codes }: { s: Slot; codes: Map<string, Card> }) {
+function Tile({ s, codes, hidden }: { s: Slot; codes: Map<string, Card>; hidden?: boolean }) {
   const code = codes.get(plain(s.title))?.code;
   const faceup = s.side === "Runner" || s.rezzed !== false;
   return (
-    <div class="tile-wrap">
+    <div class="tile-wrap" style={hidden ? { visibility: "hidden" } : undefined}>
       <div class={`tile fxlab-tile ${s.side === "Corp" ? "corp" : "runner"}`} data-cid={s.cid}>
         {faceup && code ? <img class="card-image" src={cardImage(code, "small")} alt={s.title} crossOrigin="anonymous" /> : <span class="fxlab-back">{s.side === "Corp" ? "CORP" : "RUNNER"}</span>}
       </div>
@@ -410,20 +411,20 @@ function Board({ m, codes }: { m: Model; codes: Map<string, Card> }) {
           </div>
         </div>
         {at("servers", "remote1", "ices").map((s) => (
-          <Tile s={s} codes={codes} />
+          <Tile s={s} codes={codes} hidden={m.hidden?.includes(s.cid)} />
         ))}
         {at("servers", "remote1", "content").map((s) => (
-          <Tile s={s} codes={codes} />
+          <Tile s={s} codes={codes} hidden={m.hidden?.includes(s.cid)} />
         ))}
       </div>
       <div class="fxlab-rig">
         {at("rig").map((s) => (
-          <Tile s={s} codes={codes} />
+          <Tile s={s} codes={codes} hidden={m.hidden?.includes(s.cid)} />
         ))}
       </div>
       <div class="fxlab-hand" data-anchor="runner-hand">
         {at("hand").map((s) => (
-          <Tile s={s} codes={codes} />
+          <Tile s={s} codes={codes} hidden={m.hidden?.includes(s.cid)} />
         ))}
       </div>
       <div class="fxlab-panel" data-anchor="runner-panel">
@@ -451,6 +452,13 @@ export function FxLab() {
   const [current, setCurrent] = useState<string>();
   const [auto, setAuto] = useState(false);
   const busy = useRef(false);
+  const pending = useRef<(() => void) | null>(null);
+
+  useLayoutEffect(() => {
+    const replay = pending.current;
+    pending.current = null;
+    replay?.();
+  }, [model]);
 
   useEffect(() => {
     fetch("data/cards.json")
@@ -490,7 +498,8 @@ export function FxLab() {
     document.querySelector(".fx-layer")?.replaceChildren();
     const scene = e.scene();
     const me = scene.me ?? "runner";
-    setModel(scene.before);
+    const known = new Set(base().slots.map((x) => x.cid));
+    setModel({ ...scene.before, hidden: scene.before.slots.filter((x) => !known.has(x.cid)).map((x) => x.cid) });
     await frame();
     let plan: Plan | undefined;
     if (scene.move) {
@@ -500,9 +509,8 @@ export function FxLab() {
       const s = scene.after.slots.find((x) => x.cid === mv.cid) ?? scene.before.slots.find((x) => x.cid === mv.cid);
       plan = { moves: [{ cid: mv.cid, from: info(s, mv.from, holder, byPlain), to: info(s, mv.to, holder, byPlain), src: src ?? null, clone: null }] };
     }
+    pending.current = () => replayFx(toView(scene.before, byPlain), toView(scene.after, byPlain), me, scene.lines ?? [], plan);
     setModel(scene.after);
-    await frame();
-    replayFx(toView(scene.before, byPlain), toView(scene.after, byPlain), me, scene.lines ?? [], plan);
     setTimeout(() => (busy.current = false), 400);
   }
 

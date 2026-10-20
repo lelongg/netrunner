@@ -32,7 +32,7 @@ self.addEventListener("activate", (event) => {
 async function networkFirst(request, cacheName, fallback) {
   const cache = await caches.open(cacheName);
   try {
-    const response = await fetch(request);
+    const response = await fetch(fallback ? new Request(request.url, { cache: "no-cache", credentials: "same-origin" }) : request);
     if (response.ok) cache.put(fallback ?? request, response.clone());
     return response;
   } catch {
