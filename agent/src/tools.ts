@@ -11,7 +11,7 @@ During the game: get_state shows the whole board from your seat only and a numbe
 Keep playing in a loop (wait_for_turn, then act) without ending your turn until the game is over or the user asks you to stop: the human cannot nudge you while you are idle, so ending your turn stalls the game. A human may think for many minutes, even half an hour: when wait_for_turn says it is still waiting, or fails, times out or is cut off, call it again at once, however long it has been. A cut-off wait is normal and loses nothing.
 To save context, act and wait_for_turn only return what changed since your last look (new log lines, changed lines, the current run and prompt) plus the fresh action list. Call get_state again whenever you need the full picture, for example after your context was summarized.
 Use card_info to read a card's full text. Decide every move yourself. You only ever see what your seat may see.
-The person you are talking to is your opponent. Keep your hidden information hidden in everything you write to them: never mention the cards in your hand or deck, what your facedown or unrezzed cards are, which installed card is an agenda or a trap, how many credits you are saving for what, or your plans and bluffs. Think about your strategy privately and only write things your opponent can already see on the board (moves once they are public, like a run, a rez or a scored agenda), plus friendly table talk. If they ask about your hidden cards or plans, decline playfully, as a human player would. When the game is over you may discuss it freely.
+The person you are talking to is your opponent. Keep your hidden information hidden in everything you write to them: never mention the cards in your hand or deck, what your facedown or unrezzed cards are, which installed card is an agenda or a trap, how many credits you are saving for what, or your plans and bluffs. Think about your strategy privately and only write things your opponent can already see on the board (moves once they are public, like a run, a rez or a scored agenda), plus friendly table talk. If they ask about your hidden cards or plans, decline playfully, as a human player would. When the game is over you may discuss it freely: offer the human a debrief, call get_replay to see the whole game with every hidden card revealed, and go through the key turns, what each side could have done better and what surprised you. If the human shares a replay link from the app, get_replay reads that game too.
 If a call says you are not in a game while you were playing one, this server lost its session: call join_game with the game code and the rejoin key from your last get_state, then carry on. Never write the rejoin key to the human.
 If you have to stop before the game is over (a limit on tool calls, an error, anything), end with one short line asking them to say "continue", with no recap of your hand, your hidden cards or your plans: they read every word.`;
 
@@ -101,6 +101,19 @@ export function registerTools(server: McpServer, agent: () => Promise<Agent>, NA
       const tick = token === undefined ? undefined : (elapsed: number) => void extra.sendNotification({ method: "notifications/progress", params: { progressToken: token, progress: Math.round(elapsed / 1000), message: "Waiting for your opponent" } }).catch(() => {});
       return play((a) => a.wait(seconds ?? 3600, tick, extra.signal));
     },
+  );
+  server.registerTool(
+    "get_replay",
+    {
+      description:
+        "After a game has ended, replay it in full to debrief it with the human: both decklists, the score and credits at the end of every turn, the final board with every hidden card revealed, and the whole game log. Without arguments it replays the game you just played (or your last finished game). Pass a replay link or 8-letter code that the human shares from the History screen of the app to debrief any other game. Refused while your current game is still going. Long games: use from_turn and to_turn to read the log in parts.",
+      inputSchema: {
+        replay: z.string().optional().describe("Replay link (…?replay=CODE) or 8-letter replay code shared from the app"),
+        from_turn: z.number().int().optional().describe("First turn of the log to include"),
+        to_turn: z.number().int().optional().describe("Last turn of the log to include"),
+      },
+    },
+    ({ replay, from_turn, to_turn }) => run((a) => a.replay(replay, from_turn, to_turn)),
   );
   server.registerTool("card_info", { description: "Full text and stats of a card by name.", inputSchema: { name: z.string() } }, ({ name }) => run((a) => a.card(name)));
   server.registerTool("say", { description: "Send a chat message to your opponent's game log.", inputSchema: { message: z.string() } }, ({ message }) => run((a) => a.say(message)));

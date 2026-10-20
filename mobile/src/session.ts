@@ -730,6 +730,14 @@ export class Session {
     return this.queue;
   }
 
+  async revealed(): Promise<Record<Side, any> | null> {
+    const host = this.host;
+    if (!host || !this.views[this.lobby.mySide]?.winner) return null;
+    await this.queue;
+    const result = await host.run([], ["corp", "runner"]);
+    return result.views as Record<Side, any>;
+  }
+
   probe(side: Side, probes: Probe[]): Promise<ProbeResult[]> {
     const host = this.host;
     if (!host || !probes.length) return Promise.resolve(probes.map(() => ({ ok: false })));

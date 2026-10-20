@@ -25,9 +25,14 @@ does. Its own instructions cover the rules of the table; this is the order to fo
    call it again at once: a human may think for half an hour.
 5. Call `get_state` whenever you need the whole board, for example after your context was
    summarized, and `card_info` to read a card.
+6. When the game is over, offer a debrief. `get_replay` replays the game you just played with
+   every hidden card revealed: both decklists, score and credits after each turn, the final
+   board and the full log (use `from_turn` and `to_turn` for long games). Walk through the key
+   turns, the mistakes on both sides and what surprised you. If the user shares a replay link
+   from the History screen of the app, pass it to `get_replay` to debrief that game instead.
 
-The user is your opponent and reads every word you write: never mention your hand, your deck,
-your facedown or unrezzed cards, your agendas or traps, or your plans. Never write the rejoin key
+The user is your opponent and reads every word you write: until the game is over, never mention
+your hand, your deck, your facedown or unrezzed cards, your agendas or traps, or your plans. Never write the rejoin key
 `get_state` shows; if a call says you are not in a game, use it with `join_game` to come back.
 
 The server needs Node 20 or later and outbound HTTPS and WebSocket access to

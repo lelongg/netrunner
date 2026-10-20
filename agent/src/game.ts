@@ -1,5 +1,7 @@
 import type { Card, CardDb, EngineApi, Side } from "../../mobile/src/engine";
-import { Session, loadSave } from "../../mobile/src/session";
+import { type SavedGame, Session, listSaves, loadSave } from "../../mobile/src/session";
+import { type Script, type SharedGame, scriptOf, scriptOfShared } from "../../mobile/src/game/replay";
+import { makeHost } from "../../mobile/src/game/runner";
 import { type Store, browserStore } from "../../mobile/src/store";
 import { basicCommands, cardCommands, cardRef, currentIce, findCard, promptOf, runCommands } from "../../mobile/src/game/actions";
 import { type WireDeck, fromPrecon, importNrdb, toWire } from "../../mobile/src/decks";
@@ -115,7 +117,7 @@ export class Agent {
 
   private render = (m: unknown) => {
     try {
-      return this.engine.renderMessage(m);
+      return this.engine.renderMessage(m).replace(/\[(?:their|pronoun)\]/g, "their").replace(/\[(they|them|theirs|themself)\]/g, "$1");
     } catch {
       return String(m ?? "");
     }
@@ -775,6 +777,104 @@ export class Agent {
     const minutes = Math.floor((Date.now() - this.waitingSince) / 60_000);
     const head = `Still waiting: it is your opponent's move${minutes ? ` (${minutes} min so far)` : ""}. Humans often think for many minutes; that is normal and the game is fine. Call wait_for_turn again right away, as many times as it takes. Do not end your turn and do not ask the user anything.`;
     return this.logLines().length === this.logSeen ? `${head} Nothing changed since your last look.` : `${head}\n\n${await this.update()}`;
+  }
+
+  private async replayScript(source?: string): Promise<{ script: Script; label: string; views?: Record<Side, any> }> {
+    if (source?.trim()) {
+      const code = (source.match(/[?&]replay=([A-Za-z0-9]{8})/)?.[1] ?? source.trim()).toUpperCase();
+      if (!/^[A-HJ-NP-Z2-9]{8}$/.test(code)) throw new Error(`"${source}" is not a replay link or 8-letter replay code.`);
+      const relay = source.match(/[?&]relay=([^&#]+)/)?.[1];
+      const base = relay ? decodeURIComponent(relay) : relayUrl();
+      const res = await fetch(`${base}/replays/${code}`);
+      if (!res.ok) throw new Error(`Replay ${code} not found (${res.status}).`);
+      return { script: scriptOfShared((await res.json()) as SharedGame, this.db), label: `shared replay ${code}` };
+    }
+    const s = this.session;
+    if (s?.lobby.started) {
+      if (!s.views[s.lobby.mySide]?.winner) throw new Error("This game is not over yet. A replay shows both players' hidden cards, so it is only available once the game has ended.");
+      const save = JSON.parse(s.journal() ?? "null") as SavedGame | null;
+      const script = save && scriptOf(save, this.db);
+      if (!script) throw new Error("This game has no replayable log.");
+      return { script, label: `game ${s.lobby.code}`, views: (await s.revealed()) ?? undefined };
+    }
+    const last = listSaves(this.store)
+      .filter((g) => g.summary?.winner)
+      .sort((a, b) => b.savedAt - a.savedAt)[0];
+    const script = last && scriptOf(last, this.db);
+    if (!script) throw new Error("No finished game to replay. Pass the replay link the human shares from the History screen of the app.");
+    return { script, label: `game ${last.code}` };
+  }
+
+  async replay(source?: string, fromTurn?: number, toTurn?: number) {
+    const { script, label, views: live } = await this.replayScript(source);
+    let views: Record<Side, any>;
+    if (live) views = live;
+    else {
+      const host = makeHost(this.engine);
+      try {
+        const r = await host.run([{ k: "boot", setup: script.setup, seed: script.seed }, ...script.entries.map((entry) => ({ k: "exec" as const, entry }))], ["corp", "runner"]);
+        views = r.views as Record<Side, any>;
+      } finally {
+        host.dispose();
+      }
+    }
+    const end = views.corp;
+    const name = (side: Side) => script.names[side];
+    const deckText = (side: Side) => {
+      const deck = script.setup[side].deck;
+      const counts = new Map<string, number>();
+      for (const c of deck.cards ?? []) counts.set(c.card?.title ?? c.title, (counts.get(c.card?.title ?? c.title) ?? 0) + (c.qty ?? 1));
+      return `${side} ${name(side)}: ${deck.identity?.title ?? "?"}${script.deckNames[side] ? ` — "${script.deckNames[side]}"` : ""}\n  ${[...counts].map(([t, n]) => `${n}x ${t}`).join(", ")}`;
+    };
+    const lines: string[] = [];
+    const turns: string[] = [];
+    const points: Record<string, number> = {};
+    let current = 0;
+    for (const e of end?.log ?? []) {
+      const text = e.user === "__system__" ? this.render(e.text) : `${e.user?.username ?? "?"} says: ${this.render(e.text)}`;
+      if (text === "[hr]") continue;
+      const m = text.match(/started their turn (\d+)/);
+      if (m) current = Number(m[1]);
+      const gain = text.match(/^(.+?) (?:scores|steals) .+? and gains (\d+) agenda points?/);
+      if (gain) points[gain[1]] = (points[gain[1]] ?? 0) + Number(gain[2]);
+      const ending = text.match(/^(.+?) is ending their turn (\d+) with (\d+) \[Credits?\] and (\d+) cards? in (HQ|the grip)/);
+      if (ending) turns.push(`turn ${ending[2]}, ${ending[5] === "HQ" ? "corp" : "runner"} ${ending[1]} ends with ${ending[3]} credits, ${ending[4]} cards in hand, ${points[ending[1]] ?? 0} points`);
+      if ((fromTurn == null || current >= fromTurn) && (toTurn == null || current <= toTurn)) lines.push(text);
+    }
+    const MAX = 700;
+    const clipped = lines.length > MAX;
+    const board = (side: Side) => {
+      const v = views[side];
+      const out: string[] = [];
+      if (side === "corp")
+        for (const [key, srv] of Object.entries<any>(v.corp?.servers ?? {})) {
+          const cards = [...(srv.ices ?? []).map((c: any) => `ice ${this.cardLine(c, "corp")}`), ...(srv.content ?? []).map((c: any) => this.cardLine(c, "corp"))];
+          if (cards.length) out.push(`  ${key}: ${cards.join("; ")}`);
+        }
+      else for (const k of ["program", "hardware", "resource"]) for (const c of v.runner?.rig?.[k] ?? []) out.push(`  ${k}: ${this.cardLine(c, "runner")}`);
+      const scored = (v[side]?.scored ?? []).map((c: any) => c.title).join(", ");
+      if (scored) out.push(`  scored: ${scored}`);
+      const hand = (v[side]?.hand ?? []).map((c: any) => c.title).join(", ");
+      if (hand) out.push(`  hand: ${hand}`);
+      return out.join("\n");
+    };
+    return [
+      `REPLAY of ${label}. Everything is revealed: use it to debrief the game with the human.`,
+      end?.winner ? `Result: ${end.winner} (${name(end.winner)}) won${end.reason ? ` by ${end.reason}` : ""}, ${end.corp?.["agenda-point"] ?? 0}-${end.runner?.["agenda-point"] ?? 0} on turn ${end.turn}.` : `Result: no winner recorded (stopped on turn ${end?.turn}).`,
+      "",
+      "DECKS",
+      deckText("corp"),
+      deckText("runner"),
+      "",
+      "SCORE AND CREDITS PER TURN",
+      ...turns,
+      "",
+      `FINAL BOARD\ncorp (${name("corp")}):\n${board("corp")}\nrunner (${name("runner")}):\n${board("runner")}`,
+      "",
+      `LOG${fromTurn != null || toTurn != null ? ` (turns ${fromTurn ?? 1} to ${toTurn ?? "end"})` : ""}`,
+      ...(clipped ? lines.slice(-MAX) : lines),
+      clipped ? `\n(Only the last ${MAX} of ${lines.length} log lines are shown. Pass from_turn and to_turn to read earlier turns.)` : "",
+    ].join("\n");
   }
 
   card(name: string) {
