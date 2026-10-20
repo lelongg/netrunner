@@ -1462,7 +1462,8 @@
   stroke-dashoffset: 1;
 }
 
-.fx-stroke.silver path {
+.fx-stroke.silver path,
+.fx-stroke.silver polyline {
   stroke: #e5e7eb;
   filter: drop-shadow(0 0 5px #a5f3fc);
 }
@@ -1737,4 +1738,166 @@
   font-size: 11px;
   letter-spacing: 0.2em;
   opacity: 0.85;
+}
+
+.fx-orb {
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff, #22d3ee 50%, transparent 70%);
+}
+
+.fx-goggles {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  border-radius: 20px;
+  background: rgb(10 20 30 / 0.85);
+  border: 2px solid #22d3ee;
+  box-shadow: 0 0 14px #22d3ee;
+}
+
+.fx-goggles i {
+  width: 38%;
+  height: 70%;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ff9f1c, #c792ff 60%, #22d3ee);
+}
+
+.fx-stroke.enso path {
+  stroke: #f1ede4;
+  stroke-width: 9;
+  filter: drop-shadow(0 0 6px #f6e03a);
+}
+
+.fx-saw {
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, #0b1424 0 12%, #d6e4ff 13% 18%, #7fb0ff 19% 60%, transparent 61%),
+    repeating-conic-gradient(#d6e4ff 0 8deg, transparent 8deg 20deg);
+  box-shadow: 0 0 16px rgb(127 176 255 / 0.6);
+}
+
+.fx-book {
+  display: flex;
+  gap: 2px;
+}
+
+.fx-book i {
+  flex: 1;
+  background: linear-gradient(90deg, #f1ede4, #d8d2c2);
+  border: 1px solid #3ddc84;
+  box-shadow: 0 0 10px rgb(61 220 132 / 0.5);
+}
+
+.fx-book i:first-child {
+  transform-origin: 100% 50%;
+}
+
+.fx-book i:last-child {
+  transform-origin: 0 50%;
+}
+
+.fx-coin-big {
+  border-radius: 50%;
+  border: 3px solid #b88a00;
+  background: radial-gradient(circle at 35% 30%, #fff6b0, #f6e03a 50%, #b88a00);
+  box-shadow: 0 0 16px rgb(246 224 58 / 0.7);
+}
+
+.fx-zzz {
+  font-family: var(--display);
+  font-weight: 900;
+  color: #a5f3fc;
+  text-shadow: 0 0 8px #22d3ee;
+}
+
+.fx-conduit {
+  border-radius: 8px;
+  border: 2px solid #3ddc84;
+  background: linear-gradient(90deg, rgb(61 220 132 / 0.15), rgb(61 220 132 / 0.4), rgb(61 220 132 / 0.15));
+  box-shadow: 0 0 14px rgb(61 220 132 / 0.6);
+}
+
+.fx-chevron {
+  clip-path: polygon(0 100%, 50% 0, 100% 100%, 85% 100%, 50% 30%, 15% 100%);
+  background: linear-gradient(180deg, #fff, #22d3ee);
+  filter: drop-shadow(0 0 6px #22d3ee);
+}
+
+.fx-unity {
+  border-radius: 50%;
+  border: 4px solid;
+}
+
+.fx-laptop {
+  border: 3px solid #7fb0ff;
+  border-radius: 6px 6px 2px 2px;
+  background: linear-gradient(180deg, #0b1a40, #2b6cff);
+  box-shadow: 0 0 18px rgb(127 176 255 / 0.6);
+}
+
+.fx-diamond {
+  border-radius: 6px;
+  background: linear-gradient(135deg, #fff, #a5f3fc 40%, #22d3ee 60%, #0e7490);
+  box-shadow: 0 0 20px #22d3ee;
+}
+
+.fx-speech {
+  display: grid;
+  place-items: center;
+  border-radius: 12px 12px 12px 2px;
+  background: #f1ede4;
+  color: #0b0f14;
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 14px;
+  box-shadow: 0 0 12px rgb(34 211 238 / 0.6);
+}
+
+.fx-hazard {
+  background: repeating-linear-gradient(45deg, #f6e03a 0 10px, #111 10px 20px);
+  box-shadow: 0 0 14px rgb(246 224 58 / 0.5);
+}
+
+.fx-crystal {
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff 0 8%, #e6d6ff 15%, #c792ff 45%, #3a1a6a 75%);
+  box-shadow: 0 0 26px #c792ff;
+}
+
+.fx-arrow.heavy {
+  width: 60px;
+  height: 7px;
+  margin: -3px 0 0 -30px;
+}
+
+.fx-beacon {
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, rgb(246 224 58 / 0.55), transparent 25deg, transparent 180deg, rgb(246 224 58 / 0.55) 180deg, transparent 205deg);
+  -webkit-mask: radial-gradient(circle, #000, transparent 70%);
+  mask: radial-gradient(circle, #000, transparent 70%);
+}
+
+.fx-vault.blue {
+  border-color: #7fb0ff;
+  background:
+    linear-gradient(0deg, transparent 47%, #2b6cff 47% 53%, transparent 53%),
+    linear-gradient(90deg, transparent 47%, #2b6cff 47% 53%, transparent 53%),
+    radial-gradient(circle, #d6e4ff 0 12%, #0b1a40 13% 60%, #1a3a80 61%);
+}
+
+.fx-whiteout {
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 0 40px #fff;
+}
+
+.fx-pillar {
+  background: linear-gradient(90deg, transparent, rgb(255 246 176 / 0.8), transparent);
+  box-shadow: 0 0 40px rgb(246 224 58 / 0.5);
+}
+
+.fx-stroke.bolt polyline {
+  stroke: #d6e4ff;
+  stroke-width: 6;
+  filter: drop-shadow(0 0 8px #2b6cff);
 }
