@@ -297,12 +297,13 @@ function breakHit(style: BreakStyle, at: Point, iceEl: HTMLElement | null, power
     buzz([15, 15, 15]);
     return;
   }
-  for (let i = 0; i < power; i++)
-    setTimeout(() => {
-      slash(at, "red", 120, -40);
-      setTimeout(() => slash(at, "red", 120, 40), 60);
-    }, i * 140);
-  burst(at, "red", 10 * power, 60, { size: 4, shards: true, gravity: 40 });
+  const angle = -58;
+  const nx = Math.cos(((angle + 90) * Math.PI) / 180);
+  const ny = Math.sin(((angle + 90) * Math.PI) / 180);
+  for (let swipe = 0; swipe < power; swipe++)
+    for (let i = -1; i <= 1; i++)
+      setTimeout(() => slash([at[0] + nx * i * 16, at[1] + ny * i * 16], "red", 95, angle + swipe * 14), swipe * 160 + (i + 1) * 55);
+  burst(at, "red", 10 * power, 55, { size: 4, shards: true, gravity: 40 });
   if (iceEl) animate(iceEl, { x: [0, 7, -6, 4, 0], rotate: [0, 2, -2, 0] }, { duration: 0.35 });
   kick(0.5);
   buzz(20);
