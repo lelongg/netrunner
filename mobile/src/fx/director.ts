@@ -24,6 +24,7 @@ export interface Snap {
   clicks: Record<Side, number>;
   points: Record<Side, number>;
   tags: number;
+  discards: number;
   rezzed: Map<unknown, boolean>;
   ices: Set<unknown>;
   adv: Map<unknown, number>;
@@ -67,6 +68,7 @@ function snap(view: any): Snap {
   const enc = view.encounters;
   return {
     credits: { corp: view.corp?.credit ?? 0, runner: view.runner?.credit ?? 0 },
+    discards: (view.corp?.discard?.length ?? 0) + (view.runner?.discard?.length ?? 0),
     clicks: { corp: view.corp?.click ?? 0, runner: view.runner?.click ?? 0 },
     points: { corp: view.corp?.["agenda-point"] ?? 0, runner: view.runner?.["agenda-point"] ?? 0 },
     tags: view.runner?.tag?.total ?? view.runner?.tag?.base ?? 0,
@@ -505,10 +507,11 @@ function sounds(prev: Snap, now: Snap, view: any, me: Side, lines: string[], hea
     else if (k.kind === "install") fallback("install", k.owner === "corp" ? "install-corp" : "install-runner");
     else if (k.kind === "draw") fallback("draw", "click-card");
     else if (k.kind === "trash") {
-      if (k.from === "servers" || k.from === "rig") fallback("trash_installed", "trash_installed");
-      else if (k.from === "hand" || k.from === "deck") fallback("discard", "discard");
+      if ((k.from === "hand" || k.from === "deck") && !lines.some((l) => /\btrash/i.test(l))) fallback("discard", "discard");
+      else fallback("trash_installed", "trash_installed");
     }
   }
+  if (now.discards > prev.discards && lines.some((l) => /\btrash(es)?\b/i.test(l))) fallback("trash_installed", "trash_installed");
   for (const [cid, up] of now.rezzed) if (up && prev.rezzed.get(cid) === false) fallback("rez", now.ices.has(cid) ? "rez-ice" : "rez-other");
   for (const [cid, n] of now.adv) if (n > (prev.adv.get(cid) ?? 0)) fallback("click-advance", "click-advance");
   if (now.server && !prev.server) fallback("click-run", "click-run");
