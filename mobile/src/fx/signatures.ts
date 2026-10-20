@@ -463,18 +463,6 @@ export function stimhack(card: DOMRect) {
   done(animate(el, { opacity: [1, 1, 0] }, { duration: 1.2, times: [0, 0.75, 1] }), el);
 }
 
-export function hardHittingNews(card: DOMRect) {
-  if (reduced()) return;
-  const paper = box("fx-paper", new DOMRect(card.left - card.width * 0.25, card.top + card.height * 0.25, card.width * 1.5, card.height * 0.5));
-  paper.innerHTML = "<b>BREAKING</b><i></i><i></i><i></i>";
-  animate(paper, { rotate: [-720, -6], scale: [0.1, 1.08, 1] }, { duration: 0.75, ease: [0.2, 0.7, 0.3, 1] });
-  setTimeout(() => {
-    shake(0.7);
-    buzz([60, 30, 60]);
-    burst(center(card), "red", 14, 80, { size: 5, shards: true, gravity: 40 });
-  }, 720);
-  done(animate(paper, { opacity: [1, 1, 0] }, { duration: 1.9, times: [0, 0.8, 1] }), paper);
-}
 
 export function bioticLabor(card: DOMRect) {
   if (reduced()) return;
@@ -1621,17 +1609,6 @@ export function madDash() {
   buzz([10, 10, 10, 40]);
 }
 
-export function violetClearance(card: DOMRect) {
-  if (reduced()) return;
-  const badge = box("fx-badge", new DOMRect(card.left + card.width * 0.1, card.top + card.height * 0.3, card.width * 0.8, card.height * 0.38));
-  badge.innerHTML = "<b>VIOLET</b><span>CLEARANCE</span>";
-  animate(badge, { rotateY: [90, 0], transformPerspective: 500 } as any, { duration: 0.4, ease: "easeOut" });
-  done(animate(badge, { opacity: [0, 1, 1, 0] }, { duration: 1.6, times: [0, 0.1, 0.8, 1] }), badge);
-  setTimeout(() => {
-    burst(center(card), "violet", 16, 70, { size: 4, gravity: 0 });
-    buzz([20, 40]);
-  }, 400);
-}
 
 export function efficiencyCommittee(card: DOMRect) {
   if (reduced()) return;
@@ -1695,15 +1672,6 @@ export function treadLightly(card: DOMRect) {
   setTimeout(() => floater([card.left + card.width / 2, card.top], "+3 rez", "cyan", 40, true), 700);
 }
 
-export function vrcation(card: DOMRect) {
-  if (reduced()) return;
-  const sun = box("fx-sun", inset(card, 0.1, 0.1, 0.8, 0.8 * (card.width / card.height)));
-  animate(sun, { y: [card.height * 0.2, 0] }, { duration: 0.8, ease: "easeOut" });
-  fade(sun, 1.6);
-  const goggles = tag("fx-goggles", inset(card, 0.05, 0.45, 0.9, 0.2), "<i></i><i></i>");
-  fade(goggles, 1.6);
-  setTimeout(() => buzz([10, 30, 10]), 500);
-}
 
 export function sprint(card: DOMRect) {
   if (reduced()) return;
@@ -3162,6 +3130,87 @@ export function nanomanagement(card: DOMRect) {
   fade(face, 1.3);
   fade(hand, 1.3);
   setTimeout(() => floater([at[0], card.top + 20], "+2 clicks", "blue", 40, true), 600);
+}
+
+function flyCards(from: Point, to: Point, n: number, cls = "", delay = 0, gap = 0.12) {
+  for (let i = 0; i < n; i++) {
+    const c = box(`fx-mini-card ${cls}`, new DOMRect(from[0] - 11, from[1] - 15, 22, 30));
+    const dx = to[0] - from[0] + (i - (n - 1) / 2) * 14;
+    const dy = to[1] - from[1];
+    done(animate(c, { x: [0, dx * 0.5, dx], y: [0, dy * 0.5 - 50, dy], rotate: [0, (i - 1.5) * 12, (i - 1.5) * 6], opacity: [0, 1, 1, 0] }, { duration: 0.7, delay: delay + i * gap, times: [0, 0.15, 0.85, 1], ease: [0.4, 0, 0.3, 1] }), c);
+  }
+}
+
+export function vrcation(card: DOMRect) {
+  if (reduced()) return;
+  const world = node("fx-sig fx-vr");
+  const floor = node("fx-vr-floor", world);
+  const sky = node("fx-vr-sky", world);
+  const sun = node("fx-vr-sun", sky);
+  animate(world, { opacity: [0, 1] }, { duration: 0.25 });
+  animate(floor, { rotateX: [90, 68], backgroundPositionY: ["0px", "-160px"] } as any, { duration: 1.6, ease: "linear" });
+  animate(sun, { y: [80, 0] }, { duration: 0.8, ease: "easeOut" });
+  setTimeout(() => {
+    const stack = pointOf(anchor("runner-deck")) ?? [innerWidth / 2, innerHeight - 60];
+    const hand = pointOf(anchor("runner-hand")) ?? [innerWidth / 2, innerHeight - 30];
+    flyCards(stack, hand, 4, "vr", 0, 0.14);
+    buzz([10, 20, 10, 20, 10, 20, 10]);
+  }, 500);
+  setTimeout(() => {
+    const pip = [...document.querySelectorAll('[data-anchor="runner-clicks"] i.on')].pop();
+    if (pip) animate(pip, { opacity: [1, 0.2, 1, 0.2], scale: [1, 1.6, 1] }, { duration: 0.5 });
+    animate(world, { scaleY: [1, 0.01, 0.01], scaleX: [1, 1, 0], opacity: [1, 1, 0] }, { duration: 0.45, times: [0, 0.5, 1], ease: "easeIn" }).finished.then(() => world.remove(), () => world.remove());
+    flash("white", 0.2, 0.25);
+  }, 1500);
+}
+
+export function violetClearance(card: DOMRect) {
+  if (reduced()) return;
+  const reader = box("fx-reader", new DOMRect(card.right - 8, card.top + card.height * 0.3, 26, card.height * 0.4));
+  const led = node("fx-reader-led", reader);
+  const key = box("fx-keycard", new DOMRect(card.right + 40, card.top + card.height * 0.32, 46, 30));
+  animate(reader, { x: [30, 0], opacity: [0, 1] }, { duration: 0.25, ease: "easeOut" });
+  animate(key, { x: [80, -48, -40], opacity: [0, 1, 1] }, { duration: 0.6, delay: 0.2, times: [0, 0.7, 1], ease: "easeOut" });
+  setTimeout(() => {
+    led.classList.add("ok");
+    ring([card.right + 5, card.top + card.height * 0.5], "violet", 60);
+    buzz([15, 40, 15]);
+    const split = box("fx-clear-light", inset(card, 0.48, 0, 0.04, 1));
+    animate(split, { scaleX: [0, 24, 30], opacity: [1, 0.9, 0] }, { duration: 0.9, ease: "easeOut" });
+    setTimeout(() => split.remove(), 950);
+  }, 800);
+  setTimeout(() => {
+    const at = center(card);
+    credits(at, 8, "corp");
+    flyCards(at, pointOf(anchor("corp-hand")) ?? [innerWidth / 2, 40], 4, "violet", 0.3);
+  }, 1000);
+  for (const el of [reader, key]) done(animate(el, { opacity: [1, 1, 0] }, { duration: 1.9, times: [0, 0.85, 1] }), el);
+}
+
+export function hardHittingNews(card: DOMRect) {
+  if (reduced()) return;
+  const sheets: HTMLElement[] = [];
+  for (let i = 0; i < 4; i++) {
+    const sheet = tag("fx-paper fx-press", inset(card, -0.2, 0.3, 1.4, 0.42), "<b>BREAKING</b><i></i><i></i><i></i>");
+    sheets.push(sheet);
+    animate(sheet, { x: [-innerWidth, 0], rotate: [0, (i - 1.5) * 3] }, { duration: 0.22, delay: i * 0.13, ease: "easeOut" });
+    animate(sheet.querySelectorAll("b, i"), { clipPath: ["inset(0 100% 0 0)", "inset(0 0% 0 0)"] } as any, { duration: 0.2, delay: i * 0.13 + 0.1 });
+    buzz(8);
+  }
+  const target = pointOf(anchor("runner-panel")) ?? [innerWidth / 2, innerHeight - 100];
+  setTimeout(() => {
+    const top = sheets[sheets.length - 1];
+    const r = top.getBoundingClientRect();
+    const dx = target[0] - (r.left + r.width / 2);
+    const dy = target[1] - (r.top + r.height / 2);
+    animate(top, { x: [0, dx], y: [0, dy], rotate: [3, 380], scale: [1, 0.55] }, { duration: 0.45, ease: [0.5, 0, 0.8, 0.6] }).finished.then(() => {
+      shake(0.6);
+      buzz([70, 30, 70]);
+      for (let i = 0; i < 4; i++) setTimeout(() => ring([target[0] + (i - 1.5) * 34, target[1]], "red", 50), i * 90);
+      animate(top, { opacity: [1, 0] }, { duration: 0.4 }).finished.then(() => top.remove());
+    });
+    sheets.slice(0, -1).forEach((s, i) => done(animate(s, { opacity: [1, 0], x: [0, -20 - i * 10] }, { duration: 0.35, delay: i * 0.05 }), s));
+  }, 750);
 }
 
 export const SCORE: Record<string, (r: DOMRect) => void> = {

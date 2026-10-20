@@ -2427,3 +2427,109 @@
   mask: radial-gradient(circle, transparent 0 70%, #000 71%);
   box-shadow: 0 0 14px rgb(127 176 255 / 0.6);
 }
+
+.fx-mini-card.vr {
+  border-color: #a5f3fc;
+  background: linear-gradient(135deg, #0e7490, #062026);
+  box-shadow: 0 0 10px #22d3ee;
+}
+
+.fx-mini-card.violet {
+  border-color: #e6d6ff;
+  background: linear-gradient(135deg, #7b3fbf, #2a0f4a);
+  box-shadow: 0 0 10px #c792ff;
+}
+
+.fx-vr {
+  inset: 0;
+  overflow: hidden;
+  perspective: 300px;
+  background: linear-gradient(180deg, rgb(20 6 40 / 0.85), rgb(60 10 70 / 0.6) 50%, transparent 50%);
+}
+
+.fx-vr-sky {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 50%;
+  overflow: hidden;
+}
+
+.fx-vr-sun {
+  position: absolute;
+  left: 50%;
+  bottom: -60px;
+  width: 140px;
+  height: 140px;
+  margin-left: -70px;
+  border-radius: 50%;
+  background: repeating-linear-gradient(180deg, #ffd166 0 10px, #ff6fae 10px 14px);
+  box-shadow: 0 0 40px #ff6fae;
+}
+
+.fx-vr-floor {
+  position: absolute;
+  left: -50%;
+  right: -50%;
+  top: 50%;
+  height: 100%;
+  transform-origin: 50% 0;
+  background:
+    linear-gradient(rgb(34 211 238 / 0.8) 2px, transparent 2px) 0 0 / 100% 40px,
+    linear-gradient(90deg, rgb(34 211 238 / 0.8) 2px, transparent 2px) 0 0 / 40px 100%,
+    rgb(10 4 30 / 0.85);
+}
+
+.fx-reader {
+  border-radius: 4px;
+  background: linear-gradient(90deg, #1a1a22, #2a2a36);
+  border: 1px solid #555;
+  box-shadow: 0 0 12px rgb(199 146 255 / 0.4);
+}
+
+.fx-reader-led {
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  margin-left: -4px;
+  border-radius: 50%;
+  background: #ff3b30;
+  box-shadow: 0 0 8px #ff3b30;
+  transition: background 0.1s, box-shadow 0.1s;
+}
+
+.fx-reader-led.ok {
+  background: #3ddc84;
+  box-shadow: 0 0 12px #3ddc84;
+}
+
+.fx-keycard {
+  border-radius: 4px;
+  background: linear-gradient(135deg, #c792ff, #7b3fbf);
+  border: 1px solid #e6d6ff;
+  box-shadow: 0 0 12px #c792ff;
+}
+
+.fx-keycard::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 6px;
+  width: 12px;
+  height: 9px;
+  border-radius: 2px;
+  background: #f6e03a;
+}
+
+.fx-clear-light {
+  background: linear-gradient(90deg, transparent, #f3d6ff, #fff, #f3d6ff, transparent);
+  box-shadow: 0 0 30px #c792ff;
+  mix-blend-mode: screen;
+}
+
+.fx-press {
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.6);
+}
