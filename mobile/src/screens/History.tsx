@@ -243,7 +243,7 @@ function statsOf(view: any, render: (m: unknown) => string): Stats {
     runner: [
       { label: "Agendas stolen", value: stolen },
       { label: "Runs", value: runs },
-      { label: "Successful", value: breaches, detail: runs ? `${Math.round((breaches / runs) * 100)}%` : undefined },
+      { label: "Successful runs", value: breaches, detail: runs ? `${Math.round((breaches / runs) * 100)}%` : undefined },
       { label: "Cards accessed", value: s.runner?.access?.cards ?? count("runner", / accesses /) },
     ],
   };
