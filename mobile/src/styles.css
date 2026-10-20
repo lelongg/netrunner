@@ -928,7 +928,7 @@ textarea:focus {
   top: 0;
   z-index: 3;
   flex: none;
-  box-shadow: 0 0 0 10px var(--bg), 0 12px 14px 4px rgb(0 0 0 / 0.75);
+  box-shadow: 0 12px 14px 4px rgb(0 0 0 / 0.75);
   clip-path: inset(-10px -10px -40px -10px);
 }
 
@@ -978,6 +978,157 @@ textarea:focus {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  position: relative;
+  background: linear-gradient(180deg, #090e18, #060708 50%, #0e090a);
+}
+
+.playfield-frame::before {
+  content: "";
+  position: absolute;
+  inset: -24px 0 0;
+  background:
+    linear-gradient(rgb(34 211 238 / 0.07) 1px, transparent 1px) 0 0 / 24px 24px,
+    linear-gradient(90deg, rgb(34 211 238 / 0.07) 1px, transparent 1px) 0 0 / 24px 24px;
+  -webkit-mask-image: radial-gradient(130% 80% at 50% 50%, #000 30%, transparent 85%);
+  mask-image: radial-gradient(130% 80% at 50% 50%, #000 30%, transparent 85%);
+  animation: grid-drift 6s linear infinite;
+  pointer-events: none;
+}
+
+.playfield-frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  height: 140px;
+  background: linear-gradient(180deg, transparent, rgb(34 211 238 / 0.06) 70%, rgb(34 211 238 / 0.16) 99%, transparent);
+  transform: translateY(-160px);
+  animation: grid-sweep 11s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  pointer-events: none;
+}
+
+.board-bg {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.board-bg::before,
+.board-bg::after {
+  content: "";
+  position: absolute;
+  left: -20%;
+  right: -20%;
+  height: 55%;
+  opacity: 0.55;
+  transition: opacity 1.2s ease;
+  animation: halo-breathe 7s ease-in-out infinite alternate;
+}
+
+.board-bg::before {
+  top: -15%;
+  background: radial-gradient(60% 60% at 30% 40%, rgb(127 176 255 / 0.28), transparent 70%);
+}
+
+.board-bg::after {
+  bottom: -15%;
+  background: radial-gradient(60% 60% at 70% 60%, rgb(255 106 95 / 0.24), transparent 70%);
+  animation-delay: -3.5s;
+}
+
+.turn-corp .board-bg::before,
+.turn-runner .board-bg::after {
+  opacity: 1;
+}
+
+.board-bg i {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  border-radius: 1px;
+  background: #8ff0ff;
+  box-shadow: 0 0 6px 1px rgb(34 211 238 / 0.8);
+  opacity: 0;
+}
+
+.board-bg i:nth-child(odd) {
+  left: 0;
+  width: 48px;
+  background: linear-gradient(90deg, transparent, #8ff0ff);
+  box-shadow: none;
+  animation: packet-x 9s linear infinite;
+}
+
+.board-bg i:nth-child(even) {
+  top: 0;
+  height: 48px;
+  background: linear-gradient(180deg, transparent, #8ff0ff);
+  box-shadow: none;
+  animation: packet-y 11s linear infinite;
+}
+
+.board-bg i:nth-child(1) { top: 95px; animation-delay: -1s; }
+.board-bg i:nth-child(2) { left: 119px; animation-delay: -4s; }
+.board-bg i:nth-child(3) { top: 335px; animation-delay: -5.5s; animation-duration: 12s; }
+.board-bg i:nth-child(4) { left: 287px; animation-delay: -8s; animation-duration: 14s; }
+.board-bg i:nth-child(5) { top: 527px; left: auto; right: 0; animation-delay: -2.5s; animation-duration: 10s; rotate: 180deg; }
+.board-bg i:nth-child(6) { left: 47px; top: auto; bottom: 0; animation-delay: -6s; animation-duration: 13s; rotate: 180deg; }
+
+.in-run .playfield-frame::before {
+  background:
+    linear-gradient(rgb(255 106 95 / 0.07) 1px, transparent 1px) 0 0 / 24px 24px,
+    linear-gradient(90deg, rgb(34 211 238 / 0.08) 1px, transparent 1px) 0 0 / 24px 24px;
+  animation-duration: 1.6s;
+}
+
+.in-run .playfield-frame::after {
+  animation-duration: 3.5s;
+}
+
+.in-run .board-bg i {
+  animation-duration: 3s;
+}
+
+.playfield {
+  position: relative;
+}
+
+@keyframes grid-drift {
+  to { transform: translateY(24px); }
+}
+
+@keyframes grid-sweep {
+  0% { transform: translateY(-160px); }
+  55%, 100% { transform: translateY(110vh); }
+}
+
+@keyframes halo-breathe {
+  from { scale: 1; }
+  to { scale: 1.12; }
+}
+
+@keyframes packet-x {
+  0% { transform: translateX(-60px); opacity: 0; }
+  5% { opacity: 0.9; }
+  35% { transform: translateX(440px); opacity: 0.9; }
+  36%, 100% { transform: translateX(440px); opacity: 0; }
+}
+
+@keyframes packet-y {
+  0% { transform: translateY(-60px); opacity: 0; }
+  5% { opacity: 0.9; }
+  40% { transform: translateY(900px); opacity: 0.9; }
+  41%, 100% { transform: translateY(900px); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .playfield-frame::before,
+  .playfield-frame::after,
+  .board-bg::before,
+  .board-bg::after,
+  .board-bg i {
+    animation: none;
+  }
 }
 
 .playfield {
