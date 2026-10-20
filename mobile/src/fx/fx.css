@@ -30,6 +30,9 @@
 .tone-blue {
   --tone: #7fb0ff;
 }
+.tone-green {
+  --tone: #3ddc84;
+}
 .tone-white {
   --tone: #f1ede4;
 }
@@ -863,4 +866,115 @@
   clip-path: polygon(50% 0, 100% 70%, 80% 100%, 20% 100%, 0 70%);
   background: linear-gradient(180deg, #fff, #ff9f1c);
   filter: drop-shadow(0 0 8px #ff9f1c);
+}
+
+.fx-stakes {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  overflow: hidden;
+  filter: drop-shadow(0 0 8px #ff9f1c);
+}
+
+.fx-stake {
+  width: 15%;
+  height: 100%;
+  transform-origin: 50% 100%;
+  background: linear-gradient(180deg, #fff3d6, #ffd166 20%, #ff9f1c 70%, #9a4b00);
+  clip-path: polygon(50% 0, 100% 16%, 100% 100%, 0 100%, 0 16%);
+}
+
+.fx-scan {
+  height: 6px;
+  background: linear-gradient(90deg, transparent, #ff3b30 20%, #fff 50%, #ff3b30 80%, transparent);
+  box-shadow: 0 0 18px 4px rgb(255 59 48 / 0.6);
+}
+
+.fx-eye {
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow:
+    0 0 8px #ff3b30,
+    0 0 18px #ff3b30;
+}
+
+.fx-bulb {
+  width: 9px;
+  height: 9px;
+  margin: -4px 0 0 -4px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow:
+    0 0 6px currentColor,
+    0 0 14px currentColor;
+}
+
+.fx-void {
+  width: 120px;
+  height: 120px;
+  margin: -60px 0 0 -60px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #000 0 52%, #1a0630 62%, rgb(199 146 255 / 0.7) 70%, transparent 74%);
+  box-shadow: 0 0 40px 10px rgb(127 63 191 / 0.45);
+}
+
+.fx-mote {
+  width: 5px;
+  height: 5px;
+  margin: -2px 0 0 -2px;
+  border-radius: 50%;
+  background: #e6d6ff;
+  box-shadow: 0 0 8px #c792ff;
+}
+
+.fx-firefly {
+  width: 9px;
+  height: 9px;
+  margin: -4px 0 0 -4px;
+  border-radius: 50%;
+  background: #f4ffb0;
+  box-shadow:
+    0 0 8px #e6ff8a,
+    0 0 22px #3ddc84;
+}
+
+.fx-bubble {
+  border-radius: 50%;
+  border: 2px solid #a7f3c4;
+  background: radial-gradient(circle at 35% 30%, rgb(255 255 255 / 0.6) 0 12%, rgb(61 220 132 / 0.35) 40%, rgb(61 220 132 / 0.15));
+  box-shadow: 0 0 10px rgb(61 220 132 / 0.6);
+}
+
+.fx-drop {
+  width: 8px;
+  height: 11px;
+  margin: -5px 0 0 -4px;
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  background: #3ddc84;
+  box-shadow: 0 0 10px #3ddc84;
+}
+
+.fx-streak {
+  height: 3px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, #ff3b30 40%, #fff);
+  box-shadow: 0 0 10px #ff3b30;
+}
+
+.fx-pass {
+  display: grid;
+  place-items: center;
+  border: 2px dashed #7fb0ff;
+  border-radius: 6px;
+  background: rgb(10 18 40 / 0.85);
+  box-shadow: 0 0 18px rgb(127 176 255 / 0.6);
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #d6e4ff;
 }

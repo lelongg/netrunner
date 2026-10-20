@@ -1,5 +1,5 @@
 import { cardImage } from "../engine";
-import { orbitalStrike, signature } from "./signatures";
+import { installSignature, orbitalStrike, signature } from "./signatures";
 import type { Side } from "../engine";
 import { anchor, animate, points, scoreSegments, banner, burst, buzz, done, flash, floater, layer, mid, node, place, punch, rays, rectOf, reduced, ring, shake, tileEl, visible, type Point, type Tone } from "./core";
 
@@ -224,6 +224,7 @@ function land(el: HTMLElement | null, info: Info | undefined, strong: boolean) {
   ring(at, info?.type === "ICE" ? "blue" : sideTone(info?.owner), strong ? 150 : 100);
   burst(at, info?.type === "ICE" ? "blue" : sideTone(info?.owner), strong ? 16 : 8, strong ? 70 : 45, { size: 4, gravity: 10 });
   if (info?.type === "ICE") shake(0.45);
+  installSignature(info?.title, r);
 }
 
 function stage(width: number) {

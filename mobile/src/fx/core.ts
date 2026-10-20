@@ -197,6 +197,7 @@ const PALETTE: Record<string, string[]> = {
   violet: ["#c792ff", "#7fb0ff", "#ffffff"],
   orange: ["#ff9f1c", "#ffd166", "#ffffff"],
   blue: ["#7fb0ff", "#2b6cff", "#d6e4ff"],
+  green: ["#3ddc84", "#a7f3c4", "#e6ff8a"],
 };
 
 export type Tone = keyof typeof PALETTE;

@@ -3,7 +3,7 @@ import type { Side } from "../engine";
 import { currentIce } from "../game/actions";
 import { serverName } from "../game/text";
 import { type Plan, collect, moveKinds, play, prepare } from "./cards";
-import { transmission } from "./signatures";
+import { cleaver, fireSignature, leech, regolith, rezSignature, transmission } from "./signatures";
 import { play as sound } from "../sound";
 import { type Point, type Tone, anchor, animate, banner, burst, buzz, haptics, coins, done, flash, floater, gate, glitch, layer, lunge, mid, node, place, pointOf, punch, rays, rectOf, reduced, ring, shake, slash, split, stamp, tileEl, vignette, visible, wrapEl, scoreSegment } from "./core";
 
@@ -569,6 +569,10 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
     const isIce = card?.type === "ICE";
     const flip = () => {
       rezFlip(cid, isIce ? KIND_TONE[iceKind(card)] : "blue", isIce && !!now.server);
+      setTimeout(() => {
+        const r = rectOf(tileEl(cid));
+        if (visible(r)) rezSignature(card?.title, r);
+      }, 450);
     };
     const to = isIce && messaged ? pointOf(tileEl(cid)) : null;
     if (to) {
@@ -625,6 +629,18 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
     busy = 0.9;
   }
 
+  for (const e of (view.log ?? []).slice(prev.log)) {
+    const text = render(e.text);
+    if (/\buses Regolith Mining License\b/i.test(text)) {
+      const r = rectOf(tileEl(byTitle(view.corp?.servers, "Regolith Mining License")?.cid));
+      if (visible(r)) regolith(r);
+    } else if (/\buses Leech\b/i.test(text)) {
+      const from = pointOf(tileEl(currentIce(view)?.cid));
+      const to = pointOf(tileEl(runnerCard(view, "Leech")?.cid));
+      if (from && to) leech(from, to);
+    }
+  }
+
   const hits = readLog(view, prev.log, render);
   let t = busy;
   for (const h of hits) {
@@ -638,7 +654,12 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
         const breakerEl = h.breaker ? tileEl(h.breaker.cid) : null;
         const style = breakStyle(h.breaker, h.ice);
         const live = () => pointOf(tileEl(h.ice.cid));
-        lunge(breakerEl, live, { onHit: () => breakHit(style, live() ?? target, tileEl(h.ice.cid) ?? iceEl, h.power ?? 1) });
+        lunge(breakerEl, live, {
+          onHit: () => {
+            breakHit(style, live() ?? target, tileEl(h.ice.cid) ?? iceEl, h.power ?? 1);
+            if (h.breaker?.title === "Cleaver") cleaver(live() ?? target, tileEl(h.ice.cid) ?? iceEl);
+          },
+        });
       }, delay * 1000);
       t += 0.45;
     } else if (h.kind === "fire" && h.ice) {
@@ -649,6 +670,7 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
         const iceEl = tileEl(h.ice.cid);
         const at = runnerTarget(me);
         const icePoint = pointOf(iceEl);
+        setTimeout(() => fireSignature(h.ice.title, rectOf(tileEl(h.ice.cid)), runnerTarget(me)), 380);
         if (/end the run/i.test(text)) {
           punch(iceEl, 1.12);
           gate(wrapEl(h.ice.cid) ?? iceEl, tone);
@@ -725,6 +747,21 @@ function breached(server: string, me: Side) {
     if (corp) shake(0.5);
   }, 300);
   buzz(corp ? [80, 40, 80] : [30, 30, 30, 30, 80]);
+}
+
+function byTitle(root: any, title: string): any {
+  let found: any;
+  const walk = (x: any) => {
+    if (found || !x || typeof x !== "object") return;
+    if (Array.isArray(x)) return x.forEach(walk);
+    if (x.title === title && x.zone) {
+      found = x;
+      return;
+    }
+    for (const [k, v] of Object.entries(x)) if (k !== "abilities" && k !== "subroutines") walk(v);
+  };
+  walk(root);
+  return found;
 }
 
 function findIn(view: any, cid: unknown): any {
