@@ -7,6 +7,7 @@ type Layer = "menu" | "base" | "tension" | "run";
 const LOOP = 34.909090909;
 const ROLL = 0.5;
 const FADE = 1.2;
+const MENU_FADE_IN = 7;
 const LAYERS: Layer[] = ["menu", "base", "tension", "run"];
 const MIX: Record<Mood, Partial<Record<Layer, number>>> = {
   off: {},
@@ -102,7 +103,8 @@ function apply() {
     const gain = gainOf(ctx, layer).gain;
     gain.cancelScheduledValues(now);
     gain.setValueAtTime(gain.value, now);
-    gain.linearRampToValueAtTime(mix[layer] ?? 0, now + FADE);
+    const target = mix[layer] ?? 0;
+    gain.linearRampToValueAtTime(target, now + (layer === "menu" && target > gain.value ? MENU_FADE_IN : FADE));
   }
   stopTimer = window.setTimeout(() => {
     if (!wantGame) stop(game);
