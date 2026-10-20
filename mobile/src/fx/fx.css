@@ -92,6 +92,7 @@
 }
 
 .fx-banner {
+  z-index: 6;
   left: 0;
   right: 0;
   top: 32%;
