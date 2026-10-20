@@ -2739,3 +2739,24 @@
     linear-gradient(180deg, #f6e03a, #b88a00);
   box-shadow: 0 0 20px rgb(246 224 58 / 0.6);
 }
+
+.fx-mini-card.faceup {
+  border-color: #f1ede4;
+  background: linear-gradient(180deg, #f1ede4 0 30%, #7fb0ff 30% 70%, #f1ede4 70%);
+  box-shadow: 0 0 8px rgb(241 237 228 / 0.6);
+}
+
+.fx-slot {
+  border-radius: 3px;
+  background: #000;
+  box-shadow: inset 0 0 0 1px #f6e03a;
+}
+
+.fx-shelf {
+  border-radius: 4px;
+  border: 2px solid #7fb0ff;
+  background:
+    linear-gradient(transparent 46%, #7fb0ff 46% 50%, transparent 50%),
+    linear-gradient(transparent 96%, #7fb0ff 96%),
+    rgb(10 20 40 / 0.85);
+}
