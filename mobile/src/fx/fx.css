@@ -2804,3 +2804,47 @@
   background: radial-gradient(circle at 40% 35%, #ff8a80, #c4161c 50%, #6b0a0a);
   box-shadow: 0 0 10px rgb(196 22 28 / 0.6);
 }
+
+.fx-plano {
+  border: 1px solid rgb(127 176 255 / 0.85);
+  background:
+    linear-gradient(transparent 36%, rgb(127 176 255 / 0.55) 36% 37%, transparent 37% 68%, rgb(127 176 255 / 0.55) 68% 69%, transparent 69%),
+    repeating-linear-gradient(0deg, rgb(165 243 252 / 0.06) 0 1px, transparent 1px 4px),
+    linear-gradient(rgb(14 28 56 / 0.92), rgb(8 14 28 / 0.88));
+  box-shadow: 0 0 26px rgb(127 176 255 / 0.4), inset 0 0 20px rgb(127 176 255 / 0.25);
+  transform-origin: 50% 100%;
+  transform-style: preserve-3d;
+  perspective: 600px;
+}
+
+.fx-plano-beam {
+  background: linear-gradient(to top, rgb(127 176 255 / 0.55), rgb(127 176 255 / 0.05));
+  clip-path: polygon(44% 100%, 56% 100%, 100% 0, 0 0);
+  filter: blur(3px);
+}
+
+.fx-plano-item {
+  position: absolute;
+  border: 1px solid color-mix(in srgb, rgb(165 243 252 / 0.6) calc((1 - var(--heat)) * 100%), #f6e03a);
+  border-radius: 2px;
+  background: color-mix(in srgb, rgb(59 130 246 / 0.28) calc((1 - var(--heat)) * 100%), rgb(246 224 58 / 0.85));
+  box-shadow: 0 0 calc(var(--heat) * 16px) rgb(246 224 58 / calc(var(--heat) * 0.9));
+}
+
+.fx-plano-heat {
+  position: absolute;
+  width: 46%;
+  aspect-ratio: 1.6;
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgb(246 224 58 / 0.45), rgb(255 106 95 / 0.18) 55%, transparent);
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+.fx-stroke.plano polyline {
+  stroke: #a5f3fc;
+  stroke-width: 2.5;
+  stroke-dasharray: 1;
+  filter: drop-shadow(0 0 6px #22d3ee);
+}

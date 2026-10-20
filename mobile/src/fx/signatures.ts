@@ -3442,18 +3442,61 @@ export function plutus(r: DOMRect) {
 
 export function predictivePlanogram(card: DOMRect) {
   if (reduced()) return;
-  const shelf = box("fx-shelf", inset(card, -0.05, 0.2, 1.1, 0.6));
-  done(animate(shelf, { opacity: [0, 1, 1, 0] }, { duration: 1.7, times: [0, 0.1, 0.85, 1] }), shelf);
-  for (let i = 0; i < 6; i++) {
-    const item = box(i < 3 ? "fx-coin-flat" : "fx-mini-card blue", new DOMRect(card.left + card.width * (0.08 + (i % 3) * 0.32), card.top + card.height * (i < 3 ? 0.3 : 0.55), card.width * 0.22, i < 3 ? 10 : card.height * 0.18));
-    animate(item, { x: [-innerWidth, 0] }, { duration: 0.3, delay: 0.2 + i * 0.08, ease: "easeOut" });
-    done(animate(item, { opacity: [1, 1, 0] }, { duration: 1.5, delay: 0.2 + i * 0.08, times: [0, 0.8, 1] }), item);
+  const w = Math.min(innerWidth * 0.86, card.width * 1.5, 340);
+  const h = w * 0.7;
+  const c = center(card);
+  const top = c[1] - h * 0.62;
+  const frame = box("fx-plano", new DOMRect(c[0] - w / 2, top, w, h));
+  const beam = box("fx-plano-beam", new DOMRect(c[0] - w / 2, top + h, w, Math.max(20, card.bottom - top - h)));
+  done(animate(beam, { opacity: [0, 0.9, 0.6, 0.9, 0] }, { duration: 2.8, times: [0, 0.1, 0.5, 0.8, 1] }), beam);
+  done(animate(frame, { opacity: [0, 1, 1, 0], scaleY: [0.02, 1, 1, 1] }, { duration: 2.9, times: [0, 0.12, 0.86, 1], ease: "easeOut" }), frame);
+  const hotX = 0.62 + Math.random() * 0.2;
+  const hotRow = Math.floor(Math.random() * 3);
+  const items: { x: number; row: number; el: HTMLElement }[] = [];
+  for (let row = 0; row < 3; row++) {
+    let x = 0.03;
+    let i = 0;
+    while (x < 0.9) {
+      const iw = 0.07 + Math.random() * 0.08;
+      if (x + iw > 0.97) break;
+      const ih = 0.45 + Math.random() * 0.4;
+      const el = node("fx-plano-item", frame);
+      el.style.left = `${x * 100}%`;
+      el.style.width = `${iw * 100}%`;
+      el.style.top = `${(row + 1 - ih * 0.85) * 33.3 - 1.5}%`;
+      el.style.height = `${ih * 0.85 * 33.3}%`;
+      const heat = Math.max(0, 1 - Math.hypot((x + iw / 2 - hotX) * 2.6, (row - hotRow) * 0.9)) ** 1.3;
+      el.style.setProperty("--heat", "0");
+      animate(el, { opacity: [0, 1], y: [-8, 0] }, { duration: 0.25, delay: 0.3 + row * 0.12 + i * 0.04, ease: "easeOut" });
+      animate(el, { "--heat": [0, heat] } as any, { duration: 0.7, delay: 1 + Math.random() * 0.2, ease: "easeInOut" });
+      items.push({ x: x + iw / 2, row, el });
+      x += iw + 0.015 + Math.random() * 0.02;
+      i++;
+    }
   }
-  after(1100, () => {
-    credits(center(card), 3, "corp");
-    flyCards(center(card), spot("corp-hand", [innerWidth * 0.7, 60]), 3, "blue");
-    buzz([20, 20, 40]);
+  const glow = node("fx-plano-heat", frame);
+  glow.style.left = `${hotX * 100}%`;
+  glow.style.top = `${(hotRow + 0.5) * 33.3}%`;
+  animate(glow, { opacity: [0, 0.9, 0.6], scale: [0.3, 1.1, 1] }, { duration: 1, delay: 1, ease: "easeOut" });
+  const at = (x: number, row: number): Point => [frame.offsetLeft + w * x, frame.offsetTop + h * (row + 1) * 0.333 - 2];
+  after(1350, () => {
+    const route: Point[] = [at(0.02, 2), at(0.3, 2), at(0.3, 1), at(0.55, 1), at(0.55, hotRow), at(hotX, hotRow)];
+    fade(pathLine("plano", route, 0.7), 1.3);
+    spark(route, 0.75, "#a5f3fc");
+    after(780, () => {
+      ring([frame.offsetLeft + w * hotX, frame.offsetTop + h * (hotRow + 0.5) * 0.333], "yellow", 80);
+      buzz([15, 30, 15]);
+    });
   });
+}
+
+export function planogramResult(text: string) {
+  if (reduced()) return;
+  const mid: Point = [innerWidth / 2, innerHeight * 0.45];
+  const gain = /gain 3/i.test(text);
+  const draw = /draw 3/i.test(text);
+  if (gain) credits(mid, 3, "corp");
+  if (draw) flyCards(spot("corp-deck", [innerWidth * 0.3, 60]), spot("corp-hand", [innerWidth * 0.7, 60]), 3, "blue", gain ? 0.35 : 0);
 }
 
 function breakerPoints(): Point[] {

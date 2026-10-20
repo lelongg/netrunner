@@ -3,7 +3,7 @@ import type { Side } from "../engine";
 import { currentIce } from "../game/actions";
 import { serverName } from "../game/text";
 import { type Plan, collect, moveKinds, play, prepare } from "./cards";
-import { cleaver, fireSignature, leech, regolith, rezSignature, snare, transmission } from "./signatures";
+import { cleaver, fireSignature, leech, planogramResult, regolith, rezSignature, snare, transmission } from "./signatures";
 import { cue, play as sound } from "../sound";
 import { type Point, type Tone, anchor, animate, banner, burst, buzz, haptics, coins, done, flash, floater, gate, glitch, layer, lunge, mid, node, place, pointOf, punch, rays, rectOf, reduced, ring, shake, slash, split, stamp, tileEl, vignette, visible, wrapEl, scoreSegment } from "./core";
 
@@ -710,7 +710,9 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
 
   for (const e of (view.log ?? []).slice(prev.log)) {
     const text = render(e.text);
-    if (/\buses Regolith Mining License\b/i.test(text)) {
+    if (/\buses Predictive Planogram to (gain|draw)\b/i.test(text)) {
+      planogramResult(text);
+    } else if (/\buses Regolith Mining License\b/i.test(text)) {
       const r = rectOf(tileEl(byTitle(view.corp?.servers, "Regolith Mining License")?.cid));
       if (visible(r)) regolith(r);
     } else if (/\bSnare!/.test(text) && /\b(net damage|tag)/i.test(text)) {

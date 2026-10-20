@@ -236,6 +236,22 @@ function extraScenes(byPlain: Map<string, Card>): Entry[] {
         return { before, after: before, me: "runner", lines: ["Gerald uses Leech to give -1 strength to Archer."] };
       },
     });
+  const planogram = real("Predictive Planogram");
+  if (planogram)
+    for (const [key, text] of [["gain", "gain 3 [Credits]"], ["draw", "draw 3 cards"], ["both", "gain 3 [Credits] and draw 3 cards"]])
+      out.push({
+        id: `c:planogram-${key}`,
+        label: `${planogram.title} · ${text.replace(" [Credits]", "¢")}`,
+        group: "Use",
+        code: planogram.code,
+        scene: () => {
+          const before = base();
+          const after = edit(before, (x) => {
+            if (key !== "draw") x.credits.corp += 3;
+          });
+          return { before, after, me: "runner", lines: [`Corp uses Predictive Planogram to ${text}.`] };
+        },
+      });
   const regolith = real("Regolith Mining License");
   if (regolith)
     out.push({
