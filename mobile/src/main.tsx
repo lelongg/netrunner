@@ -9,6 +9,7 @@ import { installTips } from "./tips";
 import { installMotion, useLoop } from "./fx/ui";
 import { unlockSound } from "./sound";
 import { initMusic, setMood } from "./music";
+import { installUiSounds } from "./uisound";
 import { startEngineWorker } from "./game/workerHost";
 import { type CardDb, type EngineApi, type Matchup, type Side, loadEngine } from "./engine";
 import { Board } from "./game/Board";
@@ -400,6 +401,7 @@ installTips();
 installMotion();
 unlockSound();
 initMusic();
+installUiSounds();
 setMood("menu");
 startEngineWorker();
 render(

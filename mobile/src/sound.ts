@@ -36,6 +36,7 @@ const VARIANTS: Record<string, string[]> = {
 
 let context: AudioContext | null = null;
 const buffers = new Map<string, Promise<AudioBuffer | null>>();
+const missing = new Set<string>();
 const lastPlayed = new Map<string, number>();
 
 export function audio(): AudioContext | null {
@@ -50,7 +51,11 @@ function load(file: string): Promise<AudioBuffer | null> {
   let buffer = buffers.get(file);
   if (!buffer) {
     buffer = fetch(`sound/${file}.mp3`)
-      .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(new Error(String(r.status)))))
+      .then((r) => {
+        const audible = r.ok && !r.headers.get("content-type")?.includes("html");
+        if (r.status === 404 || (r.ok && !audible)) missing.add(file);
+        return audible ? r.arrayBuffer() : Promise.reject(new Error(String(r.status)));
+      })
       .then((data) => new Promise<AudioBuffer>((resolve, reject) => audio()!.decodeAudioData(data, resolve, reject)))
       .catch(() => {
         buffers.delete(file);
@@ -70,7 +75,8 @@ export function cue(name: Sound | string, delay = 0, volume = 1) {
   setTimeout(() => play(name, volume), delay);
 }
 
-export function play(name: Sound | string, volume = 1) {
+export function play(name: Sound | string, volume = 1, fallback?: string) {
+  if (fallback && missing.has(name)) return play(fallback, volume);
   if (!soundOn()) return;
   const ctx = audio();
   if (!ctx) return;
@@ -81,6 +87,7 @@ export function play(name: Sound | string, volume = 1) {
   const files = VARIANTS[name] ?? [name];
   const file = files[Math.floor(Math.random() * files.length)];
   load(file).then((buffer) => {
+    if (!buffer && fallback && missing.has(file)) return play(fallback, volume);
     if (!buffer || !soundOn()) return;
     const source = ctx.createBufferSource();
     source.buffer = buffer;

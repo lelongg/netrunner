@@ -4,6 +4,7 @@ import { animate } from "motion";
 import { Icon } from "./icons";
 import { motionOff } from "./settings";
 import { useBackClose } from "./back";
+import { uiSound } from "./uisound";
 
 export function Meter({ value, max, tone = "cyan", small, anchor }: { value: number; max: number; tone?: "cyan" | "red" | "yellow"; small?: boolean; anchor?: string }) {
   const count = Math.max(0, Math.min(max, 12));
@@ -152,6 +153,7 @@ export function Dialogs() {
   useBackClose(!!current, () => close(false));
   useEffect(() => {
     if (!current) return;
+    uiSound("ui_open");
     box.current?.querySelector<HTMLButtonElement>("button.dialog-ok")?.focus();
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && close(false);
     addEventListener("keydown", onKey);
