@@ -28,18 +28,28 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Restore the compiled engine
+        id: engine
+        uses: actions/cache@v4
+        with:
+          path: mobile/engine/engine.js
+          key: engine-${{ hashFiles('src/clj/**', 'src/cljc/**', 'src/cljs/**', 'shadow-cljs.edn', 'project.clj', 'package-lock.json') }}
+
       - name: Prepare java
+        if: steps.engine.outputs.cache-hit != 'true'
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
 
       - name: Install clojure tools
+        if: steps.engine.outputs.cache-hit != 'true'
         uses: DeLaGuardo/setup-clojure@94d767dbb80ae5c637d0f1ad70b75fa2b00495cd # 13.0
         with:
           lein: 2.9.1
 
       - name: Cache lein project dependencies
+        if: steps.engine.outputs.cache-hit != 'true'
         uses: actions/cache@v4
         with:
           path: |
@@ -52,6 +62,7 @@ jobs:
         run: npm ci && npm ci --prefix mobile
 
       - name: Compile the engine to JavaScript
+        if: steps.engine.outputs.cache-hit != 'true'
         run: npx shadow-cljs release engine
 
       - name: Fetch card data
@@ -69,9 +80,11 @@ jobs:
           VITE_ICE_SERVERS: ${{ secrets.ICE_SERVERS }}
 
       - name: Build the agent server
+        if: github.event_name != 'push' || github.ref == 'refs/heads/master'
         run: npm ci --prefix agent && npm run build --prefix agent
 
       - name: Typecheck the hosted MCP worker
+        if: github.event_name != 'push' || github.ref == 'refs/heads/master'
         run: npm run worker:typecheck --prefix agent
 
       - name: Deploy the hosted MCP worker
@@ -94,6 +107,7 @@ jobs:
         if: github.event_name == 'push' && github.ref != 'refs/heads/master' && env.HAS_TOKEN == 'true'
         working-directory: mobile
         run: |
+          npm ci --prefix ../agent
           ../agent/node_modules/.bin/wrangler deploy --name pocket-rig-preview --assets dist --compatibility-date 2026-10-01
           echo "Preview of $GITHUB_REF_NAME: https://pocket-rig-preview.lelong-gerald.workers.dev" >> "$GITHUB_STEP_SUMMARY"
         env:
