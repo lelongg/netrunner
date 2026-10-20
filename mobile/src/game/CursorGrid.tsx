@@ -158,7 +158,7 @@ void main() {
     if (i >= uPulseCount) break;
     vec4 p = uPulses[i];
     float off = length(pos - p.xy) - p.z;
-    float t = off > 0.0 ? off / (uBand * 0.6) : off / (uBand * 1.4);
+    float t = off > 0.0 ? off / (uBand * 1.6) : off / (uBand * 2.6);
     wave = max(wave, p.w * exp(-t * t));
   }
   float n = (sin(g.x * 0.55 + uTime * 0.35) + sin(g.y * 0.4 - uTime * 0.27) + sin((g.x + g.y) * 0.3 + uTime * 0.19) + sin(length(g - vec2(uCells) * 0.5 - vec2(sin(uTime * 0.07) * float(uCells.x), 0.0)) * 0.45 - uTime * 0.5)) / 4.0;
@@ -485,15 +485,11 @@ const CursorGrid = ({
 
     const TAIL = 3.5;
 
-    const spawn = (from?: Walker, at?: { x: number; y: number; dx: number; dy: number }) => {
+    const spawn = (from?: Walker) => {
       const { cols, rows } = grid;
       if (from) {
         const turn = Math.random() < 0.5 ? 1 : -1;
         walkers.push({ x: from.x, y: from.y, dx: -from.dy * turn, dy: from.dx * turn, progress: 0, speed: from.speed * (0.8 + Math.random() * 0.4), life: 3 + Math.random() * 8, strength: from.strength * 0.85, trail: [from.x, from.y], drain: TAIL });
-        return;
-      }
-      if (at) {
-        walkers.push({ x: at.x, y: at.y, dx: at.dx, dy: at.dy, progress: 0, speed: 7 + Math.random() * 3, life: 4 + Math.random() * 6, strength: 1, trail: [at.x, at.y], drain: TAIL });
         return;
       }
       const side = Math.floor(Math.random() * 4);
@@ -676,12 +672,7 @@ const CursorGrid = ({
       const s = settingsRef.current;
       const { x, y, inside } = locate(event);
       if (!inside || !s.clickPulse || reduce) return;
-      pulses.push({ x, y, t0: clock, strength: 1 });
-      if (s.ambient > 0) {
-        const vx = Math.round((x - grid.offX) / s.cellSize);
-        const vy = Math.round((y - grid.offY) / s.cellSize);
-        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) spawn(undefined, { x: vx, y: vy, dx, dy });
-      }
+      pulses.push({ x, y, t0: clock, strength: 0.45 });
       wake();
     };
 
