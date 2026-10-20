@@ -25,10 +25,13 @@ export type Sound =
   | "virus-purge"
   | "wave";
 
-const VARIANTS: Partial<Record<Sound, string[]>> = {
+const TRIPLES = ["access_card", "breach", "break_decoder", "break_fracter", "break_killer", "derez", "discard", "expose", "ice_encounter", "ice_passed", "jack_out", "run_ended", "sub_derez", "sub_end_the_run", "sub_lose_credits", "sub_tag", "sub_trash", "tag_received", "trash_installed", "turn_start_opp"];
+
+const VARIANTS: Record<string, string[]> = {
   bling: Array.from({ length: 10 }, (_, i) => `bling-${i + 1}`),
   "click-card": ["click-card", "click-card-2", "click-card-3"],
   "click-credit": ["click-credit", "click-credit-2", "click-credit-3"],
+  ...Object.fromEntries(TRIPLES.map((n) => [n, [1, 2, 3].map((i) => `${n}_0${i}`)])),
 };
 
 let context: AudioContext | null = null;
@@ -62,6 +65,11 @@ export function soundOn() {
   return settings.sound && settings.volume > 0;
 }
 
+export function cue(name: Sound | string, delay = 0, volume = 1) {
+  if (delay <= 0) return play(name, volume);
+  setTimeout(() => play(name, volume), delay);
+}
+
 export function play(name: Sound | string, volume = 1) {
   if (!soundOn()) return;
   const ctx = audio();
@@ -70,7 +78,7 @@ export function play(name: Sound | string, volume = 1) {
   if (now - (lastPlayed.get(name) ?? 0) < 90) return;
   lastPlayed.set(name, now);
   if (ctx.state === "suspended") ctx.resume().catch(() => {});
-  const files = VARIANTS[name as Sound] ?? [name];
+  const files = VARIANTS[name] ?? [name];
   const file = files[Math.floor(Math.random() * files.length)];
   load(file).then((buffer) => {
     if (!buffer || !soundOn()) return;

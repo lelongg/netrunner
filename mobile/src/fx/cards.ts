@@ -330,7 +330,7 @@ async function showcase(m: Move, kind: Kind, me: Side) {
 }
 
 export function moveKinds(plan: Plan, me: Side, lines: string[] = []) {
-  return plan.moves.map((m) => ({ kind: kindOf(m, me, lines), owner: (m.to ?? m.from)?.owner as string | undefined, type: (m.to ?? m.from)?.type as string | undefined }));
+  return plan.moves.map((m) => ({ kind: kindOf(m, me, lines), owner: (m.to ?? m.from)?.owner as string | undefined, type: (m.to ?? m.from)?.type as string | undefined, from: head(m.from?.zone) as string | undefined }));
 }
 
 export function play(plan: Plan, me: Side, lines: string[] = []) {
