@@ -192,9 +192,6 @@ export function Home({ ready, error, initialJoin, saves, onResume, onDiscard, on
         </nav>
 
         <div class="footer">
-          <span>Engine: Jinteki · MIT</span>
-          <span>Cards: NetrunnerDB</span>
-          <span>Not affiliated with Null Signal Games</span>
           <button class="footer-link" onClick={onCredits}>
             Credits
           </button>

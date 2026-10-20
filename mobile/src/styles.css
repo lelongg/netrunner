@@ -3360,11 +3360,6 @@ button:active:not(:disabled) {
   text-decoration-color: color-mix(in srgb, var(--text) 50%, transparent);
 }
 
-.footer span:last-child {
-  flex-basis: 100%;
-  letter-spacing: 0.12em;
-  text-align: center;
-}
 
 .encounter.live {
   border-left-color: var(--ice, var(--red));
@@ -4765,7 +4760,7 @@ button.armed {
 .stat-card {
   flex: none;
   width: 128px;
-  height: 84px;
+  height: 108px;
   scroll-snap-align: start;
   display: flex;
   flex-direction: column;
@@ -4787,6 +4782,7 @@ button.armed {
 }
 
 .stat-card-side {
+  text-align: center;
   font-size: 9px;
   line-height: 1.3;
   letter-spacing: 0.2em;
@@ -4794,12 +4790,14 @@ button.armed {
 }
 
 .stat-card-num {
+  flex: 1;
   display: flex;
-  align-items: baseline;
+  align-items: center;
+  justify-content: center;
   gap: 6px;
   font-family: var(--display);
   font-weight: 900;
-  font-size: 32px;
+  font-size: 52px;
   line-height: 0.9;
 }
 
@@ -6762,6 +6760,7 @@ h1.deck-name.long {
 }
 
 .footer-link {
+  margin: 0 auto;
   min-width: 0;
   padding: 0;
   border: 0;
