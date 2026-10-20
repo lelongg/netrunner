@@ -1446,3 +1446,146 @@
   background: linear-gradient(90deg, transparent, #a5f3fc 30%, #fff);
   box-shadow: 0 0 8px #22d3ee;
 }
+
+.fx-stroke svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.fx-stroke path {
+  fill: none;
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+
+.fx-stroke.silver path {
+  stroke: #e5e7eb;
+  filter: drop-shadow(0 0 5px #a5f3fc);
+}
+
+.fx-stroke.venom path {
+  stroke: #3ddc84;
+  stroke-width: 7;
+  filter: drop-shadow(0 0 6px #3ddc84);
+}
+
+.fx-link {
+  border: 4px solid #f6e03a;
+  border-radius: 10px;
+  box-shadow: 0 0 10px #f6e03a;
+}
+
+.fx-code {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 4px;
+  background: rgb(6 20 26 / 0.75);
+  border: 1px solid #22d3ee;
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+  color: #a5f3fc;
+  text-shadow: 0 0 6px #22d3ee;
+}
+
+.fx-code-char {
+  width: 14%;
+  text-align: center;
+}
+
+.fx-mini-card.peddler {
+  border-color: #ff8a80;
+  background: linear-gradient(135deg, #6f1f1f, #2a0b0b);
+  box-shadow: 0 0 8px #ff3b30;
+}
+
+.fx-mini-card.blue {
+  border-color: #d6e4ff;
+  background: linear-gradient(135deg, #2b6cff, #0b1a40);
+  box-shadow: 0 0 8px #7fb0ff;
+}
+
+.fx-zero {
+  display: grid;
+  place-items: center;
+  font-family: var(--display);
+  font-size: 64px;
+  font-weight: 900;
+  color: #fff;
+  text-shadow:
+    -3px 0 #ff3b30,
+    3px 0 #22d3ee,
+    0 0 16px #c792ff;
+}
+
+.fx-wheel {
+  border-radius: 50%;
+  border: 4px solid #f6e03a;
+  background:
+    linear-gradient(0deg, transparent 48%, rgb(246 224 58 / 0.8) 48% 52%, transparent 52%),
+    linear-gradient(60deg, transparent 48%, rgb(246 224 58 / 0.8) 48% 52%, transparent 52%),
+    linear-gradient(120deg, transparent 48%, rgb(246 224 58 / 0.8) 48% 52%, transparent 52%);
+  box-shadow: 0 0 18px rgb(246 224 58 / 0.6);
+}
+
+.fx-clot {
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ff8a80, #8a1a14 60%, #3a0505);
+  box-shadow: 0 0 10px rgb(255 59 48 / 0.6);
+}
+
+.fx-scan.green {
+  background: linear-gradient(90deg, transparent, #3ddc84 20%, #fff 50%, #3ddc84 80%, transparent);
+  box-shadow: 0 0 18px 4px rgb(61 220 132 / 0.6);
+}
+
+.fx-spikes {
+  transform-origin: 50% 100%;
+  background: linear-gradient(180deg, #fff, #ff9f1c);
+  clip-path: polygon(0 100%, 6% 0, 12% 100%, 18% 0, 24% 100%, 30% 0, 36% 100%, 42% 0, 48% 100%, 54% 0, 60% 100%, 66% 0, 72% 100%, 78% 0, 84% 100%, 90% 0, 96% 100%);
+  filter: drop-shadow(0 0 6px #ff9f1c);
+}
+
+.fx-kanji {
+  display: grid;
+  place-items: center;
+  font-size: 72px;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 0 14px #ff3b30;
+}
+
+.fx-wing {
+  background: radial-gradient(ellipse at 100% 50%, rgb(255 255 255 / 0.95), rgb(255 246 176 / 0.6) 40%, transparent 70%);
+  clip-path: polygon(100% 50%, 70% 0, 40% 10%, 0 20%, 20% 45%, 0 60%, 30% 75%, 20% 100%, 70% 85%);
+}
+
+.fx-wing.left {
+  transform-origin: 100% 50%;
+}
+
+.fx-wing.right {
+  transform-origin: 0 50%;
+  scale: -1 1;
+}
+
+.fx-syringe.green {
+  border-color: #a7f3c4;
+  box-shadow: 0 0 12px #3ddc84;
+}
+
+.fx-syringe.green .fx-syringe-fill {
+  background: linear-gradient(90deg, #a7f3c4, #3ddc84);
+}
+
+.fx-stroke.swap path {
+  stroke: #7fb0ff;
+  stroke-width: 8;
+  filter: drop-shadow(0 0 8px #2b6cff);
+}

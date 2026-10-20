@@ -1,4 +1,4 @@
-import { type Point, anchor, animate, burst, buzz, coins, done, flash, floater, node, pointOf, punch, rays, reduced, ring, shake, slash, vignette } from "./core";
+import { type Point, anchor, animate, burst, buzz, coins, done, flash, floater, node, pointOf, punch, rays, reduced, ring, shake, slash, stamp, vignette } from "./core";
 
 const SVG = "http://www.w3.org/2000/svg";
 
@@ -1090,6 +1090,284 @@ export function pinhole(card: DOMRect) {
   done(animate(needle, { opacity: [1, 1, 0] }, { duration: 1.1, times: [0, 0.75, 1] }), needle);
 }
 
+function svgBox(cls: string, r: DOMRect, inner: string, view = "0 0 100 100") {
+  const el = box(cls, r);
+  el.innerHTML = `<svg viewBox="${view}">${inner}</svg>`;
+  return el;
+}
+
+function draw(el: HTMLElement, duration = 0.6) {
+  for (const shape of el.querySelectorAll("path, polyline, circle, rect")) animate(shape, { strokeDashoffset: [1, 0] }, { duration, ease: "easeInOut" });
+}
+
+export function paperclip(r: DOMRect) {
+  if (reduced()) return;
+  const el = svgBox("fx-stroke silver", new DOMRect(r.left + r.width * 0.2, r.top + r.height * 0.1, r.width * 0.6, r.height * 0.8), '<path pathLength="1" d="M30 85 V20 a15 15 0 0 1 30 0 V75 a10 10 0 0 1 -20 0 V30"/>');
+  draw(el, 0.7);
+  setTimeout(() => {
+    burst(center(r), "cyan", 10, 50, { size: 3, gravity: 0 });
+    buzz([10, 20, 10]);
+  }, 650);
+  done(animate(el, { opacity: [1, 1, 0] }, { duration: 1.4, times: [0, 0.8, 1] }), el);
+}
+
+export function liberatedAccount(r: DOMRect) {
+  if (reduced()) return;
+  const at = center(r);
+  for (const side of [-1, 1]) {
+    const link = box("fx-link", new DOMRect(at[0] - 14 + side * 10, at[1] - 8, 28, 16));
+    done(animate(link, { x: [0, side * 50], rotate: [0, side * 50], opacity: [1, 1, 0] }, { duration: 0.7, delay: 0.25, ease: "easeOut" }), link);
+  }
+  setTimeout(() => {
+    burst(at, "gold", 12, 50, { size: 4, gravity: 30 });
+    buzz([20, 40]);
+  }, 250);
+}
+
+const GLYPHS = "01<>{}[]#$%&*+=/\\|;:";
+
+export function selfModifyingCode(r: DOMRect) {
+  if (reduced()) return;
+  const el = box("fx-code", r);
+  const spans = Array.from({ length: 24 }, () => node("fx-code-char", el, "span"));
+  let n = 0;
+  const tick = setInterval(() => {
+    for (const s of spans) s.textContent = GLYPHS[Math.floor(Math.random() * GLYPHS.length)];
+    if (++n > 14) clearInterval(tick);
+  }, 60);
+  done(animate(el, { opacity: [0, 1, 1, 0] }, { duration: 1.2, times: [0, 0.1, 0.8, 1] }), el);
+  buzz([10, 10, 10, 10]);
+}
+
+export function mimic(r: DOMRect) {
+  if (reduced()) return;
+  const ghost = box("fx-phantom", r);
+  ghost.style.borderColor = "#ff8a80";
+  ghost.style.background = "rgb(255 59 48 / 0.15)";
+  animate(ghost, { rotateY: [0, 180, 360], scale: [1, 1.15, 1], transformPerspective: 500 } as any, { duration: 0.8, ease: "easeInOut" });
+  done(animate(ghost, { opacity: [0, 1, 0] }, { duration: 1 }), ghost);
+  setTimeout(() => slash(center(r), "red", 70, -40), 600);
+}
+
+export function streetPeddler(r: DOMRect) {
+  if (reduced()) return;
+  for (let i = -1; i <= 1; i++) {
+    const c = box("fx-mini-card peddler", new DOMRect(r.left + r.width / 2 - 14, r.top + r.height * 0.3, 28, 40));
+    done(animate(c, { y: [0, -r.height * 0.6], x: [0, i * 34], rotate: [0, i * 18], opacity: [0, 1, 1, 0] }, { duration: 1.3, times: [0, 0.2, 0.8, 1], delay: (i + 1) * 0.06, ease: "easeOut" }), c);
+  }
+  buzz([10, 20, 10, 20]);
+}
+
+export function yog(r: DOMRect) {
+  if (reduced()) return;
+  const zero = box("fx-zero", new DOMRect(r.left, r.top + r.height * 0.15, r.width, r.height * 0.7));
+  zero.textContent = "0";
+  animate(zero, { scale: [2.5, 1], x: [0, -4, 4, -2, 0] }, { duration: 0.6, ease: "easeOut" });
+  done(animate(zero, { opacity: [0, 1, 1, 0] }, { duration: 1.3, times: [0, 0.1, 0.75, 1] }), zero);
+  setTimeout(() => buzz([30, 10, 30]), 300);
+}
+
+export function turningWheel(r: DOMRect) {
+  if (reduced()) return;
+  const at = center(r);
+  const wheel = node("fx-sig fx-wheel");
+  const s = r.width * 1.3;
+  wheel.style.left = `${at[0] - s / 2}px`;
+  wheel.style.top = `${at[1] - s / 2}px`;
+  wheel.style.width = `${s}px`;
+  wheel.style.height = `${s}px`;
+  animate(wheel, { rotate: [0, 360] }, { duration: 1.4, ease: "easeInOut" });
+  done(animate(wheel, { opacity: [0, 1, 1, 0], scale: [0.5, 1, 1, 0.9] }, { duration: 1.5, times: [0, 0.15, 0.8, 1] }), wheel);
+  buzz([10, 30, 10, 30]);
+}
+
+export function aumakua(r: DOMRect) {
+  if (reduced()) return;
+  const at = center(r);
+  for (let i = 0; i < 14; i++) {
+    const w = node("fx-sig fx-firefly");
+    w.style.background = "#e6fbff";
+    w.style.boxShadow = "0 0 8px #a5f3fc, 0 0 18px #22d3ee";
+    w.style.left = `${at[0]}px`;
+    w.style.top = `${r.bottom}px`;
+    const a0 = (i / 14) * Math.PI * 2;
+    const xs = Array.from({ length: 6 }, (_, k) => Math.cos(a0 + k) * r.width * 0.4);
+    const ys = Array.from({ length: 6 }, (_, k) => -k * r.height * 0.3);
+    done(animate(w, { x: xs, y: ys, opacity: [0, 1, 1, 0] }, { duration: 1.5, delay: i * 0.04, ease: "easeOut" }), w);
+  }
+  buzz([10, 40, 10]);
+}
+
+export function clot(r: DOMRect) {
+  if (reduced()) return;
+  const at = center(r);
+  for (let i = 0; i < 8; i++) {
+    const b = node("fx-sig fx-clot");
+    const sz = 14 + Math.random() * 16;
+    b.style.width = `${sz}px`;
+    b.style.height = `${sz}px`;
+    b.style.left = `${at[0] - sz / 2}px`;
+    b.style.top = `${at[1] - sz / 2}px`;
+    const a = Math.random() * Math.PI * 2;
+    const d = r.width * 0.7;
+    done(animate(b, { x: [Math.cos(a) * d, 0], y: [Math.sin(a) * d, 0], scale: [0.4, 1.2, 0.8], opacity: [0, 1, 0] }, { duration: 1.1, delay: i * 0.05, ease: "easeIn" }), b);
+  }
+  setTimeout(() => buzz([60, 40]), 900);
+}
+
+export function imp(r: DOMRect) {
+  if (reduced()) return;
+  const at = center(r);
+  for (let i = 0; i < 6; i++) setTimeout(() => burst([at[0] + (Math.random() - 0.5) * r.width, at[1] + (Math.random() - 0.5) * r.height], i % 2 ? "red" : "orange", 6, 30, { size: 4, gravity: -60 }), i * 90);
+  setTimeout(() => {
+    slash(at, "red", 60, 45);
+    slash(at, "red", 60, -45);
+    buzz([20, 20, 40]);
+  }, 400);
+}
+
+export function snare(r: DOMRect | null) {
+  if (reduced()) return;
+  const at = r ? center(r) : (pointOf(anchor("runner-panel")) ?? [innerWidth / 2, innerHeight / 2]);
+  const t = new DOMRect(at[0] - 70, at[1] - 50, 140, 100);
+  const top = box("fx-jaw top", new DOMRect(t.left, t.top, t.width, t.height * 0.5));
+  const bottom = box("fx-jaw bottom", new DOMRect(t.left, t.top + t.height * 0.5, t.width, t.height * 0.5));
+  animate(top, { y: [-60, 0] }, { duration: 0.18, ease: "easeIn" });
+  animate(bottom, { y: [60, 0] }, { duration: 0.18, ease: "easeIn" });
+  setTimeout(() => {
+    flash("red", 0.35, 0.3);
+    shake(1);
+    stamp([at[0], at[1] - 70], "Snare!", "red");
+    buzz([100, 30, 60]);
+  }, 200);
+  for (const j of [top, bottom]) done(animate(j, { opacity: [1, 1, 0] }, { duration: 1.2, times: [0, 0.75, 1] }), j);
+}
+
+export function spinDoctor(r: DOMRect) {
+  if (reduced()) return;
+  const at = center(r);
+  for (let i = 0; i < 6; i++) {
+    const c = box("fx-mini-card blue", new DOMRect(at[0] - 10, at[1] - 14, 20, 28));
+    const a0 = (i / 6) * Math.PI * 2;
+    const xs = Array.from({ length: 9 }, (_, k) => Math.cos(a0 + k * 0.8) * r.width * 0.6);
+    const ys = Array.from({ length: 9 }, (_, k) => Math.sin(a0 + k * 0.8) * r.width * 0.6);
+    done(animate(c, { x: xs, y: ys, rotate: [0, 540], opacity: [0, 1, 1, 0] }, { duration: 1.3, ease: "linear" }), c);
+  }
+  buzz([10, 20, 10, 20]);
+}
+
+export function cyberdex(r: DOMRect) {
+  if (reduced()) return;
+  const scan = box("fx-scan green", new DOMRect(0, r.top, innerWidth, 6));
+  animate(scan, { y: [0, innerHeight - r.top - 10] }, { duration: 0.9, ease: "easeInOut" });
+  done(animate(scan, { opacity: [0, 1, 1, 0] }, { duration: 1, times: [0, 0.1, 0.85, 1] }), scan);
+  setTimeout(() => {
+    flash("violet", 0.2, 0.3);
+    buzz([20, 20, 20]);
+  }, 800);
+}
+
+export function turnpike(r: DOMRect) {
+  if (reduced()) return;
+  const spikes = box("fx-spikes", new DOMRect(r.left - 10, r.bottom - 16, r.width + 20, 16));
+  animate(spikes, { scaleY: [0, 1.2, 1] }, { duration: 0.3, ease: "easeOut" });
+  done(animate(spikes, { opacity: [1, 1, 0] }, { duration: 1.3, times: [0, 0.8, 1] }), spikes);
+  setTimeout(() => {
+    const from = pointOf(anchor("runner-credits"));
+    if (from) coins(from, center(r), 1, "gold");
+    buzz(40);
+  }, 300);
+}
+
+export function ichi(r: DOMRect) {
+  if (reduced()) return;
+  const glyph = box("fx-kanji", new DOMRect(r.left, r.top + r.height * 0.2, r.width, r.height * 0.6));
+  glyph.textContent = "一";
+  animate(glyph, { scaleX: [0, 1.2, 1] }, { duration: 0.4, ease: "easeOut" });
+  done(animate(glyph, { opacity: [0, 1, 1, 0] }, { duration: 1.3, times: [0, 0.1, 0.75, 1] }), glyph);
+  setTimeout(() => {
+    slash(center(r), "red", r.width * 1.4, 0);
+    buzz([40, 30, 40]);
+  }, 400);
+}
+
+export function cobra(r: DOMRect) {
+  if (reduced()) return;
+  const el = svgBox("fx-stroke venom", new DOMRect(r.left - r.width * 0.3, r.top - r.height * 0.1, r.width * 1.6, r.height * 1.2), '<path pathLength="1" d="M10 95 C 40 80, 10 60, 40 50 S 70 30, 45 15 L 60 5"/>');
+  draw(el, 0.35);
+  setTimeout(() => {
+    slash([r.left + r.width * 0.65, r.top + r.height * 0.1], "green", 60, 30);
+    burst(center(r), "green", 12, 60, { size: 5, shards: true, gravity: 30 });
+    buzz([10, 60]);
+  }, 350);
+  done(animate(el, { opacity: [1, 1, 0] }, { duration: 1.1, times: [0, 0.75, 1] }), el);
+}
+
+export function archangel(r: DOMRect) {
+  if (reduced()) return;
+  const at = center(r);
+  for (const side of [-1, 1]) {
+    const wing = box(`fx-wing ${side < 0 ? "left" : "right"}`, new DOMRect(side < 0 ? at[0] - r.width * 1.1 : at[0], at[1] - r.height * 0.5, r.width * 1.1, r.height * 0.8));
+    animate(wing, { scaleX: [0, 1], rotate: [side * 30, 0] }, { duration: 0.5, ease: "easeOut" });
+    done(animate(wing, { opacity: [0, 1, 1, 0] }, { duration: 1.6, times: [0, 0.15, 0.8, 1] }), wing);
+  }
+  setTimeout(() => {
+    rays(at, "gold", r.width * 3, 1);
+    buzz([20, 40, 80]);
+  }, 400);
+}
+
+export function offworldOffice(card: DOMRect) {
+  if (reduced()) return;
+  const to = pointOf(anchor("corp-credits"));
+  if (!to) return;
+  for (let i = 0; i < 7; i++) setTimeout(() => coins([card.left + Math.random() * card.width, card.top], to, 1, "gold"), i * 90);
+  setTimeout(() => floater([to[0], to[1] - 30], "+7", "gold", 50, true), 700);
+}
+
+export function hostileTakeover(card: DOMRect) {
+  if (reduced()) return;
+  setTimeout(() => {
+    stamp(center(card), "Takeover", "red");
+    shake(0.6);
+    buzz([60, 30, 60]);
+  }, 400);
+}
+
+export function napdContract(card: DOMRect) {
+  if (reduced()) return;
+  setTimeout(() => {
+    stamp(center(card), "Approved", "blue");
+    buzz([40, 40]);
+  }, 400);
+}
+
+export function inject(card: DOMRect) {
+  if (reduced()) return;
+  const el = box("fx-syringe green", new DOMRect(card.right - 10, card.top + card.height * 0.35, card.width * 0.9, 16));
+  node("fx-syringe-fill", el);
+  animate(el, { x: [60, 0], opacity: [0, 1] }, { duration: 0.25, ease: "easeOut" });
+  animate(el.firstElementChild!, { scaleX: [1, 0] }, { duration: 0.5, delay: 0.3, ease: "easeIn" });
+  setTimeout(() => {
+    const deck = pointOf(anchor("runner-deck")) ?? center(card);
+    for (let i = 0; i < 4; i++) {
+      const c = box("fx-mini-card", new DOMRect(deck[0] - 10, deck[1] - 14, 20, 28));
+      done(animate(c, { y: [0, -40 - i * 10], x: [0, (i - 1.5) * 26], rotateY: [0, 180], opacity: [1, 1, 0] } as any, { duration: 0.9, delay: i * 0.08, ease: "easeOut" }), c);
+    }
+    buzz([20, 20, 20, 20]);
+  }, 800);
+  done(animate(el, { opacity: [1, 1, 0] }, { duration: 1.2, times: [0, 0.75, 1] }), el);
+}
+
+export function exchangeOfInformation(card: DOMRect) {
+  if (reduced()) return;
+  const el = svgBox("fx-stroke swap", new DOMRect(card.left + card.width * 0.15, card.top + card.height * 0.25, card.width * 0.7, card.height * 0.5), '<path pathLength="1" d="M10 35 H85 L70 20 M90 65 H15 L30 80"/>');
+  draw(el, 0.4);
+  animate(el, { rotate: [0, 360], scale: [0.4, 1.1, 1] }, { duration: 0.8, ease: "easeInOut" });
+  done(animate(el, { opacity: [0, 1, 1, 0] }, { duration: 1.4, times: [0, 0.1, 0.8, 1] }), el);
+  setTimeout(() => buzz([20, 40, 20]), 500);
+}
+
 export function scoreSignature(title: string | undefined, card: DOMRect) {
   const t = plain(title);
   if (t === "Global Food Initiative") globalFood(card);
@@ -1097,6 +1375,9 @@ export function scoreSignature(title: string | undefined, card: DOMRect) {
   else if (t === "Project Vitruvius") vitruvius(card);
   else if (t === "AstroScript Pilot Program") astroscript(card);
   else if (t === "Project Beale") beale(card);
+  else if (t === "Offworld Office") offworldOffice(card);
+  else if (t === "Hostile Takeover") hostileTakeover(card);
+  else if (t === "NAPD Contract") napdContract(card);
 }
 
 export function rezSignature(title: string | undefined, r: DOMRect) {
@@ -1114,6 +1395,12 @@ export function rezSignature(title: string | undefined, r: DOMRect) {
   else if (t === "Ice Wall") iceWall(r);
   else if (t === "PAD Campaign") padCampaign(r);
   else if (t === "SanSan City Grid") sansan(r);
+  else if (t === "Spin Doctor") spinDoctor(r);
+  else if (t === "Cyberdex Virus Suite") cyberdex(r);
+  else if (t === "Turnpike") turnpike(r);
+  else if (t === "Ichi 1.0") ichi(r);
+  else if (t === "Cobra") cobra(r);
+  else if (t === "Archangel") archangel(r);
 }
 
 export function fireSignature(title: string | undefined, ice: DOMRect | null, runner: Point) {
@@ -1145,6 +1432,16 @@ export function installSignature(title: string | undefined, r: DOMRect) {
   else if (t === "Desperado") desperado(r);
   else if (t === "Stargate") stargate(r);
   else if (t === "Corroder") corroder(r);
+  else if (t === "Paperclip") paperclip(r);
+  else if (t === "Liberated Account") liberatedAccount(r);
+  else if (t === "Self-modifying Code") selfModifyingCode(r);
+  else if (t === "Mimic") mimic(r);
+  else if (t === "Street Peddler") streetPeddler(r);
+  else if (t === "Yog.0") yog(r);
+  else if (t === "The Turning Wheel") turningWheel(r);
+  else if (t === "Aumakua") aumakua(r);
+  else if (t === "Clot") clot(r);
+  else if (t === "Imp") imp(r);
 }
 
 export function signature(title: string | undefined, card: DOMRect) {
@@ -1175,4 +1472,6 @@ export function signature(title: string | undefined, card: DOMRect) {
   else if (title === "Psychographics") psychographics();
   else if (title === "Rebirth") rebirth(card);
   else if (title === "Pinhole Threading") pinhole(card);
+  else if (title === "Inject") inject(card);
+  else if (title === "Exchange of Information") exchangeOfInformation(card);
 }
