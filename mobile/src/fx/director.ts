@@ -3,7 +3,7 @@ import type { Side } from "../engine";
 import { currentIce } from "../game/actions";
 import { serverName } from "../game/text";
 import { type Plan, collect, play, prepare } from "./cards";
-import { type Point, type Tone, anchor, animate, banner, burst, buzz, haptics, coins, done, flash, floater, gate, gateOpen, glitch, layer, lunge, mid, node, place, pointOf, punch, rays, rectOf, reduced, ring, shake, slash, stamp, tileEl, vignette, visible, wrapEl, scoreSegment } from "./core";
+import { type Point, type Tone, anchor, animate, banner, burst, buzz, haptics, coins, done, flash, floater, gate, glitch, layer, lunge, mid, node, place, pointOf, punch, rays, rectOf, reduced, ring, shake, slash, split, stamp, tileEl, vignette, visible, wrapEl, scoreSegment } from "./core";
 
 export type IceKind = "sentry" | "gate" | "barrier" | "other";
 
@@ -595,11 +595,11 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
 
 function breached(server: string, me: Side) {
   const corp = me === "corp";
-  gateOpen(corp ? "red" : "cyan");
+  split(corp ? "red" : "cyan");
   setTimeout(() => {
     banner(corp ? "Breached" : "Breach", server, corp ? "red" : "cyan", { size: "xl", hold: 0.5 });
     if (corp) shake(0.5);
-  }, 320);
+  }, 300);
   buzz(corp ? [80, 40, 80] : [30, 30, 30, 30, 80]);
 }
 

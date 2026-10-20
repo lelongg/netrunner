@@ -352,18 +352,17 @@ export function slash(at: Point, tone: Tone = "cyan", size = 90, angle = -35) {
   done(animate(el, { rotate: [angle, angle], scaleX: [0, 1.15, 1.15], opacity: [1, 1, 0] }, { duration: 0.45, times: [0, 0.3, 1], ease: "easeOut" }), el);
 }
 
-export function gateOpen(tone: Tone = "cyan") {
+export function split(tone: Tone = "cyan") {
   if (reduced()) return;
-  const el = node(`fx-gate fx-gate-full tone-${tone}`);
-  const left = node("fx-gate-half l", el);
-  const right = node("fx-gate-half r", el);
-  const seam = node("fx-gate-seam", el);
-  animate(el, { opacity: [0, 1] }, { duration: 0.12 });
-  animate(seam, { opacity: [0, 1, 0], scaleY: [0.3, 1, 1] }, { duration: 0.45, times: [0, 0.4, 1], delay: 0.08 });
-  const open = { duration: 0.5, delay: 0.3, ease: [0.3, 0, 0.2, 1] };
-  animate(left, { x: ["0%", "-100%"] }, open);
-  animate(right, { x: ["0%", "100%"] }, open);
-  done(animate(el, { opacity: [1, 1, 0] }, { duration: 0.95, times: [0, 0.85, 1] }), el);
+  const el = node(`fx-split tone-${tone}`);
+  const top = node("fx-split-half top", el);
+  const bottom = node("fx-split-half bottom", el);
+  const seam = node("fx-split-seam", el);
+  animate(seam, { scaleX: [0, 1, 1], opacity: [1, 1, 0] }, { duration: 0.52, times: [0, 0.45, 1], ease: "easeOut" });
+  const open = { duration: 0.38, delay: 0.23, ease: [0.3, 0, 0.2, 1] };
+  animate(top, { y: ["0%", "-100%"] }, open);
+  animate(bottom, { y: ["0%", "100%"] }, open);
+  done(animate(el, { opacity: [1, 1, 0] }, { duration: 0.7, times: [0, 0.9, 1] }), el);
 }
 
 export function gate(target: Element | null, tone: Tone = "orange") {
