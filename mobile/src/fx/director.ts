@@ -529,6 +529,11 @@ function sounds(prev: Snap, now: Snap, view: any, me: Side, lines: string[], hea
         fired.add(name);
         cue(name, at(t + (name === "sub_end_the_run" ? 0 : 0.34)));
       }
+      const damage = (h.text ?? "").match(/\b(net|meat|core|brain) damage/i);
+      if (damage && !fired.has("damage")) {
+        fired.add("damage");
+        cue(damageSound(damage[1]), at(t + 0.34));
+      }
       t += 0.55;
     } else if (h.kind === "damage") {
       if (!fired.has("damage")) cue(damageSound(String(h.text ?? "")), at(t));
