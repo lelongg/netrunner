@@ -3,6 +3,7 @@ import type { Side } from "../engine";
 import { currentIce } from "../game/actions";
 import { serverName } from "../game/text";
 import { type Plan, collect, play, prepare } from "./cards";
+import { transmission } from "./signatures";
 import { type Point, type Tone, anchor, animate, banner, burst, buzz, haptics, coins, done, flash, floater, gate, glitch, layer, lunge, mid, node, place, pointOf, punch, rays, rectOf, reduced, ring, shake, slash, split, stamp, tileEl, vignette, visible, wrapEl, scoreSegment } from "./core";
 
 export type IceKind = "sentry" | "gate" | "barrier" | "other";
@@ -500,11 +501,17 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
     }
   }
 
+  const messaged = (view.log ?? []).slice(prev.log).some((e: any) => /Send a Message/.test(render(e.text)));
   for (const [cid, rez] of now.rezzed) {
     if (!rez || prev.rezzed.get(cid) !== false) continue;
     const card = findIn(view, cid);
     const isIce = card?.type === "ICE";
-    rezFlip(cid, isIce ? KIND_TONE[iceKind(card)] : "blue", isIce && !!now.server);
+    const flip = () => rezFlip(cid, isIce ? KIND_TONE[iceKind(card)] : "blue", isIce && !!now.server);
+    const to = isIce && messaged ? pointOf(tileEl(cid)) : null;
+    if (to) {
+      const from = pointOf(anchor("corp-panel")) ?? pointOf(anchor("corp-credits")) ?? [innerWidth / 2, innerHeight / 2];
+      transmission(from, to).then(flip);
+    } else flip();
   }
 
   for (const [cid, a] of now.adv) {
