@@ -21,12 +21,25 @@ jobs:
     runs-on: ubuntu-latest
     env:
       HAS_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
+      PREVIEW: ${{ github.event_name == 'push' && github.ref != 'refs/heads/master' }}
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            mobile/package-lock.json
+            agent/package-lock.json
+
+      - name: Restore agent dependencies
+        id: agent-deps
+        uses: actions/cache@v4
+        with:
+          path: agent/node_modules
+          key: agent-deps-${{ hashFiles('agent/package-lock.json') }}
 
       - name: Restore the compiled engine
         id: engine
@@ -59,7 +72,10 @@ jobs:
           restore-keys: ${{ runner.os }}-mobile-clojure
 
       - name: Install npm dependencies
-        run: npm ci && npm ci --prefix mobile
+        run: |
+          if [ "${{ steps.engine.outputs.cache-hit }}" != "true" ]; then npm ci; fi
+          npm ci --prefix mobile
+          if [ "${{ steps.agent-deps.outputs.cache-hit }}" != "true" ]; then npm ci --prefix agent; fi
 
       - name: Compile the engine to JavaScript
         if: steps.engine.outputs.cache-hit != 'true'
@@ -69,45 +85,26 @@ jobs:
         run: npm run cards --prefix mobile
 
       - name: Engine smoke test
+        if: env.PREVIEW != 'true'
         run: npm run smoke --prefix mobile
 
       - name: Shared journal replay test
+        if: env.PREVIEW != 'true'
         run: npm run journal --prefix mobile
 
       - name: Build mobile app
-        run: npm run build --prefix mobile
+        run: if [ "$PREVIEW" = "true" ]; then (cd mobile && npx vite build); else npm run build --prefix mobile; fi
         env:
           VITE_ICE_SERVERS: ${{ secrets.ICE_SERVERS }}
 
       - name: Build the agent server
-        if: github.event_name != 'push' || github.ref == 'refs/heads/master'
-        run: npm ci --prefix agent && npm run build --prefix agent
-
-      - name: Typecheck the hosted MCP worker
-        if: github.event_name != 'push' || github.ref == 'refs/heads/master'
-        run: npm run worker:typecheck --prefix agent
-
-      - name: Deploy the hosted MCP worker
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master' && env.HAS_TOKEN == 'true'
-        working-directory: agent
-        run: |
-          npx wrangler deploy --dry-run --outdir "$RUNNER_TEMP/mcp-worker"
-          build=$(cat "$RUNNER_TEMP/mcp-worker/index.js" wrangler.toml | sha256sum | cut -c1-16)
-          live=$(curl -fsS --max-time 20 https://pocket-rig-mcp.lelong-gerald.workers.dev/version || true)
-          if [ "$build" = "$live" ]; then
-            echo "MCP worker unchanged ($build), not redeploying so live sessions keep their games"
-          else
-            npx wrangler deploy --var "BUILD:$build"
-          fi
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        if: env.PREVIEW != 'true'
+        run: npm run build --prefix agent
 
       - name: Deploy a preview of this branch
         if: github.event_name == 'push' && github.ref != 'refs/heads/master' && env.HAS_TOKEN == 'true'
         working-directory: mobile
         run: |
-          npm ci --prefix ../agent
           ../agent/node_modules/.bin/wrangler deploy --name pocket-rig-preview --assets dist --compatibility-date 2026-10-01
           echo "Preview of $GITHUB_REF_NAME: https://pocket-rig-preview.lelong-gerald.workers.dev" >> "$GITHUB_STEP_SUMMARY"
         env:
@@ -130,3 +127,59 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+
+  mcp:
+    name: 'Typecheck and deploy the hosted MCP worker'
+    if: github.event_name != 'push' || github.ref == 'refs/heads/master'
+    needs: build
+    runs-on: ubuntu-latest
+    env:
+      HAS_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            mobile/package-lock.json
+            agent/package-lock.json
+
+      - name: Restore the compiled engine
+        uses: actions/cache/restore@v4
+        with:
+          path: mobile/engine/engine.js
+          key: engine-${{ hashFiles('src/clj/**', 'src/cljc/**', 'src/cljs/**', 'shadow-cljs.edn', 'project.clj', 'package-lock.json') }}
+          fail-on-cache-miss: true
+
+      - name: Restore agent dependencies
+        id: agent-deps
+        uses: actions/cache@v4
+        with:
+          path: agent/node_modules
+          key: agent-deps-${{ hashFiles('agent/package-lock.json') }}
+
+      - name: Install npm dependencies
+        run: |
+          npm ci --prefix mobile
+          if [ "${{ steps.agent-deps.outputs.cache-hit }}" != "true" ]; then npm ci --prefix agent; fi
+
+      - name: Typecheck the hosted MCP worker
+        run: npm run worker:typecheck --prefix agent
+
+      - name: Deploy the hosted MCP worker
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master' && env.HAS_TOKEN == 'true'
+        working-directory: agent
+        run: |
+          npx wrangler deploy --dry-run --outdir "$RUNNER_TEMP/mcp-worker"
+          build=$(cat "$RUNNER_TEMP/mcp-worker/index.js" wrangler.toml | sha256sum | cut -c1-16)
+          live=$(curl -fsS --max-time 20 https://pocket-rig-mcp.lelong-gerald.workers.dev/version || true)
+          if [ "$build" = "$live" ]; then
+            echo "MCP worker unchanged ($build), not redeploying so live sessions keep their games"
+          else
+            npx wrangler deploy --var "BUILD:$build"
+          fi
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
