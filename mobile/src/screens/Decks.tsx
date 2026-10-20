@@ -888,7 +888,6 @@ function CardBrowser({ db, deck, format, qtyOf, onQty, onOpen }: { db: CardDb; d
             <div class={`browse-card ${qty ? "in" : ""} ${blocked ? "blocked" : ""}`}>
               <button class="browse-img" onClick={() => onOpen(c, results)} aria-label={c.title}>
                 <CardImage code={c.code} alt={c.title} size="small" width="31vw" lazy />
-                {qty > 0 && <span class="browse-qty">×{qty}</span>}
                 {inf > 0 && <span class="browse-inf">{"●".repeat(Math.min(inf, 5))}</span>}
               </button>
               {!blocked && <Stepper qty={qty} max={deckLimit(c)} title={c.title} onQty={(n) => onQty(c, n)} />}
