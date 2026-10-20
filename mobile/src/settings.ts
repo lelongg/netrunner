@@ -6,10 +6,12 @@ export interface Settings {
   glossary: boolean;
   relay: string;
   notifications: boolean;
+  sound: boolean;
+  volume: number;
 }
 
 const KEY = "nsg.settings";
-const DEFAULTS: Settings = { format: "casual", animations: true, glossary: true, relay: "", notifications: false };
+const DEFAULTS: Settings = { format: "casual", animations: true, glossary: true, relay: "", notifications: false, sound: true, volume: 0.6 };
 const listeners = new Set<() => void>();
 
 function load(): Settings {

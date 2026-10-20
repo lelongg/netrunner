@@ -21,7 +21,7 @@ import { Coach } from "./Coach";
 import { type Prober, Verified, useChecked, useVerified } from "./legal";
 import { CardImage, ZoomableCardImage } from "./CardImage";
 import { withTerms } from "./RichText";
-import { motionOff } from "../settings";
+import { motionOff, setSetting, settings } from "../settings";
 
 interface Props {
   session: Session;
@@ -1259,6 +1259,14 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
             }}
           >
             <Icon name="deck" /> Deck list
+          </button>
+          <button
+            onClick={() => {
+              setSetting("sound", !settings.sound);
+              setMenu(false);
+            }}
+          >
+            <Icon name={settings.sound ? "mute" : "sound"} /> {settings.sound ? "Mute sounds" : "Turn sounds on"}
           </button>
           {session.watchUrl && (
             <button

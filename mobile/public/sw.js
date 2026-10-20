@@ -2,6 +2,7 @@ const VERSION = "v2";
 const SHELL = `nsg-shell-${VERSION}`;
 const DATA = `nsg-data-${VERSION}`;
 const IMAGES = "nsg-images";
+const SOUNDS = "nsg-sounds";
 const PRECACHE = [
   "./",
   "./manifest.webmanifest",
@@ -19,7 +20,7 @@ self.addEventListener("install", (event) => {
 });
 
 self.addEventListener("activate", (event) => {
-  const keep = new Set([SHELL, DATA, IMAGES]);
+  const keep = new Set([SHELL, DATA, IMAGES, SOUNDS]);
   event.waitUntil(
     caches
       .keys()
@@ -70,6 +71,7 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(cacheFirst(request, IMAGES));
   } else if (url.origin === self.location.origin) {
     if (url.pathname.includes("/assets/")) event.respondWith(cacheFirst(request, SHELL));
+    else if (url.pathname.includes("/sound/")) event.respondWith(cacheFirst(request, SOUNDS));
     else if (url.pathname.includes("/data/") || url.pathname.includes("/i18n/")) event.respondWith(staleWhileRevalidate(request, DATA));
     else event.respondWith(networkFirst(request, SHELL));
   }

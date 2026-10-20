@@ -4,6 +4,7 @@ import { currentIce } from "../game/actions";
 import { serverName } from "../game/text";
 import { type Plan, collect, play, prepare } from "./cards";
 import { transmission } from "./signatures";
+import { play as sound } from "../sound";
 import { type Point, type Tone, anchor, animate, banner, burst, buzz, haptics, coins, done, flash, floater, gate, glitch, layer, lunge, mid, node, place, pointOf, punch, rays, rectOf, reduced, ring, shake, slash, split, stamp, tileEl, vignette, visible, wrapEl, scoreSegment } from "./core";
 
 export type IceKind = "sentry" | "gate" | "barrier" | "other";
@@ -242,6 +243,7 @@ function cracks(at: Point) {
 
 function damageHit(kind: string) {
   const label: Point = [innerWidth / 2, innerHeight * 0.45];
+  sound(kind === "net" ? "pulse" : kind === "meat" ? "end-of-the-line" : "wave");
   if (kind === "net") {
     glitch(1.6);
     setTimeout(() => glitch(0.8), 180);
@@ -444,7 +446,12 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
   if (reduced()) return;
   let busy = 0;
 
-  if (now.winner && !prev.winner) setTimeout(() => (spectating ? finale(true, `${now.winner === "corp" ? "CORP" : "RUNNER"} WINS`) : finale(now.winner === me)), 1600);
+  if (now.winner && !prev.winner)
+    setTimeout(() => {
+      sound("game-end");
+      if (spectating) finale(true, `${now.winner === "corp" ? "CORP" : "RUNNER"} WINS`);
+      else finale(now.winner === me);
+    }, 1600);
 
   if (now.active && prev.active && now.active !== prev.active && spectating) {
     const side = now.active as Side;
@@ -453,6 +460,7 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
     const mine = now.active === me;
     banner(mine ? "Your turn" : `${now.active === "corp" ? "Corp" : "Runner"} turn`, mine ? `${now.clicks[me]} clicks` : "", mine ? "gold" : "white", { size: mine ? "xl" : "md", hold: mine ? 0.6 : 0.35 });
     if (mine) {
+      sound("ting");
       buzz([20, 40, 20]);
       const pips = [...document.querySelectorAll(`[data-anchor="${me}-clicks"] i`)];
       pips.forEach((p, i) => animate(p, { scale: [0, 1.4, 1], opacity: [0, 1] }, { duration: 0.45, delay: 0.5 + i * 0.09, ease: "easeOut" }));
@@ -468,6 +476,7 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
     if (!at) continue;
     punch(el!.closest(".big") ?? el, delta > 0 ? 1.3 : 1.15);
     if (delta > 0) {
+      sound(delta > 1 ? "bling" : "click-credit");
       const from: Point = focus ?? [at[0] + (Math.random() - 0.5) * 30, at[1] + 70];
       coins(from, at, delta, "gold");
       floater([at[0], el!.getBoundingClientRect().top - 14], `+${delta}`, "gold", 30, true);
@@ -506,7 +515,10 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
     if (!rez || prev.rezzed.get(cid) !== false) continue;
     const card = findIn(view, cid);
     const isIce = card?.type === "ICE";
-    const flip = () => rezFlip(cid, isIce ? KIND_TONE[iceKind(card)] : "blue", isIce && !!now.server);
+    const flip = () => {
+      sound(isIce ? "rez-ice" : "rez-other");
+      rezFlip(cid, isIce ? KIND_TONE[iceKind(card)] : "blue", isIce && !!now.server);
+    };
     const to = isIce && messaged ? pointOf(tileEl(cid)) : null;
     if (to) {
       const from = pointOf(anchor("corp-panel")) ?? pointOf(anchor("corp-credits")) ?? [innerWidth / 2, innerHeight / 2];
@@ -517,6 +529,7 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
   for (const [cid, a] of now.adv) {
     const before = prev.adv.get(cid) ?? 0;
     if (a <= before) continue;
+    sound("click-advance");
     const el = tileEl(cid);
     const pt = pointOf(el);
     if (!pt) continue;
@@ -538,6 +551,7 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
     burst(pt, "cyan", 12, 40, { size: 4, gravity: -50 });
   }
 
+  if (now.tags < prev.tags) sound("click-remove-tag");
   if (now.tags > prev.tags) {
     const at = runnerTarget(me);
     reticle(at);
@@ -550,6 +564,7 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
     const server = document.querySelector(".server.running");
     const to = pointOf(server) ?? [innerWidth / 2, innerHeight / 3];
     warp(to, "cyan");
+    sound("click-run");
     banner("Run", serverName(now.server), "cyan", { size: "xl", hold: 0.45 });
     stageFreeAt = performance.now() + 1900;
     setTimeout(() => {
@@ -623,6 +638,7 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
       setTimeout(() => accessShow(view, h.text ?? "", h.zone ?? ""), Math.max(delay * 1000, stageFreeAt - performance.now()));
       t += 1.5;
     } else if (h.kind === "purge") {
+      sound("virus-purge");
       flash("violet", 0.35);
       ring([innerWidth / 2, innerHeight / 2], "violet", 360);
       stamp([innerWidth / 2, innerHeight * 0.4], "Purge", "violet");
@@ -646,6 +662,7 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
       const jacked = lines.some((l: string) => /jacks? out/i.test(l));
       setTimeout(() => {
         banner(jacked ? "Jacked out" : "Run ended", serverName(prev.server!), "white", { size: "lg", hold: 0.4, from: "right" });
+        sound("run-unsuccessful");
         buzz(60);
       }, t * 1000);
     }
@@ -656,6 +673,7 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
 
 function breached(server: string, me: Side) {
   const corp = me === "corp";
+  sound("run-successful");
   split(corp ? "red" : "cyan");
   setTimeout(() => {
     banner(corp ? "Breached" : "Breach", server, corp ? "red" : "cyan", { size: "xl", hold: 0.5 });

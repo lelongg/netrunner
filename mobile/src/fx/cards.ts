@@ -1,5 +1,6 @@
 import { cardImage } from "../engine";
 import { hedgeFund, orbitalStrike } from "./signatures";
+import { play as sound } from "../sound";
 import type { Side } from "../engine";
 import { anchor, animate, points, scoreSegments, banner, burst, buzz, done, flash, floater, layer, mid, node, place, punch, rays, rectOf, reduced, ring, shake, tileEl, visible, type Point, type Tone } from "./core";
 
@@ -255,6 +256,9 @@ async function showcase(m: Move, kind: Kind, me: Side) {
   const target = rectOf(destEl);
   const dest = head(m.to?.zone) === "play-area" ? null : visible(target) ? target : cardShaped(rectOf(zoneAnchor(m.to)));
   const src = m.src ?? new DOMRect(innerWidth / 2 - 30, innerHeight + 20, 60, 84);
+  if (kind === "play") sound("play-instant");
+  else if (kind === "score") sound("agenda-score");
+  else if (kind === "steal") sound("agenda-steal");
   if (kind === "steal" && (m.to?.holder ?? m.from?.holder) === me) {
     const seen = rectOf(document.querySelector(".prompt img"));
     const from = visible(seen) ? mid(seen) : visible(src) ? mid(src) : ([innerWidth / 2, innerHeight / 2] as Point);
@@ -348,6 +352,7 @@ export function play(plan: Plan, me: Side, lines: string[] = []) {
     }
     const delay = i++ * 0.07;
     if (kind === "draw") {
+      sound("click-card");
       const face = synth(info, !!info?.code);
       const { ghost, flip } = twoSided(face, info, src);
       ghost.style.transformOrigin = "0 0";
@@ -393,8 +398,10 @@ export function play(plan: Plan, me: Side, lines: string[] = []) {
     }
     flyTo(ghost, from, to, { delay, duration: kind === "install" ? 0.5 : 0.45, turn }).finished.then(() => {
       ghost.remove();
-      if (kind === "install") land(destEl, info, info?.type === "ICE" || info?.owner !== me);
-      else show(destEl);
+      if (kind === "install") {
+        sound(info?.owner === "corp" ? "install-corp" : "install-runner");
+        land(destEl, info, info?.type === "ICE" || info?.owner !== me);
+      } else show(destEl);
     });
   }
   layer();

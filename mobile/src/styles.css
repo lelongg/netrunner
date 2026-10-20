@@ -3401,6 +3401,11 @@ button:active:not(:disabled) {
   margin-top: 4px;
 }
 
+.setting-field input.volume {
+  width: 100%;
+  accent-color: var(--yellow);
+}
+
 .relay-field {
   display: flex;
   align-items: center;

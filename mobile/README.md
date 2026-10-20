@@ -172,4 +172,5 @@ so use ones meant for browsers.
 - Netrunner is published by [Null Signal Games](https://nullsignal.games). Card names, text
   and art belong to their respective owners.
 - Fonts: Big Shoulders Display and Space Mono (SIL Open Font License).
+- Sounds: the jinteki.net sound bank, with the per-sound sources and licences in [`public/sound/attributions.txt`](public/sound/attributions.txt).
 - Peer-to-peer matchmaking: [Trystero](https://github.com/dmotz/trystero).

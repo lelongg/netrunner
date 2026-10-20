@@ -5,6 +5,7 @@ import { Icon } from "../icons";
 import { disablePush, enablePush, pushSupported } from "../net/push";
 import { Picker, tell } from "../ui";
 import { FORMAT_DESC, GAME_FORMATS, type GameFormat } from "../deckrules";
+import { play } from "../sound";
 
 function Toggle({ label, on, onChange }: { label: string; on: boolean; onChange: (on: boolean) => void }) {
   return (
@@ -53,6 +54,29 @@ export function SettingsMenu({ onClose }: { onClose: () => void }) {
         </div>
         <Toggle label="Animations" on={settings.animations} onChange={(v) => setSetting("animations", v)} />
         <Toggle label="Glossary" on={settings.glossary} onChange={(v) => setSetting("glossary", v)} />
+        <Toggle
+          label="Sounds"
+          on={settings.sound}
+          onChange={(v) => {
+            setSetting("sound", v);
+            if (v) play("click-credit");
+          }}
+        />
+        {settings.sound && (
+          <label class="setting-field">
+            <span class="label">Effects volume · {Math.round(settings.volume * 100)}%</span>
+            <input
+              class="volume"
+              type="range"
+              min={0}
+              max={100}
+              step={5}
+              value={Math.round(settings.volume * 100)}
+              onInput={(e) => setSetting("volume", Number((e.target as HTMLInputElement).value) / 100)}
+              onChange={() => play("click-credit")}
+            />
+          </label>
+        )}
         {pushSupported() && (
           <Toggle
             label="Turn notifications"

@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import { animate } from "motion";
 import { installTips } from "./tips";
 import { installMotion, useLoop } from "./fx/ui";
+import { unlockSound } from "./sound";
 import { startEngineWorker } from "./game/workerHost";
 import { type CardDb, type EngineApi, type Matchup, type Side, loadEngine } from "./engine";
 import { Board } from "./game/Board";
@@ -395,6 +396,7 @@ syncSettings();
 onSettings(syncSettings);
 installTips();
 installMotion();
+unlockSound();
 startEngineWorker();
 render(
   <>
