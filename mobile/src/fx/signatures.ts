@@ -629,9 +629,239 @@ export function globalFood(card: DOMRect) {
   }
 }
 
+export function iveHadWorse(card: DOMRect) {
+  if (reduced()) return;
+  const el = box("fx-bandage", new DOMRect(card.left + card.width * 0.1, card.top + card.height * 0.42, card.width * 0.8, card.height * 0.16));
+  const other = box("fx-bandage", new DOMRect(card.left + card.width * 0.1, card.top + card.height * 0.42, card.width * 0.8, card.height * 0.16));
+  animate(el, { rotate: [45, 45], scaleX: [0, 1] }, { duration: 0.3, ease: "easeOut" });
+  animate(other, { rotate: [-45, -45], scaleX: [0, 1] }, { duration: 0.3, delay: 0.15, ease: "easeOut" });
+  for (const b of [el, other]) done(animate(b, { opacity: [1, 1, 0] }, { duration: 1.5, times: [0, 0.8, 1] }), b);
+  setTimeout(() => {
+    const at = center(card);
+    ring(at, "green", card.width * 1.4);
+    floater([at[0], at[1] - 20], "+3 cards", "green", 50, true);
+    buzz([20, 40, 20]);
+  }, 500);
+}
+
+export function legwork(card: DOMRect) {
+  if (reduced()) return;
+  const x = card.left + card.width / 2;
+  for (let i = -1; i <= 1; i++) {
+    const a = node("fx-sig fx-dash");
+    a.style.left = `${x + i * card.width * 0.3 - 3}px`;
+    a.style.top = `${card.top}px`;
+    done(animate(a, { y: [0, -card.top - 40], scaleY: [0.3, 1.4, 0.6], opacity: [0, 1, 0] }, { duration: 0.6, delay: 0.1 + (i + 1) * 0.12, ease: "easeIn" }), a);
+  }
+  setTimeout(() => {
+    floater([x, 120], "HQ ×3", "cyan", 40, true);
+    buzz([15, 15, 15]);
+  }, 500);
+}
+
+export function sweepsWeek(card: DOMRect) {
+  if (reduced()) return;
+  const tv = box("fx-tv", new DOMRect(card.left - 10, card.top + card.height * 0.2, card.width + 20, card.height * 0.55));
+  for (let i = 0; i < 5; i++) {
+    const bar = node("fx-tv-bar", tv);
+    bar.style.left = `${10 + i * 17}%`;
+    animate(bar, { scaleY: [0, 0.3 + ((i * 37) % 70) / 100] }, { duration: 0.4, delay: 0.4 + i * 0.08, ease: "easeOut" });
+  }
+  animate(tv, { scale: [0.2, 1.05, 1], opacity: [0, 1] }, { duration: 0.35 });
+  setTimeout(() => {
+    const to = pointOf(anchor("corp-credits"));
+    const r = tv.getBoundingClientRect();
+    if (to) coins([r.left + r.width / 2, r.top], to, 4, "gold");
+    buzz([20, 20, 20, 60]);
+  }, 900);
+  done(animate(tv, { opacity: [1, 1, 0] }, { duration: 1.8, times: [0, 0.8, 1] }), tv);
+}
+
+export function levy(card: DOMRect) {
+  if (reduced()) return;
+  const at = center(card);
+  for (let i = 0; i < 8; i++) {
+    const c = box("fx-mini-card", new DOMRect(at[0] - 12, at[1] - 17, 24, 34));
+    const a0 = (i / 8) * Math.PI * 2;
+    const xs = Array.from({ length: 7 }, (_, k) => Math.cos(a0 + k * 0.9) * card.width * 0.7 * (1 - k / 7));
+    const ys = Array.from({ length: 7 }, (_, k) => Math.sin(a0 + k * 0.9) * card.width * 0.7 * (1 - k / 7));
+    done(animate(c, { x: xs, y: ys, rotate: [0, 360], opacity: [0, 1, 1, 0] }, { duration: 1.2, delay: i * 0.04, ease: "easeIn" }), c);
+  }
+  setTimeout(() => {
+    ring(at, "green", card.width * 1.6);
+    burst(at, "green", 16, 60, { size: 4, gravity: 0 });
+    buzz([20, 20, 60]);
+  }, 1100);
+}
+
+export function specialOrder(card: DOMRect) {
+  if (reduced()) return;
+  const target = pointOf(anchor("runner-deck")) ?? center(card);
+  const lens = node("fx-sig fx-lens");
+  lens.style.left = `${target[0]}px`;
+  lens.style.top = `${target[1]}px`;
+  animate(lens, { x: [-40, 30, -20, 0], y: [-20, 10, 20, 0], scale: [0.4, 1, 1, 1.2] }, { duration: 1, ease: "easeInOut" });
+  setTimeout(() => {
+    ring(target, "cyan", 110);
+    burst(target, "cyan", 12, 50, { size: 4, gravity: -30 });
+    buzz(40);
+  }, 950);
+  done(animate(lens, { opacity: [0, 1, 1, 0] }, { duration: 1.4, times: [0, 0.1, 0.8, 1] }), lens);
+}
+
+export function archivedMemories(card: DOMRect) {
+  if (reduced()) return;
+  const drawer = box("fx-drawer", new DOMRect(card.left - 6, card.bottom - 30, card.width + 12, 30));
+  animate(drawer, { scaleY: [0, 1], opacity: [0, 1] }, { duration: 0.25 });
+  const ghost = box("fx-phantom", new DOMRect(card.left + card.width * 0.2, card.bottom - 40, card.width * 0.6, card.height * 0.5));
+  ghost.style.borderColor = "#7fb0ff";
+  animate(ghost, { y: [0, -card.height * 0.9], opacity: [0, 1, 0] }, { duration: 1, delay: 0.25, ease: "easeOut" });
+  setTimeout(() => ghost.remove(), 1300);
+  setTimeout(() => buzz([20, 40]), 300);
+  done(animate(drawer, { opacity: [1, 1, 0] }, { duration: 1.4, times: [0, 0.75, 1] }), drawer);
+}
+
+export function psychographics() {
+  if (reduced()) return;
+  const at = pointOf(anchor("runner-panel")) ?? [innerWidth / 2, innerHeight - 120];
+  const radar = node("fx-sig fx-radar");
+  radar.style.left = `${at[0]}px`;
+  radar.style.top = `${at[1]}px`;
+  animate(radar, { rotate: [0, 720] }, { duration: 1.4, ease: "linear" });
+  done(animate(radar, { opacity: [0, 1, 1, 0], scale: [0.4, 1, 1, 1.1] }, { duration: 1.5, times: [0, 0.15, 0.8, 1] }), radar);
+  setTimeout(() => {
+    ring(at, "red", 200);
+    vignette("red", 0.35);
+    buzz([30, 30, 30, 30, 90]);
+  }, 1100);
+}
+
+export function breakingNews() {
+  if (reduced()) return;
+  const band = node("fx-sig fx-ticker");
+  band.style.top = `${innerHeight * 0.28}px`;
+  const text = node("fx-ticker-text", band);
+  text.textContent = "BREAKING NEWS ✦ BREAKING NEWS ✦ BREAKING NEWS ✦ BREAKING NEWS ✦ BREAKING NEWS";
+  animate(band, { scaleY: [0, 1] }, { duration: 0.2 });
+  animate(text, { x: [innerWidth, -innerWidth * 1.6] }, { duration: 2.4, ease: "linear" });
+  done(animate(band, { opacity: [1, 1, 0] }, { duration: 2.4, times: [0, 0.88, 1] }), band);
+  buzz([40, 40, 40]);
+}
+
+export function vitruvius(card: DOMRect) {
+  if (reduced()) return;
+  const el = box("fx-sig fx-vitruvius", new DOMRect(card.left - card.width * 0.15, card.top + card.height / 2 - card.width * 0.65, card.width * 1.3, card.width * 1.3));
+  el.innerHTML = '<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" pathLength="1"/><rect x="14" y="14" width="72" height="72" pathLength="1"/><path d="M50 14 L50 86 M14 42 L86 42 M50 62 L22 86 M50 62 L78 86 M50 42 L18 22 M50 42 L82 22" pathLength="1"/></svg>';
+  for (const shape of el.querySelectorAll("circle, rect, path")) animate(shape, { strokeDashoffset: [1, 0] }, { duration: 0.8, ease: "easeInOut" });
+  done(animate(el, { opacity: [0, 1, 1, 0], rotate: [-20, 0, 0, 0] }, { duration: 2, times: [0, 0.15, 0.8, 1] }), el);
+}
+
+export function astroscript(card: DOMRect) {
+  if (reduced()) return;
+  const pts: Point[] = Array.from({ length: 7 }, (_, i) => [card.left + card.width * (0.1 + Math.random() * 0.8), card.top - 20 + card.height * (i / 6) * 0.9 + Math.random() * 20]);
+  const el = box("fx-sig fx-constellation", new DOMRect(0, 0, innerWidth, innerHeight));
+  el.innerHTML = `<svg viewBox="0 0 ${innerWidth} ${innerHeight}"><polyline points="${pts.map((p) => p.join(",")).join(" ")}" pathLength="1"/></svg>`;
+  animate(el.querySelector("polyline")!, { strokeDashoffset: [1, 0] }, { duration: 0.9, ease: "easeInOut" });
+  pts.forEach((p, i) =>
+    setTimeout(() => {
+      burst(p, "gold", 6, 24, { size: 4, gravity: 0 });
+      ring(p, "gold", 36);
+    }, i * 130),
+  );
+  done(animate(el, { opacity: [1, 1, 0] }, { duration: 1.9, times: [0, 0.8, 1] }), el);
+}
+
+export function popUpWindow(r: DOMRect) {
+  if (reduced()) return;
+  const win = box("fx-popup", new DOMRect(r.left - 12, r.top + r.height * 0.2, r.width + 24, r.height * 0.6));
+  win.innerHTML = "<b><i>×</i></b><span>ALERT</span>";
+  animate(win, { scale: [0, 1.15, 1] }, { duration: 0.3, ease: "easeOut" });
+  setTimeout(() => {
+    animate(win, { x: [0, -4, 4, -2, 0] }, { duration: 0.25 });
+    buzz([10, 20, 10]);
+  }, 350);
+  done(animate(win, { opacity: [1, 1, 0] }, { duration: 1.4, times: [0, 0.8, 1] }), win);
+}
+
+export function wraparound(r: DOMRect) {
+  if (reduced()) return;
+  const at = center(r);
+  const wrap = node("fx-sig fx-wrap");
+  const s = Math.max(r.width, r.height) * 1.3;
+  wrap.style.left = `${at[0] - s / 2}px`;
+  wrap.style.top = `${at[1] - s / 2}px`;
+  wrap.style.width = `${s}px`;
+  wrap.style.height = `${s}px`;
+  animate(wrap, { rotate: [0, 540], scale: [1.6, 1] }, { duration: 1, ease: [0.2, 0.7, 0.3, 1] });
+  done(animate(wrap, { opacity: [0, 1, 1, 0] }, { duration: 1.3, times: [0, 0.15, 0.8, 1] }), wrap);
+  setTimeout(() => buzz([10, 10, 10, 40]), 600);
+}
+
+export function borderControl() {
+  if (reduced()) return;
+  const el = node("fx-sig fx-border");
+  done(animate(el, { opacity: [0, 1, 0.2, 1, 0] }, { duration: 1.1 }), el);
+  buzz([60, 60, 60]);
+}
+
+export function femmeFatale(r: DOMRect) {
+  if (reduced()) return;
+  const kiss = box("fx-kiss", new DOMRect(r.left + r.width / 2 - 24, r.top + r.height / 2 - 24, 48, 48));
+  kiss.textContent = "💋";
+  animate(kiss, { scale: [2.2, 0.9, 1], rotate: [-25, -10] }, { duration: 0.35, ease: "easeOut" });
+  setTimeout(() => {
+    ring(center(r), "red", 110);
+    buzz(40);
+  }, 300);
+  done(animate(kiss, { opacity: [0, 1, 1, 0] }, { duration: 1.4, times: [0, 0.1, 0.8, 1] }), kiss);
+}
+
+export function plascrete(r: DOMRect) {
+  if (reduced()) return;
+  const at = pointOf(anchor("runner-panel")) ?? center(r);
+  const shield = node("fx-sig fx-shield");
+  shield.style.left = `${at[0]}px`;
+  shield.style.top = `${at[1]}px`;
+  animate(shield, { scale: [0.3, 1.1, 1], opacity: [0, 1] }, { duration: 0.4, ease: "easeOut" });
+  setTimeout(() => {
+    burst(at, "blue", 14, 70, { size: 4, gravity: 0 });
+    buzz([30, 60]);
+  }, 350);
+  done(animate(shield, { opacity: [1, 1, 0] }, { duration: 1.5, times: [0, 0.8, 1] }), shield);
+}
+
+export function parasite(r: DOMRect) {
+  if (reduced()) return;
+  const at = center(r);
+  for (let i = 0; i < 12; i++) {
+    const spore = node("fx-sig fx-drop");
+    const a = (i / 12) * Math.PI * 2;
+    const d = Math.max(r.width, r.height) * 0.9;
+    spore.style.left = `${at[0]}px`;
+    spore.style.top = `${at[1]}px`;
+    done(animate(spore, { x: [Math.cos(a) * d, Math.cos(a + 0.8) * d * 0.5, 0], y: [Math.sin(a) * d, Math.sin(a + 0.8) * d * 0.5, 0], opacity: [0, 1, 0], scale: [1, 1.2, 0.4] }, { duration: 0.9, delay: i * 0.03, ease: "easeIn" }), spore);
+  }
+  setTimeout(() => {
+    burst(at, "green", 14, 50, { size: 4, gravity: 20 });
+    vignette("cyan", 0.2);
+    buzz([20, 20, 20, 60]);
+  }, 900);
+}
+
+export function earthrise(r: DOMRect) {
+  if (reduced()) return;
+  const sun = box("fx-sun", new DOMRect(r.left - r.width * 0.2, r.top + r.height * 0.3, r.width * 1.4, r.width * 1.4));
+  animate(sun, { y: [r.height * 0.5, 0], opacity: [0, 1] }, { duration: 0.8, ease: "easeOut" });
+  done(animate(sun, { opacity: [1, 1, 0] }, { duration: 1.6, times: [0, 0.75, 1] }), sun);
+  setTimeout(() => buzz([10, 30, 10]), 500);
+}
+
 export function scoreSignature(title: string | undefined, card: DOMRect) {
   const t = plain(title);
   if (t === "Global Food Initiative") globalFood(card);
+  else if (t === "Breaking News") breakingNews();
+  else if (t === "Project Vitruvius") vitruvius(card);
+  else if (t === "AstroScript Pilot Program") astroscript(card);
 }
 
 export function rezSignature(title: string | undefined, r: DOMRect) {
@@ -641,6 +871,9 @@ export function rezSignature(title: string | undefined, r: DOMRect) {
   else if (t === "Funhouse") funhouse(r);
   else if (t === "Enigma") enigma(r);
   else if (t === "Tollbooth") tollbooth(r);
+  else if (t === "Pop-up Window") popUpWindow(r);
+  else if (t === "Wraparound") wraparound(r);
+  else if (t === "Border Control") borderControl();
 }
 
 export function fireSignature(title: string | undefined, ice: DOMRect | null, runner: Point) {
@@ -658,6 +891,10 @@ export function installSignature(title: string | undefined, r: DOMRect) {
   else if (t === "Carmen") carmen(r);
   else if (t === "Docklands Pass") docklandsPass(r);
   else if (t === "Daily Casts") dailyCasts(r);
+  else if (t === "Femme Fatale") femmeFatale(r);
+  else if (t === "Plascrete Carapace") plascrete(r);
+  else if (t === "Parasite") parasite(r);
+  else if (t === "Earthrise Hotel") earthrise(r);
 }
 
 export function signature(title: string | undefined, card: DOMRect) {
@@ -679,4 +916,11 @@ export function signature(title: string | undefined, card: DOMRect) {
   else if (title === "Closed Accounts") closedAccounts();
   else if (title === "Diesel") diesel(card);
   else if (title === "Inside Job") insideJob(card);
+  else if (title === "I've Had Worse") iveHadWorse(card);
+  else if (title === "Legwork") legwork(card);
+  else if (title === "Sweeps Week") sweepsWeek(card);
+  else if (title === "Levy AR Lab Access") levy(card);
+  else if (title === "Special Order") specialOrder(card);
+  else if (title === "Archived Memories") archivedMemories(card);
+  else if (title === "Psychographics") psychographics();
 }
