@@ -978,3 +978,166 @@
   text-transform: uppercase;
   color: #d6e4ff;
 }
+
+.fx-drum {
+  width: 110px;
+  height: 110px;
+  margin: -55px 0 0 -55px;
+  border-radius: 50%;
+  border: 6px solid #a5f3fc;
+  background: repeating-conic-gradient(rgb(34 211 238 / 0.35) 0 20deg, rgb(10 40 60 / 0.7) 20deg 40deg);
+  box-shadow:
+    0 0 20px #22d3ee,
+    inset 0 0 20px #0e7490;
+}
+
+.fx-syringe {
+  border: 2px solid #e6d6ff;
+  border-radius: 3px;
+  background: rgb(20 10 40 / 0.8);
+  box-shadow: 0 0 12px #c792ff;
+  overflow: hidden;
+}
+
+.fx-syringe::after {
+  content: "";
+  position: absolute;
+  right: 100%;
+  top: 50%;
+  width: 22px;
+  height: 2px;
+  background: #fff;
+}
+
+.fx-syringe-fill {
+  height: 100%;
+  transform-origin: 0 50%;
+  background: linear-gradient(90deg, #e87bff, #c792ff);
+}
+
+.fx-paper {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  background: #f1ede4;
+  box-shadow: 0 8px 30px rgb(0 0 0 / 0.6);
+}
+
+.fx-paper b {
+  font-family: var(--display);
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  color: #c4161c;
+}
+
+.fx-paper i {
+  height: 5px;
+  background: #555;
+}
+
+.fx-paper i:nth-child(3) {
+  width: 80%;
+}
+
+.fx-helix {
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 10px currentColor;
+}
+
+.fx-pipe {
+  height: 6px;
+  margin-top: -3px;
+  transform-origin: 0 50%;
+  border-radius: 3px;
+  background: repeating-linear-gradient(90deg, #f6e03a 0 10px, #b88a00 10px 20px);
+  box-shadow: 0 0 12px rgb(246 224 58 / 0.7);
+}
+
+.fx-bell {
+  display: grid;
+  place-items: center;
+  font-size: 40px;
+  transform-origin: 50% 0;
+  filter: drop-shadow(0 0 10px #f6e03a);
+}
+
+.fx-confetti {
+  width: 7px;
+  height: 11px;
+  border-radius: 1px;
+}
+
+.fx-freeze {
+  width: 70px;
+  height: 70px;
+  margin: -35px 0 0 -35px;
+  border-radius: 12px;
+  border: 2px solid #a5f3fc;
+  background: radial-gradient(circle, rgb(165 243 252 / 0.5), rgb(34 211 238 / 0.15));
+  box-shadow:
+    0 0 20px #22d3ee,
+    inset 0 0 18px #fff;
+  backdrop-filter: blur(3px);
+}
+
+.fx-phantom {
+  border: 2px dashed #a5f3fc;
+  border-radius: 6px;
+  background: rgb(34 211 238 / 0.12);
+  box-shadow: 0 0 20px rgb(34 211 238 / 0.6);
+}
+
+.fx-cipher {
+  width: 0;
+  height: 0;
+}
+
+.fx-cipher-glyph {
+  position: absolute;
+  left: -10px;
+  top: -60px;
+  width: 20px;
+  height: 60px;
+  transform-origin: 50% 100%;
+  text-align: center;
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 22px;
+  color: #7fb0ff;
+  text-shadow: 0 0 10px #2b6cff;
+}
+
+.fx-toll {
+  transform-origin: 0 50%;
+  border-radius: 3px;
+  background: repeating-linear-gradient(90deg, #ff3b30 0 14px, #fff 14px 28px);
+  box-shadow: 0 0 14px rgb(255 59 48 / 0.7);
+}
+
+.fx-globe {
+  width: 120px;
+  height: 120px;
+  margin: -60px 0 0 -60px;
+  border-radius: 50%;
+  border: 2px solid #3ddc84;
+  background:
+    linear-gradient(90deg, transparent 49%, rgb(61 220 132 / 0.6) 49% 51%, transparent 51%),
+    linear-gradient(transparent 49%, rgb(61 220 132 / 0.6) 49% 51%, transparent 51%),
+    radial-gradient(circle, rgb(61 220 132 / 0.25), rgb(61 220 132 / 0.05));
+  box-shadow: 0 0 30px rgb(61 220 132 / 0.6);
+}
+
+.fx-leaf {
+  width: 10px;
+  height: 16px;
+  margin: -8px 0 0 -5px;
+  border-radius: 0 100% 0 100%;
+  background: #3ddc84;
+  box-shadow: 0 0 8px #3ddc84;
+}

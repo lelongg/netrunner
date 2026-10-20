@@ -1,5 +1,5 @@
 import { cardImage } from "../engine";
-import { installSignature, orbitalStrike, signature } from "./signatures";
+import { installSignature, orbitalStrike, scoreSignature, signature } from "./signatures";
 import type { Side } from "../engine";
 import { anchor, animate, points, scoreSegments, banner, burst, buzz, done, flash, floater, layer, mid, node, place, punch, rays, rectOf, reduced, ring, shake, tileEl, visible, type Point, type Tone } from "./core";
 
@@ -281,6 +281,7 @@ async function showcase(m: Move, kind: Kind, me: Side) {
   await Promise.race([arrive.finished, new Promise((r) => setTimeout(r, 300))]);
   const center = mid(big);
   if (kind === "play") signature(info?.title, big);
+  if (kind === "score" || kind === "steal") scoreSignature(info?.title, big);
   if (kind === "score" && info?.title === "Orbital Superiority") {
     const runner = rectOf(anchor("runner-panel"));
     setTimeout(() => orbitalStrike(visible(runner) ? mid(runner) : [innerWidth / 2, 90]), 1750);
