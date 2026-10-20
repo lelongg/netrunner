@@ -1,4 +1,4 @@
-import { type Point, anchor, animate, burst, buzz, coins, done, flash, floater, node, pointOf, punch, reduced, ring, shake, slash, vignette } from "./core";
+import { type Point, anchor, animate, burst, buzz, coins, done, flash, floater, node, pointOf, punch, rays, reduced, ring, shake, slash, vignette } from "./core";
 
 const SVG = "http://www.w3.org/2000/svg";
 
@@ -856,12 +856,247 @@ export function earthrise(r: DOMRect) {
   setTimeout(() => buzz([10, 30, 10]), 500);
 }
 
+export function datasucker(r: DOMRect) {
+  if (reduced()) return;
+  const [cx] = center(r);
+  for (const side of [-1, 1]) {
+    const fang = box("fx-fang", new DOMRect(cx + side * r.width * 0.15 - 7, r.top - 10, 14, 26));
+    done(animate(fang, { y: [-20, r.height * 0.35, r.height * 0.3], opacity: [0, 1, 1, 0] }, { duration: 1, times: [0, 0.3, 0.7, 1], ease: "easeIn" }), fang);
+  }
+  setTimeout(() => {
+    for (let i = 0; i < 5; i++) {
+      const drop = node("fx-sig fx-drop");
+      drop.style.background = "#ff3b30";
+      drop.style.boxShadow = "0 0 8px #ff3b30";
+      drop.style.left = `${cx + (Math.random() - 0.5) * r.width * 0.5}px`;
+      drop.style.top = `${r.top + r.height * 0.5}px`;
+      done(animate(drop, { y: [0, r.height * 0.6], opacity: [1, 0] }, { duration: 0.7, delay: i * 0.06, ease: "easeIn" }), drop);
+    }
+    buzz([30, 20]);
+  }, 350);
+}
+
+export function blackOrchestra(r: DOMRect) {
+  if (reduced()) return;
+  const notes = ["♪", "♫", "♩", "♬"];
+  for (let i = 0; i < 8; i++) {
+    const n = node("fx-sig fx-note");
+    n.textContent = notes[i % notes.length];
+    n.style.left = `${r.left + Math.random() * r.width}px`;
+    n.style.top = `${r.top + r.height * 0.6}px`;
+    n.style.color = i % 2 ? "#ff3b30" : "#c792ff";
+    done(animate(n, { y: [0, -r.height * (0.8 + Math.random() * 0.6)], x: [0, (Math.random() - 0.5) * 40], rotate: [-20, 20], opacity: [0, 1, 0] }, { duration: 1.3, delay: i * 0.08, ease: "easeOut" }), n);
+  }
+  buzz([20, 40, 20, 40]);
+}
+
+export function mkultra(r: DOMRect) {
+  if (reduced()) return;
+  const at = center(r);
+  const spiral = node("fx-sig fx-hypno");
+  const s = Math.max(r.width, r.height) * 1.2;
+  spiral.style.left = `${at[0] - s / 2}px`;
+  spiral.style.top = `${at[1] - s / 2}px`;
+  spiral.style.width = `${s}px`;
+  spiral.style.height = `${s}px`;
+  animate(spiral, { rotate: [0, 900] }, { duration: 1.4, ease: "easeIn" });
+  done(animate(spiral, { opacity: [0, 0.9, 0.9, 0], scale: [0.3, 1, 1, 0.2] }, { duration: 1.5, times: [0, 0.2, 0.75, 1] }), spiral);
+  setTimeout(() => buzz([10, 10, 10, 10, 10, 10]), 300);
+}
+
+export function david(r: DOMRect) {
+  if (reduced()) return;
+  const from: Point = [r.left + r.width / 2, r.top];
+  const stone = node("fx-sig fx-stone");
+  stone.style.left = `${from[0]}px`;
+  stone.style.top = `${from[1]}px`;
+  const rise = Math.min(from[1] - 60, 260);
+  animate(stone, { y: [0, -rise], x: [0, 40], scale: [1, 0.7] }, { duration: 0.45, ease: [0.2, 0.8, 0.4, 1] });
+  setTimeout(() => {
+    const hit: Point = [from[0] + 40, from[1] - rise];
+    ring(hit, "gold", 120);
+    burst(hit, "gold", 18, 70, { size: 5, shards: true, gravity: 80 });
+    shake(0.5);
+    buzz([20, 60]);
+    stone.remove();
+  }, 450);
+}
+
+export function hippo(r: DOMRect) {
+  if (reduced()) return;
+  const top = box("fx-jaw top", new DOMRect(r.left - 10, r.top - 10, r.width + 20, r.height * 0.5 + 10));
+  const bottom = box("fx-jaw bottom", new DOMRect(r.left - 10, r.top + r.height * 0.5, r.width + 20, r.height * 0.5 + 10));
+  animate(top, { y: [-r.height * 0.6, 0] }, { duration: 0.3, delay: 0.1, ease: "easeIn" });
+  animate(bottom, { y: [r.height * 0.6, 0] }, { duration: 0.3, delay: 0.1, ease: "easeIn" });
+  setTimeout(() => {
+    shake(0.8);
+    burst(center(r), "red", 16, 70, { size: 5, shards: true, gravity: 40 });
+    buzz([80, 20, 40]);
+  }, 400);
+  for (const j of [top, bottom]) done(animate(j, { opacity: [0, 1, 1, 0] }, { duration: 1.1, times: [0, 0.2, 0.75, 1] }), j);
+}
+
+export function cloneChip(r: DOMRect) {
+  if (reduced()) return;
+  for (const dx of [-1, 1]) {
+    const ghost = box("fx-phantom", r);
+    done(animate(ghost, { x: [0, dx * r.width * 0.7], opacity: [0.9, 0], scale: [1, 0.9] }, { duration: 0.8, ease: "easeOut" }), ghost);
+  }
+  ring(center(r), "cyan", 100);
+  buzz([10, 30, 10]);
+}
+
+export function rdInterface(r: DOMRect) {
+  if (reduced()) return;
+  for (let i = 0; i < 10; i++) {
+    const line = node("fx-sig fx-dash");
+    line.style.width = "2px";
+    line.style.left = `${r.left + (i + 0.5) * (r.width / 10)}px`;
+    line.style.top = `${r.top}px`;
+    done(animate(line, { y: [r.height * 0.5, -r.height * 1.2], opacity: [0, 1, 0] }, { duration: 0.7, delay: Math.random() * 0.4, ease: "linear" }), line);
+  }
+  buzz([10, 10, 10]);
+}
+
+export function desperado(r: DOMRect) {
+  if (reduced()) return;
+  const star = box("fx-star", new DOMRect(r.left + r.width / 2 - 30, r.top + r.height / 2 - 30, 60, 60));
+  animate(star, { rotate: [-180, 0], scale: [0.2, 1.2, 1] }, { duration: 0.5, ease: "easeOut" });
+  setTimeout(() => {
+    burst(center(r), "gold", 14, 60, { size: 4, gravity: 20 });
+    buzz(40);
+  }, 450);
+  done(animate(star, { opacity: [0, 1, 1, 0] }, { duration: 1.3, times: [0, 0.1, 0.8, 1] }), star);
+}
+
+export function stargate(r: DOMRect) {
+  if (reduced()) return;
+  const at = center(r);
+  const gate = node("fx-sig fx-portal");
+  const s = Math.max(r.width, r.height) * 1.1;
+  gate.style.left = `${at[0] - s / 2}px`;
+  gate.style.top = `${at[1] - s / 2}px`;
+  gate.style.width = `${s}px`;
+  gate.style.height = `${s}px`;
+  animate(gate, { rotate: [0, 360], scale: [0, 1] }, { duration: 1, ease: "easeOut" });
+  done(animate(gate, { opacity: [1, 1, 0] }, { duration: 1.4, times: [0, 0.8, 1] }), gate);
+  setTimeout(() => buzz([10, 40, 10, 40]), 300);
+}
+
+export function corroder(r: DOMRect) {
+  if (reduced()) return;
+  for (let i = 0; i < 9; i++) {
+    const drop = node("fx-sig fx-drop");
+    drop.style.background = "#d4ff3a";
+    drop.style.boxShadow = "0 0 10px #a3e635";
+    drop.style.left = `${r.left + Math.random() * r.width}px`;
+    drop.style.top = `${r.top}px`;
+    done(animate(drop, { y: [0, r.height * (0.6 + Math.random() * 0.5)], scaleY: [1, 1.8, 1], opacity: [0, 1, 0] }, { duration: 0.9, delay: i * 0.07, ease: "easeIn" }), drop);
+  }
+  setTimeout(() => burst([r.left + r.width / 2, r.bottom], "green", 10, 40, { size: 6, gravity: -50 }), 700);
+  buzz([10, 20, 10, 20]);
+}
+
+export function eli(r: DOMRect) {
+  if (reduced()) return;
+  for (const [i, side] of [[0, -1], [1, 1]] as const) {
+    const bar = box("fx-brace", new DOMRect(r.left - 8, r.top + r.height * (0.3 + i * 0.3), r.width + 16, 10));
+    animate(bar, { x: [side * innerWidth, 0] }, { duration: 0.3, delay: i * 0.12, ease: "easeIn" });
+    done(animate(bar, { opacity: [1, 1, 0] }, { duration: 1.3, times: [0, 0.8, 1] }), bar);
+  }
+  setTimeout(() => {
+    shake(0.6);
+    buzz([50, 30, 50]);
+  }, 420);
+}
+
+export function architect(r: DOMRect) {
+  if (reduced()) return;
+  const grid = box("fx-blueprint", new DOMRect(r.left - 8, r.top - 8, r.width + 16, r.height + 16));
+  animate(grid, { clipPath: ["inset(0 100% 0 0)", "inset(0 0% 0 0)"] } as any, { duration: 0.6, ease: "easeOut" });
+  done(animate(grid, { opacity: [1, 1, 0] }, { duration: 1.5, times: [0, 0.8, 1] }), grid);
+  setTimeout(() => buzz([10, 20, 10, 60]), 550);
+}
+
+export function iceWall(r: DOMRect) {
+  if (reduced()) return;
+  const frost = box("fx-frost", new DOMRect(r.left - 6, r.top - 6, r.width + 12, r.height + 12));
+  animate(frost, { opacity: [0, 1, 1, 0] }, { duration: 1.3, times: [0, 0.2, 0.7, 1] });
+  setTimeout(() => frost.remove(), 1350);
+  burst(center(r), "cyan", 18, 70, { size: 7, shards: true, gravity: 30 });
+  buzz([20, 20]);
+}
+
+export function padCampaign(r: DOMRect) {
+  if (reduced()) return;
+  const at: Point = [r.left + r.width / 2, r.top + r.height * 0.35];
+  for (let i = 0; i < 4; i++) ring(at, "blue", 60 + i * 50, i * 0.12);
+  setTimeout(() => {
+    const to = pointOf(anchor("corp-credits"));
+    if (to) coins(at, to, 1, "gold");
+  }, 400);
+  buzz([10, 20, 10]);
+}
+
+export function sansan(r: DOMRect) {
+  if (reduced()) return;
+  const city = box("fx-city", new DOMRect(r.left - 10, r.top + r.height * 0.3, r.width + 20, r.height * 0.7));
+  for (let i = 0; i < 7; i++) {
+    const tower = node("fx-tower", city);
+    tower.style.left = `${i * 14 + 2}%`;
+    tower.style.height = `${35 + ((i * 53) % 60)}%`;
+    animate(tower, { scaleY: [0, 1] }, { duration: 0.4, delay: i * 0.05, ease: "easeOut" });
+  }
+  done(animate(city, { opacity: [1, 1, 0] }, { duration: 1.6, times: [0, 0.8, 1] }), city);
+  setTimeout(() => buzz([20, 40]), 400);
+}
+
+export function beale(card: DOMRect) {
+  if (reduced()) return;
+  for (let i = 0; i < 5; i++) {
+    const col = box("fx-tv-bar", new DOMRect(card.left + card.width * (0.1 + i * 0.17), card.top + card.height * 0.2, card.width * 0.12, card.height * 0.6));
+    animate(col, { scaleY: [0, 0.3 + i * 0.17] }, { duration: 0.5, delay: i * 0.1, ease: "easeOut" });
+    done(animate(col, { opacity: [1, 1, 0] }, { duration: 1.8, times: [0, 0.8, 1] }), col);
+  }
+}
+
+export function rebirth(card: DOMRect) {
+  if (reduced()) return;
+  const at = center(card);
+  for (let i = 0; i < 16; i++) setTimeout(() => burst([at[0] + (Math.random() - 0.5) * card.width * 0.6, card.bottom - 10], i % 2 ? "orange" : "gold", 4, 40, { size: 7, gravity: -200 }), i * 40);
+  setTimeout(() => {
+    rays(at, "orange", card.width * 2.4, 1);
+    ring(at, "gold", card.width * 1.8);
+    flash("gold", 0.3, 0.4);
+    buzz([20, 40, 80]);
+  }, 600);
+}
+
+export function pinhole(card: DOMRect) {
+  if (reduced()) return;
+  const from: Point = [card.left - 20, card.top + card.height * 0.7];
+  const to: Point = [card.right + 20, card.top + card.height * 0.3];
+  const needle = node("fx-sig fx-thread");
+  needle.style.left = `${from[0]}px`;
+  needle.style.top = `${from[1]}px`;
+  const len = Math.hypot(to[0] - from[0], to[1] - from[1]);
+  needle.style.width = `${len}px`;
+  needle.style.rotate = `${(Math.atan2(to[1] - from[1], to[0] - from[0]) * 180) / Math.PI}deg`;
+  animate(needle, { scaleX: [0, 1] }, { duration: 0.4, ease: "easeIn" });
+  setTimeout(() => {
+    burst(to, "cyan", 10, 40, { size: 3, gravity: 0 });
+    buzz(30);
+  }, 400);
+  done(animate(needle, { opacity: [1, 1, 0] }, { duration: 1.1, times: [0, 0.75, 1] }), needle);
+}
+
 export function scoreSignature(title: string | undefined, card: DOMRect) {
   const t = plain(title);
   if (t === "Global Food Initiative") globalFood(card);
   else if (t === "Breaking News") breakingNews();
   else if (t === "Project Vitruvius") vitruvius(card);
   else if (t === "AstroScript Pilot Program") astroscript(card);
+  else if (t === "Project Beale") beale(card);
 }
 
 export function rezSignature(title: string | undefined, r: DOMRect) {
@@ -874,6 +1109,11 @@ export function rezSignature(title: string | undefined, r: DOMRect) {
   else if (t === "Pop-up Window") popUpWindow(r);
   else if (t === "Wraparound") wraparound(r);
   else if (t === "Border Control") borderControl();
+  else if (t === "Eli 1.0") eli(r);
+  else if (t === "Architect") architect(r);
+  else if (t === "Ice Wall") iceWall(r);
+  else if (t === "PAD Campaign") padCampaign(r);
+  else if (t === "SanSan City Grid") sansan(r);
 }
 
 export function fireSignature(title: string | undefined, ice: DOMRect | null, runner: Point) {
@@ -895,6 +1135,16 @@ export function installSignature(title: string | undefined, r: DOMRect) {
   else if (t === "Plascrete Carapace") plascrete(r);
   else if (t === "Parasite") parasite(r);
   else if (t === "Earthrise Hotel") earthrise(r);
+  else if (t === "Datasucker") datasucker(r);
+  else if (t === "Black Orchestra") blackOrchestra(r);
+  else if (t === "MKUltra") mkultra(r);
+  else if (t === "D4v1d") david(r);
+  else if (t === "Hippo") hippo(r);
+  else if (t === "Clone Chip") cloneChip(r);
+  else if (t === "R&D Interface") rdInterface(r);
+  else if (t === "Desperado") desperado(r);
+  else if (t === "Stargate") stargate(r);
+  else if (t === "Corroder") corroder(r);
 }
 
 export function signature(title: string | undefined, card: DOMRect) {
@@ -923,4 +1173,6 @@ export function signature(title: string | undefined, card: DOMRect) {
   else if (title === "Special Order") specialOrder(card);
   else if (title === "Archived Memories") archivedMemories(card);
   else if (title === "Psychographics") psychographics();
+  else if (title === "Rebirth") rebirth(card);
+  else if (title === "Pinhole Threading") pinhole(card);
 }

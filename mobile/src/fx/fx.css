@@ -1341,3 +1341,108 @@
   background: radial-gradient(circle, #fff6b0, #ffb800 35%, rgb(255 159 28 / 0.4) 55%, transparent 70%);
   mix-blend-mode: screen;
 }
+
+.fx-fang {
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  background: linear-gradient(180deg, #fff, #ffd0cc);
+  filter: drop-shadow(0 0 6px #ff3b30);
+}
+
+.fx-note {
+  font-size: 26px;
+  font-weight: 900;
+  text-shadow: 0 0 10px currentColor;
+}
+
+.fx-hypno {
+  border-radius: 50%;
+  background: repeating-conic-gradient(rgb(199 146 255 / 0.75) 0 15deg, rgb(20 10 40 / 0.4) 15deg 30deg);
+  -webkit-mask: radial-gradient(circle, #000 0 30%, transparent 70%);
+  mask: radial-gradient(circle, #000 0 30%, transparent 70%);
+}
+
+.fx-stone {
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #ddd, #777);
+  box-shadow: 0 0 10px rgb(246 224 58 / 0.7);
+}
+
+.fx-jaw {
+  background: radial-gradient(ellipse at 50% 100%, #3a1010, #1a0505 70%);
+  border: 2px solid #ff8a80;
+  box-shadow: 0 0 16px rgb(255 59 48 / 0.6);
+}
+
+.fx-jaw.top {
+  border-radius: 50% 50% 8px 8px / 30% 30% 8px 8px;
+  -webkit-mask: linear-gradient(#000, #000) top / 100% 70% no-repeat, repeating-linear-gradient(90deg, #000 0 12px, transparent 12px 24px) bottom / 100% 30% no-repeat;
+  mask: linear-gradient(#000, #000) top / 100% 70% no-repeat, repeating-linear-gradient(90deg, #000 0 12px, transparent 12px 24px) bottom / 100% 30% no-repeat;
+}
+
+.fx-jaw.bottom {
+  border-radius: 8px 8px 50% 50% / 8px 8px 30% 30%;
+  -webkit-mask: linear-gradient(#000, #000) bottom / 100% 70% no-repeat, repeating-linear-gradient(90deg, transparent 0 12px, #000 12px 24px) top / 100% 30% no-repeat;
+  mask: linear-gradient(#000, #000) bottom / 100% 70% no-repeat, repeating-linear-gradient(90deg, transparent 0 12px, #000 12px 24px) top / 100% 30% no-repeat;
+}
+
+.fx-star {
+  clip-path: polygon(50% 0, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+  background: radial-gradient(circle, #fff6b0, #f6e03a 50%, #b88a00);
+}
+
+.fx-portal {
+  border-radius: 50%;
+  border: 5px solid #7fb0ff;
+  background: repeating-conic-gradient(from 0deg, rgb(43 108 255 / 0.6) 0 20deg, rgb(214 228 255 / 0.3) 20deg 40deg);
+  box-shadow:
+    0 0 24px #2b6cff,
+    inset 0 0 30px #d6e4ff;
+}
+
+.fx-brace {
+  border-radius: 3px;
+  background: linear-gradient(180deg, #ffd0cc, #ff3b30 50%, #8a1a14);
+  box-shadow: 0 0 14px rgb(255 59 48 / 0.7);
+}
+
+.fx-blueprint {
+  border: 1px solid #7fb0ff;
+  background:
+    linear-gradient(rgb(127 176 255 / 0.5) 1px, transparent 1px) 0 0 / 12px 12px,
+    linear-gradient(90deg, rgb(127 176 255 / 0.5) 1px, transparent 1px) 0 0 / 12px 12px,
+    rgb(10 30 80 / 0.55);
+  box-shadow: 0 0 18px rgb(127 176 255 / 0.6);
+}
+
+.fx-frost {
+  border-radius: 6px;
+  background: radial-gradient(circle at 30% 20%, rgb(255 255 255 / 0.7), rgb(165 243 252 / 0.45) 50%, rgb(34 211 238 / 0.2));
+  box-shadow: 0 0 22px #a5f3fc;
+  backdrop-filter: blur(2px);
+}
+
+.fx-city {
+  overflow: hidden;
+}
+
+.fx-tower {
+  position: absolute;
+  bottom: 0;
+  width: 12%;
+  transform-origin: 50% 100%;
+  background:
+    repeating-linear-gradient(0deg, transparent 0 6px, rgb(246 224 58 / 0.7) 6px 8px) center / 50% 100% no-repeat,
+    linear-gradient(180deg, #2b6cff, #0b1a40);
+  box-shadow: 0 0 10px rgb(127 176 255 / 0.5);
+}
+
+.fx-thread {
+  height: 2px;
+  margin-top: -1px;
+  transform-origin: 0 50%;
+  background: linear-gradient(90deg, transparent, #a5f3fc 30%, #fff);
+  box-shadow: 0 0 8px #22d3ee;
+}
