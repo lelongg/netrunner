@@ -2772,3 +2772,14 @@
   background: #111;
   box-shadow: 0 0 0 2px #555, 0 0 12px rgb(0 0 0 / 0.6);
 }
+
+.fx-handslot {
+  border-radius: 3px;
+  border: 2px dashed #a5f3fc;
+  box-shadow: 0 0 10px #22d3ee;
+}
+
+.fx-advtoken.red {
+  background: radial-gradient(circle, #ffd0cc, #ff3b30);
+  box-shadow: 0 0 8px #ff3b30;
+}
