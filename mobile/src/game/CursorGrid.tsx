@@ -27,6 +27,7 @@ export interface CursorGridProps {
   clickPulse?: boolean;
   pulseSpeed?: number;
   ambient?: number;
+  fps?: number;
   edgeFade?: number;
   intro?: boolean;
   lightMode?: boolean;
@@ -56,12 +57,15 @@ type Settings = {
   clickPulse: boolean;
   pulseSpeed: number;
   ambient: number;
+  fps: number;
   edgeFade: number;
   intro: boolean;
   dpr?: number;
 };
 
 type Pulse = { x: number; y: number; t0: number; strength: number };
+
+type Walker = { col: number; row: number; dx: number; dy: number; wait: number; speed: number; life: number; strength: number };
 
 type Program = { program: WebGLProgram; uniforms: Record<string, WebGLUniformLocation | null> };
 
@@ -286,6 +290,7 @@ const CursorGrid = ({
   clickPulse = true,
   pulseSpeed = 600,
   ambient = 0,
+  fps = 0,
   edgeFade = 0.2,
   intro = true,
   lightMode = false,
@@ -318,6 +323,7 @@ const CursorGrid = ({
     clickPulse,
     pulseSpeed: Math.max(1, pulseSpeed),
     ambient: clamp(ambient, 0, 1),
+    fps: Math.max(0, fps),
     edgeFade: clamp(edgeFade, 0, 0.5),
     intro,
     dpr
@@ -359,6 +365,10 @@ const CursorGrid = ({
     let targets = new Float32Array(0);
     let touched = new Float32Array(0);
     let pixels = new Uint8Array(0);
+    let field = new Float32Array(0);
+    const walkers: Walker[] = [];
+    let nextRipple = 2;
+    let drawn = 0;
     let presence = 0;
     let clock = 0;
     let introClock = settingsRef.current.intro && !reduce ? 0 : 1;
@@ -389,6 +399,8 @@ const CursorGrid = ({
         targets = new Float32Array(cols * rows);
         touched = new Float32Array(cols * rows).fill(-1e9);
         pixels = new Uint8Array(cols * rows);
+        field = new Float32Array(cols * rows);
+        walkers.length = 0;
         gl.bindTexture(gl.TEXTURE_2D, stateTexture);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, cols, rows, 0, gl.RED, gl.UNSIGNED_BYTE, pixels);
       }
@@ -475,7 +487,7 @@ const CursorGrid = ({
       gl.bindTexture(gl.TEXTURE_2D, stateTexture);
       if (dirty) {
         for (let i = 0; i < levels.length; i++)
-          pixels[i] = Math.round(clamp(Math.max(levels[i], waves[i]), 0, 1) * 255);
+          pixels[i] = Math.round(clamp(Math.max(levels[i], waves[i], field[i]), 0, 1) * 255);
         gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, grid.cols, grid.rows, gl.RED, gl.UNSIGNED_BYTE, pixels);
         dirty = false;
       }
@@ -505,10 +517,72 @@ const CursorGrid = ({
       gl.bindVertexArray(null);
     };
 
+    const spawn = (from?: Walker) => {
+      const { cols, rows } = grid;
+      const strength = 0.7 + Math.random() * 0.3;
+      if (from) {
+        const turn = Math.random() < 0.5 ? 1 : -1;
+        walkers.push({ col: from.col, row: from.row, dx: -from.dy * turn, dy: from.dx * turn, wait: 0, speed: from.speed * (0.8 + Math.random() * 0.4), life: 4 + Math.random() * 10, strength: from.strength * 0.8 });
+        return;
+      }
+      const side = Math.floor(Math.random() * 4);
+      const col = side === 0 ? 0 : side === 1 ? cols - 1 : Math.floor(Math.random() * cols);
+      const row = side === 2 ? 0 : side === 3 ? rows - 1 : Math.floor(Math.random() * rows);
+      const dx = side === 0 ? 1 : side === 1 ? -1 : 0;
+      const dy = side === 2 ? 1 : side === 3 ? -1 : 0;
+      walkers.push({ col, row, dx, dy, wait: Math.random(), speed: 4 + Math.random() * 6, life: 10 + Math.random() * 25, strength });
+    };
+
+    const simulate = (dt: number, s: Settings) => {
+      const { cols, rows } = grid;
+      const want = Math.max(1, Math.round(cols * rows * 0.035 * s.ambient));
+      if (walkers.length < want && Math.random() < dt * 4) spawn();
+      for (let k = walkers.length - 1; k >= 0; k--) {
+        const w = walkers[k];
+        w.wait -= dt * w.speed;
+        if (w.wait > 0) continue;
+        w.wait += 1;
+        w.col += w.dx;
+        w.row += w.dy;
+        w.life -= 1;
+        if (w.life <= 0 || w.col < 0 || w.row < 0 || w.col >= cols || w.row >= rows) {
+          walkers.splice(k, 1);
+          continue;
+        }
+        light(w.row * cols + w.col, w.strength * (0.5 + 0.5 * s.ambient));
+        const roll = Math.random();
+        if (roll < 0.06 && walkers.length < want * 2) spawn(w);
+        else if (roll < 0.2) {
+          const turn = Math.random() < 0.5 ? 1 : -1;
+          [w.dx, w.dy] = [-w.dy * turn, w.dx * turn];
+        }
+      }
+      nextRipple -= dt * s.ambient;
+      if (nextRipple <= 0) {
+        nextRipple = 3 + Math.random() * 5;
+        pulses.push({ x: Math.random() * view.width, y: Math.random() * view.height, t0: clock, strength: 0.25 * s.ambient + 0.1 });
+      }
+      const t = clock;
+      for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < cols; col++) {
+          const n = Math.sin(col * 0.55 + t * 0.35) + Math.sin(row * 0.4 - t * 0.27) + Math.sin((col + row) * 0.3 + t * 0.19) + Math.sin(Math.hypot(col - cols * 0.5 - Math.sin(t * 0.07) * cols, row - rows * 0.5) * 0.45 - t * 0.5);
+          const v = n / 4;
+          const blob = v > 0.15 ? (v - 0.15) / 0.85 : 0;
+          field[row * cols + col] = blob * blob * (3 - 2 * blob) * (0.25 + 0.4 * s.ambient);
+        }
+      }
+      dirty = true;
+    };
+
     const frame = (now: number) => {
       raf = 0;
       if (!visible || document.hidden) return;
       const s = settingsRef.current;
+      if (s.fps > 0 && last && now - drawn < 1000 / s.fps - 2) {
+        raf = requestAnimationFrame(frame);
+        return;
+      }
+      drawn = now;
       const dt = last ? clamp((now - last) / 1000, 0, 1 / 20) : 1 / 60;
       last = now;
       clock += dt;
@@ -520,11 +594,7 @@ const CursorGrid = ({
       const presenceGoal = pointer.inside ? 1 : 0;
       presence += (presenceGoal - presence) * (1 - Math.exp(-dt / 0.25));
 
-      if (s.ambient > 0 && !reduce && levels.length) {
-        const chance = s.ambient * dt * levels.length * 0.04;
-        let spawns = Math.floor(chance) + (Math.random() < chance % 1 ? 1 : 0);
-        while (spawns-- > 0) light(Math.floor(Math.random() * levels.length), 0.25 + Math.random() * 0.45);
-      }
+      if (s.ambient > 0 && !reduce && levels.length) simulate(dt, s);
       if (pulses.length) sweepPulses(s);
       else if (waves.length && waves.some(value => value > 0)) {
         waves.fill(0);
