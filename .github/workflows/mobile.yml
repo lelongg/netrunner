@@ -92,12 +92,10 @@ jobs:
 
       - name: Deploy a preview of this branch
         if: github.event_name == 'push' && github.ref != 'refs/heads/master' && env.HAS_TOKEN == 'true'
-        working-directory: agent
+        working-directory: mobile
         run: |
-          npx wrangler pages project list | grep -q pocket-rig-preview || npx wrangler pages project create pocket-rig-preview --production-branch master
-          npx wrangler pages deploy ../mobile/dist --project-name pocket-rig-preview --branch "$GITHUB_REF_NAME" --commit-dirty=true
-          alias=$(echo "$GITHUB_REF_NAME" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | cut -c1-28 | sed 's/-*$//')
-          echo "Preview: https://$alias.pocket-rig-preview.pages.dev" >> "$GITHUB_STEP_SUMMARY"
+          ../agent/node_modules/.bin/wrangler deploy --name pocket-rig-preview --assets dist --compatibility-date 2026-10-01
+          echo "Preview of $GITHUB_REF_NAME: https://pocket-rig-preview.lelong-gerald.workers.dev" >> "$GITHUB_STEP_SUMMARY"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
