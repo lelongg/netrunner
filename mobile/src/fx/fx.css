@@ -2533,3 +2533,104 @@
 .fx-press {
   box-shadow: 0 6px 18px rgb(0 0 0 / 0.6);
 }
+
+.fx-gavel {
+  transform-origin: 50% 100%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #6b4520, #a0662e, #6b4520);
+}
+
+.fx-gavel-head {
+  position: absolute;
+  left: -22px;
+  top: -6px;
+  width: 60px;
+  height: 26px;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #c48a4a, #6b4520);
+  box-shadow: 0 0 12px rgb(246 224 58 / 0.4);
+}
+
+.fx-crackline {
+  background: linear-gradient(90deg, transparent, #fff6b0, #f6e03a, #fff6b0, transparent);
+  box-shadow: 0 0 10px #f6e03a;
+}
+
+.fx-stroke.trend polyline {
+  stroke: #ff6b5e;
+  stroke-width: 4;
+  filter: drop-shadow(0 0 6px #ff3b30);
+}
+
+.fx-stroke.geo polyline {
+  stroke: #a5f3fc;
+  stroke-width: 3;
+  stroke-dasharray: 1;
+  filter: drop-shadow(0 0 6px #22d3ee);
+}
+
+.fx-stroke.pipe polyline {
+  stroke: rgb(61 220 132 / 0.6);
+  stroke-width: 8;
+  filter: drop-shadow(0 0 6px #3ddc84);
+}
+
+.fx-plate {
+  border: 2px solid;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #d0d4dc, #6b7280 60%, #3a3f48);
+  opacity: 0.92;
+}
+
+.fx-arm {
+  border-radius: 4px;
+  background: linear-gradient(180deg, #e6d6ff, #7b3fbf);
+  box-shadow: 0 0 10px #c792ff;
+}
+
+.fx-receipt {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  background: #f1ede4;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.5);
+  clip-path: inset(0 0 0 0);
+}
+
+.fx-receipt-line {
+  height: 4px;
+  background: repeating-linear-gradient(90deg, #444 0 6px, transparent 6px 9px);
+}
+
+.fx-receipt-line:last-child {
+  height: 8px;
+  width: 50%;
+  margin-left: auto;
+  background: #111;
+}
+
+.fx-heart {
+  clip-path: path("M8 15 C-6 6 2 -3 8 3 C14 -3 22 6 8 15 Z");
+  background: #ff6fae;
+  filter: drop-shadow(0 0 6px #ff6fae);
+}
+
+.fx-chroma-skin {
+  border: 3px solid #ff9f1c;
+  border-radius: 6px;
+}
+
+.fx-runner-dot {
+  border-radius: 50%;
+  background: #fff;
+  box-shadow:
+    0 0 10px #22d3ee,
+    0 0 24px #22d3ee;
+}
+
+.fx-stroke.cutlass path {
+  stroke: #e5e7eb;
+  stroke-width: 6;
+  filter: drop-shadow(0 0 8px #ff9f1c);
+}
