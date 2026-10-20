@@ -2760,3 +2760,15 @@
     linear-gradient(transparent 96%, #7fb0ff 96%),
     rgb(10 20 40 / 0.85);
 }
+
+.fx-cocoon {
+  border-radius: 50%;
+  background: repeating-linear-gradient(35deg, #f1ede4 0 3px, #c9c3b4 3px 6px);
+  box-shadow: 0 0 14px rgb(241 237 228 / 0.6);
+}
+
+.fx-shredder {
+  border-radius: 3px;
+  background: #111;
+  box-shadow: 0 0 0 2px #555, 0 0 12px rgb(0 0 0 / 0.6);
+}
