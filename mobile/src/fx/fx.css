@@ -2783,3 +2783,18 @@
   background: radial-gradient(circle, #ffd0cc, #ff3b30);
   box-shadow: 0 0 8px #ff3b30;
 }
+
+.fx-tracebar {
+  transform-origin: 0 50%;
+  border-radius: 3px;
+}
+
+.fx-tracebar.corp {
+  background: linear-gradient(90deg, #2b6cff, #7fb0ff);
+  box-shadow: 0 0 8px #7fb0ff;
+}
+
+.fx-tracebar.runner {
+  background: linear-gradient(90deg, #8a1a14, #ff3b30);
+  box-shadow: 0 0 8px #ff3b30;
+}
