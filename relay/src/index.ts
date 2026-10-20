@@ -67,7 +67,7 @@ function allowedOrigin(request: Request, env: Env): string | null {
   const origin = request.headers.get("Origin");
   if (!origin) return null;
   const allowed = (env.ALLOWED_ORIGINS ?? "").split(",").map((o) => o.trim()).filter(Boolean);
-  return allowed.length === 0 || allowed.includes(origin) ? origin : null;
+  return allowed.length === 0 || allowed.some((o) => o === origin || (o.startsWith("https://*.") && origin.startsWith("https://") && origin.endsWith(o.slice(9)))) ? origin : null;
 }
 
 function json(body: unknown, status: number, origin: string | null) {

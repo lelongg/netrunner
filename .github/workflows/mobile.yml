@@ -2,7 +2,7 @@ name: Mobile app
 
 on:
   push:
-    branches: ["master"]
+    branches: ["**"]
   pull_request:
   workflow_dispatch:
 
@@ -90,13 +90,26 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
+      - name: Deploy a preview of this branch
+        if: github.event_name == 'push' && github.ref != 'refs/heads/master' && env.HAS_TOKEN == 'true'
+        working-directory: agent
+        run: |
+          npx wrangler pages project list | grep -q pocket-rig-preview || npx wrangler pages project create pocket-rig-preview --production-branch master
+          npx wrangler pages deploy ../mobile/dist --project-name pocket-rig-preview --branch "$GITHUB_REF_NAME" --commit-dirty=true
+          alias=$(echo "$GITHUB_REF_NAME" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | cut -c1-28 | sed 's/-*$//')
+          echo "Preview: https://$alias.pocket-rig-preview.pages.dev" >> "$GITHUB_STEP_SUMMARY"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
       - uses: actions/upload-pages-artifact@v3
+        if: github.ref == 'refs/heads/master'
         with:
           path: mobile/dist
 
   deploy:
     name: 'Deploy to GitHub Pages'
-    if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
     needs: build
     runs-on: ubuntu-latest
     environment:
