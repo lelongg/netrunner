@@ -307,18 +307,18 @@ function StatStrip({ only }: { only: Record<Side, Tile[]> }) {
   return (
     <div ref={strip} class="stat-strip" role="list">
       {[0, 1].flatMap((copy) =>
-        SIDES.flatMap((side) =>
-          only[side].map((t, i) => (
-          <div class={`stat-card ${side}`} role={copy ? undefined : "listitem"} aria-hidden={copy ? "true" : undefined} data-loop={copy && side === "corp" && i === 0 ? "start" : undefined}>
-            <span class={`stat-card-side who-${side}`}>{side}</span>
-            <span class="stat-card-num">
-              {t.value}
-              {t.detail && <small>{t.detail}</small>}
-            </span>
-            <span class="stat-card-label">{t.label}</span>
-          </div>
+        Array.from({ length: Math.max(only.corp.length, only.runner.length) })
+          .flatMap((_, i) => SIDES.map((side) => ({ side, t: only[side][i] })))
+          .filter((x) => x.t)
+          .map(({ side, t }, i) => (
+            <div class={`stat-card ${side}`} role={copy ? undefined : "listitem"} aria-hidden={copy ? "true" : undefined} data-loop={copy && i === 0 ? "start" : undefined}>
+              <span class={`stat-card-side who-${side}`}>{t.label}</span>
+              <span class="stat-card-num">
+                {t.value}
+                {t.detail && <small>{t.detail}</small>}
+              </span>
+            </div>
           )),
-        ),
       )}
     </div>
   );
@@ -479,18 +479,20 @@ function Report({ head, engine, db, onClose }: { head: Head; engine: EngineApi; 
               const d = deckOf(side);
               return (
                 <div class={`report-player panel ${side} ${head.winner === side ? "winner" : ""}`}>
-                  {id && <ZoomableCardImage class="report-id" code={id.code} alt={id.title} size="medium" width="120px" />}
+                  {id &&
+                    (d ? (
+                      <button class="report-id-open" onClick={() => setDeck(d)} aria-label={`Open the ${side} decklist`}>
+                        <CardImage class="report-id" code={id.code} alt={id.title} size="medium" width="120px" />
+                      </button>
+                    ) : (
+                      <ZoomableCardImage class="report-id" code={id.code} alt={id.title} size="medium" width="120px" />
+                    ))}
                   <span class={`label who-${side}`}>
                     {side}
                     {side === head.mySide && script.mode !== "local" && !head.shared ? " · you" : ""}
                   </span>
                   <span class="report-name">{script.names[side]}</span>
                   <span class="report-deck">{script.deckNames[side] ?? id?.title}</span>
-                  {d && (
-                    <button class="ghost report-decklist" onClick={() => setDeck(d)}>
-                      Decklist
-                    </button>
-                  )}
                 </div>
               );
             })}

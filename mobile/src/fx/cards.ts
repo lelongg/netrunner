@@ -170,6 +170,8 @@ function kindOf(m: Move, me: Side, lines: string[]): Kind {
   return "move";
 }
 
+export const accessStage: { current: { title: string; at: Point; end: () => void } | null } = { current: null };
+
 let cinema: Promise<void> = Promise.resolve();
 
 function queue(fn: () => Promise<void>) {
@@ -256,6 +258,17 @@ async function showcase(m: Move, kind: Kind, me: Side) {
   const target = rectOf(destEl);
   const dest = head(m.to?.zone) === "play-area" ? null : visible(target) ? target : cardShaped(rectOf(zoneAnchor(m.to)));
   const src = m.src ?? new DOMRect(innerWidth / 2 - 30, innerHeight + 20, 60, 84);
+  const staged = accessStage.current;
+  if (kind === "steal" && staged && staged.title === info?.title) {
+    accessStage.current = null;
+    banner("Stolen", info?.title ?? "", "red", { size: "lg", hold: 0.6 });
+    ring(staged.at, "red", 180);
+    burst(staged.at, "red", 26, 100, { size: 6, gravity: 0, shards: true });
+    points(staged.at, scoreSegments("runner", info?.points ?? 1), "red");
+    buzz([40, 40, 120]);
+    setTimeout(staged.end, 900);
+    return;
+  }
   if (kind === "steal" && (m.to?.holder ?? m.from?.holder) === me) {
     const seen = rectOf(document.querySelector(".prompt img"));
     const from = visible(seen) ? mid(seen) : visible(src) ? mid(src) : ([innerWidth / 2, innerHeight / 2] as Point);

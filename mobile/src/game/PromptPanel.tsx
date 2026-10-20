@@ -264,7 +264,7 @@ export function PromptPanel({ view, side, prompt, render, send, closePrompt, dis
     body = (
       <>
         {ptype === "select" && <p class="hint">Tap a highlighted card to look at it and select it.</p>}
-        <div class="choices">
+        <div class={`choices ${choices.some((c: any) => choiceLabel(c.value, render).length > 22) ? "long" : ""}`}>
           {byServerOrder(choices, (c: any) => c.value)
             .filter((c: any) => c.value !== "Hide")
             .map((c: any) => (

@@ -3,7 +3,7 @@ import { History } from "./screens/History";
 import { Decks } from "./screens/Decks";
 import { useBackClose } from "./back";
 import { render } from "preact";
-import { useEffect, useRef, useState } from "preact/hooks";
+import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { animate } from "motion";
 import { installTips } from "./tips";
 import { installMotion, useLoop } from "./fx/ui";
@@ -130,6 +130,17 @@ function App() {
   const [sharedReplay, setSharedReplay] = useState(replayParam ? { code: replayParam, relay: replayRelay } : undefined);
   const [opening, setOpeningState] = useState<string | null>(joinParam ?? watchParam ?? gameParam?.replace(/^local:.*/, "local game") ?? null);
   const [held, setHeld] = useState<string | null>(null);
+  const [diving, setDiving] = useState(false);
+  const started = !!session?.lobby.started;
+  const wasStarted = useRef(started);
+  useLayoutEffect(() => {
+    const fresh = started && !wasStarted.current;
+    wasStarted.current = started;
+    if (!fresh || motionOff()) return;
+    setDiving(true);
+    const timer = setTimeout(() => setDiving(false), 1300);
+    return () => clearTimeout(timer);
+  }, [started]);
   const openedAt = useRef(performance.now());
   const openingLabel = useRef(opening);
   const setOpening = (label: string | null) => {
@@ -309,6 +320,7 @@ function App() {
 
   const { lobby } = session;
   if (!lobby.started) return <Lobby session={session} db={loaded.db} matchups={loaded.matchups} onLeave={leave} onWatch={() => watch(lobby.code, true)} />;
+  if (diving) return <Opening label={lobby.vsBot ? "solo game" : lobby.role === "local" ? "local game" : lobby.code || "game"} ready />;
 
   if (hotSeat) {
     if (handoff)

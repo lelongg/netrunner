@@ -2,7 +2,7 @@ import { useLayoutEffect, useRef } from "preact/hooks";
 import type { Side } from "../engine";
 import { currentIce } from "../game/actions";
 import { serverName } from "../game/text";
-import { type Plan, collect, moveKinds, play, prepare } from "./cards";
+import { type Plan, accessStage, collect, moveKinds, play, prepare } from "./cards";
 import { cleaver, fireSignature, leech, planogramResult, regolith, rezSignature, snare, transmission } from "./signatures";
 import { cue, play as sound } from "../sound";
 import { type Point, type Tone, anchor, animate, banner, burst, buzz, haptics, coins, done, flash, floater, gate, glitch, layer, lunge, mid, node, place, pointOf, punch, rays, rectOf, reduced, ring, shake, slash, split, stamp, tileEl, vignette, visible, wrapEl, scoreSegment } from "./core";
@@ -438,7 +438,11 @@ function readLog(view: any, from: number, render: (m: unknown) => string, before
     else if ((m = text.match(/\b(?:accesses|to access) (.+?) from (.+?)\.?$/i))) out.push({ kind: "access", text: m[1], zone: m[2] });
   }
   const texts = log.slice(from).map((e) => render(e.text));
-  if (accessing && texts.some((t) => movesCard(t, accessing!.title))) accessing.stop();
+  if (accessing && texts.some((t) => movesCard(t, accessing!.title))) {
+    const pending = accessing;
+    if (texts.some((t) => /\bsteals?\b/i.test(t) && movesCard(t, pending.title))) setTimeout(() => accessing === pending && pending.stop(), 2500);
+    else pending.stop();
+  } else if (accessing && texts.length && !texts.some((t) => t.includes(accessing!.title))) accessing.stop();
   const kept = out.filter((h) => h.kind !== "access" || !texts.some((t) => movesCard(t, h.text ?? "")));
   const dmg = kept.filter((h) => h.kind === "damage");
   return dmg.length > 1 ? [...kept.filter((h) => h.kind !== "damage"), dmg[0]] : kept;
@@ -981,6 +985,7 @@ function accessSource(view: any, title: string, zone: string): { el: Element | n
 }
 
 function accessShow(view: any, title: string, zone: string) {
+  if ((view.runner?.scored ?? []).some((c: any) => c.title === title)) return;
   const { el, card } = accessSource(view, title, zone);
   const r = rectOf(el);
   if (!visible(r)) return;
@@ -1028,6 +1033,7 @@ function accessShow(view: any, title: string, zone: string) {
     ended = true;
     clearTimeout(timer);
     if (accessing?.stop === stop) accessing = null;
+    if (accessStage.current?.title === title) accessStage.current = null;
     animate(label, { opacity: 0 }, { duration: 0.2 });
     animate(ghost, fast ? { opacity: 0 } : { x: from.x, y: from.y, scale: 0.35, opacity: 0 }, { duration: fast ? 0.15 : 0.35, ease: [0.5, 0, 0.3, 1] }).finished.then(
       () => stageEl.remove(),
@@ -1036,8 +1042,9 @@ function accessShow(view: any, title: string, zone: string) {
     animate(stageEl, { backgroundColor: ["rgba(0,0,0,0.55)", "rgba(0,0,0,0)"] }, { duration: fast ? 0.15 : 0.35 });
   };
   const stop = () => end(true);
-  const timer = setTimeout(() => end(false), 1100);
+  const timer = setTimeout(() => end(false), card?.type === "Agenda" ? 9000 : 1100);
   accessing = { title, stop };
+  accessStage.current = { title, at: [big.left + big.width / 2, big.top + big.height / 2], end: stop };
 }
 
 function persistent(view: any) {

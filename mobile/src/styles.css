@@ -1393,6 +1393,15 @@ textarea:focus {
   flex-basis: 100%;
 }
 
+.choices.long button {
+  flex-basis: 100%;
+  min-height: 0;
+  padding: 12px 14px;
+  text-align: left;
+  letter-spacing: 0.08em;
+  line-height: 1.35;
+}
+
 .run-status {
   margin: 0;
   font-size: 10px;
@@ -4341,6 +4350,16 @@ button.armed {
   margin-bottom: 6px;
 }
 
+.report-id-open {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
 .report-name {
   font-family: var(--display);
   font-weight: 900;
@@ -4359,14 +4378,6 @@ button.armed {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.report-decklist {
-  margin-top: 2px;
-  padding: 4px 8px;
-  min-height: 0;
-  font-size: 10px;
-  color: var(--cyan);
 }
 
 .report-vs {
@@ -4754,7 +4765,7 @@ button.armed {
 .stat-card {
   flex: none;
   width: 128px;
-  height: 104px;
+  height: 84px;
   scroll-snap-align: start;
   display: flex;
   flex-direction: column;
@@ -4777,7 +4788,8 @@ button.armed {
 
 .stat-card-side {
   font-size: 9px;
-  letter-spacing: 0.24em;
+  line-height: 1.3;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
 }
 
@@ -4807,14 +4819,6 @@ button.armed {
   color: var(--muted);
 }
 
-.stat-card-label {
-  margin-top: auto;
-  font-size: 9px;
-  line-height: 1.3;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
 
 .report-cta {
   display: flex;
@@ -6816,4 +6820,9 @@ h1.deck-name.long {
 
 .usable-mark.second {
   right: 18px;
+}
+
+.row-cost .glyph {
+  position: relative;
+  top: -0.12em;
 }

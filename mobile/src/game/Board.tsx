@@ -943,7 +943,7 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
     const options = openPrompt.choices;
     if (pt === "trace" && Number(options ?? 0) === 0) return { steps: [{ command: "choice", args: { eid, choice: 0 } }], wait: 700 };
     const selectable: unknown[] = openPrompt.selectable ?? [];
-    if (Array.isArray(options) && options.length === 1 && !selectable.length && /^(steal|no action)$/i.test(String(options[0]?.value))) return { steps: [{ command: "choice", args: { eid, choice: { uuid: options[0].uuid } } }], wait: 1600 };
+    if (Array.isArray(options) && options.length === 1 && !selectable.length && /^steal$/i.test(String(options[0]?.value))) return { steps: [{ command: "choice", args: { eid, choice: { uuid: options[0].uuid } } }], wait: 1600 };
     if (pt === "select" && selectable.length) {
       const max: number = openPrompt["select-max"] ?? 1;
       const min: number = openPrompt["select-all"] ? max : (openPrompt["select-min"] ?? 0);
