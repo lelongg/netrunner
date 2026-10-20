@@ -2361,7 +2361,7 @@ button:active:not(:disabled) {
 .lobby > *,
 .lobby .invite-side > *,
 .lobby-footer > * {
-  animation: lobby-in 0.45s cubic-bezier(0.2, 0.8, 0.25, 1) both;
+  animation: lobby-in 0.45s cubic-bezier(0.2, 0.8, 0.25, 1) backwards;
 }
 
 .lobby > :nth-child(2) { animation-delay: 0.05s; }
@@ -2378,7 +2378,7 @@ button:active:not(:disabled) {
 }
 
 .qr-button .qr {
-  animation: qr-scan 0.9s cubic-bezier(0.45, 0, 0.2, 1) both;
+  animation: qr-scan 0.9s cubic-bezier(0.45, 0, 0.2, 1) backwards;
 }
 
 .qr-button {
@@ -2812,7 +2812,7 @@ button:active:not(:disabled) {
 }
 
 .board {
-  animation: board-dive-in 0.5s cubic-bezier(0.2, 0.85, 0.25, 1) both;
+  animation: board-dive-in 0.5s cubic-bezier(0.2, 0.85, 0.25, 1) backwards;
 }
 
 @keyframes board-dive-in {
