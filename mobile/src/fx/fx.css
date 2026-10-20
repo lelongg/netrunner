@@ -2106,3 +2106,324 @@
   border-radius: 4px;
   box-shadow: 0 0 16px rgb(127 176 255 / 0.6);
 }
+
+.fx-dial {
+  border-radius: 50%;
+  border: 3px solid #d6e4ff;
+  background:
+    radial-gradient(circle at 50% 18%, #0b1424 0 7%, transparent 8%),
+    radial-gradient(circle at 78% 30%, #0b1424 0 7%, transparent 8%),
+    radial-gradient(circle at 82% 62%, #0b1424 0 7%, transparent 8%),
+    radial-gradient(circle at 60% 84%, #0b1424 0 7%, transparent 8%),
+    radial-gradient(circle at 28% 80%, #0b1424 0 7%, transparent 8%),
+    radial-gradient(circle at 18% 48%, #0b1424 0 7%, transparent 8%),
+    radial-gradient(circle, #7fb0ff 0 30%, #d6e4ff 31%);
+  box-shadow: 0 0 14px rgb(127 176 255 / 0.6);
+}
+
+.fx-touchstone {
+  border-radius: 46% 54% 50% 50% / 55% 45% 55% 45%;
+  background: radial-gradient(circle at 35% 30%, #fff6b0, #6b6b6b 40%, #2a2a2a);
+  box-shadow: 0 0 18px rgb(246 224 58 / 0.6);
+}
+
+.fx-redroom {
+  border-radius: 4px;
+  background: radial-gradient(circle, rgb(255 59 48 / 0.7), rgb(120 0 0 / 0.5));
+  box-shadow: 0 0 30px rgb(255 59 48 / 0.7);
+  mix-blend-mode: screen;
+}
+
+.fx-bricks {
+  transform-origin: 50% 100%;
+  background:
+    linear-gradient(#3a0a0a 2px, transparent 2px) 0 0 / 100% 12px,
+    repeating-linear-gradient(90deg, #ff6b5e 0 22px, #3a0a0a 22px 24px);
+  box-shadow: 0 0 14px rgb(255 59 48 / 0.6);
+}
+
+.fx-stroke.gold path {
+  stroke: #f6e03a;
+  stroke-width: 5;
+  filter: drop-shadow(0 0 6px #f6e03a);
+}
+
+.fx-stroke.circuit path {
+  stroke: #3ddc84;
+  stroke-width: 2.5;
+  filter: drop-shadow(0 0 5px #3ddc84);
+}
+
+.fx-tape {
+  transform-origin: 0 50%;
+  border-radius: 2px;
+  background:
+    repeating-linear-gradient(90deg, #111 0 1px, transparent 1px 8px) bottom / 100% 40% no-repeat,
+    #f6e03a;
+  box-shadow: 0 0 10px rgb(246 224 58 / 0.6);
+}
+
+.fx-stroke.coil path {
+  stroke: #ff9f1c;
+  stroke-width: 6;
+  filter: drop-shadow(0 0 8px #ff3b30);
+}
+
+.fx-horseshoe {
+  border: 4px solid #f6e03a;
+  border-top: none;
+  border-radius: 0 0 10px 10px;
+  box-shadow: 0 0 8px #f6e03a;
+}
+
+.fx-rope {
+  border-radius: 3px;
+  background: repeating-linear-gradient(60deg, #ff3b30 0 4px, #8a1a14 4px 8px);
+  box-shadow: 0 0 8px rgb(255 59 48 / 0.6);
+}
+
+.fx-memgrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid #22d3ee;
+  background: rgb(6 20 26 / 0.85);
+}
+
+.fx-memcell {
+  border-radius: 2px;
+  background: rgb(34 211 238 / 0.25);
+}
+
+.fx-memcell.hot {
+  background: #22d3ee;
+  box-shadow: 0 0 10px #22d3ee;
+}
+
+.fx-stroke.torii path {
+  stroke: #ff3b30;
+  stroke-width: 7;
+  filter: drop-shadow(0 0 6px #ff3b30);
+}
+
+.fx-petal-fall {
+  border-radius: 50% 0;
+  background: #ffb3d1;
+  box-shadow: 0 0 6px #ff6fae;
+}
+
+.fx-haze {
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgb(199 146 255 / 0.55), rgb(255 111 174 / 0.2) 50%, transparent 70%);
+  filter: blur(4px);
+}
+
+.fx-stroke.ecg polyline {
+  stroke: #3ddc84;
+  stroke-width: 3;
+  filter: drop-shadow(0 0 6px #3ddc84);
+}
+
+.fx-vulture {
+  clip-path: polygon(0 30%, 30% 60%, 50% 40%, 70% 60%, 100% 30%, 60% 100%, 50% 80%, 40% 100%);
+  background: #1a0f24;
+  filter: drop-shadow(0 0 6px #c792ff);
+}
+
+.fx-hype {
+  border: 1px solid #ff8a80;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #1a0505;
+}
+
+.fx-hype-fill {
+  width: 100%;
+  height: 100%;
+  transform-origin: 50% 100%;
+  background: linear-gradient(0deg, #f6e03a, #ff9f1c 50%, #ff3b30);
+}
+
+.fx-stroke.lure path {
+  stroke: #a5f3fc;
+  stroke-width: 2;
+}
+
+.fx-film {
+  overflow: hidden;
+  background: #111;
+  border-block: 6px dotted #ddd;
+}
+
+.fx-film-strip {
+  display: flex;
+  gap: 6px;
+  height: 100%;
+  padding: 4px;
+}
+
+.fx-film-frame {
+  flex: none;
+  width: 30%;
+  border-radius: 2px;
+  background: linear-gradient(135deg, #7fb0ff, #c792ff);
+  opacity: 0.8;
+}
+
+.fx-stroke.null path {
+  stroke: #c792ff;
+  stroke-width: 6;
+  filter: drop-shadow(0 0 8px #c792ff);
+}
+
+.fx-accretion {
+  border-radius: 50%;
+  background: radial-gradient(ellipse, transparent 30%, #ffd166 40%, #ff9f1c 55%, rgb(255 59 48 / 0.4) 65%, transparent 72%);
+  filter: blur(1px);
+}
+
+.fx-blackcore {
+  border-radius: 50%;
+  background: #000;
+  box-shadow: 0 0 0 3px rgb(255 209 102 / 0.8), 0 0 30px #ff9f1c;
+}
+
+.fx-visor {
+  border-radius: 4px;
+  background: linear-gradient(90deg, transparent, #c792ff 20%, #fff 50%, #c792ff 80%, transparent);
+  box-shadow: 0 0 14px #c792ff;
+}
+
+.fx-taillights {
+  background:
+    radial-gradient(circle at 10% 50%, #ff3b30 0 5px, transparent 6px),
+    radial-gradient(circle at 90% 50%, #ff3b30 0 5px, transparent 6px);
+  filter: drop-shadow(0 0 8px #ff3b30);
+}
+
+.fx-speaker {
+  border-radius: 50%;
+  border: 3px solid #ff3b30;
+  box-shadow: 0 0 10px #ff3b30;
+}
+
+.fx-billboard {
+  display: grid;
+  place-items: center;
+  transform-origin: 50% 100%;
+  border: 3px solid #7fb0ff;
+  background: linear-gradient(135deg, #0b1a40, #2b6cff);
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 22px;
+  letter-spacing: 0.1em;
+  color: #fff;
+  box-shadow: 0 0 18px rgb(127 176 255 / 0.6);
+}
+
+.fx-stroke.smoke path {
+  stroke: rgb(241 237 228 / 0.7);
+  stroke-width: 4;
+  filter: blur(1px);
+}
+
+.fx-shockline {
+  background: linear-gradient(90deg, transparent, #ff3b30, transparent);
+  box-shadow: 0 0 12px #ff3b30;
+}
+
+.fx-stroke.gauge path {
+  stroke: #3ddc84;
+  stroke-width: 8;
+  filter: drop-shadow(0 0 6px #3ddc84);
+}
+
+.fx-needle {
+  transform-origin: 50% 100%;
+  border-radius: 2px;
+  background: #ff3b30;
+  box-shadow: 0 0 8px #ff3b30;
+}
+
+.fx-page {
+  transform-origin: 0 50%;
+  background: linear-gradient(90deg, #f1ede4, #d8d2c2);
+  box-shadow: 0 0 8px rgb(0 0 0 / 0.5);
+}
+
+.fx-coin-flat {
+  border-radius: 50%;
+  background: linear-gradient(180deg, #fff6b0, #b88a00);
+  box-shadow: 0 0 6px #f6e03a;
+}
+
+.fx-chip {
+  border-radius: 3px;
+  background: linear-gradient(135deg, #2a0f4a, #7b3fbf);
+  border: 2px solid #e6d6ff;
+  box-shadow:
+    0 0 0 4px rgb(230 214 255 / 0.25),
+    0 0 16px #c792ff;
+  outline: 3px dashed #e6d6ff;
+  outline-offset: 6px;
+}
+
+.fx-flywheel {
+  border-radius: 50%;
+  border: 8px solid #7fb0ff;
+  background: repeating-conic-gradient(rgb(127 176 255 / 0.7) 0 6deg, transparent 6deg 30deg);
+  filter: blur(0.6px);
+  box-shadow: 0 0 20px #2b6cff;
+}
+
+.fx-tunnel {
+  border: 2px solid #22d3ee;
+  box-shadow: 0 0 10px #22d3ee;
+}
+
+.fx-letter {
+  display: inline-block;
+}
+
+.fx-chart.crash polyline {
+  stroke: #ff3b30;
+  filter: drop-shadow(0 0 6px #ff3b30);
+}
+
+.fx-guard {
+  border-radius: 6px 6px 2px 2px;
+  background: linear-gradient(180deg, #d6e4ff, #2b6cff);
+  box-shadow: 0 0 12px #7fb0ff;
+}
+
+.fx-pricetag {
+  display: grid;
+  place-items: center;
+  transform-origin: 0 50%;
+  clip-path: polygon(20% 0, 100% 0, 100% 100%, 20% 100%, 0 50%);
+  background: #f6e03a;
+  color: #111;
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 13px;
+}
+
+.fx-spotlight {
+  clip-path: polygon(40% 0, 60% 0, 100% 100%, 0 100%);
+  background: linear-gradient(180deg, rgb(255 246 176 / 0.05), rgb(255 246 176 / 0.45));
+}
+
+.fx-stroke.lamp path {
+  stroke: #9ca3af;
+  stroke-width: 5;
+}
+
+.fx-clockface {
+  border-radius: 50%;
+  border: 3px solid #7fb0ff;
+  background: repeating-conic-gradient(#7fb0ff 0 2deg, transparent 2deg 30deg);
+  -webkit-mask: radial-gradient(circle, transparent 0 70%, #000 71%);
+  mask: radial-gradient(circle, transparent 0 70%, #000 71%);
+  box-shadow: 0 0 14px rgb(127 176 255 / 0.6);
+}
