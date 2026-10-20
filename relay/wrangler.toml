@@ -26,7 +26,7 @@ migrations_dir = "decklists-migrations"
 
 [vars]
 EXPIRY_DAYS = "14"
-ALLOWED_ORIGINS = "https://lelongg.github.io,http://localhost:5173,http://localhost:4178"
+ALLOWED_ORIGINS = "https://lelongg.github.io,https://*.pocket-rig-preview.pages.dev,http://localhost:5173,http://localhost:4178"
 
 [[ratelimits]]
 name = "CREATE_LIMIT"
