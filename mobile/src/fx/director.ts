@@ -35,6 +35,8 @@ interface Snap {
   active?: string;
   turn?: number;
   winner?: string;
+  faces: Record<Side, string | undefined>;
+  identities: Record<Side, unknown>;
   log: number;
 }
 
@@ -79,6 +81,8 @@ function snap(view: any): Snap {
     active: view["active-player"],
     turn: view.turn,
     winner: view.winner,
+    faces: { corp: view.corp?.identity?.face, runner: view.runner?.identity?.face },
+    identities: { corp: view.corp?.identity?.cid, runner: view.runner?.identity?.cid },
     log: (view.log ?? []).length,
   };
 }
@@ -623,6 +627,13 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
         }
       }, 1300);
     }
+  }
+
+  for (const s of SIDES) {
+    if (!prev.faces[s] || !now.faces[s] || prev.faces[s] === now.faces[s]) continue;
+    rezFlip(now.identities[s], s === "corp" ? "blue" : "red", true);
+    const at = pointOf(tileEl(now.identities[s]));
+    if (at) setTimeout(() => floater([at[0], at[1] - 30], "Flipped", s === "corp" ? "blue" : "red", 50, true), 300);
   }
 
   const messaged = (view.log ?? []).slice(prev.log).some((e: any) => /Send a Message/.test(render(e.text)));

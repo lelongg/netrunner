@@ -3,11 +3,12 @@ import { CardImage } from "./CardImage";
 import { Verified } from "./legal";
 import { advancement, isFaceup, zone0 } from "./actions";
 import { ICON_SET, Icon, type IconName } from "../icons";
+import { faceCode } from "../engine";
 
 export function visibleCode(card: any, viewerIsOwner: boolean): string | undefined {
   if (!card?.code) return undefined;
   if (card.facedown && !viewerIsOwner) return undefined;
-  return card.code;
+  return faceCode(card);
 }
 
 const COUNTER_ICONS: Record<string, IconName> = { credit: "credit", virus: "virus", power: "bolt", agenda: "agenda" };

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import { useLoop } from "../fx/ui";
-import type { Side } from "../engine";
+import { type Side, faceIndex } from "../engine";
 import { type Command, cardCommands, cardRef, pendingChoice } from "./actions";
 import { type Prober, useChecked } from "./legal";
 import { CardImage, ZoomableCardImage } from "./CardImage";
@@ -144,7 +144,7 @@ function SheetInfo({ card, code, full, side, view }: { card: any; code?: string;
         return (
           <>
             <span class="label">{[code ? card.type : card.side, ...(code && card.subtypes?.length ? card.subtypes : []), ...facts.where].join(" · ")}</span>
-            <h2>{code ? card.title : "Classified"}</h2>
+            <h2>{code ? (full?.title ?? card.title) : "Classified"}</h2>
             {facts.chips.length > 0 && (
               <div class="fact-chips">
                 {facts.chips.map((c) => (
@@ -173,11 +173,16 @@ function SheetInfo({ card, code, full, side, view }: { card: any; code?: string;
   );
 }
 
+function withFace(full: any, card: any) {
+  const face = full?.["face-texts"]?.[faceIndex(card) ?? -1];
+  return face ? { ...full, title: face.title, text: face.text } : full;
+}
+
 export function CardSheet({ confirm, card, view, stamp, probe, side, db, send, onClose, disabled, index = 0, count = 1, slide, onStep, readOnly, neighbors, siblings, onJump }: Props) {
   const [installing, setInstalling] = useState(false);
   const owner = card.side === (side === "corp" ? "Corp" : "Runner");
   const code = visibleCode(card, owner);
-  const full = code ? db.byTitle.get(card.title) : undefined;
+  const full = code ? withFace(db.byTitle.get(card.title), card) : undefined;
   const commands = useChecked(readOnly ? [] : cardCommands(card, view, side), readOnly ? undefined : probe, stamp ?? view);
   const gallery = (siblings ?? [card]).flatMap((c) => {
     const vc = visibleCode(c, c.side === (side === "corp" ? "Corp" : "Runner"));
@@ -217,7 +222,7 @@ export function CardSheet({ confirm, card, view, stamp, probe, side, db, send, o
           return (
             <div key={`${k}:${n.cid}`} class={`sheet-peek ${k}`} aria-hidden="true">
               {nCode ? <CardImage class="sheet-img" code={nCode} alt="" size="large" /> : <CardBack side={n.side} />}
-              <SheetInfo card={n} code={nCode} full={nCode ? db.byTitle.get(n.title) : undefined} side={side} view={view} />
+              <SheetInfo card={n} code={nCode} full={nCode ? withFace(db.byTitle.get(n.title), n) : undefined} side={side} view={view} />
             </div>
           );
         })}

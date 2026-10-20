@@ -108,6 +108,21 @@ export function loadEngine() {
   return loading;
 }
 
+const FACE_INDEX: Record<string, number> = { back: 0, brewery: 0, tank: 1, greenhouse: 2, tenure: 0, subsurface: 1, disposal: 2 };
+const FACE_BASE: Record<string, string> = { brewery: "08012", tank: "08012", greenhouse: "08012", sync: "09001" };
+
+export function faceIndex(card: any): number | undefined {
+  return card?.face ? FACE_INDEX[String(card.face)] : undefined;
+}
+
+export function faceCode(card: any): string | undefined {
+  const code: string | undefined = card?.code;
+  if (!code) return code;
+  const base = FACE_BASE[code] ?? code.replace(/flip$/, "");
+  const i = faceIndex(card);
+  return i == null ? base : `${base}-${i}`;
+}
+
 export function cardImage(code: string | undefined, size: "small" | "medium" | "large" | "xlarge" = "medium") {
   return code ? `https://card-images.netrunnerdb.com/v2/${size}/${code}.${size === "xlarge" ? "webp" : "jpg"}` : undefined;
 }

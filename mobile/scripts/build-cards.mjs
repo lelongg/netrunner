@@ -22,17 +22,26 @@ const cards = data.cards.map(({ "previous-versions": previous = [], flavor, ...c
   return card;
 });
 
-await mkdir(OUT, { recursive: true });
-await writeFile(new URL("cards.json", OUT), JSON.stringify(cards));
-await writeFile(new URL("codes.json", OUT), JSON.stringify(codes));
-console.log(`${cards.length} cards, ${Object.keys(codes).length} printings written`);
-
 const NRDB = "https://api.netrunnerdb.com/api/v3/public";
 const nrdb = async (path) => {
   const res = await fetch(`${NRDB}/${path}`, { headers: { "User-Agent": "PocketRig/1.0 (+https://github.com/lelongg/netrunner)" } });
   if (!res.ok) throw new Error(`${path}: ${res.status}`);
   return (await res.json()).data;
 };
+
+for (const card of cards.filter((c) => c.type === "Identity" && c.faces?.length)) {
+  try {
+    const faces = (await nrdb(`printings/${card.code}`)).attributes.faces ?? [];
+    card["face-texts"] = faces.map((f) => ({ title: f.title ?? card.title, text: f.text ?? "" }));
+  } catch (e) {
+    console.warn(`faces of ${card.title} unavailable: ${e.message}`);
+  }
+}
+
+await mkdir(OUT, { recursive: true });
+await writeFile(new URL("cards.json", OUT), JSON.stringify(cards));
+await writeFile(new URL("codes.json", OUT), JSON.stringify(codes));
+console.log(`${cards.length} cards, ${Object.keys(codes).length} printings written`);
 const FORMAT_KEYS = { standard: "standard", startup: "startup", core: "core", system_gateway: "system-gateway", eternal: "eternal" };
 const pools = {};
 try {

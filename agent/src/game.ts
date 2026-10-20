@@ -6,6 +6,8 @@ import { type WireDeck, fromPrecon, importNrdb, toWire } from "../../mobile/src/
 import { relayUrl, storeTicket } from "../../mobile/src/net/relay";
 import { FORMATS, GAME_FORMATS, type FormatKey, type GameFormat, analyze, dealtFormat, deckFormat } from "../../mobile/src/deckrules";
 
+const FACE_INDEX: Record<string, number> = { back: 0, brewery: 0, tank: 1, greenhouse: 2, tenure: 0, subsurface: 1, disposal: 2 };
+
 export interface Loaded {
   engine: EngineApi;
   db: CardDb;
@@ -448,7 +450,11 @@ export class Agent {
     const area = (sd: Side, who: string, prefix: string) => {
       const p = view[sd] ?? {};
       const out: [string, string][] = [];
-      if (p.identity?.title) out.push([`${prefix}.id`, `${who} identity: ${p.identity.title}`]);
+      if (p.identity?.title) {
+        const i = p.identity.face ? FACE_INDEX[String(p.identity.face)] : undefined;
+        const face = i == null ? undefined : (this.db.byTitle.get(p.identity.title) as any)?.["face-texts"]?.[i];
+        out.push([`${prefix}.id`, face ? `${who} identity: ${p.identity.title}, flipped to ${face.title} (${face.text.replace(/\n/g, " ")})` : `${who} identity: ${p.identity.title}`]);
+      }
       if (sd === "corp") {
         for (const key of ["hq", "rd", "archives", ...remoteKeys(p.servers)]) {
           const srv = p.servers?.[key];
