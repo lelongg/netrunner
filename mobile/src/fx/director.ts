@@ -86,8 +86,12 @@ function runnerTarget(me: Side): Point {
 }
 
 function iceByTitle(view: any, title: string): any {
+  const current = currentIce(view);
+  if (current?.title && title.includes(current.title)) return current;
+  const runServer = view.run?.server?.[0];
+  const servers = Object.entries<any>(view.corp?.servers ?? {}).sort(([a], [b]) => Number(b === runServer) - Number(a === runServer));
   let best: any;
-  for (const server of Object.values<any>(view.corp?.servers ?? {})) for (const c of server?.ices ?? []) if (c?.title && title.includes(c.title) && (!best || c.title.length > best.title.length)) best = c;
+  for (const [, server] of servers) for (const c of server?.ices ?? []) if (c?.title && title.includes(c.title) && (!best || c.title.length > best.title.length)) best = c;
   return best;
 }
 
@@ -233,6 +237,75 @@ function cracks(at: Point) {
     el.style.rotate = `${(i / n) * 360 + Math.random() * 25}deg`;
     done(animate(el, { scaleX: [0, 1, 1], opacity: [1, 1, 0] }, { duration: 0.9, times: [0, 0.15, 1], ease: "easeOut" }), el);
   }
+}
+
+function damageHit(kind: string) {
+  const label: Point = [innerWidth / 2, innerHeight * 0.45];
+  if (kind === "net") {
+    glitch(1.6);
+    setTimeout(() => glitch(0.8), 180);
+    vignette("cyan", 0.5);
+    flash("cyan", 0.25, 0.35);
+    shake(0.5);
+    stamp(label, "net damage", "cyan");
+    buzz([20, 30, 20, 30, 20]);
+    return;
+  }
+  if (kind === "meat") {
+    cracks([innerWidth / 2, innerHeight * 0.62]);
+    vignette("red", 0.8);
+    flash("red", 0.4);
+    shake(1.6);
+    stamp(label, "meat damage", "red");
+    buzz([140, 40, 90]);
+    return;
+  }
+  flash("white", 0.85, 0.7);
+  setTimeout(() => vignette("violet", 1.2), 120);
+  glitch(0.6);
+  shake(0.9);
+  stamp(label, `${kind} damage`, "violet");
+  buzz([60, 120, 200]);
+}
+
+type BreakStyle = "killer" | "fracter" | "decoder";
+
+function breakStyle(breaker: any, ice: any): BreakStyle {
+  const types: string[] = breaker?.subtypes ?? [];
+  if (types.includes("Killer")) return "killer";
+  if (types.includes("Fracter")) return "fracter";
+  if (types.includes("Decoder")) return "decoder";
+  const kind = iceKind(ice);
+  return kind === "barrier" ? "fracter" : kind === "gate" ? "decoder" : "killer";
+}
+
+function breakHit(style: BreakStyle, at: Point, iceEl: HTMLElement | null, power: number) {
+  if (style === "fracter") {
+    if (iceEl) animate(iceEl, { scale: [0.9, 1.04, 1], x: [0, -8, 6, -3, 0] }, { duration: 0.4 });
+    for (let i = 0; i < 4 + power; i++) slash(at, "orange", 40 + Math.random() * 40, Math.random() * 360);
+    burst(at, "orange", 22 * power, 90, { size: 7, shards: true, gravity: 120 });
+    shake(0.35 * power);
+    kick(0.7);
+    buzz([40, 20, 60]);
+    return;
+  }
+  if (style === "decoder") {
+    digitize(iceEl, "blue");
+    for (let i = 0; i < 2 + power; i++) setTimeout(() => slash([at[0], at[1] - 30 + i * (60 / (1 + power))], "blue", 130, 0), i * 70);
+    burst(at, "blue", 14 * power, 70, { size: 4, gravity: -90 });
+    kick(0.4);
+    buzz([15, 15, 15]);
+    return;
+  }
+  for (let i = 0; i < power; i++)
+    setTimeout(() => {
+      slash(at, "red", 120, -40);
+      setTimeout(() => slash(at, "red", 120, 40), 60);
+    }, i * 140);
+  burst(at, "red", 10 * power, 60, { size: 4, shards: true, gravity: 40 });
+  if (iceEl) animate(iceEl, { x: [0, 7, -6, 4, 0], rotate: [0, 2, -2, 0] }, { duration: 0.35 });
+  kick(0.5);
+  buzz(20);
 }
 
 function digitize(el: HTMLElement | null, tone: Tone) {
@@ -485,27 +558,15 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
   let t = busy;
   for (const h of hits) {
     if (h.kind === "break" && h.ice) {
-      const iceEl = tileEl(h.ice.cid);
-      const target = pointOf(iceEl);
-      if (!target) continue;
-      const breakerEl = h.breaker ? tileEl(h.breaker.cid) : null;
+      if (!pointOf(tileEl(h.ice.cid))) continue;
       const delay = t;
       setTimeout(() => {
-        lunge(breakerEl, target, {
-          onHit: () => {
-            const n = h.power ?? 1;
-            for (let i = 0; i < n; i++) setTimeout(() => slash(target, "cyan", 110, -40 + i * 50), i * 90);
-            burst(target, "cyan", 16 * n, 70, { size: 6, shards: true, gravity: 40 });
-            ring(target, "cyan", 120);
-            if (iceEl) animate(iceEl, { x: [0, 7, -6, 4, 0], rotate: [0, 2, -2, 0] }, { duration: 0.35 });
-            kick(0.5);
-            buzz(20);
-          },
-        });
-        if (!breakerEl) {
-          slash(target, "cyan", 110);
-          burst(target, "cyan", 14, 60, { size: 5, shards: true });
-        }
+        const iceEl = tileEl(h.ice.cid);
+        const target = pointOf(iceEl);
+        if (!target) return;
+        const breakerEl = h.breaker ? tileEl(h.breaker.cid) : null;
+        const style = breakStyle(h.breaker, h.ice);
+        lunge(breakerEl, target, { onHit: () => breakHit(style, target, iceEl, h.power ?? 1) });
       }, delay * 1000);
       t += 0.45;
     } else if (h.kind === "fire" && h.ice) {
@@ -545,16 +606,7 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
       t += 0.55;
     } else if (h.kind === "damage") {
       const delay = t;
-      setTimeout(() => {
-        const at: Point = [innerWidth / 2, innerHeight * 0.62];
-        cracks(at);
-        vignette("red", 0.7);
-        flash("red", 0.3);
-        shake(1.2 * (h.power ?? 1));
-        glitch(1.2);
-        stamp([innerWidth / 2, innerHeight * 0.45], `${h.text} damage`, "red");
-        buzz([90, 40, 90]);
-      }, delay * 1000);
+      setTimeout(() => damageHit(String(h.text ?? "").toLowerCase()), delay * 1000);
       t += 0.3;
     } else if (h.kind === "access") {
       if (me !== "corp" || spectating) continue;
