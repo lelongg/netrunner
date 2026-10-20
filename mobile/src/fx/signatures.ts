@@ -215,7 +215,7 @@ export function retribution() {
   animate(el, { scale: [3, 1], rotate: [-90, 0], opacity: [0, 1] }, { type: "spring", visualDuration: 0.4, bounce: 0.2 });
   setTimeout(() => {
     animate(el, { scale: [1, 0.7, 1.4], opacity: [1, 1, 0] }, { duration: 0.35 });
-    flash("red", 0.35, 0.3);
+    flash("red", 0.18, 0.3);
     burst(at, "red", 26, 100, { size: 7, shards: true, gravity: 50 });
     ring(at, "red", 180);
     shake(1);
@@ -1235,7 +1235,7 @@ export function snare(r: DOMRect | null) {
   animate(top, { y: [-60, 0] }, { duration: 0.18, ease: "easeIn" });
   animate(bottom, { y: [60, 0] }, { duration: 0.18, ease: "easeIn" });
   setTimeout(() => {
-    flash("red", 0.35, 0.3);
+    flash("red", 0.18, 0.3);
     shake(1);
     stamp([at[0], at[1] - 70], "Snare!", "red");
     buzz([100, 30, 60]);
@@ -1600,7 +1600,7 @@ export function scorchedEarth() {
   if (reduced()) return;
   for (let i = 0; i < 26; i++) setTimeout(() => burst([Math.random() * innerWidth, innerHeight - 10], i % 3 ? "orange" : "red", 5, 50, { size: 9, gravity: -260 }), i * 30);
   setTimeout(() => {
-    flash("red", 0.45, 0.4);
+    flash("red", 0.22, 0.4);
     vignette("orange", 0.8);
     shake(1.2);
     buzz([120, 40, 120]);

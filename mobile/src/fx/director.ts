@@ -263,9 +263,9 @@ function damageHit(kind: string) {
   }
   if (kind === "meat") {
     cracks([innerWidth / 2, innerHeight * 0.62]);
-    vignette("red", 0.8);
-    flash("red", 0.4);
-    shake(1.6);
+    vignette("red", 0.5);
+    flash("red", 0.18);
+    shake(1);
     stamp(label, "meat damage", "red");
     buzz([140, 40, 90]);
     return;
@@ -764,9 +764,8 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
               ring(at, "red", 170);
               burst(at, "red", 22, 90, { size: 6, gravity: 30 });
               floater([at[0], at[1] - 30], shortText(text), "red", 50, true);
-              shake(0.9);
-              flash("red", 0.22);
-              glitch(0.8);
+              shake(0.45);
+              glitch(0.35);
               buzz([60, 30, 60]);
             },
           });
