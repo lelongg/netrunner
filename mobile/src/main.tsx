@@ -8,6 +8,7 @@ import { animate } from "motion";
 import { installTips } from "./tips";
 import { installMotion, useLoop } from "./fx/ui";
 import { unlockSound } from "./sound";
+import { dive } from "./fx/dive";
 import { initMusic, setMood } from "./music";
 import { installUiSounds } from "./uisound";
 import { startEngineWorker } from "./game/workerHost";
@@ -84,7 +85,7 @@ function canAct(view: any, side: Side) {
 }
 
 const OPENING_DELAY_MS = 300;
-const OPENING_MIN_MS = 1000;
+const OPENING_MIN_MS = 1400;
 
 function App() {
   const [loaded, setLoaded] = useState<{ engine: EngineApi; db: CardDb; matchups: Matchup[] }>();
@@ -340,14 +341,17 @@ function App() {
 function Opening({ label, ready }: { label: string; ready: boolean }) {
   const title = useRef<HTMLSpanElement>(null);
   const bar = useRef<HTMLElement>(null);
+  const tunnel = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     if (!title.current || motionOff()) return;
-    animate(title.current, { transform: ["translateX(-60px) skewX(-20deg)", "translateX(0) skewX(0deg)"], opacity: [0, 1] }, { duration: 0.45, ease: [0.2, 0.9, 0.3, 1.1] });
+    animate(title.current, { transform: ["scale(2.6)", "scale(1)"], opacity: [0, 1], filter: ["blur(12px)", "blur(0px)"] }, { duration: 0.6, ease: [0.2, 0.9, 0.3, 1.05] });
   }, []);
+  useEffect(() => (tunnel.current ? dive(tunnel.current, motionOff()) : undefined), []);
   useLoop(bar, { transform: ["translateX(-100%)", "translateX(250%)"] }, { duration: 0.9, ease: [0.6, 0, 0.4, 1] });
   return (
     <div class="opening" role="status" aria-live="polite">
-      <span class="label">{ready ? "Opening" : "Loading engine"}</span>
+      <canvas class="opening-dive" ref={tunnel} aria-hidden="true" />
+      <span class="label">{ready ? "Jacking in" : "Loading engine"}</span>
       <span class="opening-title" ref={title} data-text={label}>
         {label}
       </span>

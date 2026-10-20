@@ -118,7 +118,7 @@ export function cardCommands(card: any, view: any, side: Side): Command[] {
         label: `${card.selected ? "Deselect" : "Select"}${counted ? ` · ${picked}/${max}` : ""}`,
         command: "select",
         args: { card: ref, eid: prompt.eid },
-        kind: "primary",
+        kind: card.selected ? undefined : "primary",
         enabled: card.selected || picked < max,
       });
   } else if (prompt && Array.isArray(prompt.choices) && (prompt.selectable ?? []).includes(card.cid)) {
