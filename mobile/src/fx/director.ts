@@ -2,7 +2,7 @@ import { useLayoutEffect, useRef } from "preact/hooks";
 import type { Side } from "../engine";
 import { currentIce } from "../game/actions";
 import { serverName } from "../game/text";
-import { type Plan, collect, play, prepare } from "./cards";
+import { type Plan, collect, moveKinds, play, prepare } from "./cards";
 import { transmission } from "./signatures";
 import { play as sound } from "../sound";
 import { type Point, type Tone, anchor, animate, banner, burst, buzz, haptics, coins, done, flash, floater, gate, glitch, layer, lunge, mid, node, place, pointOf, punch, rays, rectOf, reduced, ring, shake, slash, split, stamp, tileEl, vignette, visible, wrapEl, scoreSegment } from "./core";
@@ -25,6 +25,7 @@ interface Snap {
   points: Record<Side, number>;
   tags: number;
   rezzed: Map<unknown, boolean>;
+  ices: Set<unknown>;
   adv: Map<unknown, number>;
   strength: Map<unknown, number>;
   server?: string;
@@ -41,6 +42,7 @@ const SIDES: Side[] = ["corp", "runner"];
 
 function snap(view: any): Snap {
   const rezzed = new Map<unknown, boolean>();
+  const ices = new Set<unknown>();
   const adv = new Map<unknown, number>();
   const strength = new Map<unknown, number>();
   const walk = (x: any) => {
@@ -48,6 +50,7 @@ function snap(view: any): Snap {
     if (Array.isArray(x)) return x.forEach(walk);
     if (x.cid != null && x.zone) {
       if (x.side === "Corp" && x.zone[0] === "servers") rezzed.set(x.cid, !!x.rezzed);
+      if (x.type === "ICE") ices.add(x.cid);
       const a = (x["advance-counter"] ?? 0) + (x["extra-advance-counter"] ?? 0);
       if (a) adv.set(x.cid, a);
       if (x["current-strength"] != null && x.side === "Runner") strength.set(x.cid, x["current-strength"]);
@@ -66,6 +69,7 @@ function snap(view: any): Snap {
     points: { corp: view.corp?.["agenda-point"] ?? 0, runner: view.runner?.["agenda-point"] ?? 0 },
     tags: view.runner?.tag?.total ?? view.runner?.tag?.base ?? 0,
     rezzed,
+    ices,
     adv,
     strength,
     server: view.run?.server?.[0],
@@ -243,7 +247,6 @@ function cracks(at: Point) {
 
 function damageHit(kind: string) {
   const label: Point = [innerWidth / 2, innerHeight * 0.45];
-  sound(kind === "net" ? "pulse" : kind === "meat" ? "end-of-the-line" : "wave");
   if (kind === "net") {
     glitch(1.6);
     setTimeout(() => glitch(0.8), 180);
@@ -442,13 +445,64 @@ function shortText(t: string) {
   return s.length > 26 ? `${s.slice(0, 24)}…` : s;
 }
 
+const SOUND_GROUP: [RegExp, string][] = [
+  [/^(click-credit|bling|professional-contacts)/, "credit"],
+  [/^click-card/, "draw"],
+  [/^install-/, "install"],
+  [/^rez-|^(archer|bloop|echo|pulse|wave|illumination)$/, "rez"],
+  [/^run-(un)?successful$/, "run-end"],
+];
+
+const soundGroup = (name: string) => SOUND_GROUP.find(([re]) => re.test(name))?.[1] ?? name.replace(/-\d+$/, "");
+
+function sounds(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown) => string, heard: number, kinds: ReturnType<typeof moveKinds>) {
+  const fired = new Set<string>();
+  for (const e of view?.sfx ?? [])
+    if (Number(e?.id) > heard && e?.name) {
+      sound(String(e.name));
+      fired.add(soundGroup(String(e.name)));
+    }
+  const fallback = (group: string, name: string, volume = 1) => {
+    if (fired.has(group)) return;
+    fired.add(group);
+    sound(name, volume);
+  };
+  const lines: string[] = (view.log ?? []).slice(prev.log).map((e: any) => render(e.text));
+  if (now.winner && !prev.winner) fallback("game-end", "game-end");
+  for (const k of kinds) {
+    if (k.kind === "play") fallback("play-instant", "play-instant");
+    else if (k.kind === "score") fallback("agenda-score", "agenda-score");
+    else if (k.kind === "steal") fallback("agenda-steal", "agenda-steal");
+    else if (k.kind === "install") fallback("install", k.owner === "corp" ? "install-corp" : "install-runner");
+    else if (k.kind === "draw") fallback("draw", "click-card");
+  }
+  for (const [cid, up] of now.rezzed) if (up && prev.rezzed.get(cid) === false) fallback("rez", now.ices.has(cid) ? "rez-ice" : "rez-other");
+  for (const [cid, n] of now.adv) if (n > (prev.adv.get(cid) ?? 0)) fallback("click-advance", "click-advance");
+  if (now.server && !prev.server) fallback("click-run", "click-run");
+  if (prev.server && !now.server) fallback("run-end", lines.some((l) => /\b(breach|access)/i.test(l)) ? "run-successful" : "run-unsuccessful");
+  if (now.tags < prev.tags && lines.some((l) => /\bremoves? \d* ?tags?\b/i.test(l))) fallback("click-remove-tag", "click-remove-tag");
+  if (lines.some((l) => /\bpurges? virus/i.test(l))) fallback("virus-purge", "virus-purge");
+  for (const s of SIDES) {
+    const gain = now.credits[s] - prev.credits[s];
+    if (gain > 0 && !fired.size) fallback("credit", gain > 1 ? "bling" : "click-credit", gain > 1 ? 0.7 : 1);
+  }
+  if (!spectating && now.active === me && prev.active && prev.active !== me) sound("ting");
+  for (const l of lines) {
+    const m = l.match(/\b(net|meat|core|brain) damage/i);
+    if (m && /\b(suffers?|takes?|deals?|does|trashes)\b/i.test(l)) {
+      const kind = m[1].toLowerCase();
+      sound(kind === "net" ? "pulse" : kind === "meat" ? "end-of-the-line" : "wave");
+      break;
+    }
+  }
+}
+
 function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown) => string, focus: Point | null) {
   if (reduced()) return;
   let busy = 0;
 
   if (now.winner && !prev.winner)
     setTimeout(() => {
-      sound("game-end");
       if (spectating) finale(true, `${now.winner === "corp" ? "CORP" : "RUNNER"} WINS`);
       else finale(now.winner === me);
     }, 1600);
@@ -460,7 +514,6 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
     const mine = now.active === me;
     banner(mine ? "Your turn" : `${now.active === "corp" ? "Corp" : "Runner"} turn`, mine ? `${now.clicks[me]} clicks` : "", mine ? "gold" : "white", { size: mine ? "xl" : "md", hold: mine ? 0.6 : 0.35 });
     if (mine) {
-      sound("ting");
       buzz([20, 40, 20]);
       const pips = [...document.querySelectorAll(`[data-anchor="${me}-clicks"] i`)];
       pips.forEach((p, i) => animate(p, { scale: [0, 1.4, 1], opacity: [0, 1] }, { duration: 0.45, delay: 0.5 + i * 0.09, ease: "easeOut" }));
@@ -476,7 +529,6 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
     if (!at) continue;
     punch(el!.closest(".big") ?? el, delta > 0 ? 1.3 : 1.15);
     if (delta > 0) {
-      sound(delta > 1 ? "bling" : "click-credit");
       const from: Point = focus ?? [at[0] + (Math.random() - 0.5) * 30, at[1] + 70];
       coins(from, at, delta, "gold");
       floater([at[0], el!.getBoundingClientRect().top - 14], `+${delta}`, "gold", 30, true);
@@ -516,7 +568,6 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
     const card = findIn(view, cid);
     const isIce = card?.type === "ICE";
     const flip = () => {
-      sound(isIce ? "rez-ice" : "rez-other");
       rezFlip(cid, isIce ? KIND_TONE[iceKind(card)] : "blue", isIce && !!now.server);
     };
     const to = isIce && messaged ? pointOf(tileEl(cid)) : null;
@@ -529,7 +580,6 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
   for (const [cid, a] of now.adv) {
     const before = prev.adv.get(cid) ?? 0;
     if (a <= before) continue;
-    sound("click-advance");
     const el = tileEl(cid);
     const pt = pointOf(el);
     if (!pt) continue;
@@ -551,7 +601,6 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
     burst(pt, "cyan", 12, 40, { size: 4, gravity: -50 });
   }
 
-  if (now.tags < prev.tags) sound("click-remove-tag");
   if (now.tags > prev.tags) {
     const at = runnerTarget(me);
     reticle(at);
@@ -564,7 +613,6 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
     const server = document.querySelector(".server.running");
     const to = pointOf(server) ?? [innerWidth / 2, innerHeight / 3];
     warp(to, "cyan");
-    sound("click-run");
     banner("Run", serverName(now.server), "cyan", { size: "xl", hold: 0.45 });
     stageFreeAt = performance.now() + 1900;
     setTimeout(() => {
@@ -638,7 +686,6 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
       setTimeout(() => accessShow(view, h.text ?? "", h.zone ?? ""), Math.max(delay * 1000, stageFreeAt - performance.now()));
       t += 1.5;
     } else if (h.kind === "purge") {
-      sound("virus-purge");
       flash("violet", 0.35);
       ring([innerWidth / 2, innerHeight / 2], "violet", 360);
       stamp([innerWidth / 2, innerHeight * 0.4], "Purge", "violet");
@@ -662,7 +709,6 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
       const jacked = lines.some((l: string) => /jacks? out/i.test(l));
       setTimeout(() => {
         banner(jacked ? "Jacked out" : "Run ended", serverName(prev.server!), "white", { size: "lg", hold: 0.4, from: "right" });
-        sound("run-unsuccessful");
         buzz(60);
       }, t * 1000);
     }
@@ -673,7 +719,6 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
 
 function breached(server: string, me: Side) {
   const corp = me === "corp";
-  sound("run-successful");
   split(corp ? "red" : "cyan");
   setTimeout(() => {
     banner(corp ? "Breached" : "Breach", server, corp ? "red" : "cyan", { size: "xl", hold: 0.5 });
@@ -909,6 +954,7 @@ export function useFx(view: any, me: Side, render: (m: unknown) => string, quiet
   const plan = useRef<Plan | null>(null);
   const rects = useRef<Map<unknown, DOMRect>>(new Map());
   const state = useRef<Snap | null>(null);
+  const heard = useRef<number | null>(null);
 
   if (last.current !== view) {
     const next = collect(view);
@@ -933,6 +979,11 @@ export function useFx(view: any, me: Side, render: (m: unknown) => string, quiet
       play(p, me, lines);
       events(prev, now, view, me, render, focusPoint(p, prev, now));
     }
+    if (prev && !document.hidden && !quiet) {
+      const lines: string[] = (view.log ?? []).slice(prev.log).map((e: any) => render(e.text));
+      sounds(prev, now, view, me, render, heard.current ?? 0, p ? moveKinds(p, me, lines) : []);
+    }
+    heard.current = Math.max(heard.current ?? 0, Number(view?.["sfx-current-id"] ?? 0));
     persistent(view);
   }, [view]);
 

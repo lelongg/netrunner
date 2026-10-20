@@ -33,7 +33,7 @@ const VARIANTS: Partial<Record<Sound, string[]>> = {
 
 let context: AudioContext | null = null;
 const buffers = new Map<string, Promise<AudioBuffer | null>>();
-const lastPlayed = new Map<Sound, number>();
+const lastPlayed = new Map<string, number>();
 
 function audio(): AudioContext | null {
   if (context) return context;
@@ -62,7 +62,7 @@ export function soundOn() {
   return settings.sound && settings.volume > 0;
 }
 
-export function play(name: Sound, volume = 1) {
+export function play(name: Sound | string, volume = 1) {
   if (!soundOn()) return;
   const ctx = audio();
   if (!ctx) return;
@@ -70,7 +70,7 @@ export function play(name: Sound, volume = 1) {
   if (now - (lastPlayed.get(name) ?? 0) < 90) return;
   lastPlayed.set(name, now);
   if (ctx.state === "suspended") ctx.resume().catch(() => {});
-  const files = VARIANTS[name] ?? [name];
+  const files = VARIANTS[name as Sound] ?? [name];
   const file = files[Math.floor(Math.random() * files.length)];
   load(file).then((buffer) => {
     if (!buffer || !soundOn()) return;
