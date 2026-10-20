@@ -11,6 +11,7 @@ import { DeckView } from "../screens/Decks";
 import { deckFormat } from "../deckrules";
 import { CardSheet } from "./CardSheet";
 import { CardTile } from "./CardTile";
+import CursorGrid from "./CursorGrid";
 import { PromptPanel } from "./PromptPanel";
 import { useBackClose } from "../back";
 import { PHASE_LABELS, byServerOrder, iconize, serverLabel, serverName } from "./text";
@@ -1383,6 +1384,7 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
       )}
       <Toasts toasts={session.actionError ? [...toasts, { id: ACTION_ERROR, type: "error", msg: session.actionError }] : toasts} render={render} dismiss={(id) => (id === ACTION_ERROR ? session.clearActionError() : send("toast", { id }))} />
       <div class="playfield-frame">
+        <CursorGrid className="board-grid" cellSize={32} color="#22d3ee" gridColor="#22d3ee" radius={110} gridOpacity={0.09} fillOpacity={0.08} spotlight={0.5} ambient={motionOff() ? 0 : 0.12} clickPulse={!motionOff()} intro={!motionOff()} edgeFade={0.12} />
         <main class="playfield">
           <Opponent view={view} side={opp} name={names[opp]} />
           {theirArea}
