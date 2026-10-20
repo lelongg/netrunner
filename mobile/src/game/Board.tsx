@@ -1384,7 +1384,7 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
       )}
       <Toasts toasts={session.actionError ? [...toasts, { id: ACTION_ERROR, type: "error", msg: session.actionError }] : toasts} render={render} dismiss={(id) => (id === ACTION_ERROR ? session.clearActionError() : send("toast", { id }))} />
       <div class="playfield-frame">
-        <CursorGrid className="board-grid" cellSize={32} color="#3aa3b5" gridColor="#2b8a9a" radius={100} holdTime={200} fadeDuration={1400} maxOpacity={0.55} fillOpacity={0.07} gridOpacity={0.06} spotlight={0.3} ambient={motionOff() ? 0 : view.run ? 0.9 : 0.55} fps={30} clickPulse={!motionOff()} intro={!motionOff()} edgeFade={0.12} />
+        <CursorGrid className="board-grid" cellSize={32} color="#3aa3b5" gridColor="#2b8a9a" radius={100} holdTime={200} fadeDuration={1400} maxOpacity={0.6} fillOpacity={0} gridOpacity={0.06} spotlight={0.3} ambient={motionOff() ? 0 : view.run ? 0.9 : 0.55} fps={30} clickPulse={!motionOff()} intro={!motionOff()} edgeFade={0.12} />
         <main class="playfield">
           <Opponent view={view} side={opp} name={names[opp]} />
           {theirArea}

@@ -65,7 +65,7 @@ type Settings = {
 
 type Pulse = { x: number; y: number; t0: number; strength: number };
 
-type Walker = { col: number; row: number; dx: number; dy: number; wait: number; speed: number; life: number; strength: number };
+type Walker = { x: number; y: number; dx: number; dy: number; progress: number; speed: number; life: number; strength: number; trail: number[]; drain: number };
 
 type Program = { program: WebGLProgram; uniforms: Record<string, WebGLUniformLocation | null> };
 
@@ -301,6 +301,7 @@ const CursorGrid = ({
 }: CursorGridProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const signalRef = useRef<HTMLCanvasElement>(null);
   const wakeRef = useRef<(() => void) | null>(null);
   const ink = lightMode ? '#18181b' : '#ffffff';
   const settings: Settings = {
@@ -334,6 +335,8 @@ const CursorGrid = ({
   useEffect(() => {
     const container = containerRef.current;
     const canvas = canvasRef.current;
+    const signalCanvas = signalRef.current;
+    const pen = signalCanvas?.getContext('2d');
     const gl = canvas?.getContext('webgl2', {
       alpha: true,
       premultipliedAlpha: true,
@@ -341,7 +344,7 @@ const CursorGrid = ({
       depth: false,
       stencil: false
     });
-    if (!container || !canvas || !gl) return undefined;
+    if (!container || !canvas || !gl || !signalCanvas || !pen) return undefined;
     const shader = link(gl);
     if (!shader) return undefined;
     const u = shader.uniforms;
@@ -384,6 +387,8 @@ const CursorGrid = ({
       view.ratio = Math.min(s.dpr || window.devicePixelRatio || 1, 2);
       canvas.width = Math.max(1, Math.round(view.width * view.ratio));
       canvas.height = Math.max(1, Math.round(view.height * view.ratio));
+      signalCanvas.width = canvas.width;
+      signalCanvas.height = canvas.height;
       const size = s.cellSize;
       const cols = Math.ceil(view.width / size) + 1;
       const rows = Math.ceil(view.height / size) + 1;
@@ -517,44 +522,105 @@ const CursorGrid = ({
       gl.bindVertexArray(null);
     };
 
-    const spawn = (from?: Walker) => {
+    const TAIL = 3.5;
+
+    const spawn = (from?: Walker, at?: { x: number; y: number; dx: number; dy: number }) => {
       const { cols, rows } = grid;
-      const strength = 0.7 + Math.random() * 0.3;
       if (from) {
         const turn = Math.random() < 0.5 ? 1 : -1;
-        walkers.push({ col: from.col, row: from.row, dx: -from.dy * turn, dy: from.dx * turn, wait: 0, speed: from.speed * (0.8 + Math.random() * 0.4), life: 4 + Math.random() * 10, strength: from.strength * 0.8 });
+        walkers.push({ x: from.x, y: from.y, dx: -from.dy * turn, dy: from.dx * turn, progress: 0, speed: from.speed * (0.8 + Math.random() * 0.4), life: 3 + Math.random() * 8, strength: from.strength * 0.85, trail: [from.x, from.y], drain: TAIL });
+        return;
+      }
+      if (at) {
+        walkers.push({ x: at.x, y: at.y, dx: at.dx, dy: at.dy, progress: 0, speed: 7 + Math.random() * 3, life: 4 + Math.random() * 6, strength: 1, trail: [at.x, at.y], drain: TAIL });
         return;
       }
       const side = Math.floor(Math.random() * 4);
-      const col = side === 0 ? 0 : side === 1 ? cols - 1 : Math.floor(Math.random() * cols);
-      const row = side === 2 ? 0 : side === 3 ? rows - 1 : Math.floor(Math.random() * rows);
+      const x = side === 0 ? 0 : side === 1 ? cols : 1 + Math.floor(Math.random() * (cols - 1));
+      const y = side === 2 ? 0 : side === 3 ? rows : 1 + Math.floor(Math.random() * (rows - 1));
       const dx = side === 0 ? 1 : side === 1 ? -1 : 0;
       const dy = side === 2 ? 1 : side === 3 ? -1 : 0;
-      walkers.push({ col, row, dx, dy, wait: Math.random(), speed: 4 + Math.random() * 6, life: 10 + Math.random() * 25, strength });
+      walkers.push({ x, y, dx, dy, progress: 0, speed: 2.5 + Math.random() * 4, life: 10 + Math.random() * 25, strength: 0.6 + Math.random() * 0.4, trail: [x, y], drain: TAIL });
+    };
+
+    const paintSignals = (s: Settings) => {
+      const size = s.cellSize * view.ratio;
+      const ox = Math.round(grid.offX * view.ratio);
+      const oy = Math.round(grid.offY * view.ratio);
+      const [r, g, b] = hexToRgb(s.color).map(v => Math.round(v * 255));
+      pen.clearRect(0, 0, signalCanvas.width, signalCanvas.height);
+      pen.lineCap = 'round';
+      pen.lineWidth = Math.max(1, s.lineWidth * view.ratio * 1.5);
+      for (const w of walkers) {
+        const dead = w.life <= 0;
+        let hx = w.x + (dead ? 0 : w.dx * w.progress);
+        let hy = w.y + (dead ? 0 : w.dy * w.progress);
+        let left = dead ? w.drain : TAIL;
+        let walked = 0;
+        for (let k = w.trail.length - 2; k >= 0 && left > 0; k -= 2) {
+          const tx = w.trail[k];
+          const ty = w.trail[k + 1];
+          const span = Math.hypot(hx - tx, hy - ty);
+          if (span === 0) continue;
+          const take = Math.min(span, left);
+          const ex = hx + ((tx - hx) * take) / span;
+          const ey = hy + ((ty - hy) * take) / span;
+          const a0 = (1 - walked / TAIL) * w.strength * s.maxOpacity;
+          const a1 = (1 - (walked + take) / TAIL) * w.strength * s.maxOpacity;
+          const grad = pen.createLinearGradient(ox + hx * size, oy + hy * size, ox + ex * size, oy + ey * size);
+          grad.addColorStop(0, `rgba(${r},${g},${b},${a0})`);
+          grad.addColorStop(1, `rgba(${r},${g},${b},${Math.max(0, a1)})`);
+          pen.strokeStyle = grad;
+          pen.beginPath();
+          pen.moveTo(ox + hx * size, oy + hy * size);
+          pen.lineTo(ox + ex * size, oy + ey * size);
+          pen.stroke();
+          walked += take;
+          left -= take;
+          hx = ex;
+          hy = ey;
+        }
+        if (!dead) {
+          pen.fillStyle = `rgba(${r},${g},${b},${w.strength * s.maxOpacity})`;
+          pen.beginPath();
+          pen.arc(ox + (w.x + w.dx * w.progress) * size, oy + (w.y + w.dy * w.progress) * size, pen.lineWidth * 1.1, 0, Math.PI * 2);
+          pen.fill();
+        }
+      }
     };
 
     const simulate = (dt: number, s: Settings) => {
       const { cols, rows } = grid;
-      const want = Math.max(1, Math.round(cols * rows * 0.035 * s.ambient));
-      if (walkers.length < want && Math.random() < dt * 4) spawn();
+      const want = Math.max(2, Math.round((cols + rows) * 0.3 * s.ambient));
+      if (walkers.filter(w => w.life > 0).length < want && Math.random() < dt * 3) spawn();
       for (let k = walkers.length - 1; k >= 0; k--) {
         const w = walkers[k];
-        w.wait -= dt * w.speed;
-        if (w.wait > 0) continue;
-        w.wait += 1;
-        w.col += w.dx;
-        w.row += w.dy;
-        w.life -= 1;
-        if (w.life <= 0 || w.col < 0 || w.row < 0 || w.col >= cols || w.row >= rows) {
-          walkers.splice(k, 1);
+        if (w.life <= 0) {
+          w.drain -= dt * w.speed;
+          if (w.drain <= 0) walkers.splice(k, 1);
           continue;
         }
-        light(w.row * cols + w.col, w.strength * (0.5 + 0.5 * s.ambient));
-        const roll = Math.random();
-        if (roll < 0.06 && walkers.length < want * 2) spawn(w);
-        else if (roll < 0.2) {
-          const turn = Math.random() < 0.5 ? 1 : -1;
-          [w.dx, w.dy] = [-w.dy * turn, w.dx * turn];
+        w.progress += dt * w.speed;
+        while (w.progress >= 1 && w.life > 0) {
+          w.progress -= 1;
+          w.x += w.dx;
+          w.y += w.dy;
+          w.trail.push(w.x, w.y);
+          if (w.trail.length > 16) w.trail.splice(0, 2);
+          w.life -= 1;
+          const out = w.x <= 0 || w.y <= 0 || w.x >= cols || w.y >= rows;
+          if (out && (w.x + w.dx < 0 || w.y + w.dy < 0 || w.x + w.dx > cols || w.y + w.dy > rows)) w.life = 0;
+          if (w.life <= 0) {
+            w.progress = 0;
+            break;
+          }
+          const roll = Math.random();
+          if (roll < 0.07 && walkers.length < want * 3) spawn(w);
+          else if (roll < 0.25) {
+            const turn = Math.random() < 0.5 ? 1 : -1;
+            [w.dx, w.dy] = [-w.dy * turn, w.dx * turn];
+            if (w.x + w.dx < 0 || w.y + w.dy < 0 || w.x + w.dx > cols || w.y + w.dy > rows) [w.dx, w.dy] = [-w.dx, -w.dy];
+          }
         }
       }
       nextRipple -= dt * s.ambient;
@@ -620,6 +686,7 @@ const CursorGrid = ({
       if (s.ambient > 0 && !reduce) active = true;
 
       draw();
+      if (s.ambient > 0 && !reduce) paintSignals(s);
       if (active) raf = requestAnimationFrame(frame);
     };
 
@@ -660,6 +727,11 @@ const CursorGrid = ({
       const { x, y, inside } = locate(event);
       if (!inside || !s.clickPulse || reduce) return;
       pulses.push({ x, y, t0: clock, strength: 1 });
+      if (s.ambient > 0) {
+        const vx = Math.round((x - grid.offX) / s.cellSize);
+        const vy = Math.round((y - grid.offY) / s.cellSize);
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) spawn(undefined, { x: vx, y: vy, dx, dy });
+      }
       wake();
     };
 
@@ -730,6 +802,7 @@ const CursorGrid = ({
   return (
     <div ref={containerRef} class={`cursor-grid${className ? ` ${className}` : ''}`} style={style}>
       <canvas ref={canvasRef} class="cursor-grid__canvas" aria-hidden="true" />
+      <canvas ref={signalRef} class="cursor-grid__canvas" aria-hidden="true" />
       {children ? <div class="cursor-grid__content">{children}</div> : null}
     </div>
   );
