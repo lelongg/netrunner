@@ -281,7 +281,7 @@ async function showcase(m: Move, kind: Kind, me: Side) {
   await Promise.race([arrive.finished, new Promise((r) => setTimeout(r, 300))]);
   const center = mid(big);
   if (kind === "play") signature(info?.title, big);
-  if (kind === "score" || kind === "steal") scoreSignature(info?.title, big);
+  if (kind === "score" || kind === "steal") setTimeout(() => scoreSignature(info?.title, big), 1400);
   if (kind === "score" && info?.title === "Orbital Superiority") {
     const runner = rectOf(anchor("runner-panel"));
     setTimeout(() => orbitalStrike(visible(runner) ? mid(runner) : [innerWidth / 2, 90]), 1750);

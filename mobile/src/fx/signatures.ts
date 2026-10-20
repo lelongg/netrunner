@@ -1634,19 +1634,6 @@ export function wildcatStrike(card: DOMRect) {
   }, 400);
 }
 
-export function mutualFavor(card: DOMRect) {
-  if (reduced()) return;
-  const [cx, cy] = center(card);
-  for (const side of [-1, 1]) {
-    const orb = disc("fx-orb", [cx + side * card.width * 0.6, cy], 34);
-    done(animate(orb, { x: [0, -side * card.width * 0.6], opacity: [0, 1, 0] }, { duration: 0.7, ease: "easeIn" }), orb);
-  }
-  setTimeout(() => {
-    ring([cx, cy], "cyan", card.width * 1.4);
-    burst([cx, cy], "cyan", 16, 60, { size: 4, gravity: 0 });
-    buzz([20, 40]);
-  }, 650);
-}
 
 export function treadLightly(card: DOMRect) {
   if (reduced()) return;
@@ -1868,12 +1855,6 @@ export function pharos(r: DOMRect) {
   buzz([20, 40, 20]);
 }
 
-export function malapert(r: DOMRect) {
-  if (reduced()) return;
-  const vault = disc("fx-vault blue", center(r), r.width * 1.1);
-  animate(vault, { rotate: [0, 120] }, { duration: 0.8 });
-  fade(vault, 1.3);
-}
 
 export function whitespace(r: DOMRect) {
   if (reduced()) return;
@@ -1885,19 +1866,7 @@ export function whitespace(r: DOMRect) {
   }, 300);
 }
 
-export function luminal(card: DOMRect) {
-  if (reduced()) return;
-  const pillar = box("fx-pillar", inset(card, 0.3, -0.6, 0.4, 1.6));
-  fade(pillar, 1.6);
-  for (let i = 0; i < 3; i++) setTimeout(() => floater([card.left + card.width * (0.25 + i * 0.25), card.top + card.height * 0.4], "◆", "gold", 80, true), 300 + i * 120);
-}
 
-export function longevitySerum(card: DOMRect) {
-  if (reduced()) return;
-  const el = svgBox("fx-stroke recycle", inset(card, 0.2, 0.15, 0.6, 0.7), '<path pathLength="1" d="M15 5 H85 M15 95 H85 M20 5 C20 40, 80 60, 80 95 M80 5 C80 40, 20 60, 20 95"/>');
-  draw(el, 0.8);
-  fade(el, 1.7);
-}
 
 export function tomorrowsHeadline(card: DOMRect) {
   if (reduced()) return;
@@ -1971,20 +1940,7 @@ export function shred(card: DOMRect) {
 }
 
 
-export function lieLow(card: DOMRect) {
-  if (reduced()) return;
-  const el = node("fx-sig fx-shutdown");
-  done(animate(el, { opacity: [0, 0.6, 0.6, 0] }, { duration: 1.2, times: [0, 0.2, 0.8, 1] }), el);
-  glyph(inset(card, 0, 0.3, 1, 0.4), "shh", "#a5f3fc", 40);
-}
 
-export function maintenanceAccess(card: DOMRect) {
-  if (reduced()) return;
-  const band = box("fx-hazard", new DOMRect(0, card.top + card.height * 0.45, innerWidth, 26));
-  animate(band, { scaleX: [0, 1] }, { duration: 0.3 });
-  fade(band, 1.3);
-  buzz([20, 20, 20]);
-}
 
 export function transferOfWealth(card: DOMRect) {
   if (reduced()) return;
@@ -2039,13 +1995,6 @@ export function rentRioters(r: DOMRect) {
 }
 
 
-export function maglectric(r: DOMRect) {
-  if (reduced()) return;
-  const el = svgBox("fx-stroke bolt", inset(r, 0.15, -0.1, 0.7, 1.2), '<polyline pathLength="1" points="60,0 25,50 55,52 30,100"/>');
-  draw(el, 0.2);
-  done(animate(el, { opacity: [1, 0.2, 1, 0] }, { duration: 0.8 }), el);
-  flash("cyan", 0.25, 0.2);
-}
 
 
 
@@ -2062,13 +2011,6 @@ export function gamedragon(r: DOMRect) {
   for (let i = 0; i < 12; i++) setTimeout(() => burst([r.right + i * 8, r.top + r.height * 0.3 - i * 3], i % 2 ? "orange" : "gold", 4, 20 + i * 2, { size: 6, gravity: -20 }), i * 40);
 }
 
-export function madani(r: DOMRect) {
-  if (reduced()) return;
-  const lid = box("fx-lid", inset(r, -0.05, 0.3, 1.1, 0.15));
-  animate(lid, { rotate: [0, -35], y: [0, -12] }, { duration: 0.4, ease: "easeOut" });
-  fade(lid, 1.3);
-  setTimeout(() => rain(inset(r, 0.2, 0.4, 0.6, 0.6), 10, "#a5f3fc", true), 300);
-}
 
 
 
@@ -2221,12 +2163,6 @@ export function mercia(r: DOMRect) {
 }
 
 
-export function mahkotaLangit(r: DOMRect) {
-  if (reduced()) return;
-  const crown = box("fx-crown", inset(r, 0.1, 0.25, 0.8, 0.35));
-  animate(crown, { y: [-30, 0], scale: [0.6, 1] }, { duration: 0.4, ease: "easeOut" });
-  fade(crown, 1.4);
-}
 
 
 export function topDownSolutions(card: DOMRect) {
@@ -2249,10 +2185,6 @@ export function touchUps(card: DOMRect) {
 }
 
 
-export function measuredResponse(card: DOMRect) {
-  strokes(inset(card, 0.05, 0.2, 0.9, 0.6), "scale", "M50 10 V90 M30 90 H70 M10 30 H90 M10 30 L0 60 H20 Z M90 30 L80 60 H100 Z", 0.6);
-  if (!reduced()) setTimeout(() => vignette("red", 0.3), 500);
-}
 
 export function pettyCash(card: DOMRect) {
   if (reduced()) return;
@@ -2279,11 +2211,6 @@ export function takeADive(card: DOMRect) {
   }, 500);
 }
 
-export function kompromat(card: DOMRect) {
-  if (reduced()) return;
-  flash("white", 0.5, 0.2);
-  setTimeout(() => stamp(center(card), "Leaked", "red"), 250);
-}
 
 export function sellOut(card: DOMRect) {
   if (reduced()) return;
@@ -2352,9 +2279,6 @@ export function underdome(r: DOMRect) {
   }
 }
 
-export function methuselah(r: DOMRect) {
-  strokes(inset(r, 0.2, 0.15, 0.6, 0.7), "gold", "M15 5 H85 M15 95 H85 M20 5 C20 40, 80 60, 80 95 M80 5 C80 40, 20 60, 20 95", 0.8);
-}
 
 export function touchstone(r: DOMRect) {
   if (reduced()) return;
@@ -2390,19 +2314,6 @@ export function wordOnTheStreet(r: DOMRect) {
   }
 }
 
-export function meliesLuxury(card: DOMRect) {
-  if (reduced()) return;
-  for (let i = 0; i < 8; i++) {
-    const st = node("fx-sig fx-streak");
-    const w = card.width;
-    st.style.width = `${w}px`;
-    st.style.left = `${-w}px`;
-    st.style.top = `${card.top + card.height * (0.3 + i * 0.05)}px`;
-    st.style.background = "linear-gradient(90deg, transparent, #f6e03a 40%, #fff)";
-    done(animate(st, { x: [0, innerWidth + w * 2] }, { duration: 0.6, delay: i * 0.03, ease: "linear" }), st);
-  }
-  glyph(inset(card, 0, 0.2, 1, 0.6), "★", "#f6e03a", 70);
-}
 
 
 export function witchHunt(card: DOMRect) {
@@ -2444,12 +2355,6 @@ export function ezam(r: DOMRect) {
   strokes(inset(r, -0.05, 0.1, 1.1, 0.8), "geo", "M5 5 H95 V95 H5 V20 H80 V80 H20 V35 H65 V65 H35 V50 H50", 0.9);
 }
 
-export function knowledgeSeeker(r: DOMRect) {
-  if (reduced()) return;
-  const eye = disc("fx-eye", center(r), 20);
-  done(animate(eye, { scale: [0, 2, 1.5, 0], opacity: [0, 1, 1, 0] }, { duration: 1.2 }), eye);
-  ring(center(r), "green", r.width * 1.5);
-}
 
 export function lionsmane(r: DOMRect) {
   if (reduced()) return;
@@ -2480,10 +2385,6 @@ export function redRoom(r: DOMRect) {
   done(animate(room, { opacity: [0, 0.8, 0.4, 0.8, 0] }, { duration: 1.4 }), room);
 }
 
-export function magistrate(r: DOMRect) {
-  if (reduced()) return;
-  setTimeout(() => stamp(center(r), "Order", "blue"), 150);
-}
 
 
 export function grubber(r: DOMRect) {
@@ -2604,13 +2505,6 @@ export function myoshu(card: DOMRect) {
   }
 }
 
-export function lotusHaze(card: DOMRect) {
-  if (reduced()) return;
-  for (let i = 0; i < 4; i++) {
-    const band = box("fx-haze", new DOMRect(card.left - card.width * 0.5, card.top + card.height * (0.15 + i * 0.2), card.width * 2, card.height * 0.18));
-    done(animate(band, { x: [i % 2 ? 40 : -40, i % 2 ? -40 : 40], opacity: [0, 0.8, 0] }, { duration: 1.8, delay: i * 0.1 }), band);
-  }
-}
 
 export function reanimationProtocol(card: DOMRect) {
   if (reduced()) return;
@@ -2788,16 +2682,6 @@ export function vertigo(r: DOMRect) {
   }
 }
 
-export function idiosyncresis(r: DOMRect) {
-  if (reduced()) return;
-  ["?", "!", "?", "¿", "!", "?"].forEach((ch, i) => {
-    const g = box("fx-glyph", new DOMRect(r.left + Math.random() * r.width - 10, r.top + Math.random() * r.height - 10, 20, 20));
-    g.textContent = ch;
-    g.style.color = i % 2 ? "#3ddc84" : "#c792ff";
-    g.style.fontSize = "22px";
-    done(animate(g, { rotate: [0, (Math.random() - 0.5) * 720], scale: [0, 1.3, 1], opacity: [0, 1, 0] }, { duration: 1.2, delay: i * 0.08 }), g);
-  });
-}
 
 export function lethe(r: DOMRect) {
   if (reduced()) return;
@@ -2815,29 +2699,9 @@ export function lethe(r: DOMRect) {
 }
 
 
-export function mitraAman(r: DOMRect) {
-  if (reduced()) return;
-  for (const side of [-1, 1]) {
-    const guard = box("fx-guard", new DOMRect(side < 0 ? r.left - 16 : r.right + 4, r.top + r.height * 0.1, 12, r.height * 0.8));
-    animate(guard, { x: [side * 40, 0] }, { duration: 0.35, ease: "easeOut" });
-    fade(guard, 1.4);
-  }
-}
 
 
-export function luanaCampos(r: DOMRect) {
-  if (reduced()) return;
-  const cone = box("fx-spotlight", new DOMRect(r.left - r.width * 0.3, 0, r.width * 1.6, r.bottom));
-  fade(cone, 1.4);
-  setTimeout(() => floater([r.left + r.width / 2, r.top], "BP", "violet", 30, true), 400);
-}
 
-export function lamplighter(r: DOMRect) {
-  if (reduced()) return;
-  strokes(inset(r, 0.3, 0, 0.4, 1), "lamp", "M50 100 V25 M50 25 H70 V35", 0.4);
-  const flame = disc("fx-sun", [r.left + r.width * 0.58, r.top + r.height * 0.38], r.width * 0.5);
-  done(animate(flame, { opacity: [0, 0, 1, 0.7, 1, 0], scale: [0.4, 0.4, 1, 0.9, 1, 1] }, { duration: 1.5 }), flame);
-}
 
 export function nanomanagement(card: DOMRect) {
   if (reduced()) return;
@@ -3699,6 +3563,364 @@ export function ipEnforcement(card: DOMRect) {
       shake(0.4);
       buzz([60, 30, 60]);
     }, () => agenda.remove());
+  });
+}
+
+function drain(from: Point, to: Point, n: number, delay = 0) {
+  after(delay * 1000, () => coins(from, to, n, "gold"));
+}
+
+function pips(anchorName: string, n: number, color: string, delay = 0) {
+  const all = [...document.querySelectorAll<HTMLElement>(`[data-anchor="${anchorName}"] i`)];
+  all.slice(-n).forEach((p, i) => animate(p, { scale: [1, 1.9, 1], backgroundColor: ["#1e2227", color, color, "#1e2227"] } as any, { duration: 0.9, delay: delay + i * 0.15 }));
+}
+
+function burn(at: Point, delay = 0) {
+  const c = box("fx-mini-card blue", new DOMRect(at[0] - 11, at[1] - 15, 22, 30));
+  done(animate(c, { y: [0, 30], opacity: [1, 1, 0], filter: ["brightness(1)", "brightness(3) sepia(1) hue-rotate(-30deg)", "brightness(0)"] } as any, { duration: 0.7, delay }), c);
+  after(delay * 1000 + 400, () => burst([at[0], at[1] + 30], "orange", 10, 30, { size: 4, gravity: -50 }));
+}
+
+export function idiosyncresis(r: DOMRect) {
+  if (reduced()) return;
+  const at = center(r);
+  const corp = spot("corp-credits", [40, 40]);
+  const runner = spot("runner-credits", RUNNER);
+  for (let i = 0; i < 3; i++) {
+    const t = chip("fx-advtoken", [r.left + r.width * (0.25 + i * 0.25), r.top + r.height * 0.2], 14, 14);
+    done(animate(t, { y: [0, -30], scale: [1, 1.4, 0], opacity: [1, 1, 0] }, { duration: 0.5, delay: 0.2 + i * 0.3 }), t);
+    drain(at, corp, 3, 0.5 + i * 0.3);
+    drain(runner, corp, 2, 0.6 + i * 0.3);
+    after(500 + i * 300, () => buzz(20));
+  }
+  after(1400, () => {
+    burst(at, "green", 18, 60, { size: 5, shards: true, gravity: 50 });
+    ring(at, "green", r.width * 1.4);
+  });
+}
+
+export function knowledgeSeeker(r: DOMRect) {
+  if (reduced()) return;
+  const at = center(r);
+  for (let i = 0; i < 3; i++) {
+    const v = disc("fx-orb", [r.left - 20, r.top + r.height * (0.3 + i * 0.2)], 12);
+    v.style.filter = "hue-rotate(-90deg)";
+    animate(v, { x: [0, r.width * (0.3 + i * 0.2) + 20] }, { duration: 0.4, delay: i * 0.25, ease: "easeOut" });
+    done(animate(v, { opacity: [0, 1, 1, 0] }, { duration: 1.3, delay: i * 0.25, times: [0, 0.2, 0.75, 1] }), v);
+    after(400 + i * 250, () => buzz(15));
+  }
+  after(1100, () => {
+    flash("violet", 0.25, 0.4);
+    ring(at, "violet", r.width * 2);
+    const el = [...document.querySelectorAll<HTMLElement>(".tile[data-cid]")].find((t) => {
+      const rr = t.getBoundingClientRect();
+      return Math.abs(rr.left - r.left) < 2 && Math.abs(rr.top - r.top) < 2;
+    });
+    if (el) animate(el, { filter: ["brightness(1)", "brightness(0.4)", "brightness(1)"] } as any, { duration: 0.8 });
+  });
+}
+
+export function kompromat(card: DOMRect) {
+  if (reduced()) return;
+  const server = pointOf(document.querySelector(".server")) ?? [innerWidth / 2, innerHeight * 0.25];
+  after(200, () => {
+    const f = disc("fx-camflash", server, 120);
+    done(animate(f, { scale: [0.3, 1.5], opacity: [1, 0] }, { duration: 0.35 }), f);
+    buzz(30);
+  });
+  const photo = chip("fx-polaroid", server, 40, 48);
+  const corp = spot("corp-panel", [innerWidth / 2, 40]);
+  animate(photo, { y: [0, 20], rotate: [0, -8], scale: [0.4, 1] }, { duration: 0.35, delay: 0.3, ease: "easeOut" });
+  after(800, () => {
+    travel(photo, [server[0], server[1] + 20], corp, 0.5, { arc: 40, spin: 180 }).finished.then(() => {
+      photo.remove();
+      vignette("violet", 0.4);
+      ring(corp, "violet", 140);
+      buzz([40, 40]);
+    }, () => photo.remove());
+  });
+  done(animate(photo, { opacity: [0, 1, 1, 1] }, { duration: 1.3, delay: 0.3 }), photo);
+}
+
+export function lamplighter(r: DOMRect) {
+  if (reduced()) return;
+  const lampAt: Point = [r.left + r.width * 0.58, r.top + r.height * 0.38];
+  const flame = disc("fx-sun", lampAt, r.width * 0.5);
+  done(animate(flame, { opacity: [0, 1, 0.7, 1, 0], scale: [0.3, 1, 0.9, 1, 1] }, { duration: 1.8 }), flame);
+  const runner = spot("runner-panel", RUNNER);
+  const len = Math.hypot(runner[0] - lampAt[0], runner[1] - lampAt[1]) + 60;
+  const cone = box("fx-lightcone", new DOMRect(lampAt[0] - 60, lampAt[1], 120, len));
+  cone.style.transformOrigin = "50% 0";
+  const angle = (Math.atan2(runner[1] - lampAt[1], runner[0] - lampAt[0]) * 180) / Math.PI - 90;
+  animate(cone, { rotate: [angle - 50, angle + 10, angle] }, { duration: 1.1, delay: 0.3, ease: "easeInOut" });
+  done(animate(cone, { opacity: [0, 0.9, 0.9, 0] }, { duration: 1.5, delay: 0.3, times: [0, 0.2, 0.8, 1] }), cone);
+  after(1150, () => {
+    ring(runner, "red", 110);
+    buzz([30, 30, 30]);
+  });
+}
+
+export function lieLow(card: DOMRect) {
+  if (reduced()) return;
+  const dim = node("fx-sig fx-shutdown");
+  done(animate(dim, { opacity: [0, 0.6, 0.6, 0] }, { duration: 1.6, times: [0, 0.2, 0.8, 1] }), dim);
+  const runner = spot("runner-panel", RUNNER);
+  for (let i = 0; i < 2; i++) {
+    const t = disc("fx-speaker", [runner[0] + (i - 0.5) * 50, runner[1]], 44);
+    done(animate(t, { scale: [1, 0.2], opacity: [1, 0] }, { duration: 0.6, delay: 0.3 + i * 0.15, ease: "easeIn" }), t);
+  }
+  after(800, () => flyCards(spot("runner-deck", runner), spot("runner-hand", runner), 4, "", 0, 0.1));
+}
+
+export function longevitySerum(card: DOMRect) {
+  if (reduced()) return;
+  const hq = spot("corp-hand", [innerWidth * 0.7, 60]);
+  const rd = spot("corp-deck", [innerWidth / 2, 60]);
+  burn(hq, 0.1);
+  burn([hq[0] + 26, hq[1]], 0.2);
+  const archives: Point = [rd[0] - 60, rd[1] + 40];
+  after(700, () => {
+    for (let i = 0; i < 3; i++) {
+      const c = box("fx-mini-card serum", new DOMRect(archives[0] - 11, archives[1] - 15, 22, 30));
+      travel(c, archives, rd, 0.6, { delay: i * 0.12, arc: 40, spin: 360 });
+      done(animate(c, { opacity: [0, 1, 1, 0] }, { duration: 0.7, delay: i * 0.12, times: [0, 0.1, 0.85, 1] }), c);
+    }
+  });
+  after(1400, () => {
+    ring(rd, "green", 90);
+    buzz([20, 40]);
+  });
+}
+
+export function lotusHaze(card: DOMRect) {
+  if (reduced()) return;
+  for (let i = 0; i < 4; i++) {
+    const band = box("fx-haze", new DOMRect(card.left - card.width * 0.5, card.top + card.height * (0.15 + i * 0.2), card.width * 2, card.height * 0.18));
+    done(animate(band, { x: [i % 2 ? 40 : -40, i % 2 ? -40 : 40], opacity: [0, 0.8, 0] }, { duration: 1.8, delay: i * 0.1 }), band);
+  }
+  for (let i = 0; i < 3; i++) {
+    const t = chip("fx-advtoken violet", [card.left + card.width * (0.3 + i * 0.2), card.top - 20], 16, 16);
+    done(animate(t, { y: [-40, card.height * 0.5], opacity: [0, 1, 1, 0] }, { duration: 1.2, delay: 0.4 + i * 0.15, times: [0, 0.3, 0.8, 1], ease: "easeIn" }), t);
+    after(700 + i * 150, () => buzz(12));
+  }
+}
+
+export function luanaCampos(r: DOMRect) {
+  if (reduced()) return;
+  const cone = box("fx-spotlight", new DOMRect(r.left - r.width * 0.3, 0, r.width * 1.6, r.bottom));
+  done(animate(cone, { opacity: [0, 1, 1, 0] }, { duration: 1.6, times: [0, 0.15, 0.8, 1] }), cone);
+  const corp = spot("corp-panel", [innerWidth / 2, 40]);
+  const orb = disc("fx-orb", corp, 18);
+  orb.style.filter = "hue-rotate(120deg)";
+  travel(orb, corp, center(r), 0.6, { delay: 0.3, arc: 40 }).finished.then(() => {
+    orb.remove();
+    ring(center(r), "violet", 70);
+    credits(center(r), 3, "corp");
+    flyCards(center(r), spot("corp-hand", [innerWidth * 0.7, 60]), 1, "blue");
+    buzz([20, 40]);
+  }, () => orb.remove());
+}
+
+export function luminal(card: DOMRect) {
+  if (reduced()) return;
+  const pillar = box("fx-pillar", inset(card, 0.3, -0.6, 0.4, 1.6));
+  done(animate(pillar, { opacity: [0, 1, 1, 0], scaleX: [0.2, 1, 1, 0.2] }, { duration: 1.7, times: [0, 0.2, 0.8, 1] }), pillar);
+  const clicks = spot("corp-clicks", [innerWidth - 40, 40]);
+  for (let i = 0; i < 3; i++) {
+    const orb = disc("fx-orb", center(card), 14);
+    orb.style.filter = "hue-rotate(160deg) saturate(3)";
+    travel(orb, center(card), [clicks[0] + (i - 1) * 12, clicks[1]], 0.6, { delay: 0.4 + i * 0.15, arc: 60 }).finished.then(() => orb.remove(), () => orb.remove());
+  }
+  pips("corp-clicks", 3, "#f6e03a", 0.9);
+}
+
+export function madani(r: DOMRect) {
+  if (reduced()) return;
+  const lid = box("fx-lid", inset(r, -0.05, 0.3, 1.1, 0.15));
+  animate(lid, { rotate: [0, -40, -40, 0], y: [0, -14, -14, 0] }, { duration: 1.4, times: [0, 0.2, 0.7, 1], ease: "easeOut" });
+  done(animate(lid, { opacity: [1, 1, 0] }, { duration: 1.6, times: [0, 0.85, 1] }), lid);
+  const hand = spot("runner-hand", RUNNER);
+  const slot: Point = [r.left + r.width / 2, r.top + r.height * 0.4];
+  for (let i = 0; i < 2; i++) {
+    const c = box("fx-mini-card", new DOMRect(hand[0] - 10, hand[1] - 14, 20, 28));
+    travel(c, hand, slot, 0.5, { delay: 0.2 + i * 0.15, arc: 50 });
+    done(animate(c, { opacity: [0, 1, 1, 0], scale: [1, 1, 0.5] }, { duration: 0.6, delay: 0.2 + i * 0.15, times: [0, 0.1, 0.9, 1] }), c);
+  }
+  after(1100, () => {
+    const out = box("fx-mini-card vr", new DOMRect(slot[0] - 10, slot[1] - 14, 20, 28));
+    done(animate(out, { y: [0, -50], scale: [0.6, 1.2], opacity: [0, 1, 0] }, { duration: 0.6 }), out);
+    ring(slot, "cyan", 60);
+    buzz([10, 30]);
+  });
+}
+
+export function magistrate(r: DOMRect) {
+  if (reduced()) return;
+  const at: Point = [r.left + r.width / 2, r.top + r.height * 0.4];
+  const gavel = chip("fx-gavel", [at[0] + 20, at[1] - 50], 10, 54);
+  node("fx-gavel-head", gavel);
+  animate(gavel, { rotate: [-60, 20, -30, 20] }, { duration: 0.7, times: [0, 0.35, 0.6, 1], ease: "easeIn" });
+  done(animate(gavel, { opacity: [0, 1, 1, 0] }, { duration: 1.2, times: [0, 0.1, 0.8, 1] }), gavel);
+  after(250, () => (ring(at, "gold", 50), buzz(40)));
+  after(700, () => {
+    ring(at, "gold", 70);
+    buzz(40);
+    coins(spot("runner-credits", RUNNER), spot("corp-credits", [40, 40]), 3, "gold");
+  });
+}
+
+export function maglectric(r: DOMRect) {
+  if (reduced()) return;
+  const target = iceTiles()[0];
+  const to = pointOf(target) ?? [innerWidth / 2, innerHeight * 0.25];
+  const from = center(r);
+  const pts: Point[] = [from];
+  for (let i = 1; i < 6; i++) pts.push([from[0] + ((to[0] - from[0]) * i) / 6 + (Math.random() - 0.5) * 40, from[1] + ((to[1] - from[1]) * i) / 6]);
+  pts.push(to);
+  const zap = pathLine("zap", pts, 0.2);
+  done(animate(zap, { opacity: [1, 0.3, 1, 0] }, { duration: 0.6, delay: 0.2 }), zap);
+  after(300, () => {
+    flash("cyan", 0.2, 0.25);
+    if (target) animate(target, { rotateY: [0, 180, 0], filter: ["brightness(1)", "brightness(0.3)", "brightness(0.6)", "brightness(1)"] } as any, { duration: 1 });
+    burst(to, "cyan", 14, 50, { size: 4, gravity: 0 });
+    burst(from, "orange", 12, 40, { size: 5, shards: true, gravity: 60 });
+    buzz([20, 60]);
+  });
+}
+
+export function mahkotaLangit(r: DOMRect) {
+  if (reduced()) return;
+  const crown = box("fx-crown", inset(r, 0.15, 0.1, 0.7, 0.3));
+  animate(crown, { y: [-40, 0], rotate: [-10, 0] }, { duration: 0.45, ease: "easeOut" });
+  done(animate(crown, { opacity: [0, 1, 1, 0] }, { duration: 1.7, times: [0, 0.15, 0.8, 1] }), crown);
+  for (let i = 0; i < 2; i++) {
+    const coin = disc("fx-coin-big", [r.left + r.width * (0.3 + i * 0.4), r.top - 40], 16);
+    done(animate(coin, { y: [0, r.height * 0.7], rotateY: [0, 720], opacity: [0, 1, 1, 0] } as any, { duration: 0.8, delay: 0.5 + i * 0.15, ease: "easeIn" }), coin);
+    after(1200 + i * 150, () => (ring([r.left + r.width * (0.3 + i * 0.4), r.top + r.height * 0.6], "gold", 40), buzz(15)));
+  }
+}
+
+export function maintenanceAccess(card: DOMRect) {
+  if (reduced()) return;
+  const runner = spot("runner-panel", RUNNER);
+  const rd = spot("corp-deck", [innerWidth / 2, 60]);
+  const hq = spot("corp-hand", [innerWidth * 0.7, 60]);
+  const archives: Point = [rd[0] - 60, rd[1] + 40];
+  const door = box("fx-hazard", new DOMRect(archives[0] - 24, archives[1] - 6, 48, 12));
+  done(animate(door, { opacity: [0, 1, 1, 0], scaleX: [1, 1, 0.1, 0.1] }, { duration: 1.4, times: [0, 0.3, 0.45, 1] }), door);
+  const pts: Point[] = [runner, [archives[0], archives[1] + 30], archives, [(archives[0] + hq[0]) / 2, archives[1] - 20], hq];
+  const line = pathLine("geo", pts, 1.1);
+  spark(pts, 1.2, "#f6e03a");
+  done(animate(line, { opacity: [1, 1, 0] }, { duration: 1.8, times: [0, 0.8, 1] }), line);
+  after(1200, () => (ring(hq, "gold", 90), buzz([20, 40])));
+}
+
+export function malapert(r: DOMRect) {
+  if (reduced()) return;
+  const at = center(r);
+  const vault = disc("fx-vault blue", at, r.width * 1.1);
+  animate(vault, { rotate: [0, -200] }, { duration: 0.8, ease: "easeInOut" });
+  animate(vault, { scaleX: [1, 1, 0.1] }, { duration: 1.2, times: [0, 0.7, 1] });
+  done(animate(vault, { opacity: [0, 1, 1, 0] }, { duration: 1.3, times: [0, 0.1, 0.85, 1] }), vault);
+  after(1000, () => {
+    const rd = spot("corp-deck", [innerWidth / 2, 60]);
+    const hq = spot("corp-hand", [innerWidth * 0.7, 60]);
+    ring(rd, "blue", 60);
+    flyCards(rd, hq, 1, "blue");
+    buzz([20, 20]);
+  });
+}
+
+export function measuredResponse(card: DOMRect) {
+  if (reduced()) return;
+  const beam = box("fx-balance", inset(card, 0.05, 0.3, 0.9, 0.04));
+  const left = box("fx-pan", inset(card, 0.02, 0.36, 0.3, 0.12));
+  const right = box("fx-pan meat", inset(card, 0.68, 0.36, 0.3, 0.12));
+  for (const el of [beam, left, right]) {
+    animate(el, { rotate: [0, -8, 6, -4, 14] }, { duration: 1.2, ease: "easeInOut" });
+    done(animate(el, { opacity: [0, 1, 1, 0] }, { duration: 1.6, times: [0, 0.1, 0.85, 1] }), el);
+  }
+  after(1200, () => {
+    const runner = spot("runner-panel", RUNNER);
+    spark([center(card), runner], 0.3, "#ff3b30");
+    after(300, () => {
+      ring(runner, "red", 140);
+      burst(runner, "red", 18, 70, { size: 5, shards: true, gravity: 40 });
+      shake(0.7);
+      buzz([80, 30, 80]);
+    });
+  });
+}
+
+export function meliesLuxury(card: DOMRect) {
+  if (reduced()) return;
+  const track = box("fx-track", new DOMRect(0, card.top + card.height * 0.55, innerWidth, 6));
+  done(animate(track, { opacity: [0, 1, 1, 0] }, { duration: 1.6, times: [0, 0.1, 0.8, 1] }), track);
+  const train = box("fx-train", new DOMRect(-card.width * 1.4, card.top + card.height * 0.42, card.width * 1.4, card.height * 0.13));
+  animate(train, { x: [0, innerWidth + card.width * 2.8] }, { duration: 1.1, delay: 0.2, ease: [0.3, 0, 0.7, 1] });
+  after(1350, () => train.remove());
+  after(900, () => {
+    pips("corp-clicks", 1, "#f6e03a");
+    buzz([20, 40]);
+  });
+}
+
+export function methuselah(r: DOMRect) {
+  if (reduced()) return;
+  const hand = spot("runner-hand", RUNNER);
+  const c = box("fx-mini-card", new DOMRect(hand[0] - 10, hand[1] - 14, 20, 28));
+  const at = center(r);
+  travel(c, hand, at, 0.5, { arc: 40 }).finished.then(() => {
+    c.remove();
+    burst(at, "orange", 14, 40, { size: 4, shards: true, gravity: 40 });
+    for (let i = 0; i < 2; i++) {
+      const coin = disc("fx-coin-big", [at[0] + (i - 0.5) * 20, at[1] - 30], 16);
+      done(animate(coin, { y: [0, 30], rotateY: [0, 540], opacity: [0, 1, 1, 0] } as any, { duration: 0.7, delay: 0.1 + i * 0.1 }), coin);
+    }
+    buzz([20, 30]);
+  }, () => c.remove());
+}
+
+export function mitraAman(r: DOMRect) {
+  if (reduced()) return;
+  for (const side of [-1, 1]) {
+    const guard = box("fx-guard", new DOMRect(side < 0 ? r.left - 16 : r.right + 4, r.top + r.height * 0.1, 12, r.height * 0.8));
+    animate(guard, { x: [side * 40, 0] }, { duration: 0.35, ease: "easeOut" });
+    done(animate(guard, { opacity: [0, 1, 1, 0] }, { duration: 1.5, times: [0, 0.1, 0.8, 1] }), guard);
+  }
+  const ices = iceTiles();
+  if (ices.length) {
+    const a = ices[0].getBoundingClientRect();
+    const archives: Point = [a.left + a.width / 2, a.top - 60];
+    const out = box("fx-mini-card blue", new DOMRect(a.left + a.width / 2 - 11, a.top + a.height / 2 - 15, 22, 30));
+    const inn = box("fx-mini-card blue", new DOMRect(archives[0] - 11, archives[1] - 15, 22, 30));
+    animate(out, { y: [0, -60], x: [0, 20] }, { duration: 0.5, delay: 0.5, ease: "easeInOut" });
+    animate(inn, { y: [0, 60], x: [0, -10] }, { duration: 0.5, delay: 0.5, ease: "easeInOut" });
+    for (const el of [out, inn]) done(animate(el, { opacity: [0, 1, 1, 0] }, { duration: 1.2, delay: 0.4, times: [0, 0.1, 0.85, 1] }), el);
+  }
+  after(1000, () => (credits(center(r), 3, "corp"), burst(center(r), "blue", 14, 40, { size: 4, shards: true, gravity: 40 })));
+}
+
+export function mutualFavor(card: DOMRect) {
+  if (reduced()) return;
+  const [cx, cy] = center(card);
+  for (const side of [-1, 1]) {
+    const orb = disc("fx-orb", [cx + side * card.width * 0.6, cy], 30);
+    done(animate(orb, { x: [0, -side * card.width * 0.6], opacity: [0, 1, 0] }, { duration: 0.6, ease: "easeIn" }), orb);
+  }
+  after(550, () => (ring([cx, cy], "cyan", card.width * 1.2), buzz(30)));
+  after(700, () => {
+    const stack = spot("runner-deck", RUNNER);
+    const rig = spot("runner-panel", RUNNER);
+    const c = box("fx-mini-card vr", new DOMRect(stack[0] - 11, stack[1] - 15, 22, 30));
+    animate(c, { y: [0, -60, -60], scale: [1, 1.6, 1.6], rotateY: [0, 0, 360] } as any, { duration: 0.7, ease: "easeOut" });
+    after(700, () => {
+      travel(c, [stack[0], stack[1] - 60], [rig[0], rig[1] - 40], 0.45).finished.then(() => {
+        c.remove();
+        ring([rig[0], rig[1] - 40], "cyan", 70);
+        buzz([10, 30]);
+      }, () => c.remove());
+    });
   });
 }
 
