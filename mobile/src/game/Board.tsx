@@ -1205,7 +1205,7 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
 
   return (
     <Verified.Provider value={verified}>
-    <div class={`board side-${side} turn-${view["active-player"]} ${ptype === "select" ? "selecting" : ""} ${view.run ? "in-run" : ""}`}>
+    <div class={`board side-${side} ${ptype === "select" ? "selecting" : ""} ${view.run ? "in-run" : ""}`}>
       <ScoreBar view={view} />
       <Ticker
         onFeed={() => setShowLog(true)}
@@ -1383,9 +1383,6 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
       )}
       <Toasts toasts={session.actionError ? [...toasts, { id: ACTION_ERROR, type: "error", msg: session.actionError }] : toasts} render={render} dismiss={(id) => (id === ACTION_ERROR ? session.clearActionError() : send("toast", { id }))} />
       <div class="playfield-frame">
-        <div class="board-bg" aria-hidden="true">
-          <i /><i /><i /><i /><i /><i />
-        </div>
         <main class="playfield">
           <Opponent view={view} side={opp} name={names[opp]} />
           {theirArea}
