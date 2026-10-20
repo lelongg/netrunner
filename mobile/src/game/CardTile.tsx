@@ -49,6 +49,7 @@ export function CardTile({
   const playable = !!card.playable && (!verified || verified.has(card.cid));
   const rezzable = dim && !ice && !!verified?.has(card.cid);
   const scorable = owner && card.type === "Agenda" && zone0(card) === "servers" && !!verified?.has(card.cid);
+  const advanceable = owner && !scorable && !!verified?.has(`advance:${card.cid}`);
   const classes = [
     "tile",
     `tile-${size}`,
@@ -61,6 +62,7 @@ export function CardTile({
     usable ? "usable" : "",
     rezzable ? "rezzable" : "",
     scorable ? "scorable" : "",
+    advanceable ? "advanceable" : "",
     card.new ? "new" : "",
     ice ? "ice" : "",
     sideways ? "sideways" : "",
@@ -101,6 +103,11 @@ export function CardTile({
         {(usable || rezzable) && (
           <span class="usable-mark" aria-hidden="true">
             <Icon name="bolt" />
+          </span>
+        )}
+        {advanceable && (
+          <span class={`usable-mark advance-mark ${usable || rezzable ? "second" : ""}`} aria-hidden="true">
+            <Icon name="advance" />
           </span>
         )}
         {card.new && <span class="new-tag">New</span>}

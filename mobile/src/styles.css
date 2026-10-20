@@ -1162,7 +1162,8 @@ textarea:focus {
 
 .tile.playable,
 .tile.usable,
-.tile.rezzable {
+.tile.rezzable,
+.tile.advanceable {
   border-color: var(--cyan);
   box-shadow: 0 0 10px rgb(34 211 238 / 0.35);
 }
@@ -6811,4 +6812,8 @@ h1.deck-name.long {
 .row-cost-sep {
   margin: 0 3px;
   color: var(--muted);
+}
+
+.usable-mark.second {
+  right: 18px;
 }

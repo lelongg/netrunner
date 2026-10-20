@@ -1,7 +1,7 @@
 import { createContext } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { Side } from "../engine";
-import { type Command, advancement, cardRef } from "./actions";
+import { type Command, advancement, canAdvance, cardRef } from "./actions";
 import type { Probe, ProbeResult } from "./runner";
 import { quietUntil } from "../fx/director";
 
@@ -86,6 +86,10 @@ export function useVerified(view: any, side: Side, probe: Prober | undefined, st
           owners.push(card.cid);
           probes.push({ k: "try", command: ab.dynamic ? "dynamic-ability" : "ability", args: ab.dynamic ? { card: cardRef(card), dynamic: ab.dynamic, source: ab.source, index: ab.index } : { card: cardRef(card), ability: i } });
         });
+      }
+      if (side === "corp" && zone === "servers" && !inRun && canAdvance(card)) {
+        owners.push(`advance:${card.cid}`);
+        probes.push({ k: "try", command: "advance", args: { card: cardRef(card) } });
       }
     }
     for (const [k, v] of Object.entries(card)) if (k !== "abilities" && k !== "subroutines" && k !== "log" && v && typeof v === "object") visit(v);

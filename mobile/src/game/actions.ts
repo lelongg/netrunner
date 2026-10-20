@@ -57,11 +57,16 @@ export function isFaceup(card: any) {
   return !!(card.seen || card.rezzed);
 }
 
+export function canAdvance(card: any) {
+  const installed = zone0(card) === "servers" || zone0(card) === "onhost";
+  return (card.type === "Agenda" && installed) || card.advanceable === "always" || (card.rezzed && card.advanceable === "while-rezzed") || (!card.rezzed && card.advanceable === "while-unrezzed");
+}
+
 function actionList(card: any, view: any, side: Side): string[] {
   const z = zone0(card);
   const out: string[] = [];
   const installed = z === "servers" || z === "onhost";
-  if ((card.type === "Agenda" && installed) || card.advanceable === "always" || (card.rezzed && card.advanceable === "while-rezzed") || (!card.rezzed && card.advanceable === "while-unrezzed")) out.push("advance");
+  if (canAdvance(card)) out.push("advance");
   if (card.type === "Agenda" && installed && view["active-player"] === side && advancement(card) >= (card["current-advancement-requirement"] ?? card.advancementcost ?? Infinity)) out.push("score");
   if (["ICE", "Program"].includes(card.type) && (installed || z === "rig")) out.push("trash");
   if (["Asset", "Upgrade"].includes(card.type) && installed && !card.rezzed) out.push("rez");
