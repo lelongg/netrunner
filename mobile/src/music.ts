@@ -21,6 +21,8 @@ const buffers = new Map<Layer, Promise<AudioBuffer | null>>();
 const gains = new Map<Layer, GainNode>();
 const sources = new Map<Layer, AudioBufferSourceNode>();
 let master: GainNode | null = null;
+let duck: GainNode | null = null;
+let away = 0;
 let mood: Mood = "off";
 let stopTimer = 0;
 let token = 0;
@@ -47,7 +49,8 @@ function gainOf(ctx: AudioContext, layer: Layer) {
   if (!master) {
     master = ctx.createGain();
     master.gain.value = settings.musicVolume;
-    master.connect(ctx.destination);
+    duck = ctx.createGain();
+    master.connect(duck).connect(ctx.destination);
   }
   let gain = gains.get(layer);
   if (!gain) {
@@ -68,7 +71,19 @@ function stop(layers: Layer[]) {
   }
 }
 
-async function start(ctx: AudioContext, layers: Layer[], run: number) {
+function fade(ctx: AudioContext, layer: Layer, target: number, at: number) {
+  const gain = gainOf(ctx, layer).gain;
+  const from = gain.value;
+  gain.cancelScheduledValues(at);
+  gain.setValueAtTime(from, at);
+  if (layer === "menu" && target > from) {
+    const floor = 10 ** (-36 / 20);
+    const curve = Float32Array.from({ length: 128 }, (_, i) => from + ((target - from) * (10 ** ((-36 * (1 - i / 127)) / 20) - floor)) / (1 - floor));
+    gain.setValueCurveAtTime(curve, at + 0.01, MENU_FADE_IN);
+  } else gain.linearRampToValueAtTime(target, at + FADE);
+}
+
+async function start(ctx: AudioContext, layers: Layer[], run: number, mix: Partial<Record<Layer, number>>) {
   const loaded = await Promise.all(layers.map(load));
   if (run !== token || loaded.some((b) => !b)) return;
   const when = ctx.currentTime + 0.05;
@@ -81,6 +96,7 @@ async function start(ctx: AudioContext, layers: Layer[], run: number) {
     source.connect(gainOf(ctx, layer));
     source.start(when, ROLL);
     sources.set(layer, source);
+    fade(ctx, layer, mix[layer] ?? 0, when);
   });
 }
 
@@ -93,22 +109,22 @@ function apply() {
   const game: Layer[] = ["base", "tension", "run"];
   const wantGame = game.some((l) => mix[l]);
   const wantMenu = !!mix.menu;
+  const starting: Layer[] = [];
   if (wantGame && !game.every((l) => sources.has(l))) {
     stop(game);
-    start(ctx, game, run);
+    starting.push(...game);
   }
-  if (wantMenu && !sources.has("menu")) start(ctx, ["menu"], run);
+  if (wantMenu && !sources.has("menu")) starting.push("menu");
   const now = ctx.currentTime;
   for (const layer of LAYERS) {
-    const gain = gainOf(ctx, layer).gain;
-    gain.cancelScheduledValues(now);
-    gain.setValueAtTime(gain.value, now);
-    const target = mix[layer] ?? 0;
-    if (layer === "menu" && target > gain.value) {
-      const from = gain.value;
-      gain.setValueCurveAtTime(Float32Array.from({ length: 64 }, (_, i) => from + (target - from) * (i / 63) ** 3), now + 0.01, MENU_FADE_IN);
-    } else gain.linearRampToValueAtTime(target, now + FADE);
+    if (starting.includes(layer)) {
+      const gain = gainOf(ctx, layer).gain;
+      gain.cancelScheduledValues(now);
+      gain.setValueAtTime(0, now);
+    } else fade(ctx, layer, mix[layer] ?? 0, now);
   }
+  if (starting.some((l) => l !== "menu")) start(ctx, game, run, mix);
+  if (starting.includes("menu")) start(ctx, ["menu"], run, mix);
   stopTimer = window.setTimeout(() => {
     if (!wantGame) stop(game);
     if (!wantMenu) stop(["menu"]);
@@ -128,10 +144,29 @@ export function initMusic() {
     const playing = sources.size > 0;
     if (playing !== (enabled() && mood !== "off")) apply();
   });
-  document.addEventListener("visibilitychange", () => {
+  const leave = () => {
+    const ctx = audio();
+    if (!ctx || !duck) return;
+    clearTimeout(away);
+    const now = ctx.currentTime;
+    duck.gain.cancelScheduledValues(now);
+    duck.gain.setValueAtTime(duck.gain.value, now);
+    duck.gain.linearRampToValueAtTime(0, now + 0.25);
+    if (document.hidden) away = window.setTimeout(() => ctx.suspend().catch(() => {}), 300);
+  };
+  const back = () => {
     const ctx = audio();
     if (!ctx) return;
-    if (document.hidden) ctx.suspend().catch(() => {});
-    else if (settings.sound || enabled()) ctx.resume().catch(() => {});
-  });
+    clearTimeout(away);
+    if (settings.sound || enabled()) ctx.resume().catch(() => {});
+    if (!duck) return;
+    const now = ctx.currentTime;
+    duck.gain.cancelScheduledValues(now);
+    duck.gain.setValueAtTime(duck.gain.value, now);
+    duck.gain.linearRampToValueAtTime(1, now + 1.5);
+  };
+  document.addEventListener("visibilitychange", () => (document.hidden ? leave() : back()));
+  addEventListener("pagehide", leave);
+  addEventListener("blur", leave);
+  addEventListener("focus", back);
 }
