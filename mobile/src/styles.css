@@ -5666,7 +5666,7 @@ button.armed {
 
 .browse-inf {
   position: absolute;
-  left: 4px;
+  right: 4px;
   bottom: 4px;
   padding: 1px 4px;
   background: #000c;
