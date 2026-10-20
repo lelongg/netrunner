@@ -13,6 +13,7 @@ import { DeckRow, Decks, DeckView } from "./Decks";
 import { useBackClose } from "../back";
 import { Icon } from "../icons";
 import { type GameFormat, FORMAT_DESC, GAME_FORMATS, analyze, dealtFormat, deckFormat } from "../deckrules";
+import { uiSound } from "../uisound";
 
 const FORMAT_HINT: Partial<Record<GameFormat, string>> = {
   preconstructed: "Preconstructed decks only.",
@@ -291,11 +292,19 @@ export function Lobby({ session, db, matchups, onLeave, onWatch }: Props) {
   if (lobby.status !== "connecting" && lobby.status !== "closed") reached.current = true;
   const inLobby = lobby.role === "local" || (lobby.status !== "closed" && (lobby.status !== "connecting" || reached.current));
 
+  useEffect(() => {
+    if (lobby.opponentName) uiSound("ui_join");
+  }, [!!lobby.opponentName]);
+  useEffect(() => {
+    if (lobby.opponentDeckReady) uiSound("ui_ready");
+  }, [!!lobby.opponentDeckReady]);
+
   const share = async () => {
     try {
       if (navigator.share) await navigator.share({ title: "Netrunner game", text: `Code: ${lobby.code}`, url: link });
       else {
         await navigator.clipboard.writeText(link);
+        uiSound("ui_copy");
         setCopied(true);
       }
     } catch {

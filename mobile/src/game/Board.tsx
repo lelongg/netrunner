@@ -24,6 +24,7 @@ import { type Prober, Verified, useChecked, useVerified } from "./legal";
 import { CardImage, ZoomableCardImage } from "./CardImage";
 import { withTerms } from "./RichText";
 import { motionOff, setSetting, settings } from "../settings";
+import { uiSound } from "../uisound";
 
 interface Props {
   session: Session;
@@ -763,6 +764,7 @@ function Toasts({ toasts, render, dismiss }: { toasts: any[]; render: (m: unknow
   useEffect(() => {
     const live = new Set(toasts.map((t) => t.id));
     for (const t of toasts) {
+      if (!timers.current.has(t.id)) uiSound(t.type === "error" ? "ui_error" : "ui_notify");
       if (!timers.current.has(t.id))
         timers.current.set(
           t.id,
@@ -1208,7 +1210,10 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
   const tense = !view.winner && (Math.max(view.corp?.["agenda-point"] ?? 0, view.runner?.["agenda-point"] ?? 0) >= 4 || (view.runner?.tag?.total ?? 0) > 0);
   const mood = view.winner ? "calm" : view.run ? "run" : tense ? "tension" : "calm";
   useEffect(() => setMood(mood), [mood]);
-  useEffect(() => () => setMood("menu"), []);
+  useEffect(() => {
+    uiSound("ui_land");
+    return () => setMood("menu");
+  }, []);
 
   return (
     <Verified.Provider value={verified}>
@@ -1283,6 +1288,7 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
                   if (navigator.share) await navigator.share({ title: "Watch this Netrunner game", url });
                   else {
                     await navigator.clipboard.writeText(url);
+                    uiSound("ui_copy");
                     tell("Link copied", "Send it to anyone who wants to watch this game.");
                   }
                 } catch {}
@@ -1325,6 +1331,7 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
                   if (navigator.share) await navigator.share({ title: "Rejoin my Netrunner game", url });
                   else {
                     await navigator.clipboard.writeText(url);
+                    uiSound("ui_copy");
                     tell("Link copied", "Keep it private: it lets anyone take your seat.");
                   }
                 } catch {}

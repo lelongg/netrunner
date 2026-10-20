@@ -11,6 +11,7 @@ import { Icon } from "../icons";
 import { Cta, Picker, Ticker, ask, tell } from "../ui";
 import { motionOff, settings } from "../settings";
 import { DeckBrowser } from "./DeckBrowser";
+import { uiSound } from "../uisound";
 
 const SIDE_NAME: Record<Side, "Corp" | "Runner"> = { corp: "Corp", runner: "Runner" };
 
@@ -515,6 +516,7 @@ function DeckEditor({ db, initial, deck0, onClose, onOpen, readOnly }: { db?: Ca
       if ((e as Error)?.name === "AbortError") return;
     }
     await navigator.clipboard?.writeText(text).catch(() => {});
+    uiSound("ui_copy");
     tell("Decklist copied", "Paste it anywhere, or import it on NetrunnerDB.");
   };
 

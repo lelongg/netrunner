@@ -10,7 +10,7 @@ import { installMotion, useLoop } from "./fx/ui";
 import { unlockSound } from "./sound";
 import { dive } from "./fx/dive";
 import { initMusic, setMood } from "./music";
-import { installUiSounds } from "./uisound";
+import { installUiSounds, uiSound } from "./uisound";
 import { startEngineWorker } from "./game/workerHost";
 import { type CardDb, type EngineApi, type Matchup, type Side, loadEngine } from "./engine";
 import { Board } from "./game/Board";
@@ -346,7 +346,10 @@ function Opening({ label, ready }: { label: string; ready: boolean }) {
     if (!title.current || motionOff()) return;
     animate(title.current, { transform: ["scale(2.6)", "scale(1)"], opacity: [0, 1], filter: ["blur(12px)", "blur(0px)"] }, { duration: 0.6, ease: [0.2, 0.9, 0.3, 1.05] });
   }, []);
-  useEffect(() => (tunnel.current ? dive(tunnel.current, motionOff()) : undefined), []);
+  useEffect(() => {
+    uiSound("ui_dive");
+    return tunnel.current ? dive(tunnel.current, motionOff()) : undefined;
+  }, []);
   useLoop(bar, { transform: ["translateX(-100%)", "translateX(250%)"] }, { duration: 0.9, ease: [0.6, 0, 0.4, 1] });
   return (
     <div class="opening" role="status" aria-live="polite">

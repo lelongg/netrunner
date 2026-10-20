@@ -14,6 +14,7 @@ import { DEFAULT_RELAY, relayUrl } from "../net/relay";
 import { stagger } from "motion";
 import { animate } from "../fx/core";
 import { motionOff } from "../settings";
+import { uiSound } from "../uisound";
 
 const SIDES: Side[] = ["corp", "runner"];
 const other = (side: Side): Side => (side === "corp" ? "runner" : "corp");
@@ -394,11 +395,13 @@ function Report({ head, engine, db, onClose }: { head: Head; engine: EngineApi; 
         if (navigator.share) await navigator.share({ title: "Netrunner game replay", text, url });
         else {
           await navigator.clipboard.writeText(url);
+          uiSound("ui_copy");
           tell("Link copied", "Anyone with the link can see the report and watch the replay.");
         }
       } catch (e) {
         if ((e as Error)?.name !== "AbortError") {
           await navigator.clipboard?.writeText(url).catch(() => {});
+          uiSound("ui_copy");
           tell("Link copied", "Anyone with the link can see the report and watch the replay.");
         }
       }
