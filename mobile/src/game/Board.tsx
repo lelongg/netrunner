@@ -12,6 +12,7 @@ import { deckFormat } from "../deckrules";
 import { CardSheet } from "./CardSheet";
 import { CardTile } from "./CardTile";
 import CursorGrid from "./CursorGrid";
+import { setMood } from "../music";
 import { PromptPanel } from "./PromptPanel";
 import { useBackClose } from "../back";
 import { PHASE_LABELS, byServerOrder, iconize, serverLabel, serverName } from "./text";
@@ -1203,6 +1204,11 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
   const theirArea = opp === "corp" ? <CorpArea view={view} side={side} mine={false} onTap={tap} onZone={openZone} selectable={selectable} runServer={runServer} /> : <RunnerArea view={view} side={side} onTap={tap} onZone={openZone} selectable={selectable} />;
   const myArea = side === "corp" ? <CorpArea view={view} side={side} mine onTap={tap} onZone={openZone} selectable={selectable} runServer={runServer} /> : <RunnerArea view={view} side={side} onTap={tap} onZone={openZone} selectable={selectable} />;
   const hand: any[] = [...(me.hand ?? []), ...(me.discard ?? []).filter((c: any) => c["flashback-playable"])];
+
+  const tense = !view.winner && (Math.max(view.corp?.["agenda-point"] ?? 0, view.runner?.["agenda-point"] ?? 0) >= 4 || (view.runner?.tag?.total ?? 0) > 0);
+  const mood = view.winner ? "calm" : view.run ? "run" : tense ? "tension" : "calm";
+  useEffect(() => setMood(mood), [mood]);
+  useEffect(() => () => setMood("menu"), []);
 
   return (
     <Verified.Provider value={verified}>

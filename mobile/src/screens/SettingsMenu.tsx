@@ -77,6 +77,21 @@ export function SettingsMenu({ onClose }: { onClose: () => void }) {
             />
           </label>
         )}
+        <Toggle label="Music" on={settings.music} onChange={(v) => setSetting("music", v)} />
+        {settings.music && (
+          <label class="setting-field">
+            <span class="label">Music volume · {Math.round(settings.musicVolume * 100)}%</span>
+            <input
+              class="volume"
+              type="range"
+              min={0}
+              max={100}
+              step={5}
+              value={Math.round(settings.musicVolume * 100)}
+              onInput={(e) => setSetting("musicVolume", Number((e.target as HTMLInputElement).value) / 100)}
+            />
+          </label>
+        )}
         {pushSupported() && (
           <Toggle
             label="Turn notifications"

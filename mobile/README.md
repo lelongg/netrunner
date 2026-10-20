@@ -173,4 +173,5 @@ so use ones meant for browsers.
   and art belong to their respective owners.
 - Fonts: Big Shoulders Display and Space Mono (SIL Open Font License).
 - Sounds: the jinteki.net sound bank, with the per-sound sources and licences in [`public/sound/attributions.txt`](public/sound/attributions.txt), plus the Pocket Rig pack (the `snake_case` files) made for this project.
+- Music: the Pocket Rig adaptive loops in [`public/music`](public/music), made for this project.
 - Peer-to-peer matchmaking: [Trystero](https://github.com/dmotz/trystero).

@@ -8,6 +8,7 @@ import { animate } from "motion";
 import { installTips } from "./tips";
 import { installMotion, useLoop } from "./fx/ui";
 import { unlockSound } from "./sound";
+import { initMusic, setMood } from "./music";
 import { startEngineWorker } from "./game/workerHost";
 import { type CardDb, type EngineApi, type Matchup, type Side, loadEngine } from "./engine";
 import { Board } from "./game/Board";
@@ -398,6 +399,8 @@ onSettings(syncSettings);
 installTips();
 installMotion();
 unlockSound();
+initMusic();
+setMood("menu");
 startEngineWorker();
 render(
   new URLSearchParams(location.search).has("animations") ? (

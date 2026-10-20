@@ -38,7 +38,7 @@ let context: AudioContext | null = null;
 const buffers = new Map<string, Promise<AudioBuffer | null>>();
 const lastPlayed = new Map<string, number>();
 
-function audio(): AudioContext | null {
+export function audio(): AudioContext | null {
   if (context) return context;
   const Ctor = window.AudioContext ?? (window as any).webkitAudioContext;
   if (!Ctor) return null;
@@ -93,7 +93,7 @@ export function play(name: Sound | string, volume = 1) {
 
 export function unlockSound() {
   const resume = () => {
-    if (!soundOn()) return;
+    if (!soundOn() && !(settings.music && settings.musicVolume > 0)) return;
     const ctx = audio();
     if (ctx?.state === "suspended") ctx.resume().catch(() => {});
   };
