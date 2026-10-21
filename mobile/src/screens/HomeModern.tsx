@@ -13,6 +13,8 @@ import { lastDeck, saveId } from "../session";
 import { defaultStored, savedDecks } from "../decks";
 import { motionOff } from "../settings";
 import { useTilt } from "../tilt";
+import { FactionLogo, factionLogoKey } from "../FactionLogo";
+import { useCardPeek } from "../game/CardImage";
 import CursorGrid from "../game/CursorGrid";
 import { QrScan } from "./QrScan";
 import { GameList, JoinCode, type Props, describe, startGame } from "./Home";
@@ -255,6 +257,7 @@ export function HomeArena(props: Props) {
   };
   const hero = useMemo(() => featured(db, side), [db, side]);
   const feed = useFeed(props, hero);
+  const peek = useCardPeek(hero.card?.code, hero.card?.title ?? "");
   const tint = FACTION_TINT[factionKey(hero.card?.faction)] ?? (side === "corp" ? "#3aa3b5" : "#ff5a4f");
   const play = () => (mode === "online" ? onFind() : go("local", undefined, mode === "solo"));
   const searching = mode === "online" && seeking;
@@ -275,7 +278,7 @@ export function HomeArena(props: Props) {
         onPointerDown={(e) => (swipe.current = { x: e.clientX, y: e.clientY, done: false, drag: false })}
         onPointerMove={(e) => {
           const g = swipe.current;
-          if (!g) return;
+          if (!g || document.querySelector(".card-peek")) return;
           const dx = e.clientX - g.x;
           if (!g.drag && Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(e.clientY - g.y) * 1.5) g.drag = true;
           if (!g.drag) return;
@@ -309,7 +312,13 @@ export function HomeArena(props: Props) {
         <CursorGrid className="arena-grid" cellSize={32} color={tint} gridColor={tint} radius={110} holdTime={200} fadeDuration={1400} maxOpacity={0.7} fillOpacity={0} gridOpacity={0.1} spotlight={0.3} ambient={motionOff() ? 0 : 0.9} fps={30} tempo={seeking ? 1.8 : 1.2} clickPulse={!motionOff()} intro={!motionOff()} edgeFade={0.08} />
         <header class="arena-top">
           <span class="player-chip">
-            <Art key={`av-${side}`} card={hero.card} class={`player-avatar ${slide ? "chip-in" : ""}`} />
+            {factionLogoKey(hero.card?.faction) ? (
+              <span key={`av-${side}`} class={`player-glyph ${slide ? "chip-in" : ""}`}>
+                <FactionLogo faction={hero.card?.faction} />
+              </span>
+            ) : (
+              <Art key={`av-${side}`} card={hero.card} class={`player-avatar ${slide ? "chip-in" : ""}`} />
+            )}
             <span key={`pt-${side}`} class={`player-text ${slide ? "chip-in" : ""}`}>
               <small class="label">{hero.card?.side === "Corp" ? "Corp ID" : "Runner ID"}</small>
               <strong>{playerName()}</strong>
@@ -319,7 +328,7 @@ export function HomeArena(props: Props) {
         {error && <p class="error">{error}</p>}
         <Continue props={props} />
         <div class="deck-showcase">
-          <button class="deck-open" disabled={!ready} onClick={() => onDecks(hero.id, side)} aria-label={hero.id ? `Edit ${hero.deck}` : "Open your decks"}>
+          <button class="deck-open" disabled={!ready} onClick={() => peek.consumed() || onDecks(hero.id, side)} aria-label={hero.id ? `Edit ${hero.deck}` : "Open your decks"} {...peek.handlers}>
             <span ref={slideEl} key={side} class={`deck-slide ${slide ? `slide-${slide}` : ""}`}>
               <span class="deck-tilt">
                 <span class="deck-frame">
@@ -341,6 +350,7 @@ export function HomeArena(props: Props) {
               </span>
             </span>
           </button>
+          {peek.view}
           <span ref={captionEl} key={`c-${side}`} class={`deck-caption ${slide ? "fade-in" : ""}`}>
             <strong>{hero.deck ?? hero.card?.title ?? "Build a deck"}</strong>
           </span>

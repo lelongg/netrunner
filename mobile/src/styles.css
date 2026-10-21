@@ -8487,3 +8487,27 @@ body:has(.tabbar.global) .screen.guide {
   height: 1.5em;
   width: 1.5em;
 }
+
+.player-glyph {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+}
+
+.player-glyph .faction-logo {
+  width: 38px;
+  height: 38px;
+  margin: 0;
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--fc, var(--cyan)) 60%, transparent));
+}
+
+.player-glyph .faction-logo.logo-apex {
+  filter: drop-shadow(0 0 1px rgb(255 255 255 / 0.8)) drop-shadow(0 0 8px var(--fc, var(--red)));
+}
+
+.deck-open img {
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+  user-select: none;
+}
