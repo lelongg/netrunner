@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import type { CardDb, Matchup, Side } from "../engine";
 import { type WireDeck, defaultStored, latest } from "../decks";
 import { lastDeck, setLastDeck } from "../session";
-import { DeckSheet, QrZoom, shareLink } from "./Lobby";
+import { DeckSheet } from "./Lobby";
+import { WaitRoom } from "./WaitRoom";
 import { QrCode } from "../QrCode";
 import { defaultDeck, problemIn } from "./DeckPicker";
 import { DeckRow } from "./Decks";
@@ -37,49 +38,6 @@ function useTick(on: boolean) {
     const timer = setInterval(() => set((n) => n + 1), 1000);
     return () => clearInterval(timer);
   }, [on]);
-}
-
-function InviteTile({ code }: { code?: string }) {
-  const [copied, setCopied] = useState(false);
-  const [big, setBig] = useState(false);
-  const small = useRef<HTMLButtonElement>(null);
-  const link = code ? shareLink(code) : "";
-  const share = async () => {
-    try {
-      if (navigator.share) await navigator.share({ title: "Netrunner game", text: `Code: ${code}`, url: link });
-      else {
-        await navigator.clipboard.writeText(link);
-        setCopied(true);
-      }
-    } catch {}
-  };
-  return (
-    <>
-      <div class="match-stage">
-        <span class="match-radar" aria-hidden="true">
-          <i />
-          <i />
-          <i />
-          <b />
-        </span>
-        {code ? (
-          <button ref={small} class="qr-button match-qr" onClick={() => setBig(true)} aria-label="Enlarge the QR code">
-            <QrCode value={link} label={`QR code to join game ${code}`} />
-          </button>
-        ) : (
-          <div class="qr qr-pending match-qr" />
-        )}
-      </div>
-      <div class="match-code">
-        <span class="label">Game code</span>
-        <span class="code">{code || "·····"}</span>
-      </div>
-      <Cta onClick={share} disabled={!code} tone="cyan">
-        {copied ? "Link copied" : "Share the link"}
-      </Cta>
-      {big && code && <QrZoom value={link} code={code} from={small.current} onClose={() => setBig(false)} />}
-    </>
-  );
 }
 
 function Segmented<T extends string>({ label, value, options, onChange }: { label: string; value: T; options: { key: T; label: string }[]; onChange: (v: T) => void }) {
@@ -213,34 +171,25 @@ export function Match({ name, db, matchups, onMatched, onJoin, onWatch, onClose,
         </header>
 
         {mine ? (
-          <section class="match-waiting">
-            <div class="match-wait-head">
-              <div>
-                <span class="match-title">Waiting for an opponent</span>
-                <span class="match-chips">
-                  <span class="chip">{formatLabel(mine.format)}</span>
-                  <span class={`chip side-${mine.side}`}>{sideLabel(mine.side)}</span>
-                  <span class="chip">{mine.public === false ? "Private" : "Public"}</span>
-                  <span class="chip">
-                    <Icon name="eye" /> {mine.spectators === false ? "No spectators" : "Spectators"}
-                  </span>
-                  <span class="chip">{since(mine.at)}</span>
+          <WaitRoom
+            variant={localStorage.getItem("nsg.waitLayout") ?? "a"}
+            code={mine.code}
+            chips={
+              <>
+                <span class="chip">{formatLabel(mine.format)}</span>
+                <span class={`chip side-${mine.side}`}>{sideLabel(mine.side)}</span>
+                <span class="chip">{mine.public === false ? "Private" : "Public"}</span>
+                <span class="chip">
+                  <Icon name="eye" /> {mine.spectators === false ? "No spectators" : "Spectators"}
                 </span>
-              </div>
-            </div>
-            <InviteTile code={mine.code} />
-            <p class="hint">{mine.public === false && "Only people with the code or the link can join. "}The game stays open for 24 hours, even if you close the app.</p>
-            {!notify && pushSupported() && (
-              <button class="match-notify" disabled={busy} onClick={turnOnNotifications}>
-                <Icon name="sound" />
-                Notify me when someone joins
-              </button>
-            )}
-            <button class="match-stop" disabled={busy} onClick={stopSeeking}>
-              <Icon name="close" />
-              Cancel the game
-            </button>
-          </section>
+                <span class="chip">{since(mine.at)}</span>
+              </>
+            }
+            hint={`${mine.public === false ? "Only people with the code or the link can join. " : ""}The game stays open for 24 hours, even if you close the app.`}
+            busy={busy}
+            notify={!notify && pushSupported() ? turnOnNotifications : undefined}
+            onCancel={stopSeeking}
+          />
         ) : !mine && !games ? (
           <section class="panel section match-loading">
             <p class="hint">Looking for open games…</p>
@@ -337,9 +286,9 @@ export function Match({ name, db, matchups, onMatched, onJoin, onWatch, onClose,
               />
             </div>
             {!dealtFormat(format) &&
-              (side === "any" ? (["corp", "runner"] as Side[]) : [side as Side]).map((s) => (
-                <div class="match-field">
-                  <span class="label">{side === "any" ? `${s === "corp" ? "Corp" : "Runner"} deck` : "Deck"}</span>
+              (["corp", "runner"] as Side[]).map((s) => (
+                <div class={`match-field ${side !== "any" && side !== s ? "unused" : ""}`} aria-disabled={side !== "any" && side !== s}>
+                  <span class="label">{`${s === "corp" ? "Corp" : "Runner"} deck`}</span>
                   {decks[s] ? (
                     <ul class="deck-library match-deck">
                       <DeckRow db={db} stored={decks[s]!} format={deckFormat(format) ?? "casual"} onOpen={() => setChoosing(s)} issuesOnly />
