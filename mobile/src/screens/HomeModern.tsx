@@ -307,8 +307,8 @@ export function HomeArena(props: Props) {
           }
         }}
       >
-        {prev && <Art key={`out-${prev.code}`} card={prev} class="arena-bg arena-bg-out" sharp />}
-        <Art key={`bg-${side}`} card={hero.card} class={`arena-bg ${slide ? "arena-bg-in" : ""}`} sharp />
+        {prev && <Art key={`out-${prev.code}`} card={prev} class={`arena-bg arena-bg-out ${prev.type === "ICE" ? "ice" : ""}`} sharp />}
+        <Art key={`bg-${side}`} card={hero.card} class={`arena-bg ${hero.card?.type === "ICE" ? "ice" : ""} ${slide ? "arena-bg-in" : ""}`} sharp />
         <div class="arena-shade" aria-hidden="true" />
         <CursorGrid className="arena-grid" cellSize={32} color={tint} gridColor={tint} radius={110} holdTime={200} fadeDuration={1400} maxOpacity={0.7} fillOpacity={0} gridOpacity={0.1} spotlight={0.3} ambient={motionOff() ? 0 : 0.9} fps={30} tempo={seeking ? 1.8 : 1.2} clickPulse={!motionOff()} intro={!motionOff()} edgeFade={0.08} />
         <header class="arena-top">
