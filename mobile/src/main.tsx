@@ -360,7 +360,7 @@ function App() {
     );
 
   if (credits && !session) return <Credits onClose={() => setCredits(false)} />;
-  if (profile && loaded && !session) return <Profile db={loaded.db} onClose={() => setProfile(false)} />;
+  if (profile && loaded && !session && !decks) return <Profile db={loaded.db} onClose={() => setProfile(false)} onOpenDeck={(id, side) => setDecks({ id, side })} />;
   if (matching && loaded && (!session || (inviting && session.lobby.role === "host" && !session.lobby.opponentName)))
     return (
       <Match

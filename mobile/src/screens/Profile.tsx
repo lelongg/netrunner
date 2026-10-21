@@ -64,7 +64,7 @@ function stats(heads: Head[]) {
   };
 }
 
-function DefaultDeck({ side, db }: { side: Side; db: CardDb }) {
+function DefaultDeck({ side, db, onOpen }: { side: Side; db: CardDb; onOpen: (id: string, side: Side) => void }) {
   const [id, setId] = useState(() => defaultDeckId(side));
   const [choosing, setChoosing] = useState(false);
   useBackClose(choosing, () => setChoosing(false));
@@ -77,10 +77,17 @@ function DefaultDeck({ side, db }: { side: Side; db: CardDb }) {
   };
   return (
     <div class="profile-deck">
-      <span class={`label who-${side}`}>{SIDE_NAME[side]}</span>
+      <div class="profile-deck-head">
+        <span class={`label who-${side}`}>{SIDE_NAME[side]}</span>
+        {mine.length > 0 && (
+          <button class="ghost profile-change" onClick={() => setChoosing(true)}>
+            <Icon name="swap" /> Change
+          </button>
+        )}
+      </div>
       {current ? (
         <ul class="deck-library">
-          <DeckRow db={db} stored={current} onOpen={() => setChoosing(true)} issuesOnly />
+          <DeckRow db={db} stored={current} onOpen={() => onOpen(current.id, side)} issuesOnly />
         </ul>
       ) : (
         <button class="match-deck-empty" onClick={() => setChoosing(true)} disabled={!mine.length}>
@@ -113,7 +120,7 @@ function DefaultDeck({ side, db }: { side: Side; db: CardDb }) {
   );
 }
 
-export function Profile({ db, onClose }: { db: CardDb; onClose: () => void }) {
+export function Profile({ db, onClose, onOpenDeck }: { db: CardDb; onClose: () => void; onOpenDeck: (id: string, side: Side) => void }) {
   useBackClose(true, onClose);
   const [, setTick] = useState(0);
   useEffect(() => onSettings(() => setTick((t) => t + 1)), []);
@@ -160,8 +167,8 @@ export function Profile({ db, onClose }: { db: CardDb; onClose: () => void }) {
 
         <section class="panel section">
           <span class="label">Default decks</span>
-          <DefaultDeck side="corp" db={db} />
-          <DefaultDeck side="runner" db={db} />
+          <DefaultDeck side="corp" db={db} onOpen={onOpenDeck} />
+          <DefaultDeck side="runner" db={db} onOpen={onOpenDeck} />
         </section>
 
         <section class="panel cyan section profile-stats">

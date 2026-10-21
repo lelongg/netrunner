@@ -8628,6 +8628,7 @@ button.player-chip {
   flex: 1;
   min-width: 0;
   font-size: 12px;
+  color: var(--text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -8647,4 +8648,25 @@ button.player-chip {
   font-weight: 400;
   font-size: 10px;
   color: var(--muted);
+}
+
+.profile-deck-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.profile-change {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 0;
+  padding: 4px 8px;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  color: var(--cyan);
+}
+
+.profile-change .icon {
+  height: 12px;
 }
