@@ -3,7 +3,7 @@ import { motionOff } from "./settings";
 
 let granted = false;
 
-const RANGE = 0.24;
+const RANGE = 0.28;
 const BASE_SECONDS = 4;
 const FOLLOW_SECONDS = 0.08;
 
@@ -21,7 +21,7 @@ function screenAngle() {
   return (Number(a) * Math.PI) / 180;
 }
 
-export function useTilt(target: { current: HTMLElement | null }) {
+export function useTilt(target: { current: HTMLElement | null }, gain = 1) {
   useEffect(() => {
     if (typeof DeviceOrientationEvent === "undefined" || motionOff()) return;
     let base: Vec | null = null;
@@ -36,8 +36,8 @@ export function useTilt(target: { current: HTMLElement | null }) {
       last = now;
       const k = 1 - Math.exp(-dt / FOLLOW_SECONDS);
       cur = [cur[0] + (want[0] - cur[0]) * k, cur[1] + (want[1] - cur[1]) * k];
-      target.current?.style.setProperty("--tx", cur[0].toFixed(3));
-      target.current?.style.setProperty("--ty", cur[1].toFixed(3));
+      target.current?.style.setProperty("--tx", (cur[0] * gain).toFixed(3));
+      target.current?.style.setProperty("--ty", (cur[1] * gain).toFixed(3));
       const settled = Math.abs(want[0] - cur[0]) < 0.002 && Math.abs(want[1] - cur[1]) < 0.002;
       raf = settled ? 0 : requestAnimationFrame(frame);
       if (settled) last = 0;

@@ -1261,7 +1261,7 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
   }
 
   const theirArea = opp === "corp" ? <CorpArea view={view} side={side} mine={false} onTap={tap} onZone={openZone} selectable={selectable} runServer={runServer} /> : <RunnerArea view={view} side={side} onTap={tap} onZone={openZone} selectable={selectable} />;
-  useTilt(rootEl);
+  useTilt(rootEl, 0.6);
   const myArea = side === "corp" ? <CorpArea view={view} side={side} mine onTap={tap} onZone={openZone} selectable={selectable} runServer={runServer} /> : <RunnerArea view={view} side={side} onTap={tap} onZone={openZone} selectable={selectable} />;
   const hand: any[] = [...(me.hand ?? []), ...(me.discard ?? []).filter((c: any) => c["flashback-playable"])];
 
