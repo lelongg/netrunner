@@ -1,7 +1,7 @@
 import { useMemo, useState } from "preact/hooks";
 import type { Card, CardDb, Side } from "../engine";
 import { cardImage } from "../engine";
-import { Ticker } from "../ui";
+import { Cta, Ticker } from "../ui";
 import { Icon, type IconName } from "../icons";
 import { lastDeck, saveId } from "../session";
 import { savedDecks } from "../decks";
@@ -85,13 +85,14 @@ function Continue({ props }: { props: Props }) {
 }
 
 export function HomeArena(props: Props) {
-  const { ready, error, initialJoin, db, onFind, seeking, onGuide, onCredits, onDecks, onHistory } = props;
+  const { ready, error, initialJoin, db, onFind, seeking, onCredits, onDecks, onHistory, onGuide } = props;
   const go = startGame(props.onStart);
   const [mode, setMode] = useState<Mode>("online");
   const [joining, setJoining] = useState(!!initialJoin);
   const hero = useMemo(() => featured(db), [db]);
   const play = () => (mode === "online" ? onFind() : go("local", undefined, mode === "solo"));
-  const hint = mode === "online" && seeking ? "Searching for an opponent…" : MODES.find((m) => m.key === mode)!.hint;
+  const searching = mode === "online" && seeking;
+  const label = searching ? "Searching…" : mode === "online" ? "Play online" : mode === "solo" ? "Play vs bot" : "Play local";
   return (
     <>
       <Ticker>
@@ -104,8 +105,8 @@ export function HomeArena(props: Props) {
           <span class="player-chip">
             <Art card={hero.card} class="player-avatar" />
             <span class="player-text">
+              <small class="label">{hero.card?.side === "Corp" ? "Corp ID" : "Runner ID"}</small>
               <strong>{playerName()}</strong>
-              <small>Pocket Rig</small>
             </span>
           </span>
           <button class="arena-link" onClick={onCredits}>
@@ -115,12 +116,14 @@ export function HomeArena(props: Props) {
         {error && <p class="error">{error}</p>}
         <Continue props={props} />
         <button class="deck-showcase" disabled={!ready} onClick={onDecks}>
-          <span class="deck-card">
-            {hero.card && <img src={cardImage(hero.card.code, "large")} alt={hero.card.title} />}
-            <i class="deck-card-shine" />
+          <span class="deck-frame">
+            <span class="deck-card">
+              {hero.card && <img src={cardImage(hero.card.code, "large")} alt={hero.card.title} />}
+              <i class="deck-scan" />
+            </span>
           </span>
           <span class="deck-caption">
-            <small>{hero.deck ? "Your deck" : "Featured identity"}</small>
+            <span class="label">{hero.deck ? "Your deck" : "Featured identity"}</span>
             <strong>{hero.deck ?? hero.card?.title ?? "Build a deck"}</strong>
             <span class="deck-change">
               <Icon name="deck" /> {hero.deck ? "Change deck" : "Build a deck"}
@@ -128,19 +131,19 @@ export function HomeArena(props: Props) {
           </span>
         </button>
         <div class="arena-bottom">
-          <div class="mode-pills" role="tablist">
+          <div class="match-sides arena-modes" role="radiogroup" aria-label="Mode">
             {MODES.map((m) => (
-              <button role="tab" aria-selected={mode === m.key} class={mode === m.key ? "on" : ""} onClick={() => setMode(m.key)}>
+              <button role="radio" aria-checked={mode === m.key} class={`mode-${m.key} ${mode === m.key ? "on" : ""}`} onClick={() => setMode(m.key)}>
                 {m.label}
                 {m.key === "online" && seeking && <i class="mode-dot" />}
               </button>
             ))}
           </div>
-          <button class={`play-button ${mode === "online" && seeking ? "seeking" : ""}`} disabled={!ready} onClick={play}>
-            <span class="play-shine" aria-hidden="true" />
-            <strong>{mode === "online" && seeking ? "Searching" : "Play"}</strong>
-            <small>{hint}</small>
-          </button>
+          <div class={`arena-play ${searching ? "seeking" : ""}`}>
+            <Cta onClick={play} disabled={!ready}>
+              {label}
+            </Cta>
+          </div>
           {joining ? (
             <JoinCode ready={ready} initial={initialJoin} onJoin={(c) => go("guest", c)} />
           ) : (
