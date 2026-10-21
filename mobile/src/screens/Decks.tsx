@@ -1,3 +1,4 @@
+import type { ComponentChildren } from "preact";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { Card, CardDb, Deck, Matchup, Side } from "../engine";
 import { type StoredDeck, type WireDeck, defaultDeckId, setDefaultDeckId, fromPrecon, fromWire, importNrdb, parseDecklist, putDeck, removeDeck, savedDecks, toWire } from "../decks";
@@ -221,7 +222,7 @@ function FitText({ text, class: className }: { text: string; class: string }) {
   );
 }
 
-export function DeckRow({ db, stored, onOpen, format, selected, disabled, issuesOnly, star }: { db: CardDb; stored: WireDeck & { format?: string }; onOpen: () => void; format?: FormatKey; selected?: boolean; disabled?: boolean; issuesOnly?: boolean; star?: { on: boolean; onToggle: () => void } }) {
+export function DeckRow({ db, stored, onOpen, format, selected, disabled, issuesOnly, star, extra }: { db: CardDb; stored: WireDeck & { format?: string }; onOpen: () => void; format?: FormatKey; selected?: boolean; disabled?: boolean; issuesOnly?: boolean; star?: { on: boolean; onToggle: () => void }; extra?: ComponentChildren }) {
   const deck = useMemo(() => {
     try {
       return fromWire(stored, db);
@@ -269,7 +270,8 @@ export function DeckRow({ db, stored, onOpen, format, selected, disabled, issues
             )}
           </span>
         </span>
-        {!(issuesOnly && a.legal) &&
+        {extra}
+        {!extra && !(issuesOnly && a.legal) &&
           (a.legal ? (
             <span class="deck-badge ok">
               <Icon name="check" />

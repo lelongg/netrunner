@@ -8549,19 +8549,26 @@ button.player-chip {
 }
 
 .profile-record {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  display: grid;
+  grid-template-columns: auto auto;
+  column-gap: 8px;
+  row-gap: 0;
+  align-items: baseline;
   font-size: 11px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--text-2);
 }
 
+.profile-record span {
+  display: contents;
+}
+
 .profile-record b {
   font-family: var(--display);
   font-size: 18px;
-  margin-right: 6px;
+  line-height: 1.25;
+  text-align: right;
 }
 
 .profile-tiles {
@@ -8705,4 +8712,25 @@ button.player-chip {
 
 .profile-ids li:active {
   border-color: var(--cyan);
+}
+
+.deck-rate {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.deck-rate b {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--cyan);
+}
+
+.deck-rate small {
+  font-size: 10px;
+  color: var(--muted);
 }

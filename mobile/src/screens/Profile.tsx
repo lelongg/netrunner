@@ -3,12 +3,11 @@ import type { CardDb, Side } from "../engine";
 import { Picker, Ticker } from "../ui";
 import { Icon } from "../icons";
 import { useBackClose } from "../back";
-import { type StoredDeck, defaultDeckId, savedDecks, setDefaultDeckId } from "../decks";
+import { type StoredDeck, type WireDeck, defaultDeckId, fromWire, savedDecks, setDefaultDeckId, toWire } from "../decks";
 import { FORMAT_DESC, GAME_FORMATS, type GameFormat } from "../deckrules";
 import { onSettings, setSetting, settings } from "../settings";
 import { listHistory } from "../history";
-import { CardImage, CardZoom } from "../game/CardImage";
-import { DeckRow } from "./Decks";
+import { DeckRow, DeckView } from "./Decks";
 import { EditField } from "./SettingsMenu";
 import { type Head, headOf } from "./History";
 
@@ -39,16 +38,18 @@ function stats(heads: Head[]) {
     best = Math.max(best, run);
   }
   for (let i = decided.length - 1; i >= 0 && decided[i].outcome === "won"; i--) streak++;
-  const ids = new Map<string, { code: string; title: string; games: number; won: number }>();
+  const decks = new Map<string, { wire: WireDeck; games: number; won: number }>();
   for (const h of decided) {
-    const id = h.identities[h.mySide];
-    if (!id) continue;
-    const e = ids.get(id.code) ?? { ...id, games: 0, won: 0 };
+    const d = h.script?.setup?.[h.mySide]?.deck;
+    if (!d?.identity) continue;
+    const name = h.script?.deckNames?.[h.mySide] ?? d.identity.title;
+    const key = `${d.identity.code}:${name}`;
+    const e = decks.get(key) ?? { wire: toWire({ name, identity: d.identity, cards: d.cards ?? [] }), games: 0, won: 0 };
     e.games++;
     if (h.outcome === "won") e.won++;
-    ids.set(id.code, e);
+    decks.set(key, e);
   }
-  const ranked = [...ids.values()].sort((a, b) => b.games - a.games || b.won - a.won);
+  const ranked = [...decks.values()].sort((a, b) => b.games - a.games || b.won - a.won);
   const turns = heads.filter((h) => h.turn > 0);
   return {
     played: heads.length,
@@ -60,7 +61,7 @@ function stats(heads: Head[]) {
     streak,
     best,
     avgTurns: turns.length ? Math.round(turns.reduce((n, h) => n + h.turn, 0) / turns.length) : 0,
-    identities: ranked.slice(0, 3),
+    decks: ranked.slice(0, 3),
   };
 }
 
@@ -132,8 +133,7 @@ export function Profile({ db, onClose, onOpenDeck }: { db: CardDb; onClose: () =
       .catch(() => setHeads([]));
   }, []);
   const s = useMemo(() => (heads ? stats(heads) : null), [heads]);
-  const [zoom, setZoom] = useState<{ code: string; title: string } | null>(null);
-  useBackClose(!!zoom, () => setZoom(null));
+  const [viewing, setViewing] = useState<WireDeck | null>(null);
   return (
     <>
       <Ticker>
@@ -220,31 +220,28 @@ export function Profile({ db, onClose, onOpenDeck }: { db: CardDb; onClose: () =
                   <span>Turns per game</span>
                 </div>
               </div>
-              {s.identities.length > 0 && (
+              {s.decks.length > 0 && (
                 <>
-                  <span class="label">Most played</span>
-                  <ul class="profile-ids">
-                    {s.identities.map((id) => (
-                      <li
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => {
-                          const deck = savedDecks()
-                            .filter((d) => db.byTitle.get(d.identity)?.code === id.code)
-                            .sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))[0];
-                          if (deck) onOpenDeck(deck.id, deck.side);
-                          else setZoom(id);
+                  <span class="label">Most played decks</span>
+                  <ul class="deck-library">
+                    {s.decks.map(({ wire, games, won }) => (
+                      <DeckRow
+                        db={db}
+                        stored={wire}
+                        onOpen={() => {
+                          const saved = savedDecks().find((d) => d.name === wire.name && d.identity === wire.identity);
+                          if (saved) onOpenDeck(saved.id, saved.side);
+                          else setViewing(wire);
                         }}
-                      >
-                        <CardImage code={id.code} alt={id.title} size="small" width="44px" />
-                        <span class="profile-id-name">{id.title}</span>
-                        <span class="profile-id-rate">
-                          {pct(id.won, id.games)}
-                          <small>
-                            {id.won}/{id.games}
-                          </small>
-                        </span>
-                      </li>
+                        extra={
+                          <span class="deck-rate">
+                            <b>{pct(won, games)}</b>
+                            <small>
+                              {won}/{games}
+                            </small>
+                          </span>
+                        }
+                      />
                     ))}
                   </ul>
                 </>
@@ -253,7 +250,7 @@ export function Profile({ db, onClose, onOpenDeck }: { db: CardDb; onClose: () =
           )}
         </section>
       </div>
-      {zoom && <CardZoom items={[{ code: zoom.code, alt: zoom.title }]} start={0} onClose={() => setZoom(null)} />}
+      {viewing && <DeckView deck={fromWire(viewing, db)} onClose={() => setViewing(null)} />}
     </>
   );
 }
