@@ -1,16 +1,17 @@
-import { useEffect, useMemo, useState } from "preact/hooks";
+import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { openSeeks } from "../net/match";
 import { fetchDecklists } from "../nrdb";
 import { listHistory } from "../history";
 import { relayUrl } from "../net/relay";
 import { useBackClose } from "../back";
 import { createPortal } from "preact/compat";
-import type { Card, CardDb } from "../engine";
+import type { Card, CardDb, Side } from "../engine";
 import { cardImage } from "../engine";
 import { Cta, Ticker } from "../ui";
 import { Icon, type IconName } from "../icons";
 import { lastDeck, saveId } from "../session";
 import { savedDecks } from "../decks";
+import { QrScan } from "./QrScan";
 import { GameList, JoinCode, type Props, describe, startGame } from "./Home";
 
 type Mode = "online" | "solo" | "local";
@@ -31,14 +32,24 @@ function playerName() {
   }
 }
 
-function featured(db: CardDb | undefined): { deck?: string; card?: Card } {
+function featured(db: CardDb | undefined, side: Side): { deck?: string; card?: Card } {
   if (!db) return {};
-  const wire = lastDeck("runner") ?? lastDeck("corp") ?? savedDecks()[0];
+  const wire = lastDeck(side) ?? savedDecks().find((d) => d.side === side);
   const own = wire && db.byTitle.get(wire.identity);
   if (own) return { deck: wire!.name, card: own };
-  const ids = db.all.filter((c) => c.type === "Identity" && c.code >= "30000");
+  const ids = db.all.filter((c) => c.type === "Identity" && c.side === (side === "corp" ? "Corp" : "Runner") && c.code >= "30000");
   const day = Math.floor(Date.now() / 86_400_000);
   return { card: ids[day % Math.max(1, ids.length)] };
+}
+
+const SIDE_KEY = "nsg.homeSide";
+
+function storedSide(): Side {
+  try {
+    return localStorage.getItem(SIDE_KEY) === "corp" ? "corp" : "runner";
+  } catch {
+    return "runner";
+  }
 }
 
 function Art({ card, class: cls, sharp }: { card?: Card; class?: string; sharp?: boolean }) {
@@ -120,13 +131,7 @@ function Continue({ props }: { props: Props }) {
   );
 }
 
-const TIPS = [
-  "Hold a card to see it full size",
-  "Hold the ticker to peek at the game log",
-  "Tap an icon for what it means",
-  "Swipe a game in your list to delete it",
-  "Share a game code to play with a friend",
-];
+const TIPS = ["Hold a card to see it full size", "Hold the ticker to peek at the game log", "Tap an icon for what it means", "Swipe a game in your list to delete it", "Share a game code to play with a friend"];
 
 function useFeed(props: Props, hero: { deck?: string; card?: Card }) {
   const { ready, error, saves, seeking, db } = props;
@@ -135,7 +140,11 @@ function useFeed(props: Props, hero: { deck?: string; card?: Card }) {
   const [last, setLast] = useState<string | null>(null);
   useEffect(() => {
     if (!relayUrl()) return;
-    const poll = () => openSeeks().then((o) => setOpen(o.length), () => {});
+    const poll = () =>
+      openSeeks().then(
+        (o) => setOpen(o.length),
+        () => {},
+      );
     poll();
     const timer = setInterval(poll, 30_000);
     return () => clearInterval(timer);
@@ -143,7 +152,14 @@ function useFeed(props: Props, hero: { deck?: string; card?: Card }) {
   useEffect(() => {
     if (!db) return;
     fetchDecklists(db, Math.random() < 0.5 ? "corp" : "runner", null, 1, "standard")
-      .then((r) => setLists(r.items.filter((l) => l.deck).slice(0, 2).map((l) => `New on NetrunnerDB: ${l.name} by ${l.user}`)))
+      .then((r) =>
+        setLists(
+          r.items
+            .filter((l) => l.deck)
+            .slice(0, 2)
+            .map((l) => `New on NetrunnerDB: ${l.name} by ${l.user}`),
+        ),
+      )
       .catch(() => {});
   }, [db]);
   useEffect(() => {
@@ -178,7 +194,22 @@ export function HomeArena(props: Props) {
   const [mode, setMode] = useState<Mode>("online");
   const [joining, setJoining] = useState(!!initialJoin);
   useBackClose(joining, () => setJoining(false));
-  const hero = useMemo(() => featured(db), [db]);
+  const [scanning, setScanning] = useState(false);
+  useEffect(() => {
+    if (!joining) setScanning(false);
+  }, [joining]);
+  const [side, setSideState] = useState<Side>(storedSide);
+  const [slide, setSlide] = useState<"left" | "right" | null>(null);
+  const setSide = (next: Side) => {
+    if (next === side) return;
+    setSlide(next === "corp" ? "right" : "left");
+    setSideState(next);
+    try {
+      localStorage.setItem(SIDE_KEY, next);
+    } catch {}
+  };
+  const swipe = useRef<{ x: number; y: number; done: boolean } | null>(null);
+  const hero = useMemo(() => featured(db, side), [db, side]);
   const feed = useFeed(props, hero);
   const play = () => (mode === "online" ? onFind() : go("local", undefined, mode === "solo"));
   const searching = mode === "online" && seeking;
@@ -193,7 +224,26 @@ export function HomeArena(props: Props) {
           </>
         ))}
       </Ticker>
-      <div class={`screen arena faction-${factionKey(hero.card?.faction)}`}>
+      <div
+        class={`screen arena side-${side} faction-${factionKey(hero.card?.faction)}`}
+        onPointerDown={(e) => (swipe.current = { x: e.clientX, y: e.clientY, done: false })}
+        onPointerUp={(e) => {
+          const g = swipe.current;
+          if (!g) return;
+          const dx = e.clientX - g.x;
+          if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(e.clientY - g.y) * 1.5) {
+            g.done = true;
+            setSide(dx < 0 ? (side === "runner" ? "corp" : "runner") : side === "corp" ? "runner" : "corp");
+          }
+        }}
+        onClickCapture={(e) => {
+          if (swipe.current?.done) {
+            e.stopPropagation();
+            e.preventDefault();
+            swipe.current = null;
+          }
+        }}
+      >
         <Art card={hero.card} class="arena-bg" sharp />
         <div class="arena-shade" aria-hidden="true" />
         <header class="arena-top">
@@ -208,24 +258,41 @@ export function HomeArena(props: Props) {
         {error && <p class="error">{error}</p>}
         <Continue props={props} />
         <button class="deck-showcase" disabled={!ready} onClick={onDecks}>
-          <span class="deck-frame">
-            <span class="deck-card">
-              {hero.card && (
-                <img
-                  src={cardImage(hero.card.code, "xlarge")}
-                  alt={hero.card.title}
-                  onError={(e) => {
-                    const img = e.currentTarget as HTMLImageElement;
-                    const fallback = cardImage(hero.card!.code, "large")!;
-                    if (!img.src.endsWith(fallback)) img.src = fallback;
-                  }}
-                />
-              )}
-              <i class="deck-card-shine" />
+          <span key={side} class={`deck-slide ${slide ? `slide-${slide}` : ""}`}>
+            <span class="deck-frame">
+              <span class="deck-card">
+                {hero.card && (
+                  <img
+                    src={cardImage(hero.card.code, "xlarge")}
+                    alt={hero.card.title}
+                    onError={(e) => {
+                      const img = e.currentTarget as HTMLImageElement;
+                      const fallback = cardImage(hero.card!.code, "large")!;
+                      if (!img.src.endsWith(fallback)) img.src = fallback;
+                    }}
+                  />
+                )}
+                <i class="deck-card-shine" />
+              </span>
             </span>
           </span>
-          <span class="deck-caption">
+          <span key={`c-${side}`} class={`deck-caption ${slide ? "fade-in" : ""}`}>
             <strong>{hero.deck ?? hero.card?.title ?? "Build a deck"}</strong>
+            <span class="side-switch" role="tablist" aria-label="Side">
+              {(["corp", "runner"] as Side[]).map((x) => (
+                <span
+                  role="tab"
+                  aria-selected={side === x}
+                  class={`side-tab who-${x} ${side === x ? "on" : ""}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSide(x);
+                  }}
+                >
+                  {x === "corp" ? "Corp" : "Runner"}
+                </span>
+              ))}
+            </span>
             <span class="deck-change">
               <Icon name="deck" /> {hero.deck ? "Change deck" : "Build a deck"}
             </span>
@@ -259,8 +326,23 @@ export function HomeArena(props: Props) {
                     <Icon name="close" />
                   </button>
                 </div>
-                <p class="hint">Enter the five-character code your friend shared.</p>
+                {scanning ? (
+                  <QrScan
+                    onCode={(c) => {
+                      setScanning(false);
+                      setJoining(false);
+                      go("guest", c);
+                    }}
+                  />
+                ) : (
+                  <p class="hint">Enter the five-character code your friend shared, or scan their QR code.</p>
+                )}
                 <JoinCode ready={ready} initial={initialJoin} onJoin={(c) => go("guest", c)} />
+                {!scanning && typeof navigator !== "undefined" && !!navigator.mediaDevices?.getUserMedia && (
+                  <button class="qr-start" onClick={() => setScanning(true)}>
+                    <Icon name="eye" /> Scan a QR code
+                  </button>
+                )}
               </div>
             </div>,
             document.body,
