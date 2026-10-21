@@ -198,7 +198,7 @@ function useFeed(props: Props, hero: { deck?: string; card?: Card }) {
   if (!ready) items.push({ text: error ? "Engine offline" : "Engine loading", tone: "yellow" });
   const mine = saves.filter((s) => !s.summary?.winner && describe(s).status === "Your move").length;
   if (mine) items.push({ text: `Your move in ${mine} game${mine > 1 ? "s" : ""}`, tone: "yellow" });
-  if (seeking) items.push({ text: "Searching for an opponent", tone: "cyan" });
+  if (seeking) items.push({ text: "Waiting for an opponent", tone: "cyan" });
   if (open) items.push({ text: `${open} player${open > 1 ? "s" : ""} waiting for a game online`, tone: "cyan" });
   if (open === 0 && !seeking) items.push({ text: "Nobody is searching right now · be the first" });
   if (last) items.push({ text: last });
@@ -262,7 +262,7 @@ export function HomeArena(props: Props) {
   const tint = FACTION_TINT[factionKey(hero.identity?.faction)] ?? (side === "corp" ? "#3aa3b5" : "#ff5a4f");
   const play = () => (mode === "online" ? onFind() : go("local", undefined, mode === "solo"));
   const searching = mode === "online" && seeking;
-  const label = searching ? "Searching…" : mode === "online" ? "Play online" : mode === "solo" ? "Play vs bot" : "Play local";
+  const label = searching ? "Waiting for an opponent…" : mode === "online" ? "Play online" : mode === "solo" ? "Play vs bot" : "Play local";
   return (
     <>
       <Ticker feedKey={feed.length}>

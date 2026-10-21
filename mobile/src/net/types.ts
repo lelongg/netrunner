@@ -32,6 +32,7 @@ export interface LinkStatus {
   error?: string;
   watchers?: number;
   free?: boolean[];
+  spectators?: boolean;
 }
 
 export interface TransportHandlers {

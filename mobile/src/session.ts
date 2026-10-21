@@ -297,7 +297,7 @@ export class Session {
       }
       if (relayUrl()) {
         const fresh = this.seat === 0 && !code;
-        const ticket = fresh ? await createGame(this.store) : this.seat === 0 ? storedTicket(code!, this.store) : await joinGame(code!, this.store);
+        const ticket = fresh ? await createGame(this.store) : this.seat === 0 ? storedTicket(code!, this.store) : await joinGame(code!, this.store, this.lobby.myName);
         if (!ticket) throw new Error("This game was created on another device.");
         if (this.closed) return;
         this.seat = ticket.seat;
@@ -506,7 +506,7 @@ export class Session {
   }
 
   get watchUrl(): string | undefined {
-    return this.transport instanceof RelayTransport && this.lobby.code ? watchLink(this.lobby.code) : undefined;
+    return this.transport instanceof RelayTransport && this.lobby.code && this.link.spectators !== false ? watchLink(this.lobby.code) : undefined;
   }
 
   watchAs(side: Side) {

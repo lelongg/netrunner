@@ -44,10 +44,9 @@ function useTick(on: boolean) {
   }, [on]);
 }
 
-function InviteSheet({ code, status, onClose }: { code: string; status: string; onClose: () => void }) {
-  useBackClose(true, onClose);
+function InviteTile({ code }: { code?: string }) {
   const [copied, setCopied] = useState(false);
-  const link = shareLink(code);
+  const link = code ? shareLink(code) : "";
   const share = async () => {
     try {
       if (navigator.share) await navigator.share({ title: "Netrunner game", text: `Code: ${code}`, url: link });
@@ -58,31 +57,31 @@ function InviteSheet({ code, status, onClose }: { code: string; status: string; 
     } catch {}
   };
   return (
-    <div class="sheet-backdrop" onClick={onClose}>
-      <div class="sheet panel cyan invite-sheet" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Invite a friend">
-        <div class="row">
-          <span class="label cyan">Invite a friend</span>
-          <button class="ghost" onClick={onClose} aria-label="Cancel the invitation">
-            <Icon name="close" />
-          </button>
-        </div>
-        <div class="invite-tile">
-          {code ? <QrCode value={link} label={`QR code to join game ${code}`} /> : <div class="qr qr-pending" />}
-          <span class="code">{code || "·····"}</span>
-        </div>
-        <Cta onClick={share} disabled={!code} tone="cyan">
-          {copied ? "Link copied" : "Share the link"}
-        </Cta>
-        <p class="invite-wait">
-          <i class="live-dot" aria-hidden="true" />
-          {status === "waiting" ? "Waiting for your friend to join…" : "Opening the game…"}
-        </p>
+    <>
+      <div class="invite-tile">
+        {code ? <QrCode value={link} label={`QR code to join game ${code}`} /> : <div class="qr qr-pending" />}
+        <span class="code">{code || "·····"}</span>
       </div>
+      <Cta onClick={share} disabled={!code} tone="cyan">
+        {copied ? "Link copied" : "Share the link"}
+      </Cta>
+    </>
+  );
+}
+
+function Segmented<T extends string>({ label, value, options, onChange }: { label: string; value: T; options: { key: T; label: string }[]; onChange: (v: T) => void }) {
+  return (
+    <div class="match-sides" role="radiogroup" aria-label={label}>
+      {options.map((o) => (
+        <button role="radio" aria-checked={value === o.key} class={`side-${o.key} ${value === o.key ? "on" : ""}`} onClick={() => onChange(o.key)}>
+          {o.label}
+        </button>
+      ))}
     </div>
   );
 }
 
-export function Match({ name, db, matchups, onMatched, onInvite, onClose, invite, onCancelInvite, onEditDecks, autoStart, onAutoStarted }: { name: string; db: CardDb; matchups: Matchup[]; onMatched: (m: Matched) => void; onInvite: (format: GameFormat, side?: Side) => void; onClose: () => void; invite?: { code: string; status: string }; onCancelInvite?: () => void; onEditDecks?: (side: Side) => void; autoStart?: boolean; onAutoStarted?: () => void }) {
+export function Match({ name, db, matchups, onMatched, onClose, onEditDecks, autoStart, onAutoStarted }: { name: string; db: CardDb; matchups: Matchup[]; onMatched: (m: Matched) => void; onClose: () => void; onEditDecks?: (side: Side) => void; autoStart?: boolean; onAutoStarted?: () => void }) {
   const [decks, setDecks] = useState<Record<Side, WireDeck | undefined>>(() => {
     const pick = (s: Side) => {
       const pinned = defaultStored(s);
@@ -99,6 +98,9 @@ export function Match({ name, db, matchups, onMatched, onInvite, onClose, invite
   };
   const [format, setFormat] = useState<GameFormat>(settings.format);
   const [side, setSide] = useState<SeekSide>("any");
+  const [access, setAccess] = useState<"public" | "private">("public");
+  const [spectators, setSpectators] = useState<"on" | "off">("on");
+  const options = () => ({ public: access === "public", spectators: spectators === "on" });
   useEffect(() => {
     if (dealtFormat(format)) return;
     const keep = (s: Side, d?: WireDeck) => (d && !problemIn(format, db, d) ? d : (defaultDeck(s, db, matchups, format) ?? d));
@@ -157,7 +159,7 @@ export function Match({ name, db, matchups, onMatched, onInvite, onClose, invite
   const [editing, setEditing] = useState(false);
   const started = useRef(false);
   useEffect(() => {
-    if (!autoStart || started.current || mine || invite) return;
+    if (!autoStart || started.current || mine) return;
     started.current = true;
     onAutoStarted?.();
     find();
@@ -167,7 +169,7 @@ export function Match({ name, db, matchups, onMatched, onInvite, onClose, invite
       commitDecks();
       if (mine) await cancelSeek(mine).catch(() => {});
       setEditing(false);
-      const result = await seek(name, format, side);
+      const result = await seek(name, format, side, options());
       if ("status" in result) onMatched(result);
       else setMine(result);
     });
@@ -177,23 +179,6 @@ export function Match({ name, db, matchups, onMatched, onInvite, onClose, invite
       if (mine) await cancelSeek(mine);
       setMine(null);
     });
-  const inviteNow = () =>
-    act(async () => {
-      if (mine) await cancelSeek(mine).catch(() => {});
-      setMine(null);
-      setEditing(false);
-      commitDecks();
-      onInvite(format, side === "any" ? undefined : side);
-    });
-  const inviteInstead = () =>
-    act(async () => {
-      const was = mine;
-      if (!was) return;
-      await cancelSeek(was).catch(() => {});
-      setMine(null);
-      commitDecks();
-      onInvite(was.format, was.side === "any" ? undefined : was.side);
-    });
   const turnOnNotifications = () =>
     act(async () => {
       const problem = await enablePush("match");
@@ -201,7 +186,7 @@ export function Match({ name, db, matchups, onMatched, onInvite, onClose, invite
       setNotify(true);
       if (mine) {
         await cancelSeek(mine).catch(() => {});
-        const again = await seek(name, mine.format, mine.side);
+        const again = await seek(name, mine.format, mine.side, { public: mine.public !== false, spectators: mine.spectators !== false });
         if ("status" in again) onMatched(again);
         else setMine(again);
       }
@@ -210,7 +195,7 @@ export function Match({ name, db, matchups, onMatched, onInvite, onClose, invite
   return (
     <>
       <Ticker>
-        Play online <span class="cyan">{mine ? "searching" : `${open?.length ?? 0} open`}</span>
+        Play online <span class="cyan">{mine ? "waiting" : `${open?.length ?? 0} open`}</span>
       </Ticker>
       <div class="screen match">
         <div class="match-bg" aria-hidden="true" />
@@ -229,13 +214,18 @@ export function Match({ name, db, matchups, onMatched, onInvite, onClose, invite
               <i />
               <b />
             </span>
-            <span class="match-title">Searching</span>
+            <span class="match-title">Waiting for an opponent</span>
             <span class="match-chips">
               <span class="chip">{formatLabel(mine.format)}</span>
               <span class={`chip side-${mine.side}`}>{sideLabel(mine.side)}</span>
+              <span class="chip">{mine.public === false ? "Private" : "Public"}</span>
+              <span class="chip">
+                <Icon name="eye" /> {mine.spectators === false ? "No spectators" : "Spectators"}
+              </span>
               <span class="chip">{since(mine.at)}</span>
             </span>
-            <p class="hint">You can leave this screen or close the app: the search stays open for 24 hours.</p>
+            <InviteTile code={mine.code} />
+            <p class="hint">{mine.public === false ? "Only people with the code or the link can join." : "Listed in open games. Anyone with the code or the link can join too."} The game stays open for 24 hours, even if you close the app.</p>
             {!notify && pushSupported() && (
               <button class="match-notify" disabled={busy} onClick={turnOnNotifications}>
                 <Icon name="sound" />
@@ -248,17 +238,16 @@ export function Match({ name, db, matchups, onMatched, onInvite, onClose, invite
               onClick={() => {
                 setFormat(mine.format);
                 setSide(mine.side);
+                setAccess(mine.public === false ? "private" : "public");
+                setSpectators(mine.spectators === false ? "off" : "on");
                 setEditing(true);
               }}
             >
-              <Icon name="edit" /> Change format, side or deck
+              <Icon name="edit" /> Change the game settings
             </button>
-            <Cta onClick={inviteInstead} disabled={busy} tone="cyan">
-              Invite a friend instead
-            </Cta>
             <button class="match-stop" disabled={busy} onClick={stopSeeking}>
               <Icon name="close" />
-              Stop searching
+              Cancel the game
             </button>
           </section>
         ) : (
@@ -269,13 +258,31 @@ export function Match({ name, db, matchups, onMatched, onInvite, onClose, invite
             </div>
             <div class="match-field">
               <span class="label">Play as</span>
-              <div class="match-sides" role="radiogroup" aria-label="Play as">
-                {SIDES.map((s) => (
-                  <button role="radio" aria-checked={side === s.key} class={`side-${s.key} ${side === s.key ? "on" : ""}`} onClick={() => setSide(s.key)}>
-                    {s.label}
-                  </button>
-                ))}
-              </div>
+              <Segmented label="Play as" value={side} options={SIDES} onChange={setSide} />
+            </div>
+            <div class="match-field">
+              <span class="label">Who can join</span>
+              <Segmented
+                label="Who can join"
+                value={access}
+                options={[
+                  { key: "public", label: "Anyone" },
+                  { key: "private", label: "Invite only" },
+                ]}
+                onChange={setAccess}
+              />
+            </div>
+            <div class="match-field">
+              <span class="label">Spectators</span>
+              <Segmented
+                label="Spectators"
+                value={spectators}
+                options={[
+                  { key: "on", label: "Allowed" },
+                  { key: "off", label: "Off" },
+                ]}
+                onChange={setSpectators}
+              />
             </div>
             {!dealtFormat(format) &&
               (side === "any" ? (["corp", "runner"] as Side[]) : [side as Side]).map((s) => (
@@ -293,20 +300,16 @@ export function Match({ name, db, matchups, onMatched, onInvite, onClose, invite
                 </div>
               ))}
             <Cta onClick={find} disabled={busy}>
-              {editing ? "Update the search" : "Find an opponent"}
+              {editing ? "Update the game" : access === "public" ? "Find an opponent" : "Create a private game"}
             </Cta>
             {editing && (
               <button class="ghost match-cancel-edit" disabled={busy} onClick={() => setEditing(false)}>
-                Keep the current search
+                Keep the current game
               </button>
             )}
-            <Cta onClick={inviteNow} disabled={busy} tone="cyan">
-              Invite a friend
-            </Cta>
           </section>
         )}
         {error && <p class="error">{error}</p>}
-        {invite && onCancelInvite && <InviteSheet code={invite.code} status={invite.status} onClose={onCancelInvite} />}
         {choosing && <DeckSheet side={choosing} db={db} matchups={matchups} value={decks[choosing]} format={format} onPick={(d) => choose(choosing, d)} onEditDecks={onEditDecks && (() => onEditDecks(choosing))} onClose={() => setChoosing(null)} />}
 
         <section class="match-open">
@@ -320,7 +323,7 @@ export function Match({ name, db, matchups, onMatched, onInvite, onClose, invite
           {open && open.length === 0 && (
             <div class="match-empty">
               <Icon name="search" />
-              <p>Nobody is waiting right now. Start a search and other players will see it here.</p>
+              <p>Nobody is waiting right now. Create a game open to anyone and other players will see it here.</p>
             </div>
           )}
           <ul class="match-list">

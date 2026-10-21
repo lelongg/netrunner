@@ -165,13 +165,7 @@ function App() {
   const [profile, setProfile] = useState(false);
   openCredits = session ? undefined : () => setCredits(true);
   const [matching, setMatching] = useState(false);
-  const [inviting, setInviting] = useState(false);
   const [autoFind, setAutoFind] = useState(false);
-  useEffect(() => {
-    if (!inviting || !session?.lobby.opponentName) return;
-    setInviting(false);
-    setMatching(false);
-  }, [inviting, session?.lobby.opponentName]);
   const [seeking, setSeeking] = useState(() => !!pendingSeek());
   const [guide, setGuide] = useState(() => !joinParam && !gameParam && !watchParam && !replayParam && tutorialState() === null);
   const firstRun = guide && tutorialState() === null;
@@ -362,7 +356,7 @@ function App() {
 
   if (credits && !session) return <Credits onClose={() => setCredits(false)} />;
   if (profile && loaded && !session && !decks) return <Profile db={loaded.db} onClose={() => setProfile(false)} onOpenDeck={(id, side) => setDecks({ id, side })} />;
-  if (matching && loaded && (!session || (inviting && session.lobby.role === "host" && !session.lobby.opponentName)))
+  if (matching && loaded && !session)
     return (
       <Match
         name={playerName()}
@@ -372,23 +366,7 @@ function App() {
         onEditDecks={(side) => setDecks({ side })}
         autoStart={autoFind}
         onAutoStarted={() => setAutoFind(false)}
-        invite={inviting && session ? { code: session.lobby.code, status: session.lobby.status } : undefined}
-        onInvite={(format, side) => {
-          if (!loaded) return;
-          const next = new Session(loaded.engine, loaded.db, "host", undefined, playerName(), side);
-          next.configureMatch(format, side);
-          setInviting(true);
-          setSession(next);
-        }}
-        onCancelInvite={() => {
-          setInviting(false);
-          leave();
-        }}
         onClose={() => {
-          if (inviting) {
-            setInviting(false);
-            leave();
-          }
           setMatching(false);
           setSeeking(!!pendingSeek());
         }}

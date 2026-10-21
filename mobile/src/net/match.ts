@@ -11,6 +11,14 @@ export interface Seek {
   format: GameFormat;
   side: SeekSide;
   at: number;
+  code?: string;
+  public?: boolean;
+  spectators?: boolean;
+}
+
+export interface GameOptions {
+  public: boolean;
+  spectators: boolean;
 }
 
 export interface OpenSeek {
@@ -64,12 +72,12 @@ function seated(m: Matched) {
   return m;
 }
 
-export async function seek(name: string, format: GameFormat, side: SeekSide): Promise<Matched | Seek> {
+export async function seek(name: string, format: GameFormat, side: SeekSide, options: GameOptions = { public: true, spectators: true }): Promise<Matched | Seek> {
   const old = pendingSeek();
   if (old) await cancelSeek(old).catch(() => {});
-  const res = await call("/match", { name, format, side, sub: await currentSub("match") });
+  const res = await call("/match", { name, format, side, sub: await currentSub("match"), ...options });
   if (res.status === "matched") return seated(res);
-  const mine: Seek = { id: res.id, secret: res.secret, format, side, at: Date.now() };
+  const mine: Seek = { id: res.id, secret: res.secret, format, side, at: Date.now(), code: res.code, ...options };
   remember(mine);
   return mine;
 }

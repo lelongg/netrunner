@@ -6877,7 +6877,8 @@ h1.deck-name.long {
 
 .match-sides {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
   gap: 6px;
 }
 
@@ -8208,8 +8209,8 @@ button.deck-change {
 }
 
 .match-waiting .match-radar {
-  width: 150px;
-  height: 150px;
+  width: 84px;
+  height: 84px;
 }
 
 .invite-sheet {

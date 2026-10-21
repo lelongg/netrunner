@@ -65,9 +65,9 @@ export function storeTicket(ticket: SeatTicket, store: Store = browserStore()) {
 
 const BUSY = "The relay is busy right now. Try again in a minute.";
 
-async function call(path: string): Promise<{ status: number; body: any }> {
+async function call(path: string, payload?: unknown): Promise<{ status: number; body: any }> {
   for (let attempt = 0; ; attempt++) {
-    const res = await fetch(`${relayUrl()}${path}`, { method: "POST" });
+    const res = await fetch(`${relayUrl()}${path}`, payload === undefined ? { method: "POST" } : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
     if (res.status !== 429) return { status: res.status, body: await res.json().catch(() => ({})) };
     if (attempt >= 4) return { status: 429, body: { error: BUSY } };
     const hinted = Number(res.headers.get("Retry-After")) * 1000;
@@ -83,10 +83,10 @@ export async function createGame(store: Store = browserStore()): Promise<SeatTic
   return ticket;
 }
 
-export async function joinGame(code: string, store: Store = browserStore()): Promise<SeatTicket> {
+export async function joinGame(code: string, store: Store = browserStore(), name?: string): Promise<SeatTicket> {
   const known = storedTicket(code, store);
   if (known) return known;
-  const { status, body } = await call(`/games/${code}/join`);
+  const { status, body } = await call(`/games/${code}/join`, { name });
   if (status === 404) throw new Error("No game with this code. Check the code with the host.");
   if (status === 409) throw new Error("This game already has two players.");
   if (status !== 200) throw new Error(body.error ?? `The relay answered ${status}`);
@@ -195,7 +195,7 @@ export class RelayTransport implements Transport {
         for (const p of this.outbox.pending) ws.send(JSON.stringify({ t: "append", p }));
       } else if (msg.t === "presence") {
         const seat = this.ticket.seat;
-        this.setStatus({ peer: seat === null ? !!(msg.seats?.[0] || msg.seats?.[1]) : !!msg.seats?.[1 - seat], watchers: Number(msg.watchers) || 0, free: Array.isArray(msg.free) ? msg.free.map(Boolean) : undefined });
+        this.setStatus({ peer: seat === null ? !!(msg.seats?.[0] || msg.seats?.[1]) : !!msg.seats?.[1 - seat], watchers: Number(msg.watchers) || 0, free: Array.isArray(msg.free) ? msg.free.map(Boolean) : undefined, spectators: msg.spectators !== false });
       } else if (msg.t === "error" && /slow down/i.test(String(msg.error))) {
         clearTimeout(this.resendTimer);
         this.resendTimer = window.setTimeout(() => {
@@ -215,6 +215,7 @@ export class RelayTransport implements Transport {
       clearTimeout(this.pongTimer);
       if (event.code === 4001) return this.die("This game has expired.");
       if (event.code === 4002) return this.die("The host gave your seat to someone else.");
+      if (event.code === 4003) return this.die("The players turned spectators off for this game.");
       this.retry();
     };
   }

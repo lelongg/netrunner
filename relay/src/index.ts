@@ -164,7 +164,7 @@ export default {
         return json(await matchmaker(env).status(id, url.searchParams.get("secret") ?? ""), 200, origin);
       }
       if (request.method !== "POST") return json({ error: "Not found" }, 404, origin);
-      let body: { name?: unknown; format?: unknown; side?: unknown; sub?: unknown; secret?: unknown };
+      let body: { name?: unknown; format?: unknown; side?: unknown; sub?: unknown; secret?: unknown; public?: unknown; spectators?: unknown };
       try {
         body = await request.json();
       } catch {
@@ -182,7 +182,7 @@ export default {
         const result = await matchmaker(env).accept(id, who);
         return json(result, "error" in result ? 409 : 200, origin);
       }
-      return json(await matchmaker(env).seek({ ...who, format, side: side as MatchSide }), 200, origin);
+      return json(await matchmaker(env).seek({ ...who, format, side: side as MatchSide, pub: body.public !== false, spectators: body.spectators !== false }), 200, origin);
     }
 
     const match = url.pathname.match(/^\/games\/([^/]+)\/(join|ws|seat|push)$/);
@@ -193,6 +193,14 @@ export default {
 
     if (match[2] === "join" && request.method === "POST") {
       const result = await room.join();
+      if ("error" in result && result.error === "unknown") {
+        let name: unknown;
+        try {
+          name = ((await request.json()) as { name?: unknown }).name;
+        } catch {}
+        const invited = await matchmaker(env).claim(match[1], { name: cleanName(name), sub: null });
+        if (invited) return json({ code: invited.code, seat: invited.seat, token: invited.token }, 200, origin);
+      }
       if ("error" in result) return json(result, result.error === "full" ? 409 : 404, origin);
       return json({ code: match[1], ...result }, 200, origin);
     }
@@ -237,11 +245,16 @@ export class GameRoom extends DurableObject<Env> {
     this.sql.exec("CREATE TABLE IF NOT EXISTS entries (seq INTEGER PRIMARY KEY AUTOINCREMENT, seat INTEGER NOT NULL, body TEXT NOT NULL, at INTEGER NOT NULL)");
   }
 
-  async create(): Promise<{ seat: Seat; token: string } | null> {
+  async taken(): Promise<boolean> {
+    return this.exists();
+  }
+
+  async create(spectators = true): Promise<{ seat: Seat; token: string } | null> {
     this.init();
     if (this.sql.exec("SELECT COUNT(*) AS n FROM seats").one().n) return null;
     const t = token();
     this.sql.exec("INSERT INTO seats (seat, token) VALUES (0, ?)", t);
+    if (!spectators) this.sql.exec("INSERT OR REPLACE INTO meta (k, v) VALUES ('spectators', '0')");
     await this.touch();
     return { seat: 0, token: t };
   }
@@ -305,6 +318,12 @@ export class GameRoom extends DurableObject<Env> {
     let seat: Seat | null = null;
     if (url.searchParams.has("watch")) {
       if (!this.sql.exec("SELECT seat FROM seats").toArray().length && !this.lastSeq()) return new Response("Unknown game", { status: 403 });
+      if (!this.spectators()) {
+        const { 0: client, 1: server } = new WebSocketPair();
+        server.accept();
+        server.close(4003, "Spectators are off for this game");
+        return new Response(null, { status: 101, webSocket: client });
+      }
       if (this.ctx.getWebSockets("watch").length >= MAX_WATCHERS) return new Response("Too many spectators", { status: 403 });
     } else {
       const row = this.sql.exec<{ seat: number }>("SELECT seat FROM seats WHERE token = ?", url.searchParams.get("token") ?? "").toArray()[0];
@@ -395,6 +414,10 @@ export class GameRoom extends DurableObject<Env> {
     await this.ctx.storage.deleteAll();
   }
 
+  private spectators(): boolean {
+    return this.sql.exec<{ v: string }>("SELECT v FROM meta WHERE k = 'spectators'").toArray()[0]?.v !== "0";
+  }
+
   private lastSeq(): number {
     if (!this.exists()) return 0;
     return this.sql.exec<{ seq: number | null }>("SELECT MAX(seq) AS seq FROM entries").one().seq ?? 0;
@@ -419,7 +442,7 @@ export class GameRoom extends DurableObject<Env> {
     const watchers = open.filter((s) => (s.deserializeAttachment() as Seated).seat === null).length;
     const taken = this.sql.exec<{ seat: number }>("SELECT seat FROM seats").toArray().map((r) => r.seat);
     const free = [0, 1].map((seat) => !taken.includes(seat));
-    const out = JSON.stringify({ t: "presence", seats, watchers, free });
+    const out = JSON.stringify({ t: "presence", seats, watchers, free, spectators: this.spectators() });
     for (const socket of open) {
       try {
         socket.send(out);
@@ -462,6 +485,10 @@ export class Matchmaker extends DurableObject<Env> {
     this.sql.exec(
       "CREATE TABLE IF NOT EXISTS seeks (id TEXT PRIMARY KEY, secret TEXT NOT NULL, name TEXT NOT NULL, format TEXT NOT NULL, side TEXT NOT NULL, created INTEGER NOT NULL, sub TEXT, code TEXT, seat INTEGER, token TEXT, assigned TEXT, opponent TEXT)",
     );
+    const columns = this.sql.exec<{ name: string }>("PRAGMA table_info(seeks)").toArray().map((c) => c.name);
+    if (!columns.includes("invite")) this.sql.exec("ALTER TABLE seeks ADD COLUMN invite TEXT");
+    if (!columns.includes("pub")) this.sql.exec("ALTER TABLE seeks ADD COLUMN pub INTEGER NOT NULL DEFAULT 1");
+    if (!columns.includes("spectators")) this.sql.exec("ALTER TABLE seeks ADD COLUMN spectators INTEGER NOT NULL DEFAULT 1");
   }
 
   private prune() {
@@ -471,7 +498,7 @@ export class Matchmaker extends DurableObject<Env> {
   async open() {
     this.prune();
     return this.sql
-      .exec<{ id: string; name: string; format: string; side: string; created: number }>("SELECT id, name, format, side, created FROM seeks WHERE code IS NULL ORDER BY created DESC LIMIT ?", MATCH_OPEN_MAX)
+      .exec<{ id: string; name: string; format: string; side: string; created: number }>("SELECT id, name, format, side, created FROM seeks WHERE code IS NULL AND pub = 1 ORDER BY created DESC LIMIT ?", MATCH_OPEN_MAX)
       .toArray();
   }
 
@@ -487,33 +514,69 @@ export class Matchmaker extends DurableObject<Env> {
     return { ok: true };
   }
 
-  async seek(who: Seeker & { format: string; side: MatchSide }): Promise<Matched | { status: "waiting"; id: string; secret: string }> {
+  async seek(who: Seeker & { format: string; side: MatchSide; pub: boolean; spectators: boolean }): Promise<Matched | { status: "waiting"; id: string; secret: string; code: string }> {
     this.prune();
-    const rows = this.sql.exec<Record<string, any>>("SELECT * FROM seeks WHERE code IS NULL AND format = ? ORDER BY created", who.format).toArray();
-    const other = rows.find((r) => r.side === "any" || who.side === "any" || r.side !== who.side);
-    if (other) return this.pair(other, who, who.side);
+    if (who.pub) {
+      const rows = this.sql.exec<Record<string, any>>("SELECT * FROM seeks WHERE code IS NULL AND pub = 1 AND format = ? ORDER BY created", who.format).toArray();
+      const other = rows.find((r) => r.side === "any" || who.side === "any" || r.side !== who.side);
+      const paired = other && (await this.pair(other, who, who.side));
+      if (paired) return paired;
+    }
     const id = token().slice(0, 16);
     const secret = token();
-    this.sql.exec("INSERT INTO seeks (id, secret, name, format, side, created, sub) VALUES (?, ?, ?, ?, ?, ?, ?)", id, secret, who.name, who.format, who.side, Date.now(), who.sub ? JSON.stringify(who.sub) : null);
+    let invite = newCode();
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const clash = this.sql.exec("SELECT id FROM seeks WHERE invite = ?", invite).toArray().length || (await this.env.GAME_ROOM.get(this.env.GAME_ROOM.idFromName(invite)).taken());
+      if (!clash) break;
+      invite = newCode();
+    }
+    this.sql.exec(
+      "INSERT INTO seeks (id, secret, name, format, side, created, sub, invite, pub, spectators) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      id,
+      secret,
+      who.name,
+      who.format,
+      who.side,
+      Date.now(),
+      who.sub ? JSON.stringify(who.sub) : null,
+      invite,
+      who.pub ? 1 : 0,
+      who.spectators ? 1 : 0,
+    );
     await this.ctx.storage.setAlarm(Date.now() + MATCH_HOURS * 3600 * 1000);
-    return { status: "waiting", id, secret };
+    return { status: "waiting", id, secret, code: invite };
+  }
+
+  async claim(invite: string, who: Seeker): Promise<Matched | null> {
+    this.prune();
+    const row = this.sql.exec<Record<string, any>>("SELECT * FROM seeks WHERE invite = ? AND code IS NULL", invite).toArray()[0];
+    return row ? this.pair(row, who, "any") : null;
   }
 
   async accept(id: string, who: Seeker): Promise<Matched | { error: string }> {
     const row = this.sql.exec<Record<string, any>>("SELECT * FROM seeks WHERE id = ? AND code IS NULL", id).toArray()[0];
-    if (!row) return { error: "Someone else took this game first." };
-    return this.pair(row, who, "any");
+    return (row && (await this.pair(row, who, "any"))) || { error: "Someone else took this game first." };
   }
 
-  private async pair(waiting: Record<string, any>, who: Seeker, wanted: MatchSide): Promise<Matched> {
+  private async pair(waiting: Record<string, any>, who: Seeker, wanted: MatchSide): Promise<Matched | null> {
+    if (!this.sql.exec("UPDATE seeks SET code = '' WHERE id = ? AND code IS NULL", waiting.id).rowsWritten) return null;
+    try {
+      return await this.seat(waiting, who, wanted);
+    } catch (e) {
+      this.sql.exec("UPDATE seeks SET code = NULL WHERE id = ? AND code = ''", waiting.id);
+      throw e;
+    }
+  }
+
+  private async seat(waiting: Record<string, any>, who: Seeker, wanted: MatchSide): Promise<Matched> {
     const pick = (): "corp" | "runner" => (Math.random() < 0.5 ? "corp" : "runner");
     const flip = (s: "corp" | "runner") => (s === "corp" ? "runner" : "corp");
     const hostSide: "corp" | "runner" = waiting.side !== "any" ? waiting.side : wanted !== "any" ? flip(wanted) : pick();
     let code = "";
     let host: { seat: Seat; token: string } | null = null;
-    for (let attempt = 0; attempt < 5 && !host; attempt++) {
-      code = newCode();
-      host = await this.env.GAME_ROOM.get(this.env.GAME_ROOM.idFromName(code)).create();
+    for (let attempt = 0; attempt < 6 && !host; attempt++) {
+      code = attempt === 0 && waiting.invite ? waiting.invite : newCode();
+      host = await this.env.GAME_ROOM.get(this.env.GAME_ROOM.idFromName(code)).create(waiting.spectators !== 0);
     }
     if (!host) throw new Error("Could not allocate a game code");
     const guest = await this.env.GAME_ROOM.get(this.env.GAME_ROOM.idFromName(code)).join();
