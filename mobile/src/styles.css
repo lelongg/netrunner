@@ -1919,6 +1919,15 @@ form.chat input {
   cursor: zoom-in;
 }
 
+.card-peek .card-zoom {
+  pointer-events: none;
+}
+.card-zoom img,
+.tile img {
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+  user-select: none;
+}
 .card-zoom {
   position: fixed;
   inset: 0;

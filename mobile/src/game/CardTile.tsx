@@ -87,6 +87,16 @@ export function CardTile({
             p.fired = true;
             navigator.vibrate?.(12);
             setZoomed(true);
+            const block = (e: Event) => e.preventDefault();
+            const release = () => {
+              setZoomed(false);
+              window.removeEventListener("pointerup", release);
+              window.removeEventListener("pointercancel", release);
+              setTimeout(() => window.removeEventListener("contextmenu", block, true), 300);
+            };
+            window.addEventListener("contextmenu", block, true);
+            window.addEventListener("pointerup", release);
+            window.addEventListener("pointercancel", release);
           }, 420);
           press.current = p;
         },
@@ -158,7 +168,12 @@ export function CardTile({
           ))}
         </div>
       )}
-      {zoomed && code && createPortal(<CardZoom items={[{ code, alt: card.title }]} start={0} onClose={() => setZoomed(false)} />, document.body)}
+      {zoomed && code && createPortal(
+          <div class="card-peek">
+            <CardZoom items={[{ code, alt: card.title }]} start={0} onClose={() => setZoomed(false)} />
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }
