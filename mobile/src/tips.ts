@@ -1,6 +1,6 @@
 import { settings } from "./settings";
 import { animate } from "motion";
-import { HOLD_MS } from "./hold";
+import { HOLD_MS, untilRelease } from "./hold";
 
 const MEANINGS: Record<string, string> = {
   click: "Click · one action. The Corp gets 3 per turn, the Runner 4.",
@@ -137,19 +137,10 @@ function installHold() {
         navigator.vibrate?.(12);
         show(MEANINGS[hit.key] ?? hit.key, hit.anchor);
         swallow = true;
-        const block = (ev: Event) => ev.preventDefault();
-        const release = () => {
+        untilRelease(() => {
           hide();
-          removeEventListener("pointerup", release, true);
-          removeEventListener("pointercancel", release, true);
-          setTimeout(() => {
-            swallow = false;
-            removeEventListener("contextmenu", block, true);
-          }, 350);
-        };
-        addEventListener("contextmenu", block, true);
-        addEventListener("pointerup", release, true);
-        addEventListener("pointercancel", release, true);
+          setTimeout(() => (swallow = false), 350);
+        });
       }, HOLD_MS);
     },
     true,

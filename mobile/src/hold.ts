@@ -2,6 +2,23 @@ import { useRef } from "preact/hooks";
 
 export const HOLD_MS = 300;
 
+export function untilRelease(onRelease: () => void) {
+  const block = (e: Event) => e.preventDefault();
+  const release = () => {
+    removeEventListener("pointerup", release, true);
+    removeEventListener("touchend", release, true);
+    removeEventListener("touchcancel", release, true);
+    removeEventListener("touchmove", block, true);
+    setTimeout(() => removeEventListener("contextmenu", block, true), 300);
+    onRelease();
+  };
+  addEventListener("contextmenu", block, true);
+  addEventListener("touchmove", block, { capture: true, passive: false });
+  addEventListener("pointerup", release, true);
+  addEventListener("touchend", release, true);
+  addEventListener("touchcancel", release, true);
+}
+
 export function useHold(onHold: ((on: boolean) => void) | undefined) {
   const press = useRef<{ timer: number; x: number; y: number; fired: boolean } | null>(null);
   const cancel = () => {
@@ -16,16 +33,7 @@ export function useHold(onHold: ((on: boolean) => void) | undefined) {
             p.fired = true;
             navigator.vibrate?.(12);
             onHold(true);
-            const block = (e: Event) => e.preventDefault();
-            const release = () => {
-              onHold(false);
-              window.removeEventListener("pointerup", release);
-              window.removeEventListener("pointercancel", release);
-              setTimeout(() => window.removeEventListener("contextmenu", block, true), 300);
-            };
-            window.addEventListener("contextmenu", block, true);
-            window.addEventListener("pointerup", release);
-            window.addEventListener("pointercancel", release);
+            untilRelease(() => onHold(false));
           }, HOLD_MS);
           press.current = p;
         },
