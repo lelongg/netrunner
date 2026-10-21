@@ -157,7 +157,7 @@ function useTilt(target: { current: HTMLElement | null }) {
       if (e.beta == null || e.gamma == null) return;
       base ??= [e.beta, e.gamma];
       base = [base[0] * 0.995 + e.beta * 0.005, base[1] * 0.995 + e.gamma * 0.005];
-      const want: [number, number] = [clamp((e.gamma - base[1]) / 25), clamp((e.beta - base[0]) / 25)];
+      const want: [number, number] = [clamp((e.gamma - base[1]) / 18), clamp((e.beta - base[0]) / 18)];
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
         cur = [cur[0] + (want[0] - cur[0]) * 0.35, cur[1] + (want[1] - cur[1]) * 0.35];

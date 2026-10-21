@@ -8230,18 +8230,34 @@ button.deck-change {
 }
 
 .deck-tilt {
+  position: relative;
   display: block;
-  transform: perspective(700px) rotateY(calc(var(--tx, 0) * 14deg)) rotateX(calc(var(--ty, 0) * -10deg)) translate(calc(var(--tx, 0) * 6px), calc(var(--ty, 0) * 4px));
-  transition: transform 0.12s linear;
+  transform: perspective(700px) translate3d(calc(var(--tx, 0) * 14px), calc(var(--ty, 0) * 10px), 0) rotateY(calc(var(--tx, 0) * 16deg)) rotateX(calc(var(--ty, 0) * -12deg));
+  transition: transform 0.1s linear;
+}
+
+.deck-tilt::before {
+  content: "";
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  bottom: -6%;
+  height: 14%;
+  border-radius: 50%;
+  background: rgb(0 0 0 / 0.75);
+  filter: blur(14px);
+  transform: translate(calc(var(--tx, 0) * -26px), calc(var(--ty, 0) * -10px + 14px));
+  transition: transform 0.1s linear;
 }
 
 .arena .arena-bg {
-  translate: calc(var(--tx, 0) * -18px) calc(var(--ty, 0) * -12px);
-  transition: translate 0.12s linear;
+  translate: calc(var(--tx, 0) * -34px) calc(var(--ty, 0) * -26px);
+  scale: 1.08;
+  transition: translate 0.1s linear;
 }
 
 .arena .arena-shade {
-  background-position: calc(var(--tx, 0) * -8px) calc(var(--ty, 0) * -6px);
+  background-position: calc(var(--tx, 0) * -12px) calc(var(--ty, 0) * -9px);
 }
 
 .arena .deck-card-shine {
@@ -8253,7 +8269,7 @@ button.deck-change {
   inset: -4%;
   pointer-events: none;
   opacity: 0.7;
-  translate: calc(var(--tx, 0) * -9px) calc(var(--ty, 0) * -6px);
+  translate: calc(var(--tx, 0) * -16px) calc(var(--ty, 0) * -12px);
 }
 
 .screen.arena[class*="faction-"] {
