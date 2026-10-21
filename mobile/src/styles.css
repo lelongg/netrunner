@@ -7270,11 +7270,59 @@ h1.deck-name.long {
 }
 
 .home-find-dot {
+  position: relative;
+  flex: none;
   width: 8px;
   height: 8px;
   border-radius: 50%;
   background: var(--cyan);
   box-shadow: 0 0 8px var(--cyan);
+  animation: find-blink 1.6s ease-in-out infinite;
+}
+
+.home-find-dot::before,
+.home-find-dot::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1px solid var(--cyan);
+  animation: find-ping 1.6s cubic-bezier(0.2, 0.6, 0.4, 1) infinite;
+}
+
+.home-find-dot::after {
+  animation-delay: 0.8s;
+}
+
+@keyframes find-ping {
+  from {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  to {
+    transform: scale(3.6);
+    opacity: 0;
+  }
+}
+
+@keyframes find-blink {
+  0%,
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 10px var(--cyan);
+  }
+  50% {
+    opacity: 0.45;
+    box-shadow: 0 0 2px var(--cyan);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-find-dot,
+  .home-find-dot::before,
+  .home-find-dot::after {
+    animation: none;
+  }
 }
 
 @keyframes find-pulse {
