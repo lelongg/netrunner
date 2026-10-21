@@ -7632,7 +7632,7 @@ h1.deck-name.long {
     linear-gradient(180deg, rgb(5 6 8 / 0.7), transparent 22%, transparent 50%, var(--bg) 80%);
 }
 
-.arena > :not(.arena-bg):not(.arena-shade):not(.tabbar) {
+.arena > :not(.arena-bg):not(.arena-shade):not(.arena-grid):not(.tabbar) {
   position: relative;
   z-index: 1;
 }
@@ -7838,7 +7838,7 @@ h1.deck-name.long {
   width: min(44vw, 24vh, 200px);
   aspect-ratio: 300 / 419;
   overflow: hidden;
-  clip-path: polygon(0 0, 88% 0, 100% 8%, 100% 100%, 12% 100%, 0 92%);
+  border-radius: 4.5% / 3.2%;
 }
 
 .deck-frame {
@@ -8226,5 +8226,73 @@ button.deck-change {
 @keyframes find-pulse {
   to {
     box-shadow: 0 0 16px rgb(34 211 238 / 0.45);
+  }
+}
+
+.deck-tilt {
+  display: block;
+  transform: perspective(700px) rotateY(calc(var(--tx, 0) * 14deg)) rotateX(calc(var(--ty, 0) * -10deg)) translate(calc(var(--tx, 0) * 6px), calc(var(--ty, 0) * 4px));
+  transition: transform 0.12s linear;
+}
+
+.arena .arena-bg {
+  translate: calc(var(--tx, 0) * -18px) calc(var(--ty, 0) * -12px);
+  transition: translate 0.12s linear;
+}
+
+.arena .arena-shade {
+  background-position: calc(var(--tx, 0) * -8px) calc(var(--ty, 0) * -6px);
+}
+
+.arena .deck-card-shine {
+  translate: calc(var(--tx, 0) * 40%) 0;
+}
+
+.arena .arena-grid {
+  position: absolute;
+  inset: -4%;
+  pointer-events: none;
+  opacity: 0.7;
+  translate: calc(var(--tx, 0) * -9px) calc(var(--ty, 0) * -6px);
+}
+
+.screen.arena[class*="faction-"] {
+  --cyan: var(--fc, #3aa3b5);
+}
+
+.arena .arena-bg-in {
+  animation: arena-drift 30s ease-in-out infinite alternate, arena-fade-in 0.8s ease-out backwards;
+}
+
+.arena .arena-bg-out {
+  animation: arena-fade-out 0.8s ease-in forwards;
+}
+
+@keyframes arena-fade-in {
+  from {
+    opacity: 0;
+    filter: grayscale(1) contrast(1.3) brightness(1.6) blur(6px);
+  }
+}
+
+@keyframes arena-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+.player-chip .chip-in {
+  animation: chip-in 0.4s cubic-bezier(0.2, 0.8, 0.3, 1) backwards;
+}
+
+.player-chip .player-text.chip-in {
+  animation-delay: 0.06s;
+}
+
+@keyframes chip-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+    filter: brightness(2);
   }
 }

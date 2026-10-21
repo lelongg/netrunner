@@ -11,6 +11,8 @@ import { Cta, Ticker } from "../ui";
 import { Icon, type IconName } from "../icons";
 import { lastDeck, saveId } from "../session";
 import { savedDecks } from "../decks";
+import { motionOff } from "../settings";
+import CursorGrid from "../game/CursorGrid";
 import { QrScan } from "./QrScan";
 import { GameList, JoinCode, type Props, describe, startGame } from "./Home";
 
@@ -21,6 +23,16 @@ const MODES: { key: Mode; label: string; hint: string }[] = [
   { key: "solo", label: "Solo", hint: "Against the bot" },
   { key: "local", label: "Local", hint: "Pass and play" },
 ];
+
+const FACTION_TINT: Record<string, string> = {
+  "haas-bioroid": "#a77bf3",
+  jinteki: "#ff4f7e",
+  nbn: "#f5bf4a",
+  "weyland-consortium": "#5fbf7a",
+  anarch: "#ff7a35",
+  criminal: "#4f9bff",
+  shaper: "#7fdc5c",
+};
 
 const factionKey = (f?: string) => (f ?? "neutral").toLowerCase().replace(/[^a-z]+/g, "-");
 
@@ -134,6 +146,42 @@ function Continue({ props }: { props: Props }) {
 
 const TIPS = ["Hold a card to see it full size", "Hold the ticker to peek at the game log", "Tap an icon for what it means", "Swipe a game in your list to delete it", "Share a game code to play with a friend"];
 
+function useTilt(target: { current: HTMLElement | null }) {
+  useEffect(() => {
+    if (typeof DeviceOrientationEvent === "undefined" || motionOff()) return;
+    let base: [number, number] | null = null;
+    let cur: [number, number] = [0, 0];
+    let raf = 0;
+    const clamp = (v: number) => Math.max(-1, Math.min(1, v));
+    const onTilt = (e: DeviceOrientationEvent) => {
+      if (e.beta == null || e.gamma == null) return;
+      base ??= [e.beta, e.gamma];
+      base = [base[0] * 0.995 + e.beta * 0.005, base[1] * 0.995 + e.gamma * 0.005];
+      const want: [number, number] = [clamp((e.gamma - base[1]) / 25), clamp((e.beta - base[0]) / 25)];
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        cur = [cur[0] + (want[0] - cur[0]) * 0.35, cur[1] + (want[1] - cur[1]) * 0.35];
+        target.current?.style.setProperty("--tx", cur[0].toFixed(3));
+        target.current?.style.setProperty("--ty", cur[1].toFixed(3));
+      });
+    };
+    const ask = (DeviceOrientationEvent as any).requestPermission as undefined | (() => Promise<string>);
+    const start = () => addEventListener("deviceorientation", onTilt);
+    const unlock = () =>
+      ask?.().then(
+        (r) => r === "granted" && start(),
+        () => {},
+      );
+    if (ask) addEventListener("pointerdown", unlock, { once: true });
+    else start();
+    return () => {
+      removeEventListener("deviceorientation", onTilt);
+      removeEventListener("pointerdown", unlock);
+      cancelAnimationFrame(raf);
+    };
+  }, []);
+}
+
 function useFeed(props: Props, hero: { deck?: string; card?: Card }) {
   const { ready, error, saves, seeking, db } = props;
   const [open, setOpen] = useState<number | null>(null);
@@ -201,8 +249,15 @@ export function HomeArena(props: Props) {
   }, [joining]);
   const [side, setSideState] = useState<Side>(storedSide);
   const [slide, setSlide] = useState<"left" | "right" | null>(null);
+  const [prev, setPrev] = useState<Card | undefined>();
+  useEffect(() => {
+    if (!prev) return;
+    const t = setTimeout(() => setPrev(undefined), 900);
+    return () => clearTimeout(t);
+  }, [prev]);
   const setSide = (next: Side, from?: "left" | "right") => {
     if (next === side) return;
+    setPrev(hero.card);
     setSlide(from ?? (next === "corp" ? "right" : "left"));
     setSideState(next);
     try {
@@ -211,6 +266,8 @@ export function HomeArena(props: Props) {
   };
   const swipe = useRef<{ x: number; y: number; done: boolean; drag: boolean } | null>(null);
   const slideEl = useRef<HTMLSpanElement>(null);
+  const arenaEl = useRef<HTMLDivElement>(null);
+  useTilt(arenaEl);
   const captionEl = useRef<HTMLSpanElement>(null);
   const drag = (dx: number, settle: boolean, clear = false) => {
     for (const [el, k] of [
@@ -229,6 +286,7 @@ export function HomeArena(props: Props) {
   };
   const hero = useMemo(() => featured(db, side), [db, side]);
   const feed = useFeed(props, hero);
+  const tint = FACTION_TINT[factionKey(hero.card?.faction)] ?? (side === "corp" ? "#3aa3b5" : "#ff5a4f");
   const play = () => (mode === "online" ? onFind() : go("local", undefined, mode === "solo"));
   const searching = mode === "online" && seeking;
   const label = searching ? "Searching…" : mode === "online" ? "Play online" : mode === "solo" ? "Play vs bot" : "Play local";
@@ -243,6 +301,7 @@ export function HomeArena(props: Props) {
         ))}
       </Ticker>
       <div
+        ref={arenaEl}
         class={`screen arena side-${side} faction-${factionKey(hero.card?.faction)}`}
         onPointerDown={(e) => (swipe.current = { x: e.clientX, y: e.clientY, done: false, drag: false })}
         onPointerMove={(e) => {
@@ -275,12 +334,14 @@ export function HomeArena(props: Props) {
           }
         }}
       >
-        <Art card={hero.card} class="arena-bg" sharp />
+        {prev && <Art key={`out-${prev.code}`} card={prev} class="arena-bg arena-bg-out" sharp />}
+        <Art key={`bg-${side}`} card={hero.card} class={`arena-bg ${slide ? "arena-bg-in" : ""}`} sharp />
         <div class="arena-shade" aria-hidden="true" />
+        <CursorGrid className="arena-grid" cellSize={32} color={tint} gridColor={tint} radius={110} holdTime={200} fadeDuration={1400} maxOpacity={0.7} fillOpacity={0} gridOpacity={0.1} spotlight={0.3} ambient={motionOff() ? 0 : 0.9} fps={30} tempo={seeking ? 1.8 : 1.2} clickPulse={!motionOff()} intro={!motionOff()} edgeFade={0.08} />
         <header class="arena-top">
           <span class="player-chip">
-            <Art card={hero.card} class="player-avatar" />
-            <span class="player-text">
+            <Art key={`av-${side}`} card={hero.card} class={`player-avatar ${slide ? "chip-in" : ""}`} />
+            <span key={`pt-${side}`} class={`player-text ${slide ? "chip-in" : ""}`}>
               <small class="label">{hero.card?.side === "Corp" ? "Corp ID" : "Runner ID"}</small>
               <strong>{playerName()}</strong>
             </span>
@@ -291,29 +352,28 @@ export function HomeArena(props: Props) {
         <div class="deck-showcase">
           <button class="deck-open" disabled={!ready} onClick={() => onDecks(hero.id, side)} aria-label={hero.id ? `Edit ${hero.deck}` : "Open your decks"}>
             <span ref={slideEl} key={side} class={`deck-slide ${slide ? `slide-${slide}` : ""}`}>
-              <span class="deck-frame">
-                <span class="deck-card">
-                  {hero.card && (
-                    <img
-                      src={cardImage(hero.card.code, "xlarge")}
-                      alt={hero.card.title}
-                      onError={(e) => {
-                        const img = e.currentTarget as HTMLImageElement;
-                        const fallback = cardImage(hero.card!.code, "large")!;
-                        if (!img.src.endsWith(fallback)) img.src = fallback;
-                      }}
-                    />
-                  )}
-                  <i class="deck-card-shine" />
+              <span class="deck-tilt">
+                <span class="deck-frame">
+                  <span class="deck-card">
+                    {hero.card && (
+                      <img
+                        src={cardImage(hero.card.code, "xlarge")}
+                        alt={hero.card.title}
+                        onError={(e) => {
+                          const img = e.currentTarget as HTMLImageElement;
+                          const fallback = cardImage(hero.card!.code, "large")!;
+                          if (!img.src.endsWith(fallback)) img.src = fallback;
+                        }}
+                      />
+                    )}
+                    <i class="deck-card-shine" />
+                  </span>
                 </span>
               </span>
             </span>
           </button>
           <span ref={captionEl} key={`c-${side}`} class={`deck-caption ${slide ? "fade-in" : ""}`}>
             <strong>{hero.deck ?? hero.card?.title ?? "Build a deck"}</strong>
-            <button class="deck-change" disabled={!ready} onClick={() => onDecks(undefined, side)}>
-              <Icon name="deck" /> {hero.deck ? "Change deck" : "Build a deck"}
-            </button>
           </span>
         </div>
         <div class="arena-bottom">
