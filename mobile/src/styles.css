@@ -8951,57 +8951,65 @@ button.player-chip {
 }
 
 
+
 .board .board-grid {
-  inset: -4%;
-  translate: calc(var(--tx, 0) * -16px) calc(var(--ty, 0) * -12px);
+  inset: -8%;
+  translate: calc(var(--tx, 0) * -30px) calc(var(--ty, 0) * -24px);
+}
+
+.board .playfield-frame {
+  perspective: 900px;
 }
 
 .board .playfield {
   overflow-x: clip;
+  transform: rotateY(calc(var(--tx, 0) * 4deg)) rotateX(calc(var(--ty, 0) * -3deg));
 }
 
 .board .playfield > .area {
-  translate: calc(var(--tx, 0) * 5px) calc(var(--ty, 0) * 4px);
+  translate: calc(var(--tx, 0) * 10px) calc(var(--ty, 0) * 8px);
 }
 
 .board .playfield > .opp {
-  translate: calc(var(--tx, 0) * 8px) calc(var(--ty, 0) * 6px);
+  translate: calc(var(--tx, 0) * 18px) calc(var(--ty, 0) * 14px);
+  box-shadow: calc(var(--tx, 0) * -10px) calc(var(--ty, 0) * -10px + 12px) 18px rgb(0 0 0 / 0.75);
 }
 
 .board .dock {
   position: relative;
   z-index: 2;
-  margin: 0 -12px -10px;
-  padding: 0 12px calc(10px + env(safe-area-inset-bottom));
+  margin: 0 -24px -20px;
+  padding: 0 24px calc(20px + env(safe-area-inset-bottom));
   background: var(--bg);
-  translate: calc(var(--tx, 0) * 9px) calc(var(--ty, 0) * 7px);
-  box-shadow: calc(var(--tx, 0) * -8px) calc(var(--ty, 0) * -8px - 6px) 24px rgb(0 0 0 / 0.55);
+  translate: calc(var(--tx, 0) * 20px) calc(var(--ty, 0) * 15px);
+  box-shadow: calc(var(--tx, 0) * -14px) calc(var(--ty, 0) * -14px - 8px) 30px rgb(0 0 0 / 0.65);
 }
 
 .sheet-backdrop > .sheet {
-  margin-bottom: -18px;
-  padding-bottom: calc(34px + env(safe-area-inset-bottom));
-  translate: calc(var(--tx, 0) * 14px) calc(var(--ty, 0) * 11px);
-  box-shadow: calc(var(--tx, 0) * -14px) calc(var(--ty, 0) * -14px - 12px) 40px rgb(0 0 0 / 0.7);
+  margin-bottom: -34px;
+  padding-bottom: calc(50px + env(safe-area-inset-bottom));
+  translate: calc(var(--tx, 0) * 30px) calc(var(--ty, 0) * 24px);
+  box-shadow: calc(var(--tx, 0) * -24px) calc(var(--ty, 0) * -24px - 14px) 50px rgb(0 0 0 / 0.8);
 }
 
 .menu-drawer {
-  right: -18px;
-  bottom: -18px;
-  padding-right: 18px;
-  padding-bottom: 18px;
-  translate: calc(var(--tx, 0) * 14px) calc(var(--ty, 0) * 11px);
-  box-shadow: calc(var(--tx, 0) * -14px - 12px) calc(var(--ty, 0) * -14px) 40px rgb(0 0 0 / 0.7);
+  right: -34px;
+  bottom: -34px;
+  padding-right: 34px;
+  padding-bottom: 34px;
+  translate: calc(var(--tx, 0) * 30px) calc(var(--ty, 0) * 24px);
+  box-shadow: calc(var(--tx, 0) * -24px - 14px) calc(var(--ty, 0) * -24px) 50px rgb(0 0 0 / 0.8);
 }
 
 .sheet .sheet-head .sheet-img {
-  translate: calc(var(--tx, 0) * 10px) calc(var(--ty, 0) * 8px);
-  transform: perspective(700px) rotateY(calc(var(--tx, 0) * 10deg)) rotateX(calc(var(--ty, 0) * -8deg));
-  filter: drop-shadow(calc(var(--tx, 0) * -10px) calc(var(--ty, 0) * -10px + 10px) 14px rgb(0 0 0 / 0.65));
+  translate: calc(var(--tx, 0) * 12px) calc(var(--ty, 0) * 14px);
+  transform: perspective(700px) rotateY(calc(var(--tx, 0) * 16deg)) rotateX(calc(var(--ty, 0) * -12deg));
+  filter: drop-shadow(calc(var(--tx, 0) * -18px) calc(var(--ty, 0) * -18px + 12px) 16px rgb(0 0 0 / 0.7));
 }
 
 .card-zoom img,
 .card-peek img {
-  translate: calc(var(--tx, 0) * 24px) calc(var(--ty, 0) * 18px);
-  transform: perspective(800px) rotateY(calc(var(--tx, 0) * 12deg)) rotateX(calc(var(--ty, 0) * -9deg));
+  translate: calc(var(--tx, 0) * 44px) calc(var(--ty, 0) * 34px);
+  transform: perspective(800px) rotateY(calc(var(--tx, 0) * 18deg)) rotateX(calc(var(--ty, 0) * -14deg));
+  filter: drop-shadow(calc(var(--tx, 0) * -24px) calc(var(--ty, 0) * -24px + 16px) 22px rgb(0 0 0 / 0.75));
 }

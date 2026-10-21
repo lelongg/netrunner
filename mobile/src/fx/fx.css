@@ -2854,24 +2854,24 @@
 }
 
 .fx-layer > :not(.fx-border, .fx-finale, .fx-flash, .fx-glitch, .fx-showdown, .fx-shutdown, .fx-split, .fx-vignette, .fx-vr) {
-  translate: calc(var(--tx, 0) * 7px) calc(var(--ty, 0) * 5px);
+  translate: calc(var(--tx, 0) * 16px) calc(var(--ty, 0) * 12px);
 }
 
 .fx-layer > .fx-ghost:not(.fx-showcase) {
-  translate: calc(var(--tx, 0) * 12px) calc(var(--ty, 0) * 9px);
-  filter: drop-shadow(calc(var(--tx, 0) * -10px) calc(var(--ty, 0) * -10px + 14px) 16px rgb(0 0 0 / 0.65));
+  translate: calc(var(--tx, 0) * 26px) calc(var(--ty, 0) * 20px);
+  filter: drop-shadow(calc(var(--tx, 0) * -20px) calc(var(--ty, 0) * -20px + 16px) 18px rgb(0 0 0 / 0.7));
 }
 
 .fx-layer > .fx-showcase,
 .fx-showdown > * {
-  translate: calc(var(--tx, 0) * 20px) calc(var(--ty, 0) * 15px);
+  translate: calc(var(--tx, 0) * 40px) calc(var(--ty, 0) * 30px);
 }
 
 .fx-showcase .fx-card-img,
 .fx-showcase > .tile img {
-  transform: perspective(700px) rotateY(calc(var(--tx, 0) * 12deg)) rotateX(calc(var(--ty, 0) * -9deg));
+  transform: perspective(700px) rotateY(calc(var(--tx, 0) * 18deg)) rotateX(calc(var(--ty, 0) * -14deg));
 }
 
 .fx-layer > .fx-ghost.fx-burn:not(.fx-showcase) {
-  filter: drop-shadow(0 0 8px #ff6a00) drop-shadow(calc(var(--tx, 0) * -10px) calc(var(--ty, 0) * -10px + 14px) 16px rgb(0 0 0 / 0.65));
+  filter: drop-shadow(0 0 8px #ff6a00) drop-shadow(calc(var(--tx, 0) * -20px) calc(var(--ty, 0) * -20px + 16px) 18px rgb(0 0 0 / 0.7));
 }

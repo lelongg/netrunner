@@ -3,7 +3,7 @@ import { motionOff } from "./settings";
 
 let granted = false;
 
-const RANGE = 0.32;
+const RANGE = 0.24;
 const BASE_SECONDS = 4;
 const FOLLOW_SECONDS = 0.08;
 
