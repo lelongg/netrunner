@@ -326,7 +326,7 @@ export function HomeArena(props: Props) {
             ))}
           </div>
           <div class={`arena-play ${searching ? "seeking" : ""}`}>
-            <Cta onClick={play} disabled={!ready}>
+            <Cta onClick={play} disabled={!ready} tone={searching ? "cyan" : undefined}>
               {label}
             </Cta>
           </div>

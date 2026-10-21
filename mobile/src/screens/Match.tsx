@@ -2,7 +2,8 @@ import { useEffect, useState } from "preact/hooks";
 import type { CardDb, Matchup, Side } from "../engine";
 import { type WireDeck, latest } from "../decks";
 import { lastDeck, setLastDeck } from "../session";
-import { DeckSheet } from "./Lobby";
+import { DeckSheet, shareLink } from "./Lobby";
+import { QrCode } from "../QrCode";
 import { defaultDeck, problemIn } from "./DeckPicker";
 import { DeckRow } from "./Decks";
 import { Cta, Picker, Ticker } from "../ui";
@@ -43,7 +44,45 @@ function useTick(on: boolean) {
   }, [on]);
 }
 
-export function Match({ name, db, matchups, onMatched, onInvite, onClose }: { name: string; db: CardDb; matchups: Matchup[]; onMatched: (m: Matched) => void; onInvite: (format: GameFormat, side?: Side) => void; onClose: () => void }) {
+function InviteSheet({ code, status, onClose }: { code: string; status: string; onClose: () => void }) {
+  useBackClose(true, onClose);
+  const [copied, setCopied] = useState(false);
+  const link = shareLink(code);
+  const share = async () => {
+    try {
+      if (navigator.share) await navigator.share({ title: "Netrunner game", text: `Code: ${code}`, url: link });
+      else {
+        await navigator.clipboard.writeText(link);
+        setCopied(true);
+      }
+    } catch {}
+  };
+  return (
+    <div class="sheet-backdrop" onClick={onClose}>
+      <div class="sheet panel cyan invite-sheet" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Invite a friend">
+        <div class="row">
+          <span class="label cyan">Invite a friend</span>
+          <button class="ghost" onClick={onClose} aria-label="Cancel the invitation">
+            <Icon name="close" />
+          </button>
+        </div>
+        <div class="invite-tile">
+          {code ? <QrCode value={link} label={`QR code to join game ${code}`} /> : <div class="qr qr-pending" />}
+          <span class="code">{code || "·····"}</span>
+        </div>
+        <Cta onClick={share} disabled={!code} tone="cyan">
+          {copied ? "Link copied" : "Share the link"}
+        </Cta>
+        <p class="invite-wait">
+          <i class="live-dot" aria-hidden="true" />
+          {status === "waiting" ? "Waiting for your friend to join…" : "Opening the game…"}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+export function Match({ name, db, matchups, onMatched, onInvite, onClose, invite, onCancelInvite }: { name: string; db: CardDb; matchups: Matchup[]; onMatched: (m: Matched) => void; onInvite: (format: GameFormat, side?: Side) => void; onClose: () => void; invite?: { code: string; status: string }; onCancelInvite?: () => void }) {
   const [decks, setDecks] = useState<Record<Side, WireDeck | undefined>>(() => {
     const pick = (s: Side) => {
       const d = lastDeck(s);
@@ -141,6 +180,7 @@ export function Match({ name, db, matchups, onMatched, onInvite, onClose }: { na
         Play online <span class="cyan">{mine ? "searching" : `${open?.length ?? 0} open`}</span>
       </Ticker>
       <div class="screen match">
+        <div class="match-bg" aria-hidden="true" />
         <header class="screen-head">
           <button class="ghost" onClick={onClose} aria-label="Back to home">
             <Icon name="arrow-left" />
@@ -169,7 +209,8 @@ export function Match({ name, db, matchups, onMatched, onInvite, onClose }: { na
                 Notify me when someone joins
               </button>
             )}
-            <button class="ghost match-stop" disabled={busy} onClick={stopSeeking}>
+            <button class="match-stop" disabled={busy} onClick={stopSeeking}>
+              <Icon name="close" />
               Stop searching
             </button>
           </section>
@@ -207,16 +248,13 @@ export function Match({ name, db, matchups, onMatched, onInvite, onClose }: { na
             <Cta onClick={find} disabled={busy}>
               Find an opponent
             </Cta>
-            <button class="match-invite" disabled={busy} onClick={() => onInvite(format, side === "any" ? undefined : side)}>
-              <Icon name="share" />
-              <span>
-                <strong>Invite a friend</strong>
-              </span>
-              <Icon name="arrow-right" />
-            </button>
+            <Cta onClick={() => onInvite(format, side === "any" ? undefined : side)} disabled={busy} tone="cyan">
+              Invite a friend
+            </Cta>
           </section>
         )}
         {error && <p class="error">{error}</p>}
+        {invite && onCancelInvite && <InviteSheet code={invite.code} status={invite.status} onClose={onCancelInvite} />}
         {choosing && <DeckSheet side={choosing} db={db} matchups={matchups} value={decks[choosing]} format={format} onPick={(d) => choose(choosing, d)} onClose={() => setChoosing(null)} />}
 
         <section class="match-open">

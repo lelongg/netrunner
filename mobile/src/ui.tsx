@@ -133,9 +133,9 @@ export function LogoMark() {
   );
 }
 
-export function Cta({ children, onClick, disabled, cmd }: { children: ComponentChildren; onClick?: () => void; disabled?: boolean; cmd?: string }) {
+export function Cta({ children, onClick, disabled, cmd, tone }: { children: ComponentChildren; onClick?: () => void; disabled?: boolean; cmd?: string; tone?: "cyan" | "red" }) {
   return (
-    <button class="cta" onClick={onClick} disabled={disabled} data-cmd={cmd}>
+    <button class={`cta ${tone ? `tone-${tone}` : ""}`} onClick={onClick} disabled={disabled} data-cmd={cmd}>
       <Sheen off={disabled} />
       <span>
         <span class="cta-label">{children}</span>

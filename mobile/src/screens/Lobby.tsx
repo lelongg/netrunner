@@ -45,7 +45,7 @@ interface Props {
 const SIDE_LABEL: Record<Side, string> = { corp: "Corp", runner: "Runner" };
 const other = (s: Side): Side => (s === "corp" ? "runner" : "corp");
 
-function shareLink(code: string) {
+export function shareLink(code: string) {
   const url = new URL(location.href);
   url.search = `?join=${code}`;
   url.hash = "";

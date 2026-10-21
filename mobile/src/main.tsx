@@ -160,6 +160,12 @@ function App() {
   const [credits, setCredits] = useState(false);
   openCredits = session ? undefined : () => setCredits(true);
   const [matching, setMatching] = useState(false);
+  const [inviting, setInviting] = useState(false);
+  useEffect(() => {
+    if (!inviting || !session?.lobby.opponentName) return;
+    setInviting(false);
+    setMatching(false);
+  }, [inviting, session?.lobby.opponentName]);
   const [seeking, setSeeking] = useState(() => !!pendingSeek());
   const [guide, setGuide] = useState(() => !joinParam && !gameParam && !watchParam && !replayParam && tutorialState() === null);
   const firstRun = guide && tutorialState() === null;
@@ -324,25 +330,30 @@ function App() {
     );
 
   if (credits && !session) return <Credits onClose={() => setCredits(false)} />;
-  if (matching && loaded && !session)
+  if (matching && loaded && (!session || (inviting && session.lobby.role === "host" && !session.lobby.opponentName)))
     return (
       <Match
         name={playerName()}
         db={loaded.db}
         matchups={loaded.matchups}
         onMatched={startMatched}
+        invite={inviting && session ? { code: session.lobby.code, status: session.lobby.status } : undefined}
         onInvite={(format, side) => {
           if (!loaded) return;
-          setMatching(false);
-          setOpening("new game");
-          afterPaint(() => {
-            const next = new Session(loaded.engine, loaded.db, "host", undefined, playerName(), side);
-            next.configureMatch(format, side);
-            setSession(next);
-            setOpening(null);
-          });
+          const next = new Session(loaded.engine, loaded.db, "host", undefined, playerName(), side);
+          next.configureMatch(format, side);
+          setInviting(true);
+          setSession(next);
+        }}
+        onCancelInvite={() => {
+          setInviting(false);
+          leave();
         }}
         onClose={() => {
+          if (inviting) {
+            setInviting(false);
+            leave();
+          }
           setMatching(false);
           setSeeking(!!pendingSeek());
         }}
