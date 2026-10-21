@@ -4,6 +4,7 @@ import { type PushSub, type Vapid, sendPush, validSub } from "./push";
 export interface Env {
   GAME_ROOM: DurableObjectNamespace<GameRoom>;
   REPLAYS: DurableObjectNamespace<ReplayStore>;
+  MATCHMAKER: DurableObjectNamespace<Matchmaker>;
   CREATE_LIMIT?: RateLimit;
   CREATE_LIMIT_ALL?: RateLimit;
   JOIN_LIMIT?: RateLimit;
@@ -148,6 +149,39 @@ export default {
       const headers = new Headers({ "Content-Type": "application/json", "Cache-Control": "public, max-age=86400" });
       if (origin) headers.set("Access-Control-Allow-Origin", origin);
       return new Response(body, { headers });
+    }
+
+    if (url.pathname === "/match/open" && request.method === "GET") {
+      if (await limited(env.JOIN_LIMIT, request)) return json({ error: "Too many requests, try again in a minute" }, 429, origin);
+      return json({ open: await matchmaker(env).open() }, 200, origin);
+    }
+    const seek = url.pathname.match(/^\/match(?:\/([0-9a-f]{16})(?:\/(cancel|accept))?)?$/);
+    if (seek) {
+      const [, id, action] = seek;
+      if (request.method === "GET" && id && !action) {
+        if (await limited(env.JOIN_LIMIT, request)) return json({ error: "Too many requests, try again in a minute" }, 429, origin);
+        return json(await matchmaker(env).status(id, url.searchParams.get("secret") ?? ""), 200, origin);
+      }
+      if (request.method !== "POST") return json({ error: "Not found" }, 404, origin);
+      let body: { name?: unknown; format?: unknown; side?: unknown; sub?: unknown; secret?: unknown };
+      try {
+        body = await request.json();
+      } catch {
+        return json({ error: "Malformed body" }, 400, origin);
+      }
+      if (action === "cancel") return json(await matchmaker(env).cancel(id, String(body.secret ?? "")), 200, origin);
+      if (id && !action) return json({ error: "Not found" }, 404, origin);
+      const format = String(body.format ?? "");
+      const side = String(body.side ?? "");
+      if (!id && (!MATCH_FORMATS.has(format) || !MATCH_SIDES.has(side))) return json({ error: "Expected a known format and side=corp|runner|any" }, 400, origin);
+      if ((await limited(env.CREATE_LIMIT, request)) || (await limited(env.CREATE_LIMIT_ALL, null))) return json({ error: "Too many new games, try again in a minute" }, 429, origin);
+      const sub = body.sub && validSub(body.sub, env.PUSH_ALLOW_LOOPBACK === "1") ? (body.sub as PushSub) : null;
+      const who = { name: cleanName(body.name), sub };
+      if (action === "accept") {
+        const result = await matchmaker(env).accept(id, who);
+        return json(result, "error" in result ? 409 : 200, origin);
+      }
+      return json(await matchmaker(env).seek({ ...who, format, side: side as MatchSide }), 200, origin);
     }
 
     const match = url.pathname.match(/^\/games\/([^/]+)\/(join|ws|seat|push)$/);
@@ -399,6 +433,103 @@ export class GameRoom extends DurableObject<Env> {
   private async touch() {
     const days = Number(this.env.EXPIRY_DAYS) || 14;
     await this.ctx.storage.setAlarm(Date.now() + days * 24 * 60 * 60 * 1000);
+  }
+}
+
+const MATCH_FORMATS = new Set(["casual", "standard", "startup", "core", "eternal", "system-gateway", "throwback", "preconstructed", "chimera", "quick-draft"]);
+const MATCH_SIDES = new Set(["corp", "runner", "any"]);
+const MATCH_HOURS = 24;
+const MATCH_OPEN_MAX = 50;
+type MatchSide = "corp" | "runner" | "any";
+type Seeker = { name: string; sub: PushSub | null };
+type Matched = { status: "matched"; code: string; seat: Seat; token: string; side: "corp" | "runner"; format: string; opponent: string };
+
+const matchmaker = (env: Env) => env.MATCHMAKER.get(env.MATCHMAKER.idFromName("global"));
+
+const cleanName = (name: unknown) =>
+  String(name ?? "")
+    .replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2066-\u2069]/g, "")
+    .trim()
+    .slice(0, 24) || "Player";
+
+export class Matchmaker extends DurableObject<Env> {
+  private sql: SqlStorage;
+
+  constructor(ctx: DurableObjectState, env: Env) {
+    super(ctx, env);
+    this.sql = ctx.storage.sql;
+    this.sql.exec(
+      "CREATE TABLE IF NOT EXISTS seeks (id TEXT PRIMARY KEY, secret TEXT NOT NULL, name TEXT NOT NULL, format TEXT NOT NULL, side TEXT NOT NULL, created INTEGER NOT NULL, sub TEXT, code TEXT, seat INTEGER, token TEXT, assigned TEXT, opponent TEXT)",
+    );
+  }
+
+  private prune() {
+    this.sql.exec("DELETE FROM seeks WHERE created < ?", Date.now() - MATCH_HOURS * 3600 * 1000);
+  }
+
+  async open() {
+    this.prune();
+    return this.sql
+      .exec<{ id: string; name: string; format: string; side: string; created: number }>("SELECT id, name, format, side, created FROM seeks WHERE code IS NULL ORDER BY created DESC LIMIT ?", MATCH_OPEN_MAX)
+      .toArray();
+  }
+
+  async status(id: string, secret: string) {
+    const row = this.sql.exec<Record<string, any>>("SELECT * FROM seeks WHERE id = ? AND secret = ?", id, secret).toArray()[0];
+    if (!row) return { status: "expired" as const };
+    if (!row.code) return { status: "waiting" as const };
+    return { status: "matched" as const, code: row.code, seat: row.seat as Seat, token: row.token, side: row.assigned, format: row.format, opponent: row.opponent } satisfies Matched;
+  }
+
+  async cancel(id: string, secret: string) {
+    this.sql.exec("DELETE FROM seeks WHERE id = ? AND secret = ? AND code IS NULL", id, secret);
+    return { ok: true };
+  }
+
+  async seek(who: Seeker & { format: string; side: MatchSide }): Promise<Matched | { status: "waiting"; id: string; secret: string }> {
+    this.prune();
+    const rows = this.sql.exec<Record<string, any>>("SELECT * FROM seeks WHERE code IS NULL AND format = ? ORDER BY created", who.format).toArray();
+    const other = rows.find((r) => r.side === "any" || who.side === "any" || r.side !== who.side);
+    if (other) return this.pair(other, who, who.side);
+    const id = token().slice(0, 16);
+    const secret = token();
+    this.sql.exec("INSERT INTO seeks (id, secret, name, format, side, created, sub) VALUES (?, ?, ?, ?, ?, ?, ?)", id, secret, who.name, who.format, who.side, Date.now(), who.sub ? JSON.stringify(who.sub) : null);
+    await this.ctx.storage.setAlarm(Date.now() + MATCH_HOURS * 3600 * 1000);
+    return { status: "waiting", id, secret };
+  }
+
+  async accept(id: string, who: Seeker): Promise<Matched | { error: string }> {
+    const row = this.sql.exec<Record<string, any>>("SELECT * FROM seeks WHERE id = ? AND code IS NULL", id).toArray()[0];
+    if (!row) return { error: "Someone else took this game first." };
+    return this.pair(row, who, "any");
+  }
+
+  private async pair(waiting: Record<string, any>, who: Seeker, wanted: MatchSide): Promise<Matched> {
+    const pick = (): "corp" | "runner" => (Math.random() < 0.5 ? "corp" : "runner");
+    const flip = (s: "corp" | "runner") => (s === "corp" ? "runner" : "corp");
+    const hostSide: "corp" | "runner" = waiting.side !== "any" ? waiting.side : wanted !== "any" ? flip(wanted) : pick();
+    let code = "";
+    let host: { seat: Seat; token: string } | null = null;
+    for (let attempt = 0; attempt < 5 && !host; attempt++) {
+      code = newCode();
+      host = await this.env.GAME_ROOM.get(this.env.GAME_ROOM.idFromName(code)).create();
+    }
+    if (!host) throw new Error("Could not allocate a game code");
+    const guest = await this.env.GAME_ROOM.get(this.env.GAME_ROOM.idFromName(code)).join();
+    if ("error" in guest) throw new Error("Could not seat the second player");
+    this.sql.exec("UPDATE seeks SET code = ?, seat = ?, token = ?, assigned = ?, opponent = ?, created = ? WHERE id = ?", code, host.seat, host.token, hostSide, who.name, Date.now(), waiting.id);
+    const keys = vapid(this.env);
+    if (keys && waiting.sub) {
+      const payload = JSON.stringify({ code, title: "Opponent found", body: `${who.name} is ready to play. Tap to start.` });
+      this.ctx.waitUntil(sendPush(JSON.parse(waiting.sub), payload, keys).catch(() => 0));
+    }
+    return { status: "matched", code, seat: guest.seat, token: guest.token, side: flip(hostSide), format: waiting.format, opponent: waiting.name };
+  }
+
+  async alarm() {
+    this.prune();
+    const left = this.sql.exec<{ n: number }>("SELECT COUNT(*) AS n FROM seeks").one().n;
+    if (left) await this.ctx.storage.setAlarm(Date.now() + 3600 * 1000);
   }
 }
 
