@@ -414,6 +414,8 @@ export interface Hit {
 
 let accessing: { title: string; unseen: boolean; stop: () => void; resolve: (verb: string, title?: string) => void } | null = null;
 let stageFreeAt = 0;
+let accessLog: { seq: number; lines: string[]; run: boolean }[] = [];
+let accessSeq = 0;
 
 function movesCard(text: string, title: string) {
   return new RegExp(`\\b(?:steals?|trash(?:es)?|adds?) ${title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(text);
@@ -440,6 +442,7 @@ function readLog(view: any, from: number, render: (m: unknown) => string, before
     else if ((m = text.match(/\b(?:accesses|to access) (.+?) from (.+?)\.?$/i))) out.push({ kind: "access", text: m[1], zone: m[2] });
   }
   const texts = log.slice(from).map((e) => render(e.text));
+  accessLog = [...accessLog.slice(-20), { seq: ++accessSeq, lines: texts, run: !!view.run }];
   if (accessing) {
     const pending = accessing;
     const line = texts.find((t) => movesCard(t, pending.title) || (pending.unseen && /\b(?:steals?|trash(?:es)?)\b/i.test(t)));
@@ -448,7 +451,7 @@ function readLog(view: any, from: number, render: (m: unknown) => string, before
       const named = line.match(/\b(?:steals?|trash(?:es)?)\s+(.+?)(?:\s+from\b.*)?\.?$/i)?.[1];
       if (stolen || /\btrash/i.test(line)) pending.resolve(stolen ? "Stolen" : "Trashed", pending.unseen ? named : undefined);
       setTimeout(() => accessing === pending && pending.stop(), stolen ? 2500 : 1600);
-    } else if (texts.length && !texts.some((t) => t.includes(pending.title))) pending.stop();
+    } else if (!view.run || (texts.length && (pending.unseen || !texts.some((t) => t.includes(pending.title))))) pending.stop();
   }
   const kept = out.filter((h) => h.kind !== "access" || !texts.some((t) => movesCard(t, h.text ?? "")));
   const dmg = kept.filter((h) => h.kind === "damage");
@@ -799,7 +802,13 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
     } else if (h.kind === "access") {
       if (me !== "corp" || spectating) continue;
       const delay = t;
-      setTimeout(() => accessShow(view, h.text ?? "", h.zone ?? ""), Math.max(delay * 1000, stageFreeAt - performance.now()));
+      const seen = accessSeq;
+      setTimeout(() => {
+        const later = accessLog.filter((u) => u.seq > seen);
+        const title = h.text ?? "";
+        if (later.some((u) => !u.run || u.lines.some((l) => movesCard(l, title) || /\baccesses\b/i.test(l) || (/^an unseen card$/i.test(title) && /\b(?:steals?|trash(?:es)?)\b/i.test(l))))) return;
+        accessShow(view, title, h.zone ?? "");
+      }, Math.max(delay * 1000, stageFreeAt - performance.now()));
       t += 1.5;
     } else if (h.kind === "purge") {
       flash("violet", 0.35);
@@ -993,6 +1002,7 @@ function accessSource(view: any, title: string, zone: string): { el: Element | n
 }
 
 function accessShow(view: any, title: string, zone: string) {
+  accessing?.stop();
   if ((view.runner?.scored ?? []).some((c: any) => c.title === title)) return;
   const { el, card } = accessSource(view, title, zone);
   const r = rectOf(el);
