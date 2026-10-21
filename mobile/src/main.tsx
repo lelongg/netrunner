@@ -7,6 +7,7 @@ import { render } from "preact";
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { animate } from "motion";
 import { installTips } from "./tips";
+import { PeekHost, installCardPeek } from "./peek";
 import { installMotion, useLoop } from "./fx/ui";
 import { unlockSound } from "./sound";
 import { dive } from "./fx/dive";
@@ -603,6 +604,7 @@ const syncSettings = () => {
 syncSettings();
 onSettings(syncSettings);
 installTips();
+installCardPeek();
 installMotion();
 unlockSound();
 initMusic();
@@ -619,6 +621,7 @@ render(
     <>
       <App />
       <SettingsHost />
+      <PeekHost />
       <UpdateBanner />
       <Dialogs />
     </>

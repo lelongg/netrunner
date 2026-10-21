@@ -8456,3 +8456,9 @@ body:has(.tabbar.global) .screen.guide {
   fill: var(--yellow);
   filter: drop-shadow(0 0 6px var(--yellow));
 }
+
+.card-image[data-code] img {
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+  user-select: none;
+}

@@ -31,7 +31,7 @@ export function CardImage({ code, alt, size, class: className, lazy, width }: Pr
   }, [src]);
 
   return (
-    <span class={`card-image ${state} ${cached ? "cached" : ""} ${className ?? ""}`}>
+    <span class={`card-image ${state} ${cached ? "cached" : ""} ${className ?? ""}`} data-code={code} data-alt={alt}>
       {size !== "small" && state !== "error" && <img class="card-image-low" crossOrigin="anonymous" src={cardImage(code, "small")} alt="" aria-hidden="true" />}
       <img
         ref={img}
