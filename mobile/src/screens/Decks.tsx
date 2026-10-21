@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "preact/ho
 import type { Card, CardDb, Deck, Matchup, Side } from "../engine";
 import { type StoredDeck, type WireDeck, fromPrecon, fromWire, importNrdb, parseDecklist, putDeck, removeDeck, savedDecks, toWire } from "../decks";
 import { type FormatKey, FORMAT_DESC, FORMATS, deckFormat, TYPE_ORDER, analyze, costCurve, deckLimit, groupByType, influenceByFaction, influenceOf, isNeutral, legality, subtypeSpread, toText } from "../deckrules";
-import { CardImage, ZoomableCardImage } from "../game/CardImage";
+import { CardImage, ZoomableCardImage, useCardPeek } from "../game/CardImage";
 import { RichText } from "../game/RichText";
 import { Pager } from "../game/Pager";
 import { useSheetPager } from "../game/swipe";
@@ -211,13 +211,21 @@ export function DeckRow({ db, stored, onOpen, format, selected, disabled, issues
       return null;
     }
   }, [stored]);
+  const peek = useCardPeek(deck?.identity.code, deck?.identity.title ?? "");
+  const [issues, setIssues] = useState(false);
   if (!deck) return null;
   const fmt = format ?? formatOf(stored);
   const a = analyze(deck, fmt);
   return (
     <li>
-      <button class={`deck-row faction-${factionKey(deck.identity.faction)} ${selected ? "on" : ""}`} disabled={disabled} onClick={onOpen}>
-        <CardImage class="deck-row-id" code={deck.identity.code} alt={deck.identity.title} size="small" width="40px" />
+      <button
+        class={`deck-row faction-${factionKey(deck.identity.faction)} ${selected ? "on" : ""} ${disabled ? "disabled" : ""}`}
+        aria-disabled={disabled || undefined}
+        onClick={() => peek.consumed() || disabled || onOpen()}
+      >
+        <span class="deck-row-id" {...peek.handlers}>
+          <CardImage code={deck.identity.code} alt={deck.identity.title} size="small" width="40px" />
+        </span>
         <span class="deck-row-main">
           <FitText class="deck-row-name" text={deck.name} />
           <span class="deck-row-id-name">
@@ -242,11 +250,41 @@ export function DeckRow({ db, stored, onOpen, format, selected, disabled, issues
             )}
           </span>
         </span>
-        {!(issuesOnly && a.legal) && <span class={`deck-badge ${a.legal ? "ok" : "bad"}`}>
-          <Icon name={a.legal ? "check" : "warning"} />
-          {a.legal ? FORMATS.find((f) => f.key === fmt)!.label : `${a.problems.length} issue${a.problems.length > 1 ? "s" : ""}`}
-        </span>}
+        {!(issuesOnly && a.legal) &&
+          (a.legal ? (
+            <span class="deck-badge ok">
+              <Icon name="check" />
+              {FORMATS.find((f) => f.key === fmt)!.label}
+            </span>
+          ) : (
+            <span
+              class={`deck-badge bad tappable ${issues ? "open" : ""}`}
+              role="button"
+              aria-expanded={issues}
+              onClick={(e) => {
+                e.stopPropagation();
+                setIssues(!issues);
+              }}
+            >
+              <Icon name="warning" />
+              {`${a.problems.length} issue${a.problems.length > 1 ? "s" : ""}`}
+            </span>
+          ))}
       </button>
+      {issues && !a.legal && (
+        <div class="seat-issues deck-row-issues" role="note">
+          <span class="seat-issues-head">
+            <Icon name="warning" />
+            Not legal in {FORMATS.find((f) => f.key === fmt)!.label}
+          </span>
+          <ul>
+            {a.problems.map((p) => (
+              <li>{p.text}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {peek.view}
     </li>
   );
 }

@@ -4968,7 +4968,18 @@ button.armed {
 
 .deck-row-id {
   flex: none;
+  display: block;
   width: 40px;
+}
+
+.deck-row-id .card-image {
+  display: block;
+}
+
+.deck-row-id img {
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+  user-select: none;
 }
 
 .deck-row-main {
@@ -6324,8 +6335,22 @@ button.armed {
   box-shadow: inset 0 0 0 1px var(--cyan);
 }
 
-.deck-row:disabled {
+.deck-row:disabled,
+.deck-row.disabled {
   opacity: 0.55;
+}
+
+.deck-badge.tappable {
+  cursor: pointer;
+}
+
+.deck-badge.tappable.open {
+  background: color-mix(in srgb, var(--yellow) 22%, transparent);
+}
+
+.deck-row-issues {
+  margin: 0;
+  border-top: none;
 }
 
 .picker-btn {

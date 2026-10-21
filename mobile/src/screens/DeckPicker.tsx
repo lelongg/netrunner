@@ -19,7 +19,7 @@ interface Props {
   format?: GameFormat;
 }
 
-function problemIn(format: GameFormat, db: CardDb, w: WireDeck): string | null {
+export function problemIn(format: GameFormat, db: CardDb, w: WireDeck): string | null {
   const rules = deckFormat(format);
   if (!rules || rules === "casual") return null;
   try {
