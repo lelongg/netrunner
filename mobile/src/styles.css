@@ -7127,3 +7127,13 @@ h1.deck-name.long {
     box-shadow: 0 0 16px rgb(34 211 238 / 0.45);
   }
 }
+
+.match-deck {
+  margin: 0;
+}
+
+.match-deck-empty {
+  min-height: 52px;
+  border-style: dashed;
+  color: var(--cyan);
+}

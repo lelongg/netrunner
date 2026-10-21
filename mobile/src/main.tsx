@@ -303,6 +303,8 @@ function App() {
     return (
       <Match
         name={playerName()}
+        db={loaded.db}
+        matchups={loaded.matchups}
         onMatched={startMatched}
         onInvite={(format, side) => {
           if (!loaded) return;

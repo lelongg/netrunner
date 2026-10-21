@@ -138,7 +138,7 @@ function QrZoom({ value, code, from, onClose }: { value: string; code: string; f
   );
 }
 
-function DeckSheet({ side, db, matchups, value, onPick, onClose, onEditDecks, format }: { side: Side; db: CardDb; matchups: Matchup[]; value?: WireDeck; onPick: (d: WireDeck) => void; onClose: () => void; onEditDecks?: () => void; format?: GameFormat }) {
+export function DeckSheet({ side, db, matchups, value, onPick, onClose, onEditDecks, format }: { side: Side; db: CardDb; matchups: Matchup[]; value?: WireDeck; onPick: (d: WireDeck) => void; onClose: () => void; onEditDecks?: () => void; format?: GameFormat }) {
   useBackClose(true, onClose);
   return (
     <div class="sheet-backdrop" onClick={onClose}>

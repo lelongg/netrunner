@@ -167,6 +167,18 @@ function rememberedSide(store: Store): Side {
   }
 }
 
+export function lastDeck(side: Side, store: Store = browserStore()): WireDeck | undefined {
+  try {
+    return JSON.parse(store.getItem(LAST_DECK(side)) ?? "null") ?? undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export function setLastDeck(side: Side, deck: WireDeck, store: Store = browserStore()) {
+  remember(LAST_DECK(side), JSON.stringify(deck), store);
+}
+
 function remember(key: string, value: string, store: Store) {
   try {
     store.setItem(key, value);

@@ -1,11 +1,15 @@
 import { useEffect, useState } from "preact/hooks";
-import type { Side } from "../engine";
+import type { CardDb, Matchup, Side } from "../engine";
+import { type WireDeck, latest } from "../decks";
+import { lastDeck, setLastDeck } from "../session";
+import { DeckSheet } from "./Lobby";
+import { DeckRow } from "./Decks";
 import { Cta, Picker, Ticker } from "../ui";
 import { Icon } from "../icons";
 import { useBackClose } from "../back";
 import { settings } from "../settings";
 import { enablePush, pushSupported } from "../net/push";
-import { FORMAT_DESC, GAME_FORMATS, type GameFormat } from "../deckrules";
+import { FORMAT_DESC, GAME_FORMATS, type GameFormat, dealtFormat, deckFormat } from "../deckrules";
 import { type Matched, type OpenSeek, type Seek, type SeekSide, acceptSeek, cancelSeek, checkSeek, openSeeks, pendingSeek, seek } from "../net/match";
 
 const SIDES: { key: SeekSide; label: string }[] = [
@@ -38,7 +42,19 @@ function useTick(on: boolean) {
   }, [on]);
 }
 
-export function Match({ name, onMatched, onInvite, onClose }: { name: string; onMatched: (m: Matched) => void; onInvite: (format: GameFormat, side?: Side) => void; onClose: () => void }) {
+export function Match({ name, db, matchups, onMatched, onInvite, onClose }: { name: string; db: CardDb; matchups: Matchup[]; onMatched: (m: Matched) => void; onInvite: (format: GameFormat, side?: Side) => void; onClose: () => void }) {
+  const [decks, setDecks] = useState<Record<Side, WireDeck | undefined>>(() => {
+    const pick = (s: Side) => {
+      const d = lastDeck(s);
+      return d && latest(d, s);
+    };
+    return { corp: pick("corp"), runner: pick("runner") };
+  });
+  const [choosing, setChoosing] = useState<Side | null>(null);
+  const choose = (s: Side, d: WireDeck) => {
+    setLastDeck(s, d);
+    setDecks((was) => ({ ...was, [s]: d }));
+  };
   const [format, setFormat] = useState<GameFormat>(settings.format);
   const [side, setSide] = useState<SeekSide>("any");
   const [mine, setMine] = useState<Seek | null>(pendingSeek);
@@ -167,6 +183,21 @@ export function Match({ name, onMatched, onInvite, onClose }: { name: string; on
                 ))}
               </div>
             </div>
+            {!dealtFormat(format) &&
+              (side === "any" ? (["corp", "runner"] as Side[]) : [side as Side]).map((s) => (
+                <div class="match-field">
+                  <span class="label">{side === "any" ? `${s === "corp" ? "Corp" : "Runner"} deck` : "Deck"}</span>
+                  {decks[s] ? (
+                    <ul class="deck-library match-deck">
+                      <DeckRow db={db} stored={decks[s]!} format={deckFormat(format) ?? "casual"} onOpen={() => setChoosing(s)} issuesOnly />
+                    </ul>
+                  ) : (
+                    <button class="match-deck-empty" onClick={() => setChoosing(s)}>
+                      Choose a {s === "corp" ? "Corp" : "Runner"} deck
+                    </button>
+                  )}
+                </div>
+              ))}
             <Cta onClick={find} disabled={busy}>
               Find an opponent
             </Cta>
@@ -180,6 +211,7 @@ export function Match({ name, onMatched, onInvite, onClose }: { name: string; on
           </section>
         )}
         {error && <p class="error">{error}</p>}
+        {choosing && <DeckSheet side={choosing} db={db} matchups={matchups} value={decks[choosing]} format={format} onPick={(d) => choose(choosing, d)} onClose={() => setChoosing(null)} />}
 
         <section class="match-open">
           <div class="match-open-head">
