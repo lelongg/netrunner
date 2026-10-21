@@ -1,5 +1,7 @@
-import { useContext } from "preact/hooks";
-import { CardImage } from "./CardImage";
+import { useContext, useRef, useState } from "preact/hooks";
+import { createPortal } from "preact/compat";
+import { CardImage, CardZoom } from "./CardImage";
+import { useBackClose } from "../back";
 import { Verified } from "./legal";
 import { advancement, isFaceup, zone0 } from "./actions";
 import { ICON_SET, Icon, type IconName } from "../icons";
@@ -70,9 +72,44 @@ export function CardTile({
     .filter(Boolean)
     .join(" ");
   const hosted: any[] = card.hosted ?? [];
+  const [zoomed, setZoomed] = useState(false);
+  useBackClose(zoomed, () => setZoomed(false));
+  const press = useRef<{ timer: number; x: number; y: number; fired: boolean } | null>(null);
+  const cancel = () => {
+    if (press.current) clearTimeout(press.current.timer);
+  };
+  const longPress = code
+    ? {
+        onPointerDown: (e: PointerEvent) => {
+          cancel();
+          const p = { x: e.clientX, y: e.clientY, fired: false, timer: 0 };
+          p.timer = window.setTimeout(() => {
+            p.fired = true;
+            navigator.vibrate?.(12);
+            setZoomed(true);
+          }, 420);
+          press.current = p;
+        },
+        onPointerMove: (e: PointerEvent) => {
+          const p = press.current;
+          if (p && !p.fired && Math.hypot(e.clientX - p.x, e.clientY - p.y) > 10) cancel();
+        },
+        onPointerUp: cancel,
+        onPointerCancel: cancel,
+        onPointerLeave: cancel,
+        onContextMenu: (e: Event) => e.preventDefault(),
+      }
+    : {};
+  const tap = () => {
+    if (press.current?.fired) {
+      press.current = null;
+      return;
+    }
+    onTap?.(card);
+  };
   return (
     <div class="tile-wrap">
-      <button key={`${card.cid}:${code ?? ""}:${card.rezzed ? 1 : 0}`} class={classes} data-cid={card.cid} onClick={() => onTap?.(card)} aria-label={card.title ?? "Hidden card"}>
+      <button key={`${card.cid}:${code ?? ""}:${card.rezzed ? 1 : 0}`} class={classes} data-cid={card.cid} onClick={tap} {...longPress} aria-label={card.title ?? "Hidden card"}>
         {code ? <CardImage code={code} alt={card.title} size={size === "lg" ? "large" : "small"} lazy /> : <span class="back-label">{card.side === "Corp" ? "CORP" : "RUN"}</span>}
         <div class="badges">
           {counters(card).map(([icon, n]) => (
@@ -121,6 +158,7 @@ export function CardTile({
           ))}
         </div>
       )}
+      {zoomed && code && createPortal(<CardZoom items={[{ code, alt: card.title }]} start={0} onClose={() => setZoomed(false)} />, document.body)}
     </div>
   );
 }
