@@ -267,15 +267,15 @@ function MeBar({ view, side, name }: { view: any; side: Side; name: string }) {
   );
 }
 
-type ZoneKey = "discard" | "play-area" | "rfg" | "set-aside";
+type ZoneKey = "discard" | "play-area" | "rfg" | "set-aside" | "deck";
 interface ZoneRef {
   owner: Side;
   key: ZoneKey;
 }
 
 const ZONE_LABELS: Record<Side, Record<ZoneKey, string>> = {
-  corp: { discard: "Archives", "play-area": "Play area", rfg: "Removed", "set-aside": "Set aside" },
-  runner: { discard: "Heap", "play-area": "Play area", rfg: "Removed", "set-aside": "Set aside" },
+  corp: { discard: "Archives", "play-area": "Play area", rfg: "Removed", "set-aside": "Set aside", deck: "R&D" },
+  runner: { discard: "Heap", "play-area": "Play area", rfg: "Removed", "set-aside": "Set aside", deck: "Stack" },
 };
 
 function Pile({ label, count, cards, owner, side, selectable, onOpen, anchor }: { label: string; count: number; cards?: any[]; owner: boolean; side: Side; selectable: Set<unknown>; onOpen?: () => void; anchor?: string }) {
@@ -982,25 +982,38 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
     autoZone.current = false;
   });
   const promptId = prompt?.eid?.eid;
-  const staging = ptype === "select" && ((prompt["select-max"] ?? 1) > 1 || !!prompt["select-all"]) && !/^Choose a credit providing card/.test(render(prompt.msg));
+  const staging = ptype === "select" && (prompt.selectable ?? []).length > 0 && !/^Choose a credit providing card/.test(render(prompt.msg));
   useEffect(() => setStaged(new Set()), [promptId]);
   const send = (command: string, args?: any) => {
     if (!staging || command !== "select") return sendNow(command, args);
     const cid = args?.card?.cid;
-    const max = prompt["select-max"];
+    const max = prompt["select-max"] ?? 1;
     setStaged((was) => {
-      const next = new Set(was);
-      if (next.has(cid)) next.delete(cid);
-      else if (next.size < max) next.add(cid);
-      return next;
+      if (was.has(cid)) {
+        const next = new Set(was);
+        next.delete(cid);
+        return next;
+      }
+      if (max === 1) return new Set([cid]);
+      return was.size < max ? new Set([...was, cid]) : was;
     });
   };
+  const stagedNames = [...staged].map((cid) => findCard(live, cid)?.title).filter(Boolean) as string[];
+  const selectZone: ZoneRef | null = (() => {
+    if (ptype !== "select") return null;
+    for (const cid of selectable) {
+      const card = findCard(live, cid);
+      const key = card?.zone?.[0];
+      if (card && ["discard", "deck", "rfg", "set-aside", "play-area"].includes(key)) return { owner: card.side === "Corp" ? "corp" : "runner", key };
+    }
+    return null;
+  })();
   const confirmStaged = () => {
     for (const cid of staged) {
       const card = findCard(live, cid);
       if (card) sendNow("select", { card: cardRef(card), eid: prompt.eid });
     }
-    if (staged.size < prompt["select-max"]) {
+    if (staged.size < (prompt["select-max"] ?? 1)) {
       const done = (prompt.choices ?? []).find?.((c: any) => c?.value === "Done");
       if (done) sendNow("choice", { eid: prompt.eid, choice: { uuid: done.uuid } });
     }
@@ -1009,12 +1022,12 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
   };
   const stagedConfirm = (() => {
     if (!staging) return undefined;
-    const max: number = prompt["select-max"];
+    const max: number = prompt["select-max"] ?? 1;
     const min: number = prompt["select-all"] ? max : (prompt["select-min"] ?? 0);
     const ready = staged.size >= min && staged.size <= max && staged.size > 0;
     const msg = render(prompt.msg);
     const verb = /^discard/i.test(msg) ? "Discard" : /^trash/i.test(msg) ? "Trash" : "Confirm";
-    return { label: ready ? `${verb} ${staged.size} ${staged.size === 1 ? "card" : "cards"}` : `Pick ${Math.max(1, min - staged.size)} more`, ready, onConfirm: confirmStaged };
+    return { label: ready ? `${verb} ${stagedNames.length === 1 ? stagedNames[0] : `${staged.size} ${staged.size === 1 ? "card" : "cards"}`}` : `Pick ${Math.max(1, min - staged.size)} more`, ready, onConfirm: confirmStaged };
   })();
   const closePrompt = () => session.say("/close-prompt", side);
 
@@ -1127,7 +1140,9 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
         closePrompt={closePrompt}
         disabled={disabled}
         db={db}
-        staging={staging ? { count: staged.size, onConfirm: confirmStaged } : undefined}
+        staging={staging ? { count: staged.size, names: stagedNames, onConfirm: confirmStaged, onClear: () => setStaged(new Set()) } : undefined}
+        onShowZone={selectZone && !zone ? () => setZone(selectZone) : undefined}
+        zoneLabel={selectZone ? ZONE_LABELS[selectZone.owner][selectZone.key] : undefined}
       />
     );
   } else if (picking && side === "runner") {

@@ -21,7 +21,9 @@ interface Props {
   closePrompt: () => void;
   disabled: boolean;
   db: { byTitle: Map<string, any> };
-  staging?: { count: number; onConfirm: () => void };
+  staging?: { count: number; names: string[]; onConfirm: () => void; onClear: () => void };
+  onShowZone?: () => void;
+  zoneLabel?: string;
 }
 
 function NumberPicker({ min, max, initial, onSubmit, disabled, extra }: { min: number; max: number; initial: number; onSubmit: (n: number) => void; disabled: boolean; extra?: preact.ComponentChildren }) {
@@ -102,7 +104,7 @@ function choiceLabel(value: any, render: (m: unknown) => string) {
   return render(value);
 }
 
-export function PromptPanel({ view, side, prompt, render, send, closePrompt, disabled, db, staging }: Props) {
+export function PromptPanel({ view, side, prompt, render, send, closePrompt, disabled, db, staging, onShowZone, zoneLabel }: Props) {
   const ptype = prompt["prompt-type"];
   const choices = prompt.choices;
   const eid = prompt.eid;
@@ -249,15 +251,38 @@ export function PromptPanel({ view, side, prompt, render, send, closePrompt, dis
       </>
     );
   } else if (staging) {
-    const max: number = prompt["select-max"];
+    const max: number = prompt["select-max"] ?? 1;
     const min: number = prompt["select-all"] ? max : (prompt["select-min"] ?? 0);
     const ready = staging.count >= min && staging.count <= max;
     const verb = /^discard/i.test(msg) ? "Discard" : /^trash/i.test(msg) ? "Trash" : "Confirm";
+    const what = staging.count === 0 ? "nothing" : staging.names.length === 1 ? staging.names[0] : `${staging.count} cards`;
+    const extra = (Array.isArray(choices) ? choices : []).filter((c: any) => c.value !== "Hide" && c.value !== "Done");
+    const canDone = staging.count > 0 || (Array.isArray(choices) && choices.some((c: any) => c.value === "Done"));
     body = (
       <>
-        <button class="primary wide select-go" disabled={disabled || !ready} onClick={staging.onConfirm}>
-          {ready ? `${verb} ${staging.count} ${staging.count === 1 ? "card" : "cards"}` : `Pick ${min - staging.count} more`}
-        </button>
+        {staging.count === 0 && <p class="hint">Tap a highlighted card to look at it and select it.</p>}
+        <div class="choices">
+          {onShowZone && (
+            <button disabled={disabled} onClick={onShowZone}>
+              Show {zoneLabel ?? "cards"}
+            </button>
+          )}
+          {staging.count > 0 && (
+            <button disabled={disabled} onClick={staging.onClear}>
+              Clear
+            </button>
+          )}
+          {extra.map((c: any) => (
+            <button data-choice={c.uuid} disabled={disabled} onClick={() => answer({ uuid: c.uuid })}>
+              {glyphs(iconize(choiceLabel(c.value, render)))}
+            </button>
+          ))}
+          {(canDone || !ready) && (
+            <button class="primary wide select-go" disabled={disabled || !ready} onClick={staging.onConfirm}>
+              {ready ? `${verb} ${what}` : `Pick ${min - staging.count} more`}
+            </button>
+          )}
+        </div>
       </>
     );
   } else if (Array.isArray(choices)) {
@@ -300,7 +325,7 @@ export function PromptPanel({ view, side, prompt, render, send, closePrompt, dis
   const accessed = !!code && /^You accessed /.test(msg);
 
   const full = accessed ? db.byTitle.get(source.title) : undefined;
-  const selMax: number = prompt["select-max"];
+  const selMax: number = prompt["select-max"] ?? 1;
   const msgLine = staging ? (
     <div class="prompt-msg-row">
       <p class="prompt-msg">{glyphs(msg)}</p>
