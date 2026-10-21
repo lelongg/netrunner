@@ -148,17 +148,74 @@ export function CardZoom({ items, start, onClose }: { items: GalleryItem[]; star
   );
 }
 
+export function useCardPeek(code: string | undefined, alt: string) {
+  const [shown, setShown] = useState(false);
+  const press = useRef<{ timer: number; x: number; y: number; fired: boolean } | null>(null);
+  const cancel = () => {
+    if (press.current) clearTimeout(press.current.timer);
+  };
+  const handlers = code
+    ? {
+        onPointerDown: (e: PointerEvent) => {
+          cancel();
+          const p = { x: e.clientX, y: e.clientY, fired: false, timer: 0 };
+          p.timer = window.setTimeout(() => {
+            p.fired = true;
+            navigator.vibrate?.(12);
+            setShown(true);
+            const block = (e: Event) => e.preventDefault();
+            const release = () => {
+              setShown(false);
+              window.removeEventListener("pointerup", release);
+              window.removeEventListener("pointercancel", release);
+              setTimeout(() => window.removeEventListener("contextmenu", block, true), 300);
+            };
+            window.addEventListener("contextmenu", block, true);
+            window.addEventListener("pointerup", release);
+            window.addEventListener("pointercancel", release);
+          }, 420);
+          press.current = p;
+        },
+        onPointerMove: (e: PointerEvent) => {
+          const p = press.current;
+          if (p && !p.fired && Math.hypot(e.clientX - p.x, e.clientY - p.y) > 10) cancel();
+        },
+        onPointerUp: cancel,
+        onPointerCancel: cancel,
+        onPointerLeave: cancel,
+        onContextMenu: (e: Event) => e.preventDefault(),
+      }
+    : {};
+  const consumed = () => {
+    const fired = !!press.current?.fired;
+    if (fired) press.current = null;
+    return fired;
+  };
+  const view =
+    shown && code
+      ? createPortal(
+          <div class="card-peek">
+            <CardZoom items={[{ code, alt }]} start={0} onClose={() => setShown(false)} />
+          </div>,
+          document.body,
+        )
+      : null;
+  return { handlers, consumed, view };
+}
+
 export function ZoomableCardImage(props: Props & { gallery?: GalleryItem[]; galleryStart?: number; onGallery?: (index: number) => void }) {
   const [zoomed, setZoomed] = useState(false);
   useBackClose(zoomed, () => setZoomed(false));
   const { gallery, galleryStart, onGallery, ...image } = props;
   const start = gallery ? (galleryStart ?? gallery.findIndex((g) => g.code === props.code)) : -1;
   const items = start >= 0 ? gallery! : [{ code: props.code, alt: props.alt }];
+  const peek = useCardPeek(props.code, props.alt);
   return (
     <>
-      <button class={`card-zoom-trigger ${props.class ?? ""}`} onClick={() => setZoomed(true)} aria-label={`Enlarge ${props.alt}`}>
+      <button class={`card-zoom-trigger ${props.class ?? ""}`} onClick={() => peek.consumed() || setZoomed(true)} aria-label={`Enlarge ${props.alt}`} {...peek.handlers}>
         <CardImage {...image} class="" />
       </button>
+      {peek.view}
       {zoomed &&
         createPortal(
           <CardZoom

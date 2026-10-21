@@ -1923,7 +1923,8 @@ form.chat input {
   pointer-events: none;
 }
 .card-zoom img,
-.tile img {
+.tile img,
+.card-zoom-trigger img {
   -webkit-touch-callout: none;
   -webkit-user-drag: none;
   user-select: none;
