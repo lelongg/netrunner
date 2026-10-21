@@ -2848,3 +2848,7 @@
   stroke-dasharray: 1;
   filter: drop-shadow(0 0 6px #22d3ee);
 }
+
+.fx-showdown-kind.resolved {
+  color: #ff6a5f;
+}

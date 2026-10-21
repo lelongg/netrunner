@@ -412,7 +412,7 @@ export interface Hit {
   power?: number;
 }
 
-let accessing: { title: string; stop: () => void } | null = null;
+let accessing: { title: string; unseen: boolean; stop: () => void; resolve: (verb: string, title?: string) => void } | null = null;
 let stageFreeAt = 0;
 
 function movesCard(text: string, title: string) {
@@ -440,11 +440,16 @@ function readLog(view: any, from: number, render: (m: unknown) => string, before
     else if ((m = text.match(/\b(?:accesses|to access) (.+?) from (.+?)\.?$/i))) out.push({ kind: "access", text: m[1], zone: m[2] });
   }
   const texts = log.slice(from).map((e) => render(e.text));
-  if (accessing && texts.some((t) => movesCard(t, accessing!.title))) {
+  if (accessing) {
     const pending = accessing;
-    if (texts.some((t) => /\bsteals?\b/i.test(t) && movesCard(t, pending.title))) setTimeout(() => accessing === pending && pending.stop(), 2500);
-    else pending.stop();
-  } else if (accessing && texts.length && !texts.some((t) => t.includes(accessing!.title))) accessing.stop();
+    const line = texts.find((t) => movesCard(t, pending.title) || (pending.unseen && /\b(?:steals?|trash(?:es)?)\b/i.test(t)));
+    if (line) {
+      const stolen = /\bsteals?\b/i.test(line);
+      const named = line.match(/\b(?:steals?|trash(?:es)?)\s+(.+?)(?:\s+from\b.*)?\.?$/i)?.[1];
+      if (stolen || /\btrash/i.test(line)) pending.resolve(stolen ? "Stolen" : "Trashed", pending.unseen ? named : undefined);
+      setTimeout(() => accessing === pending && pending.stop(), stolen ? 2500 : 1600);
+    } else if (texts.length && !texts.some((t) => t.includes(pending.title))) pending.stop();
+  }
   const kept = out.filter((h) => h.kind !== "access" || !texts.some((t) => movesCard(t, h.text ?? "")));
   const dmg = kept.filter((h) => h.kind === "damage");
   return dmg.length > 1 ? [...kept.filter((h) => h.kind !== "damage"), dmg[0]] : kept;
@@ -1045,8 +1050,26 @@ function accessShow(view: any, title: string, zone: string) {
     animate(stageEl, { backgroundColor: ["rgba(0,0,0,0.55)", "rgba(0,0,0,0)"] }, { duration: fast ? 0.15 : 0.35 });
   };
   const stop = () => end(true);
-  const timer = setTimeout(() => end(false), card?.type === "Agenda" ? 9000 : 1100);
-  accessing = { title, stop };
+  const resolve = (verb: string, revealed?: string) => {
+    t1.textContent = verb;
+    t1.classList.add("resolved");
+    const face = revealed && codeOf(revealed);
+    if (!face) return;
+    t2.textContent = revealed!;
+    if (accessing?.stop === stop) accessing.title = revealed!;
+    if (accessStage.current?.end === stop) accessStage.current.title = revealed!;
+    animate(ghost, { rotateY: [0, 90] }, { duration: 0.18, ease: "easeIn" }).finished.then(() => {
+      ghost.querySelector(".fx-card-back")?.remove();
+      const img = document.createElement("img");
+      img.className = "fx-card-img";
+      img.src = `https://card-images.netrunnerdb.com/v2/large/${face}.jpg`;
+      img.alt = revealed!;
+      ghost.prepend(img);
+      animate(ghost, { rotateY: [-90, 0] }, { duration: 0.22, ease: "easeOut" });
+    });
+  };
+  const timer = setTimeout(() => end(false), 45000);
+  accessing = { title, unseen, stop, resolve };
   accessStage.current = { title, at: [big.left + big.width / 2, big.top + big.height / 2], end: stop };
 }
 
@@ -1084,6 +1107,10 @@ function flipSiblings(rects: Map<unknown, DOMRect>, moved: Set<unknown>) {
     if (Math.abs(dx) > innerWidth || Math.abs(dy) > innerHeight) continue;
     animate(el, { x: [dx, 0], y: [dy, 0] }, { type: "spring", visualDuration: 0.4, bounce: 0.2 });
   }
+}
+
+export function setCardCodes(codes: (title: string) => string | undefined) {
+  codeOf = codes;
 }
 
 export function useFx(view: any, me: Side, render: (m: unknown) => string, quiet = false, watching = false, codes?: (title: string) => string | undefined) {

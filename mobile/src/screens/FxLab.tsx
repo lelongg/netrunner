@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "preact/ho
 import { cardImage, type Side } from "../engine";
 import { Count } from "../fx/ui";
 import { Meter } from "../ui";
-import { replayFx } from "../fx/director";
+import { replayFx, setCardCodes } from "../fx/director";
 import type { Info, Plan } from "../fx/cards";
 import { FIRE, INSTALL, PLAY, REZ, SCORE } from "../fx/signatures";
 import { tileEl } from "../fx/core";
@@ -57,6 +57,7 @@ interface Scene {
   lines?: string[];
   me?: Side;
   move?: Move;
+  then?: { lines: string[]; after: number };
 }
 
 interface Entry {
@@ -374,7 +375,9 @@ function generic(byPlain: Map<string, Card>, plainEvent: string, plainAgenda: st
     g("Run ended", "Run end", () => ({ before: edit(base(), (x) => run(x)), after: base(), me: "runner" })),
     g("Breach (Runner)", "Run end", () => ({ before: edit(base(), (x) => ((x.run = { server: "remote1", position: 0, phase: "approach-server" }))), after: base(), me: "runner", lines: ["Gerald breaches Server 1."] })),
     g("Breach (Corp)", "Run end", () => ({ before: edit(base(), (x) => ((x.run = { server: "remote1", position: 0, phase: "approach-server" }))), after: base(), me: "corp", lines: ["Gerald breaches Server 1."] })),
-    g("Card accessed (Corp view)", "Run end", () => ({ before: base(), after: base(), me: "corp", lines: [`Gerald accesses ${agenda.title} from HQ.`] })),
+    g("Card accessed (Corp view)", "Run end", () => ({ before: base(), after: base(), me: "corp", lines: [`Gerald accesses ${agenda.title} from HQ.`], then: { lines: ["Gerald's run on HQ ends."], after: 2500 } })),
+    g("Unseen R&D card trashed (Corp view)", "Run end", () => ({ before: base(), after: base(), me: "corp", lines: ["Gerald accesses an unseen card from R&D."], then: { lines: ["Gerald pays 0 [Credits] to trash Hedge Fund from R&D."], after: 2000 } })),
+    g("Unseen R&D card stolen (Corp view)", "Run end", () => ({ before: base(), after: base(), me: "corp", lines: ["Gerald accesses an unseen card from R&D."], then: { lines: [`Gerald steals ${agenda.title} from R&D.`], after: 2000 } })),
     g("Purge virus counters", "Other", () => ({ before: base(), after: base(), me: "runner", lines: ["Corp purges virus counters."] })),
     g("Expose a card", "Other", () => ({ before: base(), after: base(), me: "runner", lines: ["Gerald exposes PAD Campaign."] })),
     g("Identity flips", "Other", () => ({ before: base(), after: edit(base(), (x) => (x.face = "back")), me: "runner" })),
@@ -525,7 +528,12 @@ export function FxLab() {
       const s = scene.after.slots.find((x) => x.cid === mv.cid) ?? scene.before.slots.find((x) => x.cid === mv.cid);
       plan = { moves: [{ cid: mv.cid, from: info(s, mv.from, holder, byPlain), to: info(s, mv.to, holder, byPlain), src: src ?? null, clone: null }] };
     }
-    pending.current = () => replayFx(toView(scene.before, byPlain), toView(scene.after, byPlain), me, scene.lines ?? [], plan);
+    setCardCodes((t) => byPlain.get(plain(t))?.code);
+    pending.current = () => {
+      replayFx(toView(scene.before, byPlain), toView(scene.after, byPlain), me, scene.lines ?? [], plan);
+      const then = scene.then;
+      if (then) setTimeout(() => replayFx(toView(scene.after, byPlain), toView(scene.after, byPlain), me, then.lines), then.after);
+    };
     setModel(scene.after);
     setTimeout(() => (busy.current = false), 400);
   }
