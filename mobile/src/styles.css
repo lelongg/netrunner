@@ -7929,16 +7929,8 @@ h1.deck-name.long {
   background: rgb(10 12 14 / 0.85);
 }
 
-.arena-modes .mode-online {
-  --tone: var(--yellow);
-}
-
-.arena-modes .mode-solo {
+.arena-modes button {
   --tone: var(--cyan);
-}
-
-.arena-modes .mode-local {
-  --tone: var(--red);
 }
 
 .mode-dot {
