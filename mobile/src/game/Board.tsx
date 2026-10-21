@@ -1298,7 +1298,16 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
                 <MenuTile icon="history" label="Game log" onClick={() => closeMenu(() => setShowLog(true))} />
                 {canUndo && <MenuTile icon="undo" label="Undo click" onClick={() => closeMenu(() => session.say("/undo-click", side))} />}
                 {onSwitchSide && watching && <MenuTile icon="swap" label={`${opp === "corp" ? "Corp" : "Runner"} view`} onClick={() => closeMenu(onSwitchSide)} />}
-                <MenuTile icon={settings.sound ? "sound" : "mute"} label={settings.sound ? "Sound on" : "Sound off"} active={settings.sound} onClick={() => setSetting("sound", !settings.sound)} />
+                <MenuTile
+                  icon={settings.sound || settings.music ? "sound" : "mute"}
+                  label={settings.sound || settings.music ? "Sound on" : "Sound off"}
+                  active={settings.sound || settings.music}
+                  onClick={() => {
+                    const on = !(settings.sound || settings.music);
+                    setSetting("sound", on);
+                    setSetting("music", on);
+                  }}
+                />
               </div>
               {(session.watchUrl || session.rejoinUrl || !watching) && (
                 <MenuSection title="Share">
