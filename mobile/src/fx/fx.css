@@ -2854,7 +2854,12 @@
 }
 
 .fx-layer > :not(.fx-border, .fx-finale, .fx-flash, .fx-glitch, .fx-showdown, .fx-shutdown, .fx-split, .fx-vignette, .fx-vr) {
-  translate: calc(var(--tx, 0) * 5px) calc(var(--ty, 0) * 4px);
+  translate: calc(var(--tx, 0) * 7px) calc(var(--ty, 0) * 5px);
+}
+
+.fx-layer > .fx-ghost:not(.fx-showcase) {
+  translate: calc(var(--tx, 0) * 12px) calc(var(--ty, 0) * 9px);
+  filter: drop-shadow(calc(var(--tx, 0) * -10px) calc(var(--ty, 0) * -10px + 14px) 16px rgb(0 0 0 / 0.65));
 }
 
 .fx-layer > .fx-showcase,
@@ -2865,4 +2870,8 @@
 .fx-showcase .fx-card-img,
 .fx-showcase > .tile img {
   transform: perspective(700px) rotateY(calc(var(--tx, 0) * 12deg)) rotateX(calc(var(--ty, 0) * -9deg));
+}
+
+.fx-layer > .fx-ghost.fx-burn:not(.fx-showcase) {
+  filter: drop-shadow(0 0 8px #ff6a00) drop-shadow(calc(var(--tx, 0) * -10px) calc(var(--ty, 0) * -10px + 14px) 16px rgb(0 0 0 / 0.65));
 }
