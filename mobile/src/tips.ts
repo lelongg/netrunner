@@ -1,5 +1,6 @@
 import { settings } from "./settings";
 import { animate } from "motion";
+import { HOLD_MS } from "./hold";
 
 const MEANINGS: Record<string, string> = {
   click: "Click · one action. The Corp gets 3 per turn, the Runner 4.",
@@ -114,8 +115,59 @@ function show(text: string, anchor: Element) {
   animate(el, { opacity: [0, 1], transform: [`translateY(${above ? 6 : -6}px) scale(0.92)`, "translateY(0px) scale(1)"] }, { duration: 0.22, ease: [0.2, 1.3, 0.4, 1] });
 }
 
+let swallow = false;
+
+function installHold() {
+  let timer = 0;
+  let start: { x: number; y: number } | null = null;
+  const stop = () => {
+    clearTimeout(timer);
+    start = null;
+  };
+  document.addEventListener(
+    "pointerdown",
+    (e) => {
+      stop();
+      const target = e.target as Element | null;
+      const hit = target && keyOf(target);
+      if (!hit) return;
+      start = { x: e.clientX, y: e.clientY };
+      timer = window.setTimeout(() => {
+        start = null;
+        navigator.vibrate?.(12);
+        show(MEANINGS[hit.key] ?? hit.key, hit.anchor);
+        swallow = true;
+        const block = (ev: Event) => ev.preventDefault();
+        const release = () => {
+          hide();
+          removeEventListener("pointerup", release, true);
+          removeEventListener("pointercancel", release, true);
+          setTimeout(() => {
+            swallow = false;
+            removeEventListener("contextmenu", block, true);
+          }, 350);
+        };
+        addEventListener("contextmenu", block, true);
+        addEventListener("pointerup", release, true);
+        addEventListener("pointercancel", release, true);
+      }, HOLD_MS);
+    },
+    true,
+  );
+  document.addEventListener("pointermove", (e) => start && Math.hypot(e.clientX - start.x, e.clientY - start.y) > 10 && stop(), { capture: true, passive: true });
+  document.addEventListener("pointerup", () => start && stop(), true);
+  document.addEventListener("pointercancel", stop, true);
+}
+
 export function installTips() {
+  installHold();
   document.addEventListener("click", (e) => {
+    if (swallow) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      swallow = false;
+      return;
+    }
     const target = e.target as Element | null;
     const hit = target && keyOf(target);
     if (current) {

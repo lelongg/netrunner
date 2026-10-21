@@ -1275,6 +1275,7 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
       <ScoreBar view={view} />
       <Ticker
         onFeed={() => setShowLog(true)}
+        onFeedHold={setShowLog}
         feedKey={log.length}
         action={
           <button class="ticker-menu" onClick={() => setMenu(!menu)} aria-label="Menu" aria-expanded={menu}>

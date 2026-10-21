@@ -5,6 +5,7 @@ import { Icon } from "./icons";
 import { motionOff } from "./settings";
 import { useBackClose } from "./back";
 import { uiSound } from "./uisound";
+import { useHold } from "./hold";
 
 export function Meter({ value, max, tone = "cyan", small, anchor }: { value: number; max: number; tone?: "cyan" | "red" | "yellow"; small?: boolean; anchor?: string }) {
   const count = Math.max(0, Math.min(max, 12));
@@ -46,7 +47,9 @@ function SettingsToggle() {
   );
 }
 
-export function Ticker({ children, action, onFeed, feedKey }: { children: ComponentChildren; action?: ComponentChildren; onFeed?: () => void; feedKey?: unknown }) {
+export function Ticker({ children, action, onFeed, onFeedHold, feedKey }: { children: ComponentChildren; action?: ComponentChildren; onFeed?: () => void; onFeedHold?: (on: boolean) => void; feedKey?: unknown }) {
+  const hold = useHold(onFeedHold);
+  const tapFeed = onFeed && (() => hold.consumed() || onFeed());
   const feed = useRef<HTMLSpanElement>(null);
   const text = useRef<HTMLSpanElement>(null);
   const [width, setWidth] = useState(0);
@@ -92,7 +95,7 @@ export function Ticker({ children, action, onFeed, feedKey }: { children: Compon
   });
   return (
     <div class="ticker">
-      <span class={`live ${onFeed ? "tappable" : ""}`} onClick={onFeed} aria-hidden="true">
+      <span class={`live ${onFeed ? "tappable" : ""}`} onClick={tapFeed} aria-hidden="true" {...hold.handlers}>
         LIVE
       </span>
       <span
@@ -100,7 +103,8 @@ export function Ticker({ children, action, onFeed, feedKey }: { children: Compon
         ref={feed}
         role={onFeed ? "button" : undefined}
         tabIndex={onFeed ? 0 : undefined}
-        onClick={onFeed}
+        onClick={tapFeed}
+        {...hold.handlers}
         onKeyDown={onFeed && ((e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), onFeed()))}
       >
         <span class="feed-track" ref={track}>
