@@ -126,7 +126,7 @@ button.cta > span {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 0 14px;
+  padding: 0 20px 0 24px;
   letter-spacing: 0.28em;
   font-size: 12px;
   background: repeating-linear-gradient(0deg, var(--cta) 0 3px, var(--cta-2) 3px 4px);
