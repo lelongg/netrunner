@@ -71,17 +71,19 @@ function Art({ card, class: cls, sharp }: { card?: Card; class?: string; sharp?:
   return <span class={`art ${cls ?? ""}`} style={style} aria-hidden="true" />;
 }
 
-function TabBar({ active, onDecks, onHistory, onGuide, ready }: { active: "play"; onDecks: () => void; onHistory: () => void; onGuide: () => void; ready: boolean }) {
-  const tabs: { key: string; icon: IconName; label: string; onClick?: () => void }[] = [
+export type Tab = "play" | "decks" | "history" | "learn";
+
+export function TabBar({ active, onTab, ready, global }: { active: Tab; onTab: (t: Tab) => void; ready: boolean; global?: boolean }) {
+  const tabs: { key: Tab; icon: IconName; label: string }[] = [
     { key: "play", icon: "play", label: "Play" },
-    { key: "decks", icon: "deck", label: "Decks", onClick: onDecks },
-    { key: "history", icon: "history", label: "History", onClick: onHistory },
-    { key: "learn", icon: "book", label: "Learn", onClick: onGuide },
+    { key: "decks", icon: "deck", label: "Decks" },
+    { key: "history", icon: "history", label: "History" },
+    { key: "learn", icon: "book", label: "Learn" },
   ];
   return (
-    <nav class="tabbar">
+    <nav class={`tabbar ${global ? "global" : ""}`}>
       {tabs.map((t) => (
-        <button class={t.key === active ? "on" : ""} disabled={!ready && t.key !== active} onClick={t.onClick} aria-current={t.key === active ? "page" : undefined}>
+        <button class={t.key === active ? "on" : ""} disabled={!ready && t.key !== active} onClick={() => t.key !== active && onTab(t.key)} aria-current={t.key === active ? "page" : undefined}>
           <Icon name={t.icon} />
           <span>{t.label}</span>
         </button>
@@ -425,7 +427,7 @@ export function HomeArena(props: Props) {
             </div>,
             document.body,
           )}
-        <TabBar active="play" ready={ready} onDecks={onDecks} onHistory={() => onHistory()} onGuide={onGuide} />
+        <TabBar active="play" ready={ready} onTab={(t) => (t === "decks" ? onDecks() : t === "history" ? onHistory() : t === "learn" && onGuide())} />
       </div>
     </>
   );

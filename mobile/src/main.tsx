@@ -22,6 +22,7 @@ import { storeTicket, ticketFromHash } from "./net/relay";
 import { awaitingMove, basicCommands, promptOf, runCommands } from "./game/actions";
 import { Handoff } from "./screens/Handoff";
 import { Home } from "./screens/Home";
+import { type Tab, TabBar } from "./screens/HomeModern";
 import { Lobby } from "./screens/Lobby";
 import { Guide } from "./screens/Guide";
 import { FxLab } from "./screens/FxLab";
@@ -220,7 +221,11 @@ function App() {
     const check = () => {
       const mine = pendingSeek();
       setSeeking(!!mine);
-      if (mine) checkSeek(mine).then((r) => typeof r === "object" && startMatched(r), () => {});
+      if (mine)
+        checkSeek(mine).then(
+          (r) => typeof r === "object" && startMatched(r),
+          () => {},
+        );
     };
     check();
     const timer = setInterval(() => !matchingNow.current && pendingSeek() && check(), 15000);
@@ -312,21 +317,37 @@ function App() {
 
   if (!error && (held || (opening && !session))) return <Opening label={(held ?? opening)!} ready={!!loaded} />;
 
-  if (decks && loaded && !session) return <Decks db={loaded.db} matchups={loaded.matchups} initialDeck={decks.id} initialSide={decks.side} onClose={() => setDecks(false)} />;
+  const goTab = (t: Tab) => {
+    setDecks(t === "decks" ? {} : false);
+    setArchive(t === "history");
+    setGuide(t === "learn");
+  };
+  const tabs = (active: Tab) => <TabBar global active={active} ready={!!loaded} onTab={goTab} />;
+
+  if (decks && loaded && !session)
+    return (
+      <>
+        <Decks db={loaded.db} matchups={loaded.matchups} initialDeck={decks.id} initialSide={decks.side} onClose={() => setDecks(false)} />
+        {tabs("decks")}
+      </>
+    );
 
   if ((archive || sharedReplay) && loaded && !session)
     return (
-      <History
-        engine={loaded.engine}
-        db={loaded.db}
-        saves={saves}
-        initial={typeof archive === "string" ? archive : undefined}
-        shared={sharedReplay}
-        onClose={() => {
-          setArchive(false);
-          setSharedReplay(undefined);
-        }}
-      />
+      <>
+        <History
+          engine={loaded.engine}
+          db={loaded.db}
+          saves={saves}
+          initial={typeof archive === "string" ? archive : undefined}
+          shared={sharedReplay}
+          onClose={() => {
+            setArchive(false);
+            setSharedReplay(undefined);
+          }}
+        />
+        {tabs("history")}
+      </>
     );
 
   if (credits && !session) return <Credits onClose={() => setCredits(false)} />;
@@ -361,32 +382,35 @@ function App() {
     );
   if (guide && loaded && !session)
     return (
-      <Guide
-        db={loaded.db}
-        firstRun={firstRun}
-        onClose={() => {
-          if (firstRun) skipTutorial();
-          setGuide(false);
-        }}
-        onPlay={(side) => {
-          markTutorial("done");
-          setGuide(false);
-          setOpening("tutorial");
-          afterPaint(() => {
-            const m = loaded.matchups.find((x) => x.key === "beginner") ?? loaded.matchups[0];
-            let name = "Player";
-            try {
-              name = localStorage.getItem("nsg.name")?.trim() || name;
-            } catch {}
-            const next = new Session(loaded.engine, loaded.db, "local", newRoomCode(), name, side);
-            const deck = (s: "corp" | "runner") => toWire(fromPrecon(m[s], loaded.db));
-            next.startTutorial(side, deck(side), deck(side === "corp" ? "runner" : "corp"));
-            setSession(next);
-            setLocalSide(side);
-            setOpening(null);
-          });
-        }}
-      />
+      <>
+        <Guide
+          db={loaded.db}
+          firstRun={firstRun}
+          onClose={() => {
+            if (firstRun) skipTutorial();
+            setGuide(false);
+          }}
+          onPlay={(side) => {
+            markTutorial("done");
+            setGuide(false);
+            setOpening("tutorial");
+            afterPaint(() => {
+              const m = loaded.matchups.find((x) => x.key === "beginner") ?? loaded.matchups[0];
+              let name = "Player";
+              try {
+                name = localStorage.getItem("nsg.name")?.trim() || name;
+              } catch {}
+              const next = new Session(loaded.engine, loaded.db, "local", newRoomCode(), name, side);
+              const deck = (s: "corp" | "runner") => toWire(fromPrecon(m[s], loaded.db));
+              next.startTutorial(side, deck(side), deck(side === "corp" ? "runner" : "corp"));
+              setSession(next);
+              setLocalSide(side);
+              setOpening(null);
+            });
+          }}
+        />
+        {!firstRun && tabs("learn")}
+      </>
     );
 
   if (!session || !loaded) {
