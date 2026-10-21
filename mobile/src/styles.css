@@ -8963,11 +8963,11 @@ button.player-chip {
 
 .board .playfield {
   overflow-x: clip;
-  transform: rotateY(calc(var(--tx, 0) * 4deg)) rotateX(calc(var(--ty, 0) * -3deg));
 }
 
 .board .playfield > .area {
   translate: calc(var(--tx, 0) * 10px) calc(var(--ty, 0) * 8px);
+  transform: rotateY(calc(var(--tx, 0) * 4deg)) rotateX(calc(var(--ty, 0) * -3deg));
 }
 
 
