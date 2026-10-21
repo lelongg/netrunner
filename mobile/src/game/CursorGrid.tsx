@@ -67,11 +67,13 @@ type Settings = {
 
 type Pulse = { x: number; y: number; t0: number; strength: number };
 
-type Walker = { x: number; y: number; dx: number; dy: number; progress: number; speed: number; life: number; strength: number; trail: number[]; drain: number };
+type Walker = { x: number; y: number; dx: number; dy: number; progress: number; speed: number; life: number; strength: number; trail: number[]; drain: number; alt: number };
 
 type Program = { program: WebGLProgram; uniforms: Record<string, WebGLUniformLocation | null> };
 
 const INTRO_SECONDS = 1.4;
+const RELIEF = 34;
+const ALTITUDES = [0.35, 0.6, 0.85, 1.1, 1.4];
 const STYLES: Record<string, number> = { lines: 0, dashed: 1, dots: 2, crosses: 3 };
 
 const VERTEX = `#version 300 es
@@ -109,6 +111,8 @@ uniform int uPulseCount;
 uniform float uBand;
 uniform float uTime;
 uniform float uField;
+uniform vec2 uTilt;
+uniform float uDepth;
 
 out vec4 outColor;
 
@@ -128,8 +132,39 @@ float roundBox(vec2 p, vec2 b, float r) {
   return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
 }
 
+float pulseAt(vec2 pos) {
+  float wave = 0.0;
+  for (int i = 0; i < 8; i++) {
+    if (i >= uPulseCount) break;
+    vec4 p = uPulses[i];
+    float off = length(pos - p.xy) - p.z;
+    float t = off > 0.0 ? off / (uBand * 1.6) : off / (uBand * 2.6);
+    wave = max(wave, p.w * exp(-t * t));
+  }
+  return wave;
+}
+
+float fieldAt(vec2 g) {
+  float n = (sin(g.x * 0.55 + uTime * 0.35) + sin(g.y * 0.4 - uTime * 0.27) + sin((g.x + g.y) * 0.3 + uTime * 0.19) + sin(length(g - vec2(uCells) * 0.5 - vec2(sin(uTime * 0.07) * float(uCells.x), 0.0)) * 0.45 - uTime * 0.5)) / 4.0;
+  return smoothstep(0.15, 1.0, n) * uField;
+}
+
+float spotAt(vec2 pos) {
+  vec2 toMouse = pos - uMouse;
+  return exp(-dot(toMouse, toMouse) / max(uRadius * uRadius, 1.0) * 1.6) * uSpotlight * uPresence;
+}
+
+float heightAt(vec2 pos) {
+  vec2 g = (pos - uOffset) / uCellSize;
+  return max(max(pulseAt(pos), fieldAt(g)), spotAt(pos) * 1.4);
+}
+
 void main() {
-  vec2 pos = vec2(gl_FragCoord.x, uResolution.y - gl_FragCoord.y);
+  vec2 screen = vec2(gl_FragCoord.x, uResolution.y - gl_FragCoord.y);
+  vec2 pos = screen;
+  if (uDepth > 0.0 && dot(uTilt, uTilt) > 0.00001) {
+    for (int k = 0; k < 3; k++) pos = screen - uTilt * uDepth * heightAt(pos);
+  }
   vec2 g = (pos - uOffset) / uCellSize;
   vec2 cell = floor(g);
   vec2 f = g - cell;
@@ -153,28 +188,18 @@ void main() {
   }
   float mark = max(vx, vy);
 
-  float wave = 0.0;
-  for (int i = 0; i < 8; i++) {
-    if (i >= uPulseCount) break;
-    vec4 p = uPulses[i];
-    float off = length(pos - p.xy) - p.z;
-    float t = off > 0.0 ? off / (uBand * 1.6) : off / (uBand * 2.6);
-    wave = max(wave, p.w * exp(-t * t));
-  }
-  float n = (sin(g.x * 0.55 + uTime * 0.35) + sin(g.y * 0.4 - uTime * 0.27) + sin((g.x + g.y) * 0.3 + uTime * 0.19) + sin(length(g - vec2(uCells) * 0.5 - vec2(sin(uTime * 0.07) * float(uCells.x), 0.0)) * 0.45 - uTime * 0.5)) / 4.0;
-  float field = smoothstep(0.15, 1.0, n) * uField;
-
-  vec2 toMouse = pos - uMouse;
-  float spot = exp(-dot(toMouse, toMouse) / max(uRadius * uRadius, 1.0) * 1.6) * uSpotlight * uPresence;
+  float wave = pulseAt(pos);
+  float field = fieldAt(g);
+  float spot = spotAt(pos);
 
   vec2 center = uResolution * 0.5;
   float reach = length(center);
-  float shown = smoothstep(uReveal * (reach + uCellSize * 2.0), uReveal * (reach + uCellSize * 2.0) - uCellSize * 2.0, length(pos - center));
+  float shown = smoothstep(uReveal * (reach + uCellSize * 2.0), uReveal * (reach + uCellSize * 2.0) - uCellSize * 2.0, length(screen - center));
   shown = uReveal >= 1.0 ? 1.0 : shown;
 
   float fade = 1.0;
   if (uEdgeFade > 0.0) {
-    vec2 norm = pos / uResolution;
+    vec2 norm = screen / uResolution;
     vec2 a = clamp(norm / uEdgeFade, 0.0, 1.0);
     vec2 b = clamp((1.0 - norm) / uEdgeFade, 0.0, 1.0);
     vec2 sa = a * a * a * (a * (a * 6.0 - 15.0) + 10.0);
@@ -397,6 +422,12 @@ const CursorGrid = ({
     let last = 0;
     let visible = true;
     let dirty = true;
+    const tilt = { x: 0, y: 0 };
+    const readTilt = () => {
+      const cs = getComputedStyle(container);
+      tilt.x = parseFloat(cs.getPropertyValue('--tx')) || 0;
+      tilt.y = parseFloat(cs.getPropertyValue('--ty')) || 0;
+    };
 
     const rebuild = () => {
       const s = settingsRef.current;
@@ -479,6 +510,8 @@ const CursorGrid = ({
       gl.uniform1f(u.uBand, s.cellSize * ratio);
       gl.uniform1f(u.uTime, pace);
       gl.uniform1f(u.uField, s.ambient > 0 && !reduce ? 0.45 + 0.45 * s.ambient : 0);
+      gl.uniform2f(u.uTilt, tilt.x, tilt.y);
+      gl.uniform1f(u.uDepth, reduce ? 0 : RELIEF * ratio);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
       gl.bindVertexArray(null);
     };
@@ -489,7 +522,7 @@ const CursorGrid = ({
       const { cols, rows } = grid;
       if (from) {
         const turn = Math.random() < 0.5 ? 1 : -1;
-        walkers.push({ x: from.x, y: from.y, dx: -from.dy * turn, dy: from.dx * turn, progress: 0, speed: from.speed * (0.8 + Math.random() * 0.4), life: 3 + Math.random() * 8, strength: from.strength * 0.85, trail: [from.x, from.y], drain: TAIL });
+        walkers.push({ x: from.x, y: from.y, dx: -from.dy * turn, dy: from.dx * turn, progress: 0, speed: from.speed * (0.8 + Math.random() * 0.4), life: 3 + Math.random() * 8, strength: from.strength * 0.85, trail: [from.x, from.y], drain: TAIL, alt: ALTITUDES[Math.floor(Math.random() * ALTITUDES.length)] });
         return;
       }
       const side = Math.floor(Math.random() * 4);
@@ -497,18 +530,20 @@ const CursorGrid = ({
       const y = side === 2 ? 0 : side === 3 ? rows : 1 + Math.floor(Math.random() * (rows - 1));
       const dx = side === 0 ? 1 : side === 1 ? -1 : 0;
       const dy = side === 2 ? 1 : side === 3 ? -1 : 0;
-      walkers.push({ x, y, dx, dy, progress: 0, speed: pickSpeed(), life: 10 + Math.random() * 25, strength: 0.6 + Math.random() * 0.4, trail: [x, y], drain: TAIL });
+      walkers.push({ x, y, dx, dy, progress: 0, speed: pickSpeed(), life: 10 + Math.random() * 25, strength: 0.6 + Math.random() * 0.4, trail: [x, y], drain: TAIL, alt: ALTITUDES[Math.floor(Math.random() * ALTITUDES.length)] });
     };
 
     const paintSignals = (s: Settings) => {
       const size = s.cellSize * view.ratio;
-      const ox = Math.round(grid.offX * view.ratio);
-      const oy = Math.round(grid.offY * view.ratio);
+      const baseX = Math.round(grid.offX * view.ratio);
+      const baseY = Math.round(grid.offY * view.ratio);
       const [r, g, b] = hexToRgb(s.color).map(v => Math.round(v * 255));
       pen.clearRect(0, 0, signalCanvas.width, signalCanvas.height);
       pen.lineCap = 'round';
       pen.lineWidth = Math.max(1, s.lineWidth * view.ratio * 1.5);
       for (const w of walkers) {
+        const ox = baseX + tilt.x * w.alt * RELIEF * view.ratio;
+        const oy = baseY + tilt.y * w.alt * RELIEF * view.ratio;
         const dead = w.life <= 0;
         let hx = w.x + (dead ? 0 : w.dx * w.progress);
         let hy = w.y + (dead ? 0 : w.dy * w.progress);
@@ -598,6 +633,7 @@ const CursorGrid = ({
         return;
       }
       drawn = now;
+      readTilt();
       const dt = last ? clamp((now - last) / 1000, 0, 1 / 20) : 1 / 60;
       last = now;
       clock += dt;
