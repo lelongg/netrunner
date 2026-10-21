@@ -1294,9 +1294,14 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
                 <MenuTile icon="deck" label="Deck list" onClick={() => closeMenu(() => setDeckOpen(true))} />
                 <MenuTile icon="history" label="Game log" onClick={() => closeMenu(() => setShowLog(true))} />
                 {canUndo && <MenuTile icon="undo" label="Undo click" onClick={() => closeMenu(() => session.say("/undo-click", side))} />}
-                {onSwitchSide && <MenuTile icon="swap" label={watching ? `${opp === "corp" ? "Corp" : "Runner"} view` : `Pass to ${opp === "corp" ? "Corp" : "Runner"}`} onClick={() => closeMenu(onSwitchSide)} />}
+                {onSwitchSide && watching && <MenuTile icon="swap" label={`${opp === "corp" ? "Corp" : "Runner"} view`} onClick={() => closeMenu(onSwitchSide)} />}
                 <MenuTile icon={settings.sound ? "sound" : "mute"} label={settings.sound ? "Sound on" : "Sound off"} active={settings.sound} onClick={() => setSetting("sound", !settings.sound)} />
               </div>
+              {onSwitchSide && !watching && (
+                <MenuSection title="Same device">
+                  <MenuItem icon="swap" label={`Hand over to the ${opp === "corp" ? "Corp" : "Runner"}`} hint={opp === "corp" ? "Turns change hands by themselves. Use this if the Corp wants to rez or use an ability now." : "Turns change hands by themselves. Use this if the Runner wants to use an ability now."} onClick={() => closeMenu(onSwitchSide)} />
+                </MenuSection>
+              )}
               {(session.watchUrl || session.rejoinUrl || !watching) && (
                 <MenuSection title="Share">
                   {session.watchUrl && <MenuItem icon="eye" label="Spectator link" hint="Anyone with it can watch" onClick={() => closeMenu(() => shareLink(session.watchUrl!, "Watch this Netrunner game", "Send it to anyone who wants to watch this game."))} />}
