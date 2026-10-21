@@ -8959,6 +8959,7 @@ button.player-chip {
 
 .board .playfield-frame {
   perspective: 900px;
+  overflow: clip;
 }
 
 .board .playfield {

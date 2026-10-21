@@ -1108,6 +1108,13 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
   const lastLog = [...log].reverse().find((e) => !/^\s*\[hr\]\s*$/i.test(String(e.text?.["raw-text"] ?? e.text ?? "")));
   const runServer = view.run?.server?.[0];
   useEffect(() => {
+    const field = document.querySelector<HTMLElement>(".board .playfield");
+    if (!field) return;
+    const hold = () => field.scrollLeft && (field.scrollLeft = 0);
+    field.addEventListener("scroll", hold, { passive: true });
+    return () => field.removeEventListener("scroll", hold);
+  }, []);
+  useEffect(() => {
     if (!runServer) return;
     document.querySelector(".server.running")?.scrollIntoView({ block: side === "runner" ? "end" : "start", inline: "center", behavior: "smooth" });
   }, [runServer, view.run?.position, side]);
