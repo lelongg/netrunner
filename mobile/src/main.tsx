@@ -387,6 +387,7 @@ function App() {
         onHistory={(id) => setArchive(id ?? true)}
         onDecks={() => setDecks(true)}
         ready={!!loaded}
+        db={loaded?.db}
         error={error}
         initialJoin={joinParam}
         saves={saves}

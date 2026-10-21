@@ -1,13 +1,16 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import { type Role, type SavedGame, saveId } from "../session";
+import type { CardDb } from "../engine";
 import { Cta, Ticker, ask } from "../ui";
 import { Icon } from "../icons";
 import { SwipeDelete } from "./SwipeDelete";
 import { motionOff, onSettings, settings } from "../settings";
 import { HomeHand, HomeJack, HomeServers, HomeTerminal } from "./HomeVariants";
+import { HomeArena, HomeModes } from "./HomeModern";
 
 export interface Props {
   ready: boolean;
+  db?: CardDb;
   error?: string;
   initialJoin?: string;
   saves: SavedGame[];
@@ -146,6 +149,8 @@ export function Home(props: Props) {
   if (variant === "servers") return <HomeServers {...props} />;
   if (variant === "jack") return <HomeJack {...props} />;
   if (variant === "hand") return <HomeHand {...props} />;
+  if (variant === "arena") return <HomeArena {...props} />;
+  if (variant === "modes") return <HomeModes {...props} />;
   return <HomeClassic {...props} />;
 }
 
