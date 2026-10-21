@@ -73,7 +73,7 @@ type Program = { program: WebGLProgram; uniforms: Record<string, WebGLUniformLoc
 
 const INTRO_SECONDS = 1.4;
 const RELIEF = 34;
-const ALTITUDES = [0.35, 0.6, 0.85, 1.1, 1.4];
+const ALTITUDES = [0.1, 0.2, 0.3, 0.45, 0.6];
 const STYLES: Record<string, number> = { lines: 0, dashed: 1, dots: 2, crosses: 3 };
 
 const VERTEX = `#version 300 es
@@ -533,49 +533,88 @@ const CursorGrid = ({
       walkers.push({ x, y, dx, dy, progress: 0, speed: pickSpeed(), life: 10 + Math.random() * 25, strength: 0.6 + Math.random() * 0.4, trail: [x, y], drain: TAIL, alt: ALTITUDES[Math.floor(Math.random() * ALTITUDES.length)] });
     };
 
+    const heightAt = (x: number, y: number, s: Settings) => {
+      const cell = s.cellSize;
+      const far = Math.hypot(view.width, view.height);
+      let wave = 0;
+      for (let k = 0; k < Math.min(pulses.length, 8); k++) {
+        const pulse = pulses[pulses.length - 1 - k];
+        const radius = Math.max(0, (clock - pulse.t0) * s.pulseSpeed);
+        const strength = pulse.strength * Math.pow(Math.max(0, 1 - radius / far), 0.6);
+        const off = Math.hypot(x - pulse.x, y - pulse.y) - radius;
+        const t = off > 0 ? off / (cell * 1.6) : off / (cell * 2.6);
+        wave = Math.max(wave, strength * Math.exp(-t * t));
+      }
+      const gx = (x - grid.offX) / cell;
+      const gy = (y - grid.offY) / cell;
+      const n =
+        (Math.sin(gx * 0.55 + pace * 0.35) +
+          Math.sin(gy * 0.4 - pace * 0.27) +
+          Math.sin((gx + gy) * 0.3 + pace * 0.19) +
+          Math.sin(Math.hypot(gx - grid.cols * 0.5 + Math.sin(pace * 0.07) * grid.cols, gy - grid.rows * 0.5) * 0.45 - pace * 0.5)) /
+        4;
+      const e = clamp((n - 0.15) / 0.85, 0, 1);
+      const field = e * e * (3 - 2 * e) * (s.ambient > 0 && !reduce ? 0.45 + 0.45 * s.ambient : 0);
+      const mx = x - mouse.x;
+      const my = y - mouse.y;
+      const spot = Math.exp(-(mx * mx + my * my) / Math.max(s.radius * s.radius, 1) * 1.6) * s.spotlight * presence;
+      return Math.max(wave, field, spot * 1.4);
+    };
+
+    const SUBSTEPS = 4;
+
     const paintSignals = (s: Settings) => {
-      const size = s.cellSize * view.ratio;
-      const baseX = Math.round(grid.offX * view.ratio);
-      const baseY = Math.round(grid.offY * view.ratio);
+      const ratio = view.ratio;
+      const size = s.cellSize;
+      const lifted = Math.abs(tilt.x) + Math.abs(tilt.y) > 0.0005 && !reduce;
       const [r, g, b] = hexToRgb(s.color).map(v => Math.round(v * 255));
+      const at = (gx: number, gy: number, alt: number): [number, number] => {
+        const x = grid.offX + gx * size;
+        const y = grid.offY + gy * size;
+        if (!lifted) return [x * ratio, y * ratio];
+        const h = heightAt(x, y, s) + alt;
+        return [(x + tilt.x * h * RELIEF) * ratio, (y + tilt.y * h * RELIEF) * ratio];
+      };
       pen.clearRect(0, 0, signalCanvas.width, signalCanvas.height);
       pen.lineCap = 'round';
-      pen.lineWidth = Math.max(1, s.lineWidth * view.ratio * 1.5);
+      pen.lineWidth = Math.max(1, s.lineWidth * ratio * 1.5);
       for (const w of walkers) {
-        const ox = baseX + tilt.x * w.alt * RELIEF * view.ratio;
-        const oy = baseY + tilt.y * w.alt * RELIEF * view.ratio;
         const dead = w.life <= 0;
         let hx = w.x + (dead ? 0 : w.dx * w.progress);
         let hy = w.y + (dead ? 0 : w.dy * w.progress);
         let left = dead ? w.drain : TAIL;
         let walked = 0;
+        let from = at(hx, hy, w.alt);
         for (let k = w.trail.length - 2; k >= 0 && left > 0; k -= 2) {
           const tx = w.trail[k];
           const ty = w.trail[k + 1];
           const span = Math.hypot(hx - tx, hy - ty);
           if (span === 0) continue;
           const take = Math.min(span, left);
-          const ex = hx + ((tx - hx) * take) / span;
-          const ey = hy + ((ty - hy) * take) / span;
-          const a0 = (1 - walked / TAIL) * w.strength * s.maxOpacity;
-          const a1 = (1 - (walked + take) / TAIL) * w.strength * s.maxOpacity;
-          const grad = pen.createLinearGradient(ox + hx * size, oy + hy * size, ox + ex * size, oy + ey * size);
-          grad.addColorStop(0, `rgba(${r},${g},${b},${a0})`);
-          grad.addColorStop(1, `rgba(${r},${g},${b},${Math.max(0, a1)})`);
-          pen.strokeStyle = grad;
-          pen.beginPath();
-          pen.moveTo(ox + hx * size, oy + hy * size);
-          pen.lineTo(ox + ex * size, oy + ey * size);
-          pen.stroke();
+          const steps = lifted ? Math.max(1, Math.ceil(take * SUBSTEPS)) : 1;
+          for (let j = 1; j <= steps; j++) {
+            const part = (take * j) / steps;
+            const px = hx + ((tx - hx) * part) / span;
+            const py = hy + ((ty - hy) * part) / span;
+            const to = at(px, py, w.alt);
+            const alpha = (1 - (walked + (take * (j - 0.5)) / steps) / TAIL) * w.strength * s.maxOpacity;
+            pen.strokeStyle = `rgba(${r},${g},${b},${Math.max(0, alpha)})`;
+            pen.beginPath();
+            pen.moveTo(from[0], from[1]);
+            pen.lineTo(to[0], to[1]);
+            pen.stroke();
+            from = to;
+          }
           walked += take;
           left -= take;
-          hx = ex;
-          hy = ey;
+          hx += ((tx - hx) * take) / span;
+          hy += ((ty - hy) * take) / span;
         }
         if (!dead) {
+          const head = at(w.x + w.dx * w.progress, w.y + w.dy * w.progress, w.alt);
           pen.fillStyle = `rgba(${r},${g},${b},${w.strength * s.maxOpacity})`;
           pen.beginPath();
-          pen.arc(ox + (w.x + w.dx * w.progress) * size, oy + (w.y + w.dy * w.progress) * size, pen.lineWidth * 1.1, 0, Math.PI * 2);
+          pen.arc(head[0], head[1], pen.lineWidth * 1.1, 0, Math.PI * 2);
           pen.fill();
         }
       }
