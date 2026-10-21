@@ -21,6 +21,7 @@ import { Board } from "./game/Board";
 import { storeTicket, ticketFromHash } from "./net/relay";
 import { awaitingMove, basicCommands, promptOf, runCommands } from "./game/actions";
 import { Handoff } from "./screens/Handoff";
+import { useTilt } from "./tilt";
 import { Home } from "./screens/Home";
 import { type Tab, TabBar } from "./screens/HomeModern";
 import { Lobby } from "./screens/Lobby";
@@ -527,6 +528,8 @@ function Opening({ label, ready }: { label: string; ready: boolean }) {
   const title = useRef<HTMLSpanElement>(null);
   const bar = useRef<HTMLElement>(null);
   const tunnel = useRef<HTMLCanvasElement>(null);
+  const root = useRef<HTMLDivElement>(null);
+  useTilt(root);
   useEffect(() => {
     if (!title.current || motionOff()) return;
     animate(title.current, { transform: ["scale(2.6)", "scale(1)"], opacity: [0, 1], filter: ["blur(12px)", "blur(0px)"] }, { duration: 0.6, ease: [0.2, 0.9, 0.3, 1.05] });
@@ -537,7 +540,7 @@ function Opening({ label, ready }: { label: string; ready: boolean }) {
   }, []);
   useLoop(bar, { transform: ["translateX(-100%)", "translateX(250%)"] }, { duration: 0.9, ease: [0.6, 0, 0.4, 1] });
   return (
-    <div class="opening" role="status" aria-live="polite">
+    <div class="opening" role="status" aria-live="polite" ref={root}>
       <canvas class="opening-dive" ref={tunnel} aria-hidden="true" />
       <span class="label">{ready ? "Jacking in" : "Loading engine"}</span>
       <span class="opening-title" ref={title} data-text={label}>
