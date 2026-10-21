@@ -325,18 +325,18 @@ export class Session {
     this.syncLobby();
   }
 
-  private matchSetup?: { format: GameFormat; side: Side };
+  private matchSetup?: { format: GameFormat; side?: Side };
 
-  configureMatch(format: GameFormat, side: Side) {
+  configureMatch(format: GameFormat, side?: Side) {
     this.matchSetup = { format, side };
-    this.wantedSide = side;
+    if (side) this.wantedSide = side;
     if (this.transport && this.seat === 0) this.applyMatch();
   }
 
   private applyMatch() {
     const setup = this.matchSetup!;
     if (setup.format !== this.lobby.format) this.push({ k: "format", format: setup.format });
-    this.push({ k: "side", side: setup.side });
+    if (setup.side) this.push({ k: "side", side: setup.side });
   }
 
   private push(p: Payload) {

@@ -1,9 +1,10 @@
 import { useEffect, useState } from "preact/hooks";
+import type { Side } from "../engine";
 import { Cta, Picker, Ticker } from "../ui";
 import { Icon } from "../icons";
 import { useBackClose } from "../back";
 import { settings } from "../settings";
-import { pushSupported } from "../net/push";
+import { enablePush, pushSupported } from "../net/push";
 import { FORMAT_DESC, GAME_FORMATS, type GameFormat } from "../deckrules";
 import { type Matched, type OpenSeek, type Seek, type SeekSide, acceptSeek, cancelSeek, checkSeek, openSeeks, pendingSeek, seek } from "../net/match";
 
@@ -13,23 +14,40 @@ const SIDES: { key: SeekSide; label: string }[] = [
   { key: "any", label: "Any" },
 ];
 const formatLabel = (f: string) => GAME_FORMATS.find((g) => g.key === f)?.label ?? f;
-const wants = (side: SeekSide) => (side === "any" ? "either side" : side === "corp" ? "Corp" : "Runner");
+const sideLabel = (s: SeekSide) => (s === "any" ? "Any side" : s === "corp" ? "Corp" : "Runner");
+const yours = (theirs: SeekSide): SeekSide => (theirs === "corp" ? "runner" : theirs === "runner" ? "corp" : "any");
+
+function since(at: number) {
+  const s = Math.max(0, Math.round((Date.now() - at) / 1000));
+  if (s < 60) return `${s}s`;
+  if (s < 3600) return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  return `${Math.floor(s / 3600)} h ${Math.floor((s % 3600) / 60)} min`;
+}
 
 function ago(at: number) {
   const min = Math.max(0, Math.round((Date.now() - at) / 60000));
-  if (min < 1) return "now";
-  if (min < 60) return `${min} min`;
-  return `${Math.round(min / 60)} h`;
+  return min < 1 ? "just now" : min < 60 ? `${min} min ago` : `${Math.round(min / 60)} h ago`;
 }
 
-export function Match({ name, onMatched, onClose }: { name: string; onMatched: (m: Matched) => void; onClose: () => void }) {
+function useTick(on: boolean) {
+  const [, set] = useState(0);
+  useEffect(() => {
+    if (!on) return;
+    const timer = setInterval(() => set((n) => n + 1), 1000);
+    return () => clearInterval(timer);
+  }, [on]);
+}
+
+export function Match({ name, onMatched, onInvite, onClose }: { name: string; onMatched: (m: Matched) => void; onInvite: (format: GameFormat, side?: Side) => void; onClose: () => void }) {
   const [format, setFormat] = useState<GameFormat>(settings.format);
   const [side, setSide] = useState<SeekSide>("any");
   const [mine, setMine] = useState<Seek | null>(pendingSeek);
   const [open, setOpen] = useState<OpenSeek[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notify, setNotify] = useState(settings.notifications);
   useBackClose(true, onClose);
+  useTick(!!mine);
 
   const act = async (fn: () => Promise<void>) => {
     setBusy(true);
@@ -70,7 +88,7 @@ export function Match({ name, onMatched, onClose }: { name: string; onMatched: (
     };
   }, [mine?.id]);
 
-  const start = () =>
+  const find = () =>
     act(async () => {
       const result = await seek(name, format, side);
       if ("status" in result) onMatched(result);
@@ -82,18 +100,30 @@ export function Match({ name, onMatched, onClose }: { name: string; onMatched: (
       if (mine) await cancelSeek(mine);
       setMine(null);
     });
+  const turnOnNotifications = () =>
+    act(async () => {
+      const problem = await enablePush();
+      if (problem) throw new Error(problem);
+      setNotify(true);
+      if (mine) {
+        await cancelSeek(mine).catch(() => {});
+        const again = await seek(name, mine.format, mine.side);
+        if ("status" in again) onMatched(again);
+        else setMine(again);
+      }
+    });
 
   return (
     <>
       <Ticker>
-        Matchmaking <span class="cyan">{mine ? "searching" : "online"}</span>
+        Play online <span class="cyan">{mine ? "searching" : `${open?.length ?? 0} open`}</span>
       </Ticker>
       <div class="screen match">
         <header class="screen-head">
           <button class="ghost" onClick={onClose} aria-label="Back to home">
             <Icon name="arrow-left" />
           </button>
-          <h1>FIND A GAME</h1>
+          <h1>PLAY ONLINE</h1>
         </header>
 
         {mine ? (
@@ -101,55 +131,82 @@ export function Match({ name, onMatched, onClose }: { name: string; onMatched: (
             <span class="match-radar" aria-hidden="true">
               <i />
               <i />
+              <i />
+              <b />
             </span>
-            <span class="label">Looking for an opponent</span>
-            <strong>
-              {formatLabel(mine.format)} · {wants(mine.side)}
-            </strong>
-            <p class="hint">
-              {settings.notifications
-                ? "You can close the app: you will get a notification when someone joins."
-                : pushSupported()
-                  ? "Turn on notifications in Settings to be told when someone joins while the app is closed."
-                  : "Keep the app open, the search continues for 24 hours."}
-            </p>
-            <button disabled={busy} onClick={stopSeeking}>
+            <span class="match-title">Searching</span>
+            <span class="match-chips">
+              <span class="chip">{formatLabel(mine.format)}</span>
+              <span class={`chip side-${mine.side}`}>{sideLabel(mine.side)}</span>
+              <span class="chip">{since(mine.at)}</span>
+            </span>
+            <p class="hint">You can leave this screen or close the app: the search stays open for 24 hours.</p>
+            {!notify && pushSupported() && (
+              <button class="match-notify" disabled={busy} onClick={turnOnNotifications}>
+                <Icon name="sound" />
+                Notify me when someone joins
+              </button>
+            )}
+            <button class="ghost match-stop" disabled={busy} onClick={stopSeeking}>
               Stop searching
             </button>
           </section>
         ) : (
           <section class="panel section match-form">
-            <div class="setting-field">
+            <div class="match-field">
               <span class="label">Format</span>
               <Picker title="Format" value={format} onChange={setFormat} options={GAME_FORMATS.map((f) => ({ key: f.key as GameFormat, label: f.label, hint: FORMAT_DESC[f.key as GameFormat] }))} />
             </div>
-            <span class="label">Play as</span>
-            <div class="side-switch match-sides" role="radiogroup">
-              {SIDES.map((s) => (
-                <button role="radio" aria-checked={side === s.key} class={`${side === s.key ? "on" : ""} ${s.key}`} onClick={() => setSide(s.key)}>
-                  {s.label}
-                </button>
-              ))}
+            <div class="match-field">
+              <span class="label">Play as</span>
+              <div class="match-sides" role="radiogroup" aria-label="Play as">
+                {SIDES.map((s) => (
+                  <button role="radio" aria-checked={side === s.key} class={`side-${s.key} ${side === s.key ? "on" : ""}`} onClick={() => setSide(s.key)}>
+                    {s.label}
+                  </button>
+                ))}
+              </div>
             </div>
-            <Cta onClick={start} disabled={busy}>
-              Search
+            <Cta onClick={find} disabled={busy}>
+              Find an opponent
             </Cta>
+            <button class="match-invite" disabled={busy} onClick={() => onInvite(format, side === "any" ? undefined : side)}>
+              <Icon name="share" />
+              <span>
+                <strong>Invite a friend</strong>
+                <small>Private game · share a code or a QR code</small>
+              </span>
+              <Icon name="arrow-right" />
+            </button>
           </section>
         )}
         {error && <p class="error">{error}</p>}
 
         <section class="match-open">
-          <span class="label">Open games · {open?.length ?? "…"}</span>
-          {open && open.length === 0 && <p class="hint">Nobody is waiting right now. Start a search and others will see it here.</p>}
+          <div class="match-open-head">
+            <span class="label">
+              <i class="live-dot" aria-hidden="true" />
+              Open games
+            </span>
+            <span class="label">{open?.length ?? "…"}</span>
+          </div>
+          {open && open.length === 0 && (
+            <div class="match-empty">
+              <Icon name="search" />
+              <p>Nobody is waiting right now. Start a search and other players will see it here.</p>
+            </div>
+          )}
           <ul class="match-list">
             {(open ?? []).map((o) => (
               <li>
-                <button class="match-row" disabled={busy} onClick={() => take(o)}>
+                <button class={`match-row you-${yours(o.side)}`} disabled={busy} onClick={() => take(o)}>
                   <span class="match-who">
                     <strong>{o.name}</strong>
-                    <span class="hint">
-                      {formatLabel(o.format)} · wants {wants(o.side)} · {ago(o.created)}
+                    <span class="match-chips">
+                      <span class="chip">{formatLabel(o.format)}</span>
+                      <span class={`chip side-${yours(o.side)}`}>{yours(o.side) === "any" ? "Either side" : `You play ${sideLabel(yours(o.side))}`}</span>
                     </span>
+                    <small>{ago(o.created)}</small>
                   </span>
                   <span class="match-play">
                     Play

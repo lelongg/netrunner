@@ -6813,23 +6813,81 @@ h1.deck-name.long {
 }
 
 .match {
-  gap: 12px;
+  gap: 14px;
   padding-top: 12px;
 }
 
 .match-form,
 .match-waiting {
-  gap: 12px;
+  gap: 14px;
+}
+
+.match-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .match-sides {
+  display: grid;
   grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
 }
 
-.side-switch button.on.any {
-  color: var(--yellow);
-  background: rgb(246 224 58 / 0.08);
-  box-shadow: inset 0 -2px 0 var(--yellow);
+.match-sides button {
+  min-height: 52px;
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 20px;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  --tone: var(--yellow);
+}
+
+.match-sides .side-corp {
+  --tone: var(--corp);
+}
+
+.match-sides .side-runner {
+  --tone: var(--runner);
+}
+
+.match-sides button.on {
+  color: var(--tone);
+  border-color: var(--tone);
+  background: color-mix(in srgb, var(--tone) 10%, transparent);
+  box-shadow: inset 0 -3px 0 var(--tone), 0 0 14px color-mix(in srgb, var(--tone) 25%, transparent);
+}
+
+.match-invite {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  text-align: left;
+  text-transform: none;
+  letter-spacing: 0.04em;
+  border-color: var(--cyan);
+}
+
+.match-invite span {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.match-invite strong {
+  color: var(--cyan);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+
+.match-invite small,
+.match-who small {
+  color: var(--muted);
+  font-size: 11px;
 }
 
 .match-waiting {
@@ -6837,18 +6895,24 @@ h1.deck-name.long {
   text-align: center;
 }
 
-.match-waiting strong {
+.match-title {
   font-family: var(--display);
-  font-size: 26px;
+  font-weight: 900;
+  font-size: 34px;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
+  color: var(--cyan);
+  text-shadow: 0 0 18px rgb(34 211 238 / 0.45);
 }
 
 .match-radar {
   position: relative;
-  width: 72px;
-  height: 72px;
-  border: 1px solid var(--cyan);
+  width: 110px;
+  height: 110px;
   border-radius: 50%;
+  background: radial-gradient(circle, rgb(34 211 238 / 0.12), transparent 70%);
+  border: 1px solid rgb(34 211 238 / 0.35);
+  overflow: hidden;
 }
 
 .match-radar i {
@@ -6856,28 +6920,127 @@ h1.deck-name.long {
   inset: 0;
   border-radius: 50%;
   border: 2px solid var(--cyan);
-  animation: match-ping 2s ease-out infinite;
+  animation: match-ping 2.4s ease-out infinite;
 }
 
-.match-radar i + i {
-  animation-delay: 1s;
+.match-radar i:nth-child(2) {
+  animation-delay: 0.8s;
+}
+
+.match-radar i:nth-child(3) {
+  animation-delay: 1.6s;
+}
+
+.match-radar b {
+  position: absolute;
+  inset: 0;
+  background: conic-gradient(from 0deg, rgb(34 211 238 / 0.45), transparent 25%);
+  animation: match-sweep 2.4s linear infinite;
 }
 
 @keyframes match-ping {
   from {
-    transform: scale(0.2);
+    transform: scale(0.15);
     opacity: 1;
   }
   to {
-    transform: scale(1.6);
+    transform: scale(1.1);
     opacity: 0;
   }
+}
+
+@keyframes match-sweep {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.match-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.match-waiting .match-chips {
+  justify-content: center;
+}
+
+.chip {
+  padding: 3px 8px;
+  border: 1px solid var(--line-2);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+
+.chip.side-corp {
+  color: var(--corp);
+  border-color: color-mix(in srgb, var(--corp) 50%, transparent);
+}
+
+.chip.side-runner {
+  color: var(--runner);
+  border-color: color-mix(in srgb, var(--runner) 50%, transparent);
+}
+
+.chip.side-any {
+  color: var(--yellow);
+  border-color: color-mix(in srgb, var(--yellow) 50%, transparent);
+}
+
+.match-notify {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-color: var(--yellow);
+  color: var(--yellow);
+}
+
+.match-stop {
+  color: var(--muted);
 }
 
 .match-open {
   display: flex;
   flex-direction: column;
+  gap: 10px;
+}
+
+.match-open-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.match-open-head .label {
+  display: flex;
+  align-items: center;
   gap: 8px;
+}
+
+.live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--red);
+  box-shadow: 0 0 8px var(--red);
+  animation: find-pulse 1.2s ease-in-out infinite alternate;
+}
+
+.match-empty {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border: 1px dashed var(--line-2);
+  color: var(--muted);
+}
+
+.match-empty p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .match-list {
@@ -6886,7 +7049,7 @@ h1.deck-name.long {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .match-row {
@@ -6895,21 +7058,35 @@ h1.deck-name.long {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 12px 14px;
+  padding: 12px 14px 12px 16px;
   text-align: left;
   text-transform: none;
   letter-spacing: 0.04em;
+  border-left: 3px solid var(--yellow);
+  background: var(--panel);
+}
+
+.match-row.you-corp {
+  border-left-color: var(--corp);
+}
+
+.match-row.you-runner {
+  border-left-color: var(--runner);
 }
 
 .match-who {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   min-width: 0;
 }
 
-.match-who .hint {
-  margin: 0;
+.match-who strong {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 22px;
+  line-height: 1;
+  letter-spacing: 0.02em;
 }
 
 .match-play {
@@ -6919,6 +7096,7 @@ h1.deck-name.long {
   color: var(--cyan);
   text-transform: uppercase;
   letter-spacing: 0.2em;
+  font-size: 12px;
 }
 
 .home-find {
@@ -6926,18 +7104,23 @@ h1.deck-name.long {
   align-items: center;
   gap: 12px;
   width: 100%;
-  padding: 14px 16px;
+  padding: 12px 16px;
   border-color: var(--cyan);
   color: var(--cyan);
   text-align: left;
+  animation: find-pulse 1.6s ease-in-out infinite alternate;
 }
 
-.home-find span {
+.home-find span:nth-child(2) {
   flex: 1;
 }
 
-.home-find.seeking {
-  animation: find-pulse 1.6s ease-in-out infinite alternate;
+.home-find-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--cyan);
+  box-shadow: 0 0 8px var(--cyan);
 }
 
 @keyframes find-pulse {

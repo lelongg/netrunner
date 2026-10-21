@@ -17,6 +17,35 @@ export function Meter({ value, max, tone = "cyan", small, anchor }: { value: num
   );
 }
 
+const settingsListeners = new Set<(open: boolean) => void>();
+let settingsShown = false;
+
+export function setSettingsOpen(open: boolean) {
+  settingsShown = open;
+  for (const fn of settingsListeners) fn(open);
+}
+
+export function useSettingsOpen() {
+  const [open, setOpen] = useState(settingsShown);
+  useEffect(() => {
+    settingsListeners.add(setOpen);
+    return () => {
+      settingsListeners.delete(setOpen);
+    };
+  }, []);
+  return open;
+}
+
+function SettingsToggle() {
+  const open = useSettingsOpen();
+  return (
+    <button class="ticker-menu" onClick={() => setSettingsOpen(!open)} aria-label="Menu" aria-expanded={open}>
+      <Icon name={open ? "close" : "menu"} />
+      <span>{open ? "Close" : "Menu"}</span>
+    </button>
+  );
+}
+
 export function Ticker({ children, action, onFeed, feedKey }: { children: ComponentChildren; action?: ComponentChildren; onFeed?: () => void; feedKey?: unknown }) {
   const feed = useRef<HTMLSpanElement>(null);
   const text = useRef<HTMLSpanElement>(null);
@@ -83,7 +112,7 @@ export function Ticker({ children, action, onFeed, feedKey }: { children: Compon
           )}
         </span>
       </span>
-      {action}
+      {action === undefined ? <SettingsToggle /> : action}
     </div>
   );
 }

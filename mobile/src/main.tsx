@@ -1,4 +1,5 @@
-import { Dialogs } from "./ui";
+import { Dialogs, setSettingsOpen, useSettingsOpen } from "./ui";
+import { SettingsMenu } from "./screens/SettingsMenu";
 import { History } from "./screens/History";
 import { Decks } from "./screens/Decks";
 import { useBackClose } from "./back";
@@ -167,8 +168,12 @@ function App() {
   };
   const afterPaint = (fn: () => void) => requestAnimationFrame(() => setTimeout(fn, 0));
 
+  const entered = useRef<string | null>(null);
+  const matchingNow = useRef(false);
+  matchingNow.current = matching;
   const startMatched = (m: Matched) => {
-    if (!loaded) return;
+    if (!loaded || entered.current === m.code) return;
+    entered.current = m.code;
     setMatching(false);
     setSeeking(false);
     setOpening(m.code);
@@ -187,9 +192,13 @@ function App() {
       if (mine) checkSeek(mine).then((r) => typeof r === "object" && startMatched(r), () => {});
     };
     check();
+    const timer = setInterval(() => !matchingNow.current && pendingSeek() && check(), 15000);
     const onVisible = () => document.visibilityState === "visible" && check();
     document.addEventListener("visibilitychange", onVisible);
-    return () => document.removeEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [loaded, !!session]);
 
   const resume = (from: SavedGame) => {
@@ -295,6 +304,17 @@ function App() {
       <Match
         name={playerName()}
         onMatched={startMatched}
+        onInvite={(format, side) => {
+          if (!loaded) return;
+          setMatching(false);
+          setOpening("new game");
+          afterPaint(() => {
+            const next = new Session(loaded.engine, loaded.db, "host", undefined, playerName(), side);
+            next.configureMatch(format, side);
+            setSession(next);
+            setOpening(null);
+          });
+        }}
         onClose={() => {
           setMatching(false);
           setSeeking(!!pendingSeek());
@@ -433,6 +453,12 @@ function Opening({ label, ready }: { label: string; ready: boolean }) {
 
 const currentBundle = (document.querySelector('script[type="module"][src*="assets/"]') as HTMLScriptElement | null)?.src.split("/").pop();
 
+function SettingsHost() {
+  const open = useSettingsOpen();
+  useBackClose(open, () => setSettingsOpen(false));
+  return open ? <SettingsMenu onClose={() => setSettingsOpen(false)} /> : null;
+}
+
 function UpdateBanner() {
   const [ready, setReady] = useState(false);
   useEffect(() => {
@@ -486,6 +512,7 @@ render(
   ) : (
     <>
       <App />
+      <SettingsHost />
       <UpdateBanner />
       <Dialogs />
     </>

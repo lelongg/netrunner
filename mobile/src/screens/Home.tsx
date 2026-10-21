@@ -3,8 +3,6 @@ import { type Role, type SavedGame, saveId } from "../session";
 import { Cta, Ticker, ask } from "../ui";
 import { Icon } from "../icons";
 import { SwipeDelete } from "./SwipeDelete";
-import { useBackClose } from "../back";
-import { SettingsMenu } from "./SettingsMenu";
 import { motionOff, onSettings, settings } from "../settings";
 
 interface Props {
@@ -79,24 +77,14 @@ export function Home({ ready, error, initialJoin, saves, onResume, onDiscard, on
   const [animations, setAnimations] = useState(settings.animations);
   useEffect(() => onSettings(() => setAnimations(settings.animations)), []);
   useScramble(codeRest, Math.max(0, 5 - code.length), animations);
-  const [menu, setMenu] = useState(false);
-  useBackClose(menu, () => setMenu(false));
   const go = (role: Role, c?: string, vsBot?: boolean) => {
     onStart(role, storedName().trim() || "Player", c, vsBot);
   };
   return (
     <>
-      <Ticker
-        action={
-          <button class="ticker-menu" onClick={() => setMenu(!menu)} aria-label="Menu" aria-expanded={menu}>
-            <Icon name={menu ? "close" : "menu"} />
-            <span>{menu ? "Close" : "Menu"}</span>
-          </button>
-        }
-      >
+      <Ticker>
         Engine <span class={ready ? "cyan" : "yellow"}>{ready ? "ready" : error ? "offline" : "loading"}</span>
       </Ticker>
-      {menu && <SettingsMenu onClose={() => setMenu(false)} />}
       <div class="screen home">
         <section class="panel hero">
           <div class="row">
@@ -145,15 +133,17 @@ export function Home({ ready, error, initialJoin, saves, onResume, onDiscard, on
           </section>
         )}
 
-        <Cta onClick={() => go("host")} disabled={!ready}>
-          Create a game
+        <Cta onClick={onFind} disabled={!ready}>
+          Play online
         </Cta>
 
-        <button class={`home-find ${seeking ? "seeking" : ""}`} disabled={!ready} onClick={onFind}>
-          <Icon name="search" />
-          <span>{seeking ? "Searching for an opponent…" : "Find an opponent"}</span>
-          <Icon name="arrow-right" />
-        </button>
+        {seeking && (
+          <button class="home-find" disabled={!ready} onClick={onFind}>
+            <span class="home-find-dot" aria-hidden="true" />
+            <span>Searching for an opponent…</span>
+            <Icon name="arrow-right" />
+          </button>
+        )}
 
         <div class="field">
           <span class="label">Join</span>
