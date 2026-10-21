@@ -8462,3 +8462,28 @@ body:has(.tabbar.global) .screen.guide {
   -webkit-user-drag: none;
   user-select: none;
 }
+
+.faction-logo {
+  display: inline-block;
+  height: 1.35em;
+  width: 1.35em;
+  object-fit: contain;
+  vertical-align: -0.35em;
+  margin-right: 0.4em;
+}
+
+.faction-logo.logo-apex {
+  filter: drop-shadow(0 0 1px rgb(255 255 255 / 0.7));
+}
+
+.summary-faction .faction-logo {
+  height: 1.1em;
+  width: 1.1em;
+  vertical-align: -0.15em;
+}
+
+.faction-chip .faction-logo,
+.inf-list .faction-logo {
+  height: 1.5em;
+  width: 1.5em;
+}

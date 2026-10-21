@@ -8,6 +8,7 @@ import { Pager } from "../game/Pager";
 import { useSheetPager } from "../game/swipe";
 import { useBackClose } from "../back";
 import { Icon } from "../icons";
+import { FactionLogo } from "../FactionLogo";
 import { Cta, Picker, Ticker, ask, tell } from "../ui";
 import { motionOff, settings } from "../settings";
 import { DeckBrowser } from "./DeckBrowser";
@@ -246,6 +247,7 @@ export function DeckRow({ db, stored, onOpen, format, selected, disabled, issues
         <span class="deck-row-main">
           <FitText class="deck-row-name" text={deck.name} />
           <span class="deck-row-id-name">
+            <FactionLogo faction={deck.identity.faction} />
             <b>{FACTION_SHORT[deck.identity.faction ?? "Neutral"] ?? deck.identity.faction}</b> · {deck.identity.title}
           </span>
           <span class="deck-row-meta">
@@ -424,6 +426,7 @@ function IdentityPicker({ db, side, format, matchups, onPick, onClose }: { db: C
         {byFaction.map(([faction, cards]) => (
           <section class="id-group">
             <span class={`label faction-label faction-${factionKey(faction)}`}>
+              <FactionLogo faction={faction} />
               {faction} <span class="hint">{cards.length}</span>
             </span>
             <div class="id-grid">
@@ -462,7 +465,10 @@ function IdentityInfo({ card }: { card: Card }) {
         Identity{Array.isArray(card.subtypes) && card.subtypes.length ? ` · ${(card.subtypes as string[]).join(" · ")}` : ""}
       </span>
       <h2>{card.title}</h2>
-      <span class={`label faction-label faction-${factionKey(card.faction)}`}>{card.faction}</span>
+      <span class={`label faction-label faction-${factionKey(card.faction)}`}>
+        <FactionLogo faction={card.faction} />
+        {card.faction}
+      </span>
       <div class="id-facts">
         <span>
           <b>{String(card.minimumdecksize ?? "–")}</b> min cards
@@ -677,7 +683,10 @@ function DeckEditor({ db, initial, deck0, onClose, onOpen, readOnly }: { db?: Ca
             {(FACTION_SHORT[deck.identity.faction ?? "Neutral"] ?? deck.identity.faction ?? "").toUpperCase()}
           </span>
           <div class="summary-who">
-            <span class="summary-faction">{deck.identity.faction}</span>
+            <span class="summary-faction">
+              <FactionLogo faction={deck.identity.faction} />
+              {deck.identity.faction}
+            </span>
             <span class="summary-id-name">{deck.identity.title}</span>
           </div>
           <button class="summary-id" onClick={() => open(deck.identity)} aria-label={deck.identity.title}>
@@ -924,6 +933,7 @@ function CardBrowser({ db, deck, format, qtyOf, onQty, onOpen }: { db: CardDb; d
         <div class="chips scroll-chips">
           {factionList.map((f) => (
             <button class={`faction-chip faction-${factionKey(f)} ${factions.includes(f) ? "on" : ""}`} onClick={() => toggle(factions, setFactions, f)}>
+              <FactionLogo faction={f} />
               {FACTION_SHORT[f] ?? f}
             </button>
           ))}
@@ -1073,7 +1083,10 @@ function DeckStats({ deck, onOpen }: { deck: Deck; onOpen: (c: Card, list: Card[
           <ul class="inf-list">
             {influence.map(([f, n]) => (
               <li class={`faction-${factionKey(f)}`}>
-                <span>{f}</span>
+                <span>
+                  <FactionLogo faction={f} />
+                  {f}
+                </span>
                 <span class="pips">{"●".repeat(n)}</span>
                 <b>{n}</b>
               </li>

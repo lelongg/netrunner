@@ -3,6 +3,7 @@ import type { CardDb, Side } from "../engine";
 import { type Decklist, FACTIONS, fetchDecklists } from "../nrdb";
 import { type FormatKey, FORMATS, analyze } from "../deckrules";
 import { IdentityThumb } from "./IdentityThumb";
+import { FactionLogo } from "../FactionLogo";
 
 interface Props {
   side: Side;
@@ -59,7 +60,8 @@ export function DeckBrowser({ side, db, selected, onPick, format }: Props) {
           All
         </button>
         {FACTIONS[side].map(([id, label]) => (
-          <button class={faction === id ? "on" : ""} onClick={() => setFaction(id)}>
+          <button class={`faction-chip ${faction === id ? "on" : ""}`} onClick={() => setFaction(id)}>
+            <FactionLogo faction={id} />
             {label}
           </button>
         ))}
