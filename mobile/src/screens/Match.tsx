@@ -225,7 +225,7 @@ export function Match({ name, db, matchups, onMatched, onClose, onEditDecks, aut
               <span class="chip">{since(mine.at)}</span>
             </span>
             <InviteTile code={mine.code} />
-            <p class="hint">{mine.public === false ? "Only people with the code or the link can join." : "Listed in open games. Anyone with the code or the link can join too."} The game stays open for 24 hours, even if you close the app.</p>
+            <p class="hint">{mine.public === false && "Only people with the code or the link can join. "}The game stays open for 24 hours, even if you close the app.</p>
             {!notify && pushSupported() && (
               <button class="match-notify" disabled={busy} onClick={turnOnNotifications}>
                 <Icon name="sound" />
