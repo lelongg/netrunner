@@ -7,7 +7,7 @@ import { type StoredDeck, defaultDeckId, savedDecks, setDefaultDeckId } from "..
 import { FORMAT_DESC, GAME_FORMATS, type GameFormat } from "../deckrules";
 import { onSettings, setSetting, settings } from "../settings";
 import { listHistory } from "../history";
-import { CardImage } from "../game/CardImage";
+import { CardImage, CardZoom } from "../game/CardImage";
 import { DeckRow } from "./Decks";
 import { EditField } from "./SettingsMenu";
 import { type Head, headOf } from "./History";
@@ -132,6 +132,8 @@ export function Profile({ db, onClose, onOpenDeck }: { db: CardDb; onClose: () =
       .catch(() => setHeads([]));
   }, []);
   const s = useMemo(() => (heads ? stats(heads) : null), [heads]);
+  const [zoom, setZoom] = useState<{ code: string; title: string } | null>(null);
+  useBackClose(!!zoom, () => setZoom(null));
   return (
     <>
       <Ticker>
@@ -223,7 +225,17 @@ export function Profile({ db, onClose, onOpenDeck }: { db: CardDb; onClose: () =
                   <span class="label">Most played</span>
                   <ul class="profile-ids">
                     {s.identities.map((id) => (
-                      <li>
+                      <li
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => {
+                          const deck = savedDecks()
+                            .filter((d) => db.byTitle.get(d.identity)?.code === id.code)
+                            .sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))[0];
+                          if (deck) onOpenDeck(deck.id, deck.side);
+                          else setZoom(id);
+                        }}
+                      >
                         <CardImage code={id.code} alt={id.title} size="small" width="44px" />
                         <span class="profile-id-name">{id.title}</span>
                         <span class="profile-id-rate">
@@ -241,6 +253,7 @@ export function Profile({ db, onClose, onOpenDeck }: { db: CardDb; onClose: () =
           )}
         </section>
       </div>
+      {zoom && <CardZoom items={[{ code: zoom.code, alt: zoom.title }]} start={0} onClose={() => setZoom(null)} />}
     </>
   );
 }

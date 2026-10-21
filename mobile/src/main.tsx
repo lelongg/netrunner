@@ -166,6 +166,7 @@ function App() {
   openCredits = session ? undefined : () => setCredits(true);
   const [matching, setMatching] = useState(false);
   const [inviting, setInviting] = useState(false);
+  const [autoFind, setAutoFind] = useState(false);
   useEffect(() => {
     if (!inviting || !session?.lobby.opponentName) return;
     setInviting(false);
@@ -369,6 +370,8 @@ function App() {
         matchups={loaded.matchups}
         onMatched={startMatched}
         onEditDecks={(side) => setDecks({ side })}
+        autoStart={autoFind}
+        onAutoStarted={() => setAutoFind(false)}
         invite={inviting && session ? { code: session.lobby.code, status: session.lobby.status } : undefined}
         onInvite={(format, side) => {
           if (!loaded) return;
@@ -429,7 +432,10 @@ function App() {
       <Home
         onGuide={() => setGuide(true)}
         onCredits={() => setCredits(true)}
-        onFind={() => setMatching(true)}
+        onFind={() => {
+          setAutoFind(!pendingSeek());
+          setMatching(true);
+        }}
         seeking={seeking}
         onHistory={(id) => setArchive(id ?? true)}
         onDecks={(id, side) => setDecks({ id, side })}

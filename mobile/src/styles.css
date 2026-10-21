@@ -8674,3 +8674,35 @@ button.player-chip {
 .match-waiting .cta {
   align-self: stretch;
 }
+
+.match-edit {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 46px;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: var(--text);
+  border-color: var(--line-2);
+}
+
+.match-edit .icon {
+  height: 13px;
+  color: var(--cyan);
+}
+
+.match-cancel-edit {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: var(--muted);
+}
+
+.profile-ids li {
+  cursor: pointer;
+}
+
+.profile-ids li:active {
+  border-color: var(--cyan);
+}

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "preact/hooks";
+import { useEffect, useRef, useState } from "preact/hooks";
 import type { CardDb, Matchup, Side } from "../engine";
 import { type WireDeck, defaultStored, latest } from "../decks";
 import { lastDeck, setLastDeck } from "../session";
@@ -82,7 +82,7 @@ function InviteSheet({ code, status, onClose }: { code: string; status: string; 
   );
 }
 
-export function Match({ name, db, matchups, onMatched, onInvite, onClose, invite, onCancelInvite, onEditDecks }: { name: string; db: CardDb; matchups: Matchup[]; onMatched: (m: Matched) => void; onInvite: (format: GameFormat, side?: Side) => void; onClose: () => void; invite?: { code: string; status: string }; onCancelInvite?: () => void; onEditDecks?: (side: Side) => void }) {
+export function Match({ name, db, matchups, onMatched, onInvite, onClose, invite, onCancelInvite, onEditDecks, autoStart, onAutoStarted }: { name: string; db: CardDb; matchups: Matchup[]; onMatched: (m: Matched) => void; onInvite: (format: GameFormat, side?: Side) => void; onClose: () => void; invite?: { code: string; status: string }; onCancelInvite?: () => void; onEditDecks?: (side: Side) => void; autoStart?: boolean; onAutoStarted?: () => void }) {
   const [decks, setDecks] = useState<Record<Side, WireDeck | undefined>>(() => {
     const pick = (s: Side) => {
       const pinned = defaultStored(s);
@@ -154,9 +154,19 @@ export function Match({ name, db, matchups, onMatched, onInvite, onClose, invite
   const commitDecks = () => {
     for (const s of ["corp", "runner"] as Side[]) if (decks[s]) setLastDeck(s, decks[s]!);
   };
+  const [editing, setEditing] = useState(false);
+  const started = useRef(false);
+  useEffect(() => {
+    if (!autoStart || started.current || mine || invite) return;
+    started.current = true;
+    onAutoStarted?.();
+    find();
+  }, []);
   const find = () =>
     act(async () => {
       commitDecks();
+      if (mine) await cancelSeek(mine).catch(() => {});
+      setEditing(false);
       const result = await seek(name, format, side);
       if ("status" in result) onMatched(result);
       else setMine(result);
@@ -166,6 +176,14 @@ export function Match({ name, db, matchups, onMatched, onInvite, onClose, invite
     act(async () => {
       if (mine) await cancelSeek(mine);
       setMine(null);
+    });
+  const inviteNow = () =>
+    act(async () => {
+      if (mine) await cancelSeek(mine).catch(() => {});
+      setMine(null);
+      setEditing(false);
+      commitDecks();
+      onInvite(format, side === "any" ? undefined : side);
     });
   const inviteInstead = () =>
     act(async () => {
@@ -203,7 +221,7 @@ export function Match({ name, db, matchups, onMatched, onInvite, onClose, invite
           <h1>PLAY ONLINE</h1>
         </header>
 
-        {mine ? (
+        {mine && !editing ? (
           <section class="panel section match-waiting">
             <span class="match-radar" aria-hidden="true">
               <i />
@@ -224,6 +242,17 @@ export function Match({ name, db, matchups, onMatched, onInvite, onClose, invite
                 Notify me when someone joins
               </button>
             )}
+            <button
+              class="match-edit"
+              disabled={busy}
+              onClick={() => {
+                setFormat(mine.format);
+                setSide(mine.side);
+                setEditing(true);
+              }}
+            >
+              <Icon name="edit" /> Change format, side or deck
+            </button>
             <Cta onClick={inviteInstead} disabled={busy} tone="cyan">
               Invite a friend instead
             </Cta>
@@ -264,9 +293,14 @@ export function Match({ name, db, matchups, onMatched, onInvite, onClose, invite
                 </div>
               ))}
             <Cta onClick={find} disabled={busy}>
-              Find an opponent
+              {editing ? "Update the search" : "Find an opponent"}
             </Cta>
-            <Cta onClick={() => (commitDecks(), onInvite(format, side === "any" ? undefined : side))} disabled={busy} tone="cyan">
+            {editing && (
+              <button class="ghost match-cancel-edit" disabled={busy} onClick={() => setEditing(false)}>
+                Keep the current search
+              </button>
+            )}
+            <Cta onClick={inviteNow} disabled={busy} tone="cyan">
               Invite a friend
             </Cta>
           </section>
