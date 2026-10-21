@@ -1,5 +1,7 @@
 import { useMemo, useState } from "preact/hooks";
-import type { Card, CardDb, Side } from "../engine";
+import { useBackClose } from "../back";
+import { createPortal } from "preact/compat";
+import type { Card, CardDb } from "../engine";
 import { cardImage } from "../engine";
 import { Cta, Ticker } from "../ui";
 import { Icon, type IconName } from "../icons";
@@ -35,12 +37,6 @@ function featured(db: CardDb | undefined): { deck?: string; card?: Card } {
   return { card: ids[day % Math.max(1, ids.length)] };
 }
 
-function pick(db: CardDb | undefined, side: Card["side"], salt: number): Card | undefined {
-  if (!db) return undefined;
-  const pool = db.all.filter((c) => c.side === side && c.code >= "30000" && c.type !== "Identity" && c.type !== "ICE");
-  return pool[(Math.floor(Date.now() / 86_400_000) * 7 + salt) % Math.max(1, pool.length)];
-}
-
 function Art({ card, class: cls }: { card?: Card; class?: string }) {
   const src = cardImage(card?.code, "large");
   return <span class={`art ${cls ?? ""}`} style={src ? { backgroundImage: `url(${src})` } : undefined} aria-hidden="true" />;
@@ -66,21 +62,56 @@ function TabBar({ active, onDecks, onHistory, onGuide, ready }: { active: "play"
 }
 
 function Continue({ props }: { props: Props }) {
-  const { saves, ready, onResume, onHistory } = props;
+  const { saves, ready, onResume, onHistory, onDiscard } = props;
+  const [all, setAll] = useState(false);
+  useBackClose(all, () => setAll(false));
   const open = saves.filter((s) => !s.summary?.winner);
   const save = open.find((s) => describe(s).status === "Your move") ?? open[0];
   if (!save) return null;
   const { title, detail, status } = describe(save);
   return (
-    <button class={`continue ${status === "Your move" ? "hot" : ""}`} disabled={!ready} onClick={() => (save.summary?.winner ? onHistory(saveId(save)) : onResume(save))}>
-      <span class="continue-tag">{status === "Your move" ? "Your move" : "Continue"}</span>
-      <span class="continue-main">
-        <strong>{title}</strong>
-        <span>{detail}</span>
-      </span>
-      {open.length > 1 && <span class="continue-more">+{open.length - 1}</span>}
-      <Icon name="arrow-right" />
-    </button>
+    <div class={`continue ${status === "Your move" ? "hot" : ""}`}>
+      <button class="continue-go" disabled={!ready} onClick={() => onResume(save)}>
+        <span class="continue-tag">{status === "Your move" ? "Your move" : "Continue"}</span>
+        <span class="continue-main">
+          <strong>{title}</strong>
+          <span>{detail}</span>
+        </span>
+        <Icon name="arrow-right" />
+      </button>
+      {saves.length > 1 && (
+        <button class="continue-more" onClick={() => setAll(true)} aria-label="All your games">
+          +{saves.length - 1}
+        </button>
+      )}
+      {all &&
+        createPortal(
+          <div class="sheet-backdrop" onClick={() => setAll(false)}>
+            <div class="sheet panel cyan games-sheet" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Your games">
+              <div class="row">
+                <span class="label cyan">Your games</span>
+                <button class="ghost" onClick={() => setAll(false)} aria-label="Close">
+                  <Icon name="close" />
+                </button>
+              </div>
+              <GameList
+                saves={saves}
+                ready={ready}
+                onResume={(s) => {
+                  setAll(false);
+                  onResume(s);
+                }}
+                onDiscard={onDiscard}
+                onHistory={(id) => {
+                  setAll(false);
+                  onHistory(id);
+                }}
+              />
+            </div>
+          </div>,
+          document.body,
+        )}
+    </div>
   );
 }
 
@@ -151,68 +182,6 @@ export function HomeArena(props: Props) {
             </button>
           )}
         </div>
-        <TabBar active="play" ready={ready} onDecks={onDecks} onHistory={() => onHistory()} onGuide={onGuide} />
-      </div>
-    </>
-  );
-}
-
-function ModeTile({ card, title, hint, tone, onClick, disabled, badge, big }: { card?: Card; title: string; hint: string; tone: string; onClick: () => void; disabled?: boolean; badge?: string; big?: boolean }) {
-  return (
-    <button class={`mode-tile tone-${tone} ${big ? "big" : ""}`} disabled={disabled} onClick={onClick}>
-      <Art card={card} class="mode-art" />
-      <span class="mode-shade" aria-hidden="true" />
-      {badge && <span class="mode-badge">{badge}</span>}
-      <span class="mode-text">
-        <strong>{title}</strong>
-        <small>{hint}</small>
-      </span>
-    </button>
-  );
-}
-
-export function HomeModes(props: Props) {
-  const { ready, error, initialJoin, db, saves, onFind, seeking, onGuide, onCredits, onDecks, onHistory, onResume, onDiscard } = props;
-  const go = startGame(props.onStart);
-  const hero = useMemo(() => featured(db), [db]);
-  const art = useMemo(() => ({ online: pick(db, "Runner", 1), solo: pick(db, "Corp", 2), local: pick(db, "Runner", 3), decks: hero.card }), [db, hero]);
-  const side: Side = hero.card?.side === "Corp" ? "corp" : "runner";
-  return (
-    <>
-      <Ticker>
-        Engine <span class={ready ? "cyan" : "yellow"}>{ready ? "ready" : error ? "offline" : "loading"}</span>
-      </Ticker>
-      <div class="screen modes">
-        <header class="modes-top">
-          <span class="player-chip">
-            <Art card={hero.card} class="player-avatar" />
-            <span class="player-text">
-              <strong>{playerName()}</strong>
-              <small class={`who-${side}`}>{hero.card?.faction ?? "Pocket Rig"}</small>
-            </span>
-          </span>
-          <button class="arena-link" onClick={onCredits}>
-            Credits
-          </button>
-        </header>
-        {error && <p class="error">{error}</p>}
-        <Continue props={props} />
-        <ModeTile big card={art.online} title={seeking ? "Searching…" : "Play online"} hint={seeking ? "Tap to see your search" : "Matchmaking or invite a friend"} tone="yellow" badge={seeking ? "Live" : undefined} onClick={onFind} disabled={!ready} />
-        <div class="mode-row">
-          <ModeTile card={art.solo} title="Solo" hint="vs the bot" tone="cyan" onClick={() => go("local", undefined, true)} disabled={!ready} />
-          <ModeTile card={art.local} title="Local" hint="pass and play" tone="red" onClick={() => go("local")} disabled={!ready} />
-        </div>
-        <ModeTile card={art.decks} title="Your decks" hint={hero.deck ?? "Build, import, tune"} tone="green" onClick={onDecks} disabled={!ready} />
-        <section class="modes-join">
-          <span class="label">Join with a code</span>
-          <JoinCode ready={ready} initial={initialJoin} onJoin={(c) => go("guest", c)} />
-        </section>
-        {saves.length > 1 && (
-          <section class="modes-games">
-            <span class="label">All your games</span>
-            <GameList saves={saves} ready={ready} onResume={onResume} onDiscard={onDiscard} onHistory={onHistory} />
-          </section>
-        )}
         <TabBar active="play" ready={ready} onDecks={onDecks} onHistory={() => onHistory()} onGuide={onGuide} />
       </div>
     </>

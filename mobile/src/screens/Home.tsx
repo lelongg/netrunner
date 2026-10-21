@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import { type Role, type SavedGame, saveId } from "../session";
 import type { CardDb } from "../engine";
-import { Cta, Ticker, ask } from "../ui";
+import { ask } from "../ui";
 import { Icon } from "../icons";
 import { SwipeDelete } from "./SwipeDelete";
 import { motionOff, onSettings, settings } from "../settings";
-import { HomeHand, HomeJack, HomeServers, HomeTerminal } from "./HomeVariants";
-import { HomeArena, HomeModes } from "./HomeModern";
+import { HomeArena } from "./HomeModern";
 
 export interface Props {
   ready: boolean;
@@ -133,105 +132,8 @@ export function JoinCode({ ready, initial, onJoin }: { ready: boolean; initial?:
   );
 }
 
-export function homeVariant(): string {
-  try {
-    const asked = new URLSearchParams(location.search).get("home");
-    if (asked !== null) localStorage.setItem("nsg.home", asked);
-    return localStorage.getItem("nsg.home") ?? "";
-  } catch {
-    return "";
-  }
-}
-
-export function Home(props: Props) {
-  const variant = homeVariant();
-  if (variant === "terminal") return <HomeTerminal {...props} />;
-  if (variant === "servers") return <HomeServers {...props} />;
-  if (variant === "jack") return <HomeJack {...props} />;
-  if (variant === "hand") return <HomeHand {...props} />;
-  if (variant === "arena") return <HomeArena {...props} />;
-  if (variant === "modes") return <HomeModes {...props} />;
-  return <HomeClassic {...props} />;
-}
-
 export const startGame = (onStart: Props["onStart"]) => (role: Role, c?: string, vsBot?: boolean) => onStart(role, storedName().trim() || "Player", c, vsBot);
 
-function HomeClassic({ ready, error, initialJoin, saves, onResume, onDiscard, onStart, onGuide, onCredits, onFind, seeking, onHistory, onDecks }: Props) {
-  const go = startGame(onStart);
-  return (
-    <>
-      <Ticker>
-        Engine <span class={ready ? "cyan" : "yellow"}>{ready ? "ready" : error ? "offline" : "loading"}</span>
-      </Ticker>
-      <div class="screen home">
-        <section class="panel hero">
-          <div class="row">
-            <span class="label">For Netrunner</span>
-          </div>
-          <h1 class="home-title">
-            <span class="big">POCKET</span>
-            <span class="big outline">RIG</span>
-          </h1>
-        </section>
-
-        {error && <p class="error">{error}</p>}
-
-        {saves.length > 0 && (
-          <section class="panel cyan section games">
-            <span class="label cyan">Your games</span>
-            <GameList saves={saves} ready={ready} onResume={onResume} onDiscard={onDiscard} onHistory={onHistory} />
-          </section>
-        )}
-
-        <Cta onClick={onFind} disabled={!ready}>
-          Play online
-        </Cta>
-
-        {seeking && (
-          <button class="home-find" disabled={!ready} onClick={onFind}>
-            <span class="home-find-dot" aria-hidden="true" />
-            <span>Searching for an opponent…</span>
-            <Icon name="arrow-right" />
-          </button>
-        )}
-
-        <div class="field">
-          <span class="label">Join</span>
-          <JoinCode ready={ready} initial={initialJoin} onJoin={(c) => go("guest", c)} />
-        </div>
-
-        <div class="field">
-          <span class="label">Offline</span>
-          <div class="home-modes">
-            <button disabled={!ready} onClick={() => go("local", undefined, true)}>
-              Solo vs bot
-            </button>
-            <button disabled={!ready} onClick={() => go("local")}>
-              Local game
-            </button>
-          </div>
-        </div>
-
-        <nav class="home-nav">
-          {[
-            { icon: "deck" as const, title: "Decks", onClick: onDecks },
-            { icon: "history" as const, title: "History", onClick: () => onHistory() },
-            { icon: "book" as const, title: "How to play", onClick: onGuide },
-          ].map((row) => (
-            <button class="home-nav-row" disabled={!ready} onClick={row.onClick}>
-              <Icon name={row.icon} />
-              <span class="home-nav-title">{row.title}</span>
-              <Icon name="arrow-right" />
-            </button>
-          ))}
-        </nav>
-
-        <div class="footer">
-          <button class="footer-link" onClick={onCredits}>
-            Credits
-          </button>
-        </div>
-      </div>
-    </>
-  );
+export function Home(props: Props) {
+  return <HomeArena {...props} />;
 }
