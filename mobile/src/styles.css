@@ -6350,7 +6350,18 @@ button.armed {
 
 .deck-row-issues {
   margin: 0;
+  padding: 8px 10px;
   border-top: none;
+}
+
+.deck-row-issues .seat-issues-head {
+  font-size: 9px;
+}
+
+.deck-row-issues ul {
+  margin-top: 5px;
+  font-size: 10.5px;
+  line-height: 1.4;
 }
 
 .picker-btn {
