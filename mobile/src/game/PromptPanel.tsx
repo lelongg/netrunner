@@ -255,7 +255,7 @@ export function PromptPanel({ view, side, prompt, render, send, closePrompt, dis
     const min: number = prompt["select-all"] ? max : (prompt["select-min"] ?? 0);
     const ready = staging.count >= min && staging.count <= max;
     const verb = /^discard/i.test(msg) ? "Discard" : /^trash/i.test(msg) ? "Trash" : "Confirm";
-    const what = staging.count === 0 ? "nothing" : staging.names.length === 1 ? staging.names[0] : `${staging.count} cards`;
+    const what = staging.names.length === 1 ? staging.names[0] : `${staging.count} cards`;
     const extra = (Array.isArray(choices) ? choices : []).filter((c: any) => c.value !== "Hide" && c.value !== "Done");
     const canDone = staging.count > 0 || (Array.isArray(choices) && choices.some((c: any) => c.value === "Done"));
     body = (
@@ -277,7 +277,11 @@ export function PromptPanel({ view, side, prompt, render, send, closePrompt, dis
               {glyphs(iconize(choiceLabel(c.value, render)))}
             </button>
           ))}
-          {(canDone || !ready) && (
+          {staging.count === 0 && canDone ? (
+            <button class="wide select-go" disabled={disabled} onClick={staging.onConfirm}>
+              Skip
+            </button>
+          ) : (
             <button class="primary wide select-go" disabled={disabled || !ready} onClick={staging.onConfirm}>
               {ready ? `${verb} ${what}` : `Pick ${min - staging.count} more`}
             </button>
