@@ -167,6 +167,15 @@ export function Match({ name, db, matchups, onMatched, onInvite, onClose, invite
       if (mine) await cancelSeek(mine);
       setMine(null);
     });
+  const inviteInstead = () =>
+    act(async () => {
+      const was = mine;
+      if (!was) return;
+      await cancelSeek(was).catch(() => {});
+      setMine(null);
+      commitDecks();
+      onInvite(was.format, was.side === "any" ? undefined : was.side);
+    });
   const turnOnNotifications = () =>
     act(async () => {
       const problem = await enablePush("match");
@@ -215,6 +224,9 @@ export function Match({ name, db, matchups, onMatched, onInvite, onClose, invite
                 Notify me when someone joins
               </button>
             )}
+            <Cta onClick={inviteInstead} disabled={busy} tone="cyan">
+              Invite a friend instead
+            </Cta>
             <button class="match-stop" disabled={busy} onClick={stopSeeking}>
               <Icon name="close" />
               Stop searching

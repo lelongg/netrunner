@@ -8670,3 +8670,7 @@ button.player-chip {
 .profile-change .icon {
   height: 12px;
 }
+
+.match-waiting .cta {
+  align-self: stretch;
+}
