@@ -82,6 +82,14 @@ export async function seek(name: string, format: GameFormat, side: SeekSide, opt
   return mine;
 }
 
+export async function updateSeek(seek: Seek, format: GameFormat, side: SeekSide, options: GameOptions): Promise<Matched | Seek> {
+  const res = await call(`/match/${seek.id}/update`, { secret: seek.secret, format, side, ...options });
+  if (res.status === "matched") return seated(res);
+  const mine: Seek = { ...seek, format, side, code: res.code ?? seek.code, ...options };
+  remember(mine);
+  return mine;
+}
+
 export async function checkSeek(seek: Seek): Promise<Matched | "waiting" | "expired"> {
   const res = await call(`/match/${seek.id}?secret=${seek.secret}`);
   if (res.status === "matched") return seated(res);

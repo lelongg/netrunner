@@ -58,4 +58,9 @@ const open = await new Promise((done) => {
   ws.onerror = () => done(false);
 });
 assert(open, "spectators are welcome by default");
+const mov = await post("/match", { name: "Max", format: "core", side: "runner", public: false });
+const moved = await post(`/match/${mov.id}/update`, { secret: mov.secret, format: "startup", side: "corp", public: true, spectators: false });
+assert(moved.status === "waiting" && moved.id === mov.id && moved.code === mov.code, "changing the settings keeps the same game and code");
+assert((await get("/match/open")).open.some((o) => o.id === mov.id && o.format === "startup" && o.side === "corp"), "the updated game is listed with its new settings");
+await post(`/match/${mov.id}/cancel`, { secret: mov.secret });
 console.log("matchmaking checks passed");

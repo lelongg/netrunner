@@ -12,7 +12,7 @@ import { useBackClose } from "../back";
 import { settings } from "../settings";
 import { enablePush, notifying, pushSupported } from "../net/push";
 import { FORMAT_DESC, GAME_FORMATS, type GameFormat, dealtFormat, deckFormat } from "../deckrules";
-import { type Matched, type OpenSeek, type Seek, type SeekSide, acceptSeek, cancelSeek, checkSeek, openSeeks, pendingSeek, seek } from "../net/match";
+import { type Matched, type OpenSeek, type Seek, type SeekSide, acceptSeek, cancelSeek, checkSeek, openSeeks, pendingSeek, seek, updateSeek } from "../net/match";
 
 const SIDES: { key: SeekSide; label: string }[] = [
   { key: "corp", label: "Corp" },
@@ -167,9 +167,8 @@ export function Match({ name, db, matchups, onMatched, onClose, onEditDecks, aut
   const find = () =>
     act(async () => {
       commitDecks();
-      if (mine) await cancelSeek(mine).catch(() => {});
+      const result = mine ? await updateSeek(mine, format, side, options()) : await seek(name, format, side, options());
       setEditing(false);
-      const result = await seek(name, format, side, options());
       if ("status" in result) onMatched(result);
       else setMine(result);
     });
@@ -312,41 +311,43 @@ export function Match({ name, db, matchups, onMatched, onClose, onEditDecks, aut
         {error && <p class="error">{error}</p>}
         {choosing && <DeckSheet side={choosing} db={db} matchups={matchups} value={decks[choosing]} format={format} onPick={(d) => choose(choosing, d)} onEditDecks={onEditDecks && (() => onEditDecks(choosing))} onClose={() => setChoosing(null)} />}
 
-        <section class="match-open">
-          <div class="match-open-head">
-            <span class="label">
-              <i class="live-dot" aria-hidden="true" />
-              Open games
-            </span>
-            <span class="label">{open?.length ?? "…"}</span>
-          </div>
-          {open && open.length === 0 && (
-            <div class="match-empty">
-              <Icon name="search" />
-              <p>Nobody is waiting right now. Create a game open to anyone and other players will see it here.</p>
+        {mine && !editing && (
+          <section class="match-open">
+            <div class="match-open-head">
+              <span class="label">
+                <i class="live-dot" aria-hidden="true" />
+                Open games
+              </span>
+              <span class="label">{open?.length ?? "…"}</span>
             </div>
-          )}
-          <ul class="match-list">
-            {(open ?? []).map((o) => (
-              <li>
-                <button class={`match-row you-${yours(o.side)}`} disabled={busy} onClick={() => take(o)}>
-                  <span class="match-who">
-                    <strong>{o.name}</strong>
-                    <span class="match-chips">
-                      <span class="chip">{formatLabel(o.format)}</span>
-                      <span class={`chip side-${yours(o.side)}`}>{yours(o.side) === "any" ? "Either side" : `You play ${sideLabel(yours(o.side))}`}</span>
+            {open && open.length === 0 && (
+              <div class="match-empty">
+                <Icon name="search" />
+                <p>Nobody is waiting right now. Create a game open to anyone and other players will see it here.</p>
+              </div>
+            )}
+            <ul class="match-list">
+              {(open ?? []).map((o) => (
+                <li>
+                  <button class={`match-row you-${yours(o.side)}`} disabled={busy} onClick={() => take(o)}>
+                    <span class="match-who">
+                      <strong>{o.name}</strong>
+                      <span class="match-chips">
+                        <span class="chip">{formatLabel(o.format)}</span>
+                        <span class={`chip side-${yours(o.side)}`}>{yours(o.side) === "any" ? "Either side" : `You play ${sideLabel(yours(o.side))}`}</span>
+                      </span>
+                      <small>{ago(o.created)}</small>
                     </span>
-                    <small>{ago(o.created)}</small>
-                  </span>
-                  <span class="match-play">
-                    Play
-                    <Icon name="arrow-right" />
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
+                    <span class="match-play">
+                      Play
+                      <Icon name="arrow-right" />
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
       </div>
     </>
   );

@@ -156,7 +156,7 @@ export default {
       if (await limited(env.JOIN_LIMIT, request)) return json({ error: "Too many requests, try again in a minute" }, 429, origin);
       return json({ open: await matchmaker(env).open() }, 200, origin);
     }
-    const seek = url.pathname.match(/^\/match(?:\/([0-9a-f]{16})(?:\/(cancel|accept))?)?$/);
+    const seek = url.pathname.match(/^\/match(?:\/([0-9a-f]{16})(?:\/(cancel|accept|update))?)?$/);
     if (seek) {
       const [, id, action] = seek;
       if (request.method === "GET" && id && !action) {
@@ -174,10 +174,15 @@ export default {
       if (id && !action) return json({ error: "Not found" }, 404, origin);
       const format = String(body.format ?? "");
       const side = String(body.side ?? "");
-      if (!id && (!MATCH_FORMATS.has(format) || !MATCH_SIDES.has(side))) return json({ error: "Expected a known format and side=corp|runner|any" }, 400, origin);
-      if (await limited(env.MATCH_LIMIT, request)) return json({ error: "Too many searches, try again in a minute" }, 429, origin);
+      if ((!id || action === "update") && (!MATCH_FORMATS.has(format) || !MATCH_SIDES.has(side))) return json({ error: "Expected a known format and side=corp|runner|any" }, 400, origin);
+      if (action !== "update" && (await limited(env.MATCH_LIMIT, request))) return json({ error: "Too many searches, try again in a minute" }, 429, origin);
       const sub = body.sub && validSub(body.sub, env.PUSH_ALLOW_LOOPBACK === "1") ? (body.sub as PushSub) : null;
       const who = { name: cleanName(body.name), sub };
+      if (action === "update") {
+        if (await limited(env.JOIN_LIMIT, request)) return json({ error: "Too many requests, try again in a minute" }, 429, origin);
+        const result = await matchmaker(env).update(id, String(body.secret ?? ""), { format, side: side as MatchSide, pub: body.public !== false, spectators: body.spectators !== false });
+        return json(result, "error" in result ? 409 : 200, origin);
+      }
       if (action === "accept") {
         const result = await matchmaker(env).accept(id, who);
         return json(result, "error" in result ? 409 : 200, origin);
@@ -545,6 +550,23 @@ export class Matchmaker extends DurableObject<Env> {
     );
     await this.ctx.storage.setAlarm(Date.now() + MATCH_HOURS * 3600 * 1000);
     return { status: "waiting", id, secret, code: invite };
+  }
+
+  async update(id: string, secret: string, opts: { format: string; side: MatchSide; pub: boolean; spectators: boolean }): Promise<Matched | { status: "waiting"; id: string; secret: string; code: string } | { error: string }> {
+    const row = this.sql.exec<Record<string, any>>("SELECT * FROM seeks WHERE id = ? AND secret = ? AND code IS NULL", id, secret).toArray()[0];
+    if (!row) return { error: "This game is no longer waiting." };
+    if (opts.pub) {
+      const rows = this.sql.exec<Record<string, any>>("SELECT * FROM seeks WHERE code IS NULL AND pub = 1 AND format = ? AND id != ? ORDER BY created", opts.format, id).toArray();
+      const other = rows.find((r) => r.side === "any" || opts.side === "any" || r.side !== opts.side);
+      const who = { name: row.name, sub: row.sub ? JSON.parse(row.sub) : null };
+      const paired = other && (await this.pair(other, who, opts.side));
+      if (paired) {
+        this.sql.exec("DELETE FROM seeks WHERE id = ? AND code IS NULL", id);
+        return paired;
+      }
+    }
+    this.sql.exec("UPDATE seeks SET format = ?, side = ?, pub = ?, spectators = ? WHERE id = ? AND code IS NULL", opts.format, opts.side, opts.pub ? 1 : 0, opts.spectators ? 1 : 0, id);
+    return { status: "waiting", id, secret, code: row.invite };
   }
 
   async claim(invite: string, who: Seeker): Promise<Matched | null> {
