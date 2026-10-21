@@ -231,10 +231,23 @@ export function SettingsSections() {
   );
 }
 
-export function SettingsMenu({ onClose }: { onClose: () => void }) {
+export function SettingsMenu({ onClose, onCredits }: { onClose: () => void; onCredits?: () => void }) {
   return (
     <MenuDrawer title="Settings" onClose={onClose}>
       <SettingsSections />
+      {onCredits && (
+        <MenuSection title="About">
+          <MenuItem
+            icon="book"
+            label="Credits"
+            hint="Sound, music and card data"
+            onClick={() => {
+              onClose();
+              onCredits();
+            }}
+          />
+        </MenuSection>
+      )}
     </MenuDrawer>
   );
 }

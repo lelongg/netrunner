@@ -1,4 +1,8 @@
-import { useMemo, useState } from "preact/hooks";
+import { useEffect, useMemo, useState } from "preact/hooks";
+import { openSeeks } from "../net/match";
+import { fetchDecklists } from "../nrdb";
+import { listHistory } from "../history";
+import { relayUrl } from "../net/relay";
 import { useBackClose } from "../back";
 import { createPortal } from "preact/compat";
 import type { Card, CardDb } from "../engine";
@@ -37,9 +41,10 @@ function featured(db: CardDb | undefined): { deck?: string; card?: Card } {
   return { card: ids[day % Math.max(1, ids.length)] };
 }
 
-function Art({ card, class: cls }: { card?: Card; class?: string }) {
-  const src = cardImage(card?.code, "large");
-  return <span class={`art ${cls ?? ""}`} style={src ? { backgroundImage: `url(${src})` } : undefined} aria-hidden="true" />;
+function Art({ card, class: cls, sharp }: { card?: Card; class?: string; sharp?: boolean }) {
+  const large = cardImage(card?.code, "large");
+  const style = large ? { backgroundImage: sharp ? `url(${cardImage(card!.code, "xlarge")}), url(${large})` : `url(${large})` } : undefined;
+  return <span class={`art ${cls ?? ""}`} style={style} aria-hidden="true" />;
 }
 
 function TabBar({ active, onDecks, onHistory, onGuide, ready }: { active: "play"; onDecks: () => void; onHistory: () => void; onGuide: () => void; ready: boolean }) {
@@ -115,22 +120,81 @@ function Continue({ props }: { props: Props }) {
   );
 }
 
+const TIPS = [
+  "Hold a card to see it full size",
+  "Hold the ticker to peek at the game log",
+  "Tap an icon for what it means",
+  "Swipe a game in your list to delete it",
+  "Share a game code to play with a friend",
+];
+
+function useFeed(props: Props, hero: { deck?: string; card?: Card }) {
+  const { ready, error, saves, seeking, db } = props;
+  const [open, setOpen] = useState<number | null>(null);
+  const [lists, setLists] = useState<string[]>([]);
+  const [last, setLast] = useState<string | null>(null);
+  useEffect(() => {
+    if (!relayUrl()) return;
+    const poll = () => openSeeks().then((o) => setOpen(o.length), () => {});
+    poll();
+    const timer = setInterval(poll, 30_000);
+    return () => clearInterval(timer);
+  }, []);
+  useEffect(() => {
+    if (!db) return;
+    fetchDecklists(db, Math.random() < 0.5 ? "corp" : "runner", null, 1, "standard")
+      .then((r) => setLists(r.items.filter((l) => l.deck).slice(0, 2).map((l) => `New on NetrunnerDB: ${l.name} by ${l.user}`)))
+      .catch(() => {});
+  }, [db]);
+  useEffect(() => {
+    listHistory()
+      .then((games) => {
+        const g = games.sort((a, b) => b.endedAt - a.endedAt)[0];
+        const sum = g?.save.summary;
+        if (!sum?.winner) return;
+        const who = sum.opponent ?? (g.save.v === 1 && g.save.vsBot ? "the bot" : "your opponent");
+        setLast(`Last game: ${sum.winner === sum.side ? "won" : "lost"} vs ${who}${sum.points ? ` ${sum.points[0]}–${sum.points[1]}` : ""}`);
+      })
+      .catch(() => {});
+  }, []);
+  const items: { text: string; tone?: string }[] = [];
+  if (!ready) items.push({ text: error ? "Engine offline" : "Engine loading", tone: "yellow" });
+  const mine = saves.filter((s) => !s.summary?.winner && describe(s).status === "Your move").length;
+  if (mine) items.push({ text: `Your move in ${mine} game${mine > 1 ? "s" : ""}`, tone: "yellow" });
+  if (seeking) items.push({ text: "Searching for an opponent", tone: "cyan" });
+  if (open) items.push({ text: `${open} player${open > 1 ? "s" : ""} waiting for a game online`, tone: "cyan" });
+  if (open === 0 && !seeking) items.push({ text: "Nobody is searching right now · be the first" });
+  if (last) items.push({ text: last });
+  for (const l of lists) items.push({ text: l });
+  if (hero.card && !hero.deck) items.push({ text: `Identity of the day: ${hero.card.title}`, tone: "red" });
+  const day = Math.floor(Date.now() / 86_400_000);
+  items.push({ text: `Tip: ${TIPS[day % TIPS.length]}` });
+  return items;
+}
+
 export function HomeArena(props: Props) {
-  const { ready, error, initialJoin, db, onFind, seeking, onCredits, onDecks, onHistory, onGuide } = props;
+  const { ready, error, initialJoin, db, onFind, seeking, onDecks, onHistory, onGuide } = props;
   const go = startGame(props.onStart);
   const [mode, setMode] = useState<Mode>("online");
   const [joining, setJoining] = useState(!!initialJoin);
+  useBackClose(joining, () => setJoining(false));
   const hero = useMemo(() => featured(db), [db]);
+  const feed = useFeed(props, hero);
   const play = () => (mode === "online" ? onFind() : go("local", undefined, mode === "solo"));
   const searching = mode === "online" && seeking;
   const label = searching ? "Searching…" : mode === "online" ? "Play online" : mode === "solo" ? "Play vs bot" : "Play local";
   return (
     <>
-      <Ticker>
-        Engine <span class={ready ? "cyan" : "yellow"}>{ready ? "ready" : error ? "offline" : "loading"}</span>
+      <Ticker feedKey={feed.length}>
+        {feed.map((f, i) => (
+          <>
+            {i > 0 && <span class="feed-sep"> // </span>}
+            <span class={f.tone ?? ""}>{f.text}</span>
+          </>
+        ))}
       </Ticker>
       <div class={`screen arena faction-${factionKey(hero.card?.faction)}`}>
-        <Art card={hero.card} class="arena-bg" />
+        <Art card={hero.card} class="arena-bg" sharp />
         <div class="arena-shade" aria-hidden="true" />
         <header class="arena-top">
           <span class="player-chip">
@@ -140,16 +204,23 @@ export function HomeArena(props: Props) {
               <strong>{playerName()}</strong>
             </span>
           </span>
-          <button class="arena-link" onClick={onCredits}>
-            Credits
-          </button>
         </header>
         {error && <p class="error">{error}</p>}
         <Continue props={props} />
         <button class="deck-showcase" disabled={!ready} onClick={onDecks}>
           <span class="deck-frame">
             <span class="deck-card">
-              {hero.card && <img src={cardImage(hero.card.code, "large")} alt={hero.card.title} />}
+              {hero.card && (
+                <img
+                  src={cardImage(hero.card.code, "xlarge")}
+                  alt={hero.card.title}
+                  onError={(e) => {
+                    const img = e.currentTarget as HTMLImageElement;
+                    const fallback = cardImage(hero.card!.code, "large")!;
+                    if (!img.src.endsWith(fallback)) img.src = fallback;
+                  }}
+                />
+              )}
               <i class="deck-card-shine" />
             </span>
           </span>
@@ -174,14 +245,26 @@ export function HomeArena(props: Props) {
               {label}
             </Cta>
           </div>
-          {joining ? (
-            <JoinCode ready={ready} initial={initialJoin} onJoin={(c) => go("guest", c)} />
-          ) : (
-            <button class="arena-link center" onClick={() => setJoining(true)}>
-              Have a game code?
-            </button>
-          )}
+          <button class="arena-link center" onClick={() => setJoining(true)}>
+            Have a game code?
+          </button>
         </div>
+        {joining &&
+          createPortal(
+            <div class="sheet-backdrop" onClick={() => setJoining(false)}>
+              <div class="sheet panel join-sheet" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Join a game">
+                <div class="row">
+                  <span class="label">Join a game</span>
+                  <button class="ghost" onClick={() => setJoining(false)} aria-label="Close">
+                    <Icon name="close" />
+                  </button>
+                </div>
+                <p class="hint">Enter the five-character code your friend shared.</p>
+                <JoinCode ready={ready} initial={initialJoin} onJoin={(c) => go("guest", c)} />
+              </div>
+            </div>,
+            document.body,
+          )}
         <TabBar active="play" ready={ready} onDecks={onDecks} onHistory={() => onHistory()} onGuide={onGuide} />
       </div>
     </>

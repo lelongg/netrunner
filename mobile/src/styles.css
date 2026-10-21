@@ -7571,7 +7571,8 @@ h1.deck-name.long {
 
 .screen.arena {
   position: relative;
-  min-height: calc(100dvh - 23px - env(safe-area-inset-top));
+  height: calc(100dvh - 23px - env(safe-area-inset-top));
+  min-height: 0;
   padding-bottom: calc(78px + env(safe-area-inset-bottom));
   gap: 14px;
   overflow: hidden;
@@ -7604,7 +7605,7 @@ h1.deck-name.long {
     linear-gradient(180deg, rgb(5 6 8 / 0.7), transparent 22%, transparent 50%, var(--bg) 80%);
 }
 
-.arena > :not(.arena-bg):not(.arena-shade) {
+.arena > :not(.arena-bg):not(.arena-shade):not(.tabbar) {
   position: relative;
   z-index: 1;
 }
@@ -7807,7 +7808,7 @@ h1.deck-name.long {
 .deck-card {
   position: relative;
   display: block;
-  width: min(44vw, 28vh, 200px);
+  width: min(44vw, 24vh, 200px);
   aspect-ratio: 300 / 419;
   overflow: hidden;
   clip-path: polygon(0 0, 88% 0, 100% 8%, 100% 100%, 12% 100%, 0 92%);
@@ -7981,4 +7982,8 @@ h1.deck-name.long {
   height: 2px;
   background: var(--cyan);
   box-shadow: 0 0 10px var(--cyan);
+}
+
+.ticker .feed-sep {
+  color: var(--muted);
 }

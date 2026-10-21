@@ -158,6 +158,7 @@ function App() {
   }, [autoPass, corpView?.log?.length, corpView?.run?.phase, corpView?.run?.position]);
 
   const [credits, setCredits] = useState(false);
+  openCredits = session ? undefined : () => setCredits(true);
   const [matching, setMatching] = useState(false);
   const [seeking, setSeeking] = useState(() => !!pendingSeek());
   const [guide, setGuide] = useState(() => !joinParam && !gameParam && !watchParam && !replayParam && tutorialState() === null);
@@ -512,10 +513,12 @@ function Opening({ label, ready }: { label: string; ready: boolean }) {
 
 const currentBundle = (document.querySelector('script[type="module"][src*="assets/"]') as HTMLScriptElement | null)?.src.split("/").pop();
 
+let openCredits: (() => void) | undefined;
+
 function SettingsHost() {
   const open = useSettingsOpen();
   useBackClose(open, () => setSettingsOpen(false));
-  return open ? <SettingsMenu onClose={() => setSettingsOpen(false)} /> : null;
+  return open ? <SettingsMenu onClose={() => setSettingsOpen(false)} onCredits={openCredits} /> : null;
 }
 
 function UpdateBanner() {
