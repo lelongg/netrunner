@@ -4,8 +4,9 @@ import { Cta, Ticker, ask } from "../ui";
 import { Icon } from "../icons";
 import { SwipeDelete } from "./SwipeDelete";
 import { motionOff, onSettings, settings } from "../settings";
+import { HomeHand, HomeJack, HomeServers, HomeTerminal } from "./HomeVariants";
 
-interface Props {
+export interface Props {
   ready: boolean;
   error?: string;
   initialJoin?: string;
@@ -21,7 +22,7 @@ interface Props {
   onDecks: () => void;
 }
 
-function describe(save: SavedGame) {
+export function describe(save: SavedGame) {
   const sum = save.summary;
   const local = save.v === 1;
   const title = local ? (save.vsBot ? `Solo vs bot` : "Local game") : `vs ${sum?.opponent ?? "…"}`;
@@ -34,7 +35,7 @@ function describe(save: SavedGame) {
   return { title, detail: bits.join(" · "), status };
 }
 
-function ago(ms: number) {
+export function ago(ms: number) {
   const min = Math.round((Date.now() - ms) / 60000);
   if (min < 1) return "now";
   if (min < 60) return `${min} min`;
@@ -71,15 +72,87 @@ function storedName() {
   }
 }
 
-export function Home({ ready, error, initialJoin, saves, onResume, onDiscard, onStart, onGuide, onCredits, onFind, seeking, onHistory, onDecks }: Props) {
-  const [code, setCode] = useState(initialJoin ?? "");
+export function GameList({ saves, ready, onResume, onDiscard, onHistory }: Pick<Props, "saves" | "ready" | "onResume" | "onDiscard" | "onHistory">) {
+  return (
+    <ul class="game-list">
+      {saves.map((save) => {
+        const { title, detail, status } = describe(save);
+        return (
+          <li key={saveId(save)}>
+            <SwipeDelete
+              label="Delete"
+              confirm={async () => {
+                if (!(await ask({ title: "Delete this game?", body: `"${title}" is removed from this device and you will not be able to come back to it.`, ok: "Delete", danger: true }))) return false;
+                onDiscard(save);
+                return true;
+              }}
+            >
+              <button class="game-row" disabled={!ready} onClick={() => (save.summary?.winner ? onHistory(saveId(save)) : onResume(save))}>
+                <span class="game-main">
+                  <span class="game-title">{title}</span>
+                  <span class="game-detail">{detail}</span>
+                </span>
+                <span class="game-meta">
+                  {status && <span class={status === "Your move" ? "yellow" : status === "Won" ? "cyan" : "red"}>{status}</span>}
+                  <span>{save.v === 2 ? save.code : ago(save.savedAt)}</span>
+                </span>
+                <Icon name="arrow-right" />
+              </button>
+            </SwipeDelete>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+export function JoinCode({ ready, initial, onJoin }: { ready: boolean; initial?: string; onJoin: (code: string) => void }) {
+  const [code, setCode] = useState(initial ?? "");
   const codeRest = useRef<HTMLSpanElement>(null);
   const [animations, setAnimations] = useState(settings.animations);
   useEffect(() => onSettings(() => setAnimations(settings.animations)), []);
   useScramble(codeRest, Math.max(0, 5 - code.length), animations);
-  const go = (role: Role, c?: string, vsBot?: boolean) => {
-    onStart(role, storedName().trim() || "Player", c, vsBot);
-  };
+  return (
+    <div class="join-row">
+      <label class="prompt-input">
+        <span class="code-field">
+          <input aria-label="Game code" value={code} maxLength={5} spellcheck={false} autocapitalize="characters" onInput={(e) => setCode((e.target as HTMLInputElement).value.toUpperCase())} />
+          <span class="code-ghost" aria-hidden="true">
+            <span class="code-typed">{code}</span>
+            <span ref={codeRest} />
+          </span>
+        </span>
+      </label>
+      <button aria-label="Join game" disabled={!ready || code.trim().length < 5} onClick={() => onJoin(code.trim())}>
+        <Icon name="arrow-right" />
+      </button>
+    </div>
+  );
+}
+
+export function homeVariant(): string {
+  try {
+    const asked = new URLSearchParams(location.search).get("home");
+    if (asked !== null) localStorage.setItem("nsg.home", asked);
+    return localStorage.getItem("nsg.home") ?? "";
+  } catch {
+    return "";
+  }
+}
+
+export function Home(props: Props) {
+  const variant = homeVariant();
+  if (variant === "terminal") return <HomeTerminal {...props} />;
+  if (variant === "servers") return <HomeServers {...props} />;
+  if (variant === "jack") return <HomeJack {...props} />;
+  if (variant === "hand") return <HomeHand {...props} />;
+  return <HomeClassic {...props} />;
+}
+
+export const startGame = (onStart: Props["onStart"]) => (role: Role, c?: string, vsBot?: boolean) => onStart(role, storedName().trim() || "Player", c, vsBot);
+
+function HomeClassic({ ready, error, initialJoin, saves, onResume, onDiscard, onStart, onGuide, onCredits, onFind, seeking, onHistory, onDecks }: Props) {
+  const go = startGame(onStart);
   return (
     <>
       <Ticker>
@@ -101,35 +174,7 @@ export function Home({ ready, error, initialJoin, saves, onResume, onDiscard, on
         {saves.length > 0 && (
           <section class="panel cyan section games">
             <span class="label cyan">Your games</span>
-            <ul class="game-list">
-              {saves.map((save) => {
-                const { title, detail, status } = describe(save);
-                return (
-                  <li key={saveId(save)}>
-                    <SwipeDelete
-                      label="Delete"
-                      confirm={async () => {
-                        if (!(await ask({ title: "Delete this game?", body: `"${title}" is removed from this device and you will not be able to come back to it.`, ok: "Delete", danger: true }))) return false;
-                        onDiscard(save);
-                        return true;
-                      }}
-                    >
-                      <button class="game-row" disabled={!ready} onClick={() => (save.summary?.winner ? onHistory(saveId(save)) : onResume(save))}>
-                        <span class="game-main">
-                          <span class="game-title">{title}</span>
-                          <span class="game-detail">{detail}</span>
-                        </span>
-                        <span class="game-meta">
-                          {status && <span class={status === "Your move" ? "yellow" : status === "Won" ? "cyan" : "red"}>{status}</span>}
-                          <span>{save.v === 2 ? save.code : ago(save.savedAt)}</span>
-                        </span>
-                        <Icon name="arrow-right" />
-                      </button>
-                    </SwipeDelete>
-                  </li>
-                );
-              })}
-            </ul>
+            <GameList saves={saves} ready={ready} onResume={onResume} onDiscard={onDiscard} onHistory={onHistory} />
           </section>
         )}
 
@@ -147,20 +192,7 @@ export function Home({ ready, error, initialJoin, saves, onResume, onDiscard, on
 
         <div class="field">
           <span class="label">Join</span>
-          <div class="join-row">
-            <label class="prompt-input">
-              <span class="code-field">
-                <input aria-label="Game code" value={code} maxLength={5} spellcheck={false} autocapitalize="characters" onInput={(e) => setCode((e.target as HTMLInputElement).value.toUpperCase())} />
-                <span class="code-ghost" aria-hidden="true">
-                  <span class="code-typed">{code}</span>
-                  <span ref={codeRest} />
-                </span>
-              </span>
-            </label>
-            <button aria-label="Join game" disabled={!ready || code.trim().length < 5} onClick={() => go("guest", code.trim())}>
-              <Icon name="arrow-right" />
-            </button>
-          </div>
+          <JoinCode ready={ready} initial={initialJoin} onJoin={(c) => go("guest", c)} />
         </div>
 
         <div class="field">
