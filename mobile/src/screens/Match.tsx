@@ -174,7 +174,6 @@ export function Match({ name, onMatched, onInvite, onClose }: { name: string; on
               <Icon name="share" />
               <span>
                 <strong>Invite a friend</strong>
-                <small>Private game · share a code or a QR code</small>
               </span>
               <Icon name="arrow-right" />
             </button>

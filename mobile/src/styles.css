@@ -6884,7 +6884,6 @@ h1.deck-name.long {
   font-size: 12px;
 }
 
-.match-invite small,
 .match-who small {
   color: var(--muted);
   font-size: 11px;
