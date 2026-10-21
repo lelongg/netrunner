@@ -10,6 +10,8 @@ import { installMotion, useLoop } from "./fx/ui";
 import { unlockSound } from "./sound";
 import { dive } from "./fx/dive";
 import { Credits } from "./screens/Credits";
+import { Match } from "./screens/Match";
+import { type Matched, checkSeek, pendingSeek } from "./net/match";
 import { initMusic, setMood } from "./music";
 import { installUiSounds, uiSound } from "./uisound";
 import { startEngineWorker } from "./game/workerHost";
@@ -88,6 +90,14 @@ function canAct(view: any, side: Side) {
 const OPENING_DELAY_MS = 300;
 const OPENING_MIN_MS = 1400;
 
+function playerName() {
+  try {
+    return localStorage.getItem("nsg.name")?.trim() || "Player";
+  } catch {
+    return "Player";
+  }
+}
+
 function App() {
   const [loaded, setLoaded] = useState<{ engine: EngineApi; db: CardDb; matchups: Matchup[] }>();
   const [error, setError] = useState<string>();
@@ -123,6 +133,8 @@ function App() {
   }, [autoPass, corpView?.log?.length, corpView?.run?.phase, corpView?.run?.position]);
 
   const [credits, setCredits] = useState(false);
+  const [matching, setMatching] = useState(false);
+  const [seeking, setSeeking] = useState(() => !!pendingSeek());
   const [guide, setGuide] = useState(() => !joinParam && !gameParam && !watchParam && !replayParam && tutorialState() === null);
   const firstRun = guide && tutorialState() === null;
   const [archive, setArchive] = useState<string | boolean>(false);
@@ -154,6 +166,31 @@ function App() {
     setOpeningState(label);
   };
   const afterPaint = (fn: () => void) => requestAnimationFrame(() => setTimeout(fn, 0));
+
+  const startMatched = (m: Matched) => {
+    if (!loaded) return;
+    setMatching(false);
+    setSeeking(false);
+    setOpening(m.code);
+    afterPaint(() => {
+      const next = new Session(loaded.engine, loaded.db, m.seat === 0 ? "host" : "guest", m.code, playerName(), m.side);
+      if (m.seat === 0) next.configureMatch(m.format, m.side);
+      setSession(next);
+      setOpening(null);
+    });
+  };
+  useEffect(() => {
+    if (!loaded || session) return;
+    const check = () => {
+      const mine = pendingSeek();
+      setSeeking(!!mine);
+      if (mine) checkSeek(mine).then((r) => typeof r === "object" && startMatched(r), () => {});
+    };
+    check();
+    const onVisible = () => document.visibilityState === "visible" && check();
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [loaded, !!session]);
 
   const resume = (from: SavedGame) => {
     if (!loaded) return;
@@ -253,6 +290,17 @@ function App() {
     );
 
   if (credits && !session) return <Credits onClose={() => setCredits(false)} />;
+  if (matching && loaded && !session)
+    return (
+      <Match
+        name={playerName()}
+        onMatched={startMatched}
+        onClose={() => {
+          setMatching(false);
+          setSeeking(!!pendingSeek());
+        }}
+      />
+    );
   if (guide && loaded && !session)
     return (
       <Guide
@@ -288,6 +336,8 @@ function App() {
       <Home
         onGuide={() => setGuide(true)}
         onCredits={() => setCredits(true)}
+        onFind={() => setMatching(true)}
+        seeking={seeking}
         onHistory={(id) => setArchive(id ?? true)}
         onDecks={() => setDecks(true)}
         ready={!!loaded}

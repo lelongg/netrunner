@@ -17,6 +17,8 @@ interface Props {
   onStart: (role: Role, name: string, code?: string, vsBot?: boolean) => void;
   onGuide: () => void;
   onCredits: () => void;
+  onFind: () => void;
+  seeking: boolean;
   onHistory: (id?: string) => void;
   onDecks: () => void;
 }
@@ -71,7 +73,7 @@ function storedName() {
   }
 }
 
-export function Home({ ready, error, initialJoin, saves, onResume, onDiscard, onStart, onGuide, onCredits, onHistory, onDecks }: Props) {
+export function Home({ ready, error, initialJoin, saves, onResume, onDiscard, onStart, onGuide, onCredits, onFind, seeking, onHistory, onDecks }: Props) {
   const [code, setCode] = useState(initialJoin ?? "");
   const codeRest = useRef<HTMLSpanElement>(null);
   const [animations, setAnimations] = useState(settings.animations);
@@ -146,6 +148,12 @@ export function Home({ ready, error, initialJoin, saves, onResume, onDiscard, on
         <Cta onClick={() => go("host")} disabled={!ready}>
           Create a game
         </Cta>
+
+        <button class={`home-find ${seeking ? "seeking" : ""}`} disabled={!ready} onClick={onFind}>
+          <Icon name="search" />
+          <span>{seeking ? "Searching for an opponent…" : "Find an opponent"}</span>
+          <Icon name="arrow-right" />
+        </button>
 
         <div class="field">
           <span class="label">Join</span>

@@ -292,6 +292,7 @@ export class Session {
         this.patch({ code: ticket.code, role: ticket.seat === 0 ? "host" : "guest" });
         this.transport = new RelayTransport(ticket, this.lastSeq(), handlers, this.store);
         if (fresh && settings.format !== "casual") this.push({ k: "format", format: settings.format });
+        if (this.matchSetup && ticket.seat === 0) this.applyMatch();
       } else {
         const room = code ?? newRoomCode();
         this.patch({ code: room });
@@ -322,6 +323,20 @@ export class Session {
       if (this.seat === 0 && !this.table.sideSet) this.push({ k: "side", side: this.wantedSide });
     }
     this.syncLobby();
+  }
+
+  private matchSetup?: { format: GameFormat; side: Side };
+
+  configureMatch(format: GameFormat, side: Side) {
+    this.matchSetup = { format, side };
+    this.wantedSide = side;
+    if (this.transport && this.seat === 0) this.applyMatch();
+  }
+
+  private applyMatch() {
+    const setup = this.matchSetup!;
+    if (setup.format !== this.lobby.format) this.push({ k: "format", format: setup.format });
+    this.push({ k: "side", side: setup.side });
   }
 
   private push(p: Payload) {

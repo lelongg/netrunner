@@ -6811,3 +6811,137 @@ h1.deck-name.long {
   position: relative;
   top: -0.12em;
 }
+
+.match {
+  gap: 12px;
+  padding-top: 12px;
+}
+
+.match-form,
+.match-waiting {
+  gap: 12px;
+}
+
+.match-sides {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.side-switch button.on.any {
+  color: var(--yellow);
+  background: rgb(246 224 58 / 0.08);
+  box-shadow: inset 0 -2px 0 var(--yellow);
+}
+
+.match-waiting {
+  align-items: center;
+  text-align: center;
+}
+
+.match-waiting strong {
+  font-family: var(--display);
+  font-size: 26px;
+  text-transform: uppercase;
+}
+
+.match-radar {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  border: 1px solid var(--cyan);
+  border-radius: 50%;
+}
+
+.match-radar i {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid var(--cyan);
+  animation: match-ping 2s ease-out infinite;
+}
+
+.match-radar i + i {
+  animation-delay: 1s;
+}
+
+@keyframes match-ping {
+  from {
+    transform: scale(0.2);
+    opacity: 1;
+  }
+  to {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+.match-open {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.match-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.match-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  text-align: left;
+  text-transform: none;
+  letter-spacing: 0.04em;
+}
+
+.match-who {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.match-who .hint {
+  margin: 0;
+}
+
+.match-play {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--cyan);
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+}
+
+.home-find {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  border-color: var(--cyan);
+  color: var(--cyan);
+  text-align: left;
+}
+
+.home-find span {
+  flex: 1;
+}
+
+.home-find.seeking {
+  animation: find-pulse 1.6s ease-in-out infinite alternate;
+}
+
+@keyframes find-pulse {
+  to {
+    box-shadow: 0 0 16px rgb(34 211 238 / 0.45);
+  }
+}
