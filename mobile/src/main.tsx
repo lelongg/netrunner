@@ -164,7 +164,7 @@ function App() {
   const [guide, setGuide] = useState(() => !joinParam && !gameParam && !watchParam && !replayParam && tutorialState() === null);
   const firstRun = guide && tutorialState() === null;
   const [archive, setArchive] = useState<string | boolean>(false);
-  const [decks, setDecks] = useState(false);
+  const [decks, setDecks] = useState<false | { id?: string; side?: Side }>(false);
   const [sharedReplay, setSharedReplay] = useState(replayParam ? { code: replayParam, relay: replayRelay } : undefined);
   const [opening, setOpeningState] = useState<string | null>(joinParam ?? watchParam ?? gameParam?.replace(/^local:.*/, "local game") ?? null);
   const [held, setHeld] = useState<string | null>(null);
@@ -306,7 +306,7 @@ function App() {
 
   if (!error && (held || (opening && !session))) return <Opening label={(held ?? opening)!} ready={!!loaded} />;
 
-  if (decks && loaded && !session) return <Decks db={loaded.db} matchups={loaded.matchups} onClose={() => setDecks(false)} />;
+  if (decks && loaded && !session) return <Decks db={loaded.db} matchups={loaded.matchups} initialDeck={decks.id} initialSide={decks.side} onClose={() => setDecks(false)} />;
 
   if ((archive || sharedReplay) && loaded && !session)
     return (
@@ -386,7 +386,7 @@ function App() {
         onFind={() => setMatching(true)}
         seeking={seeking}
         onHistory={(id) => setArchive(id ?? true)}
-        onDecks={() => setDecks(true)}
+        onDecks={(id, side) => setDecks({ id, side })}
         ready={!!loaded}
         db={loaded?.db}
         error={error}

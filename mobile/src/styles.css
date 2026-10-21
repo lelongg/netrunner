@@ -7996,6 +7996,10 @@ h1.deck-name.long {
   display: block;
 }
 
+.deck-slide > .deck-frame {
+  display: block;
+}
+
 .deck-slide.slide-left {
   animation: deck-in-left 0.38s cubic-bezier(0.2, 0.8, 0.3, 1) backwards;
 }
@@ -8027,41 +8031,6 @@ h1.deck-name.long {
     opacity: 0;
     transform: translateY(6px);
   }
-}
-
-.side-switch {
-  display: flex;
-  gap: 18px;
-  margin-top: 6px;
-}
-
-.side-tab {
-  position: relative;
-  padding: 4px 2px;
-  font-size: 10px;
-  letter-spacing: 0.24em;
-  text-transform: uppercase;
-  color: var(--muted);
-  cursor: pointer;
-}
-
-.side-tab.on.who-corp {
-  color: var(--corp);
-}
-
-.side-tab.on.who-runner {
-  color: var(--runner);
-}
-
-.side-tab.on::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -2px;
-  height: 2px;
-  background: currentColor;
-  box-shadow: 0 0 8px currentColor;
 }
 
 .qr-scan {
@@ -8132,4 +8101,16 @@ h1.deck-name.long {
 
 .qr-start .icon {
   height: 14px;
+}
+
+.deck-open {
+  min-height: 0;
+  padding: 0;
+  border: none;
+  background: none;
+}
+
+button.deck-change {
+  min-height: 0;
+  letter-spacing: 0.2em;
 }

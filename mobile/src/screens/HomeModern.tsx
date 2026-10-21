@@ -32,11 +32,12 @@ function playerName() {
   }
 }
 
-function featured(db: CardDb | undefined, side: Side): { deck?: string; card?: Card } {
+function featured(db: CardDb | undefined, side: Side): { deck?: string; id?: string; card?: Card } {
   if (!db) return {};
   const wire = lastDeck(side) ?? savedDecks().find((d) => d.side === side);
   const own = wire && db.byTitle.get(wire.identity);
-  if (own) return { deck: wire!.name, card: own };
+  const stored = wire && savedDecks().find((d) => (wire.ref ? d.id === wire.ref : d.side === side && d.name === wire.name));
+  if (own) return { deck: wire!.name, id: stored?.id, card: own };
   const ids = db.all.filter((c) => c.type === "Identity" && c.side === (side === "corp" ? "Corp" : "Runner") && c.code >= "30000");
   const day = Math.floor(Date.now() / 86_400_000);
   return { card: ids[day % Math.max(1, ids.length)] };
@@ -257,47 +258,34 @@ export function HomeArena(props: Props) {
         </header>
         {error && <p class="error">{error}</p>}
         <Continue props={props} />
-        <button class="deck-showcase" disabled={!ready} onClick={onDecks}>
-          <span key={side} class={`deck-slide ${slide ? `slide-${slide}` : ""}`}>
-            <span class="deck-frame">
-              <span class="deck-card">
-                {hero.card && (
-                  <img
-                    src={cardImage(hero.card.code, "xlarge")}
-                    alt={hero.card.title}
-                    onError={(e) => {
-                      const img = e.currentTarget as HTMLImageElement;
-                      const fallback = cardImage(hero.card!.code, "large")!;
-                      if (!img.src.endsWith(fallback)) img.src = fallback;
-                    }}
-                  />
-                )}
-                <i class="deck-card-shine" />
+        <div class="deck-showcase">
+          <button class="deck-open" disabled={!ready} onClick={() => onDecks(hero.id, side)} aria-label={hero.id ? `Edit ${hero.deck}` : "Open your decks"}>
+            <span key={side} class={`deck-slide ${slide ? `slide-${slide}` : ""}`}>
+              <span class="deck-frame">
+                <span class="deck-card">
+                  {hero.card && (
+                    <img
+                      src={cardImage(hero.card.code, "xlarge")}
+                      alt={hero.card.title}
+                      onError={(e) => {
+                        const img = e.currentTarget as HTMLImageElement;
+                        const fallback = cardImage(hero.card!.code, "large")!;
+                        if (!img.src.endsWith(fallback)) img.src = fallback;
+                      }}
+                    />
+                  )}
+                  <i class="deck-card-shine" />
+                </span>
               </span>
             </span>
-          </span>
+          </button>
           <span key={`c-${side}`} class={`deck-caption ${slide ? "fade-in" : ""}`}>
             <strong>{hero.deck ?? hero.card?.title ?? "Build a deck"}</strong>
-            <span class="side-switch" role="tablist" aria-label="Side">
-              {(["corp", "runner"] as Side[]).map((x) => (
-                <span
-                  role="tab"
-                  aria-selected={side === x}
-                  class={`side-tab who-${x} ${side === x ? "on" : ""}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSide(x);
-                  }}
-                >
-                  {x === "corp" ? "Corp" : "Runner"}
-                </span>
-              ))}
-            </span>
-            <span class="deck-change">
+            <button class="deck-change" disabled={!ready} onClick={() => onDecks(undefined, side)}>
               <Icon name="deck" /> {hero.deck ? "Change deck" : "Build a deck"}
-            </span>
+            </button>
           </span>
-        </button>
+        </div>
         <div class="arena-bottom">
           <div class="match-sides arena-modes" role="radiogroup" aria-label="Mode">
             {MODES.map((m) => (

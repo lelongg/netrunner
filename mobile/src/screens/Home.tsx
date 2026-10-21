@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import { type Role, type SavedGame, saveId } from "../session";
-import type { CardDb } from "../engine";
+import type { CardDb, Side } from "../engine";
 import { ask } from "../ui";
 import { Icon } from "../icons";
 import { SwipeDelete } from "./SwipeDelete";
@@ -21,7 +21,7 @@ export interface Props {
   onFind: () => void;
   seeking: boolean;
   onHistory: (id?: string) => void;
-  onDecks: () => void;
+  onDecks: (deckId?: string, side?: Side) => void;
 }
 
 export function describe(save: SavedGame) {

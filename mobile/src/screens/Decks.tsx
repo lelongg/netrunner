@@ -50,7 +50,7 @@ function Pips({ n, max = 5 }: { n: number; max?: number }) {
   );
 }
 
-export function Decks({ db, matchups, onClose, initialSide }: { db: CardDb; matchups: Matchup[]; onClose: () => void; initialSide?: Side }) {
+export function Decks({ db, matchups, onClose, initialSide, initialDeck }: { db: CardDb; matchups: Matchup[]; onClose: () => void; initialSide?: Side; initialDeck?: string }) {
   const [side, setSide] = useState<Side>(() => {
     if (initialSide) return initialSide;
     try {
@@ -60,13 +60,14 @@ export function Decks({ db, matchups, onClose, initialSide }: { db: CardDb; matc
     }
   });
   const [decks, setDecks] = useState(savedDecks);
-  const [editing, setEditing] = useState<StoredDeck | null>(null);
+  const [editing, setEditing] = useState<StoredDeck | null>(() => (initialDeck ? (savedDecks().find((d) => d.id === initialDeck) ?? null) : null));
   const [creating, setCreating] = useState(false);
   const [importing, setImporting] = useState(false);
   const [browsing, setBrowsing] = useState(false);
   useBackClose(browsing, () => setBrowsing(false));
   useBackClose(true, onClose);
   useBackClose(!!editing, () => {
+    if (initialDeck && editing?.id === initialDeck) return onClose();
     setEditing(null);
     setDecks(savedDecks());
   });
@@ -87,6 +88,7 @@ export function Decks({ db, matchups, onClose, initialSide }: { db: CardDb; matc
         db={db}
         initial={editing}
         onClose={() => {
+          if (initialDeck && editing.id === initialDeck) return onClose();
           setEditing(null);
           refresh();
         }}
