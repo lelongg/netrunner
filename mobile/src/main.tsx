@@ -440,13 +440,13 @@ function UpdateBanner() {
     const check = async () => {
       if (document.visibilityState !== "visible") return;
       try {
-        const html = await (await fetch("./", { cache: "no-store" })).text();
+        const html = await (await fetch(`./?check=${Date.now()}`, { cache: "no-store" })).text();
         const latest = html.match(/assets\/(index-[^"]+\.js)/)?.[1];
         if (latest && latest !== currentBundle) setReady(true);
       } catch {}
     };
     check();
-    const timer = setInterval(check, 5 * 60 * 1000);
+    const timer = setInterval(check, 2 * 60 * 1000);
     document.addEventListener("visibilitychange", check);
     return () => {
       clearInterval(timer);

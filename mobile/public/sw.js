@@ -65,6 +65,7 @@ self.addEventListener("fetch", (event) => {
   const { request } = event;
   if (request.method !== "GET") return;
   const url = new URL(request.url);
+  if (url.searchParams.has("check")) return;
   if (request.mode === "navigate") {
     event.respondWith(networkFirst(request, SHELL, new URL("./", self.registration.scope).href));
   } else if (url.hostname === "card-images.netrunnerdb.com") {
