@@ -22,6 +22,7 @@ export interface Props {
   seeking: boolean;
   onHistory: (id?: string) => void;
   onDecks: (deckId?: string, side?: Side) => void;
+  onProfile?: () => void;
 }
 
 export function describe(save: SavedGame) {

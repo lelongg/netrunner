@@ -311,7 +311,7 @@ export function HomeArena(props: Props) {
         <div class="arena-shade" aria-hidden="true" />
         <CursorGrid className="arena-grid" cellSize={32} color={tint} gridColor={tint} radius={110} holdTime={200} fadeDuration={1400} maxOpacity={0.7} fillOpacity={0} gridOpacity={0.1} spotlight={0.3} ambient={motionOff() ? 0 : 0.9} fps={30} tempo={seeking ? 1.8 : 1.2} clickPulse={!motionOff()} intro={!motionOff()} edgeFade={0.08} />
         <header class="arena-top">
-          <span class="player-chip">
+          <button class="player-chip" onClick={props.onProfile} aria-label="Your profile">
             {factionLogoKey(hero.card?.faction) ? (
               <span key={`av-${side}`} class={`player-glyph ${slide ? "chip-in" : ""}`}>
                 <FactionLogo faction={hero.card?.faction} />
@@ -323,7 +323,7 @@ export function HomeArena(props: Props) {
               <small class="label">{hero.card?.side === "Corp" ? "Corp ID" : "Runner ID"}</small>
               <strong>{playerName()}</strong>
             </span>
-          </span>
+          </button>
         </header>
         {error && <p class="error">{error}</p>}
         <Continue props={props} />

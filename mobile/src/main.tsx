@@ -12,6 +12,7 @@ import { installMotion, useLoop } from "./fx/ui";
 import { unlockSound } from "./sound";
 import { dive } from "./fx/dive";
 import { Credits } from "./screens/Credits";
+import { Profile } from "./screens/Profile";
 import { Match } from "./screens/Match";
 import { type Matched, checkSeek, pendingSeek } from "./net/match";
 import { initMusic, setMood } from "./music";
@@ -161,6 +162,7 @@ function App() {
   }, [autoPass, corpView?.log?.length, corpView?.run?.phase, corpView?.run?.position]);
 
   const [credits, setCredits] = useState(false);
+  const [profile, setProfile] = useState(false);
   openCredits = session ? undefined : () => setCredits(true);
   const [matching, setMatching] = useState(false);
   const [inviting, setInviting] = useState(false);
@@ -358,6 +360,7 @@ function App() {
     );
 
   if (credits && !session) return <Credits onClose={() => setCredits(false)} />;
+  if (profile && loaded && !session) return <Profile db={loaded.db} onClose={() => setProfile(false)} />;
   if (matching && loaded && (!session || (inviting && session.lobby.role === "host" && !session.lobby.opponentName)))
     return (
       <Match
@@ -430,6 +433,7 @@ function App() {
         seeking={seeking}
         onHistory={(id) => setArchive(id ?? true)}
         onDecks={(id, side) => setDecks({ id, side })}
+        onProfile={() => setProfile(true)}
         ready={!!loaded}
         db={loaded?.db}
         error={error}

@@ -43,7 +43,7 @@ function dateText(ms: number) {
 
 const MODE: Record<Script["mode"], string> = { solo: "Solo vs bot", local: "Local game", online: "Online" };
 
-interface Head {
+export interface Head {
   id: string;
   endedAt: number;
   shared?: string;
@@ -56,7 +56,7 @@ interface Head {
   outcome: "won" | "lost" | "over";
 }
 
-function headOf(archived: Archived, db: CardDb): Head {
+export function headOf(archived: Archived, db: CardDb): Head {
   const save = archived.save;
   const sum = save.summary ?? {};
   return headFrom(scriptOf(save, db), { id: archived.id, endedAt: archived.endedAt, side: sum.side, winner: sum.winner, points: (sum.points ?? [0, 0]) as [number, number], turn: sum.turn ?? 0 });

@@ -8503,3 +8503,148 @@ body:has(.tabbar.global) .screen.guide {
   -webkit-user-drag: none;
   user-select: none;
 }
+
+button.player-chip {
+  min-height: 0;
+  text-align: left;
+  text-transform: none;
+  letter-spacing: 0;
+  cursor: pointer;
+}
+
+.screen.profile .section {
+  gap: 12px;
+}
+
+.profile-id {
+  display: flex;
+  flex-direction: column;
+}
+
+.profile-deck {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.profile-hero {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.profile-rate {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.profile-rate strong {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 56px;
+  line-height: 1;
+  color: var(--cyan);
+  text-shadow: 2px 0 0 rgb(255 59 48 / 0.6), -2px 0 0 rgb(58 163 181 / 0.6);
+}
+
+.profile-record {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+
+.profile-record b {
+  font-family: var(--display);
+  font-size: 18px;
+  margin-right: 6px;
+}
+
+.profile-tiles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.profile-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid var(--line-2);
+  background: var(--panel-2);
+}
+
+.profile-tile strong {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 28px;
+  line-height: 1;
+}
+
+.profile-tile.who-corp strong {
+  color: var(--corp);
+}
+
+.profile-tile.who-runner strong {
+  color: var(--runner);
+}
+
+.profile-tile span {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.profile-ids {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.profile-ids li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 10px 6px 6px;
+  border: 1px solid var(--line-2);
+  background: var(--panel-2);
+}
+
+.profile-ids .card-image {
+  flex: none;
+  width: 44px;
+}
+
+.profile-id-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-id-rate {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 18px;
+}
+
+.profile-id-rate small {
+  font-family: var(--mono);
+  font-weight: 400;
+  font-size: 10px;
+  color: var(--muted);
+}

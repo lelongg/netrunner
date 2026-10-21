@@ -126,7 +126,7 @@ function storedName() {
   }
 }
 
-function EditField({ title, label, saved, fallback, placeholder, maxLength, valid, raw, onSave }: { title: string; label: string; saved: string; fallback: string; placeholder?: string; maxLength?: number; valid?: (v: string) => boolean; raw?: boolean; onSave: (v: string) => void }) {
+export function EditField({ title, label, saved, fallback, placeholder, maxLength, valid, raw, onSave }: { title: string; label: string; saved: string; fallback: string; placeholder?: string; maxLength?: number; valid?: (v: string) => boolean; raw?: boolean; onSave: (v: string) => void }) {
   const [value, setValue] = useState(saved);
   useEffect(() => setValue(saved), [saved]);
   const next = value.trim() || fallback;
