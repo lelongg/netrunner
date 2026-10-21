@@ -188,7 +188,7 @@ export class RelayTransport implements Transport {
         this.attempt = 0;
         this.focus();
         if (this.ticket.seat !== null)
-          void currentSub().then((sub) => {
+          void currentSub("turn").then((sub) => {
             if (sub && this.ws === ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ t: "subscribe", sub }));
           });
         this.setStatus({ link: "open", step: undefined, hint: undefined, since: undefined, error: undefined });

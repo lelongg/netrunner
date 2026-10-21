@@ -6,6 +6,8 @@ export interface Settings {
   glossary: boolean;
   relay: string;
   notifications: boolean;
+  notifyTurn: boolean;
+  notifyMatch: boolean;
   sound: boolean;
   volume: number;
   music: boolean;
@@ -13,7 +15,7 @@ export interface Settings {
 }
 
 const KEY = "nsg.settings";
-const DEFAULTS: Settings = { format: "casual", animations: true, glossary: true, relay: "", notifications: false, sound: true, volume: 0.6, music: true, musicVolume: 0.4 };
+const DEFAULTS: Settings = { format: "casual", animations: true, glossary: true, relay: "", notifications: false, notifyTurn: true, notifyMatch: true, sound: true, volume: 0.6, music: true, musicVolume: 0.4 };
 const listeners = new Set<() => void>();
 
 function load(): Settings {

@@ -9,7 +9,7 @@ import { Cta, Picker, Ticker } from "../ui";
 import { Icon } from "../icons";
 import { useBackClose } from "../back";
 import { settings } from "../settings";
-import { enablePush, pushSupported } from "../net/push";
+import { enablePush, notifying, pushSupported } from "../net/push";
 import { FORMAT_DESC, GAME_FORMATS, type GameFormat, dealtFormat, deckFormat } from "../deckrules";
 import { type Matched, type OpenSeek, type Seek, type SeekSide, acceptSeek, cancelSeek, checkSeek, openSeeks, pendingSeek, seek } from "../net/match";
 
@@ -67,7 +67,7 @@ export function Match({ name, db, matchups, onMatched, onInvite, onClose }: { na
   const [open, setOpen] = useState<OpenSeek[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [notify, setNotify] = useState(settings.notifications);
+  const [notify, setNotify] = useState(() => notifying("match"));
   useBackClose(true, onClose);
   useTick(!!mine);
 
@@ -124,7 +124,7 @@ export function Match({ name, db, matchups, onMatched, onInvite, onClose }: { na
     });
   const turnOnNotifications = () =>
     act(async () => {
-      const problem = await enablePush();
+      const problem = await enablePush("match");
       if (problem) throw new Error(problem);
       setNotify(true);
       if (mine) {

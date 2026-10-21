@@ -67,7 +67,7 @@ function seated(m: Matched) {
 export async function seek(name: string, format: GameFormat, side: SeekSide): Promise<Matched | Seek> {
   const old = pendingSeek();
   if (old) await cancelSeek(old).catch(() => {});
-  const res = await call("/match", { name, format, side, sub: await currentSub() });
+  const res = await call("/match", { name, format, side, sub: await currentSub("match") });
   if (res.status === "matched") return seated(res);
   const mine: Seek = { id: res.id, secret: res.secret, format, side, at: Date.now() };
   remember(mine);
@@ -95,5 +95,5 @@ export async function openSeeks(): Promise<OpenSeek[]> {
 export async function acceptSeek(id: string, name: string): Promise<Matched> {
   const old = pendingSeek();
   if (old) await cancelSeek(old).catch(() => {});
-  return seated(await call(`/match/${id}/accept`, { name, sub: await currentSub() }));
+  return seated(await call(`/match/${id}/accept`, { name, sub: await currentSub("match") }));
 }

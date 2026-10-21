@@ -14,8 +14,14 @@ async function registration() {
   return reg;
 }
 
-export async function currentSub(): Promise<PushSubscriptionJSON | null> {
-  if (!settings.notifications || !pushSupported() || Notification.permission !== "granted") return null;
+export type PushKind = "turn" | "match";
+
+const KIND_SETTING = { turn: "notifyTurn", match: "notifyMatch" } as const;
+
+export const notifying = (kind: PushKind) => settings.notifications && settings[KIND_SETTING[kind]];
+
+export async function currentSub(kind: PushKind): Promise<PushSubscriptionJSON | null> {
+  if (!notifying(kind) || !pushSupported() || Notification.permission !== "granted") return null;
   try {
     const reg = await registration();
     return (await reg.pushManager.getSubscription())?.toJSON() ?? null;
@@ -38,7 +44,7 @@ async function shareWithGames(sub: PushSubscriptionJSON | null) {
   );
 }
 
-export async function enablePush(): Promise<string | null> {
+export async function enablePush(kind?: PushKind): Promise<string | null> {
   if (!pushSupported()) return "This browser cannot show notifications. On iPhone, add Pocket Rig to your home screen first.";
   const relay = relayUrl();
   if (!relay) return "Notifications need the online relay.";
@@ -55,8 +61,9 @@ export async function enablePush(): Promise<string | null> {
       sub = null;
     }
     sub ??= await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
+    if (kind) setSetting(KIND_SETTING[kind], true);
     setSetting("notifications", true);
-    await shareWithGames(sub.toJSON());
+    await shareWithGames(settings.notifyTurn ? sub.toJSON() : null);
     return null;
   } catch (e) {
     return `Could not turn on notifications: ${e instanceof Error ? e.message : e}`;
@@ -70,4 +77,15 @@ export async function disablePush() {
     const reg = await registration();
     await (await reg.pushManager.getSubscription())?.unsubscribe();
   } catch {}
+}
+
+export async function setNotify(kind: PushKind, on: boolean): Promise<string | null> {
+  if (on && !settings.notifications) return enablePush(kind);
+  setSetting(KIND_SETTING[kind], on);
+  if (!settings.notifyTurn && !settings.notifyMatch) {
+    await disablePush();
+    return null;
+  }
+  if (kind === "turn") await shareWithGames(await currentSub("turn"));
+  return null;
 }

@@ -3,7 +3,7 @@ import { useEffect, useState } from "preact/hooks";
 import { DEFAULT_RELAY } from "../net/relay";
 import { onSettings, setSetting, settings } from "../settings";
 import { Icon, type IconName } from "../icons";
-import { disablePush, enablePush, pushSupported } from "../net/push";
+import { notifying, pushSupported, setNotify } from "../net/push";
 import { Picker, tell } from "../ui";
 import { FORMAT_DESC, GAME_FORMATS, type GameFormat } from "../deckrules";
 import { play } from "../sound";
@@ -19,13 +19,50 @@ function Toggle({ label, on, onChange }: { label: string; on: boolean; onChange:
   );
 }
 
-function Volume({ label, value, onChange, onCommit }: { label: string; value: number; onChange: (v: number) => void; onCommit?: () => void }) {
+function Channel({ label, on, onToggle, value, onValue, onCommit }: { label: string; on: boolean; onToggle: (on: boolean) => void; value: number; onValue: (v: number) => void; onCommit?: () => void }) {
+  const level = Math.round(value * 10);
+  const pick = (e: PointerEvent) => {
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const next = Math.max(1, Math.min(10, Math.ceil(((e.clientX - r.left) / r.width) * 10)));
+    if (next !== level) onValue(next / 10);
+  };
   return (
-    <label class="setting-volume">
-      <span class="sr-only">{label}</span>
-      <input class="volume" type="range" min={0} max={100} step={5} value={Math.round(value * 100)} onInput={(e) => onChange(Number((e.target as HTMLInputElement).value) / 100)} onChange={onCommit} />
-      <span class="setting-volume-value">{Math.round(value * 100)}%</span>
-    </label>
+    <div class={`channel ${on ? "" : "off"}`}>
+      <button class="channel-head" role="switch" aria-checked={on} onClick={() => onToggle(!on)}>
+        <span>{label}</span>
+        <span class={`switch ${on ? "on" : ""}`} aria-hidden="true">
+          <i />
+        </span>
+      </button>
+      <div
+        class="channel-level"
+        role="slider"
+        aria-label={`${label} volume`}
+        aria-valuemin={10}
+        aria-valuemax={100}
+        aria-valuenow={level * 10}
+        aria-disabled={!on}
+        tabIndex={on ? 0 : -1}
+        onPointerDown={(e) => {
+          if (!on) return;
+          (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+          pick(e);
+        }}
+        onPointerMove={(e) => on && (e.currentTarget as HTMLElement).hasPointerCapture(e.pointerId) && pick(e)}
+        onPointerUp={() => on && onCommit?.()}
+        onKeyDown={(e) => {
+          const d = e.key === "ArrowRight" || e.key === "ArrowUp" ? 1 : e.key === "ArrowLeft" || e.key === "ArrowDown" ? -1 : 0;
+          if (on && d) onValue(Math.max(1, Math.min(10, level + d)) / 10);
+        }}
+      >
+        <span class="channel-bars">
+          {Array.from({ length: 10 }, (_, k) => (
+            <i class={k < level ? "lit" : ""} />
+          ))}
+        </span>
+        <span class="channel-value">{level * 10}%</span>
+      </div>
+    </div>
   );
 }
 
@@ -81,95 +118,114 @@ export function MenuDrawer({ title, tabs, tab, onTab, onClose, children }: { tit
   );
 }
 
+function storedName() {
+  try {
+    return localStorage.getItem("nsg.name") ?? "Player";
+  } catch {
+    return "Player";
+  }
+}
+
+function EditField({ label, saved, fallback, placeholder, maxLength, valid, raw, onSave }: { label: string; saved: string; fallback: string; placeholder?: string; maxLength?: number; valid?: (v: string) => boolean; raw?: boolean; onSave: (v: string) => void }) {
+  const [value, setValue] = useState(saved);
+  useEffect(() => setValue(saved), [saved]);
+  const next = value.trim() || fallback;
+  const dirty = next !== saved;
+  const ok = !valid || valid(value.trim());
+  const save = () => dirty && ok && onSave(next);
+  return (
+    <span class="relay-field">
+      <input value={value} placeholder={placeholder} maxLength={maxLength} spellcheck={!raw} autocapitalize={raw ? "off" : undefined} aria-label={label} onInput={(e) => setValue((e.target as HTMLInputElement).value)} onKeyDown={(e) => e.key === "Enter" && save()} />
+      {dirty && (
+        <button class="ghost" aria-label={`Save ${label}`} title={`Save ${label}`} disabled={!ok} onClick={save}>
+          <Icon name="check" />
+        </button>
+      )}
+      {!dirty && saved !== fallback && (
+        <button
+          class="ghost"
+          aria-label={`Reset ${label}`}
+          title={`Reset ${label}`}
+          onClick={() => {
+            setValue(fallback);
+            onSave(fallback);
+          }}
+        >
+          <Icon name="undo" />
+        </button>
+      )}
+    </span>
+  );
+}
+
 export function SettingsSections() {
   const [, setTick] = useState(0);
   useEffect(() => onSettings(() => setTick((t) => t + 1)), []);
-  const [relay, setRelay] = useState(settings.relay);
-  const [name, setName] = useState(() => {
-    try {
-      return localStorage.getItem("nsg.name") ?? "Player";
-    } catch {
-      return "Player";
-    }
-  });
-  const dirty = relay.trim() !== settings.relay;
-  const valid = !relay.trim() || /^https?:\/\/[^\s/]+/.test(relay.trim());
+  const [name, setName] = useState(storedName);
   return (
     <>
       <MenuSection title="Audio">
-        <Toggle
+        <Channel
           label="Sound effects"
           on={settings.sound}
-          onChange={(v) => {
+          onToggle={(v) => {
             setSetting("sound", v);
             if (v) play("click-credit");
           }}
+          value={settings.volume}
+          onValue={(v) => setSetting("volume", v)}
+          onCommit={() => play("click-credit")}
         />
-        {settings.sound && <Volume label="Effects volume" value={settings.volume} onChange={(v) => setSetting("volume", v)} onCommit={() => play("click-credit")} />}
-        <Toggle label="Music" on={settings.music} onChange={(v) => setSetting("music", v)} />
-        {settings.music && <Volume label="Music volume" value={settings.musicVolume} onChange={(v) => setSetting("musicVolume", v)} />}
+        <Channel label="Music" on={settings.music} onToggle={(v) => setSetting("music", v)} value={settings.musicVolume} onValue={(v) => setSetting("musicVolume", v)} />
       </MenuSection>
       <MenuSection title="Display">
         <Toggle label="Animations" on={settings.animations} onChange={(v) => setSetting("animations", v)} />
         <Toggle label="Keyword glossary" on={settings.glossary} onChange={(v) => setSetting("glossary", v)} />
       </MenuSection>
       <MenuSection title="Player">
-        <label class="setting-field">
+        <div class="setting-field">
           <span class="label">Name</span>
-          <input
-            value={name}
+          <EditField
+            label="name"
+            saved={name}
+            fallback="Player"
             maxLength={24}
-            onInput={(e) => {
-              const value = (e.target as HTMLInputElement).value;
-              setName(value);
+            onSave={(v) => {
               try {
-                localStorage.setItem("nsg.name", value.trim() || "Player");
+                localStorage.setItem("nsg.name", v);
               } catch {}
+              setName(v);
             }}
           />
-        </label>
+        </div>
         <div class="setting-field">
           <span class="label">Default format</span>
           <Picker title="Default format" value={settings.format} onChange={(f: GameFormat) => setSetting("format", f)} options={GAME_FORMATS.map((f) => ({ key: f.key as GameFormat, label: f.label, hint: FORMAT_DESC[f.key as GameFormat] }))} />
         </div>
-        {pushSupported() && (
-          <Toggle
-            label="Turn notifications"
-            on={settings.notifications}
-            onChange={async (v) => {
-              if (!v) return disablePush();
-              const error = await enablePush();
-              if (error) tell("Notifications are off", error);
-            }}
-          />
-        )}
       </MenuSection>
+      {pushSupported() && (
+        <MenuSection title="Notifications">
+          {(
+            [
+              ["turn", "Your move in a game"],
+              ["match", "Opponent found"],
+            ] as const
+          ).map(([kind, label]) => (
+            <Toggle
+              label={label}
+              on={notifying(kind)}
+              onChange={async (v) => {
+                const error = await setNotify(kind, v);
+                if (error) tell("Notifications are off", error);
+              }}
+            />
+          ))}
+        </MenuSection>
+      )}
       <details class="menu-section menu-advanced">
-        <summary class="label">Advanced</summary>
-        <label class="setting-field">
-          <span class="label">Relay server</span>
-          <span class="relay-field">
-            <input value={relay} placeholder={DEFAULT_RELAY ?? "https://…"} spellcheck={false} autocapitalize="off" onInput={(e) => setRelay((e.target as HTMLInputElement).value)} onKeyDown={(e) => e.key === "Enter" && dirty && valid && setSetting("relay", relay.trim())} />
-            {dirty && (
-              <button class="ghost" aria-label="Save relay" title="Save relay" disabled={!valid} onClick={() => setSetting("relay", relay.trim())}>
-                <Icon name="check" />
-              </button>
-            )}
-            {!!settings.relay && settings.relay !== DEFAULT_RELAY && (
-              <button
-                class="ghost"
-                aria-label="Use the default relay"
-                title="Use the default relay"
-                onClick={() => {
-                  setRelay("");
-                  setSetting("relay", "");
-                }}
-              >
-                <Icon name="undo" />
-              </button>
-            )}
-          </span>
-        </label>
+        <summary>Advanced</summary>
+        <span class="label">Relay server</span>
+        <EditField label="relay" saved={settings.relay} fallback="" placeholder={DEFAULT_RELAY ?? "https://…"} valid={(v) => !v || /^https?:\/\/[^\s/]+/.test(v)} raw onSave={(v) => setSetting("relay", v)} />
       </details>
     </>
   );

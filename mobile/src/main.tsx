@@ -412,7 +412,7 @@ function App() {
       );
     const view = session.views[localSide];
     if (!view) return <Opening label={lobby.vsBot ? "solo game" : "local game"} ready />;
-    return <Board session={session} engine={loaded.engine} db={loaded.db} side={localSide} view={view} handoffLog={handoffLog} onSwitchSide={() => setHandoff(otherSide(localSide))} onLeave={leave} onExit={exit} />;
+    return <Board session={session} engine={loaded.engine} db={loaded.db} side={localSide} view={view} handoffLog={handoffLog} onSwitchSide={lobby.vsBot ? undefined : () => setHandoff(otherSide(localSide))} onLeave={leave} onExit={exit} />;
   }
 
   if (lobby.role === "spectator") {

@@ -1294,7 +1294,7 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
                 <MenuTile icon="deck" label="Deck list" onClick={() => closeMenu(() => setDeckOpen(true))} />
                 <MenuTile icon="history" label="Game log" onClick={() => closeMenu(() => setShowLog(true))} />
                 {canUndo && <MenuTile icon="undo" label="Undo click" onClick={() => closeMenu(() => session.say("/undo-click", side))} />}
-                {onSwitchSide && <MenuTile icon="swap" label={watching ? `${opp === "corp" ? "Corp" : "Runner"} view` : `Play ${opp === "corp" ? "Corp" : "Runner"}`} onClick={() => closeMenu(onSwitchSide)} />}
+                {onSwitchSide && <MenuTile icon="swap" label={watching ? `${opp === "corp" ? "Corp" : "Runner"} view` : `Pass to ${opp === "corp" ? "Corp" : "Runner"}`} onClick={() => closeMenu(onSwitchSide)} />}
                 <MenuTile icon={settings.sound ? "sound" : "mute"} label={settings.sound ? "Sound on" : "Sound off"} active={settings.sound} onClick={() => setSetting("sound", !settings.sound)} />
               </div>
               {(session.watchUrl || session.rejoinUrl || !watching) && (
