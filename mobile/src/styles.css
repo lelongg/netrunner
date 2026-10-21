@@ -8769,3 +8769,75 @@ button.player-chip {
   background-size: 106% auto;
   background-position: 50% 75%;
 }
+
+.match-waiting {
+  gap: 12px;
+}
+
+.match-wait-head {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  text-align: left;
+}
+
+.match-wait-head > div {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.match-waiting .match-wait-head .match-radar {
+  flex: none;
+  width: 60px;
+  height: 60px;
+}
+
+.match-waiting .match-wait-head .match-title {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.match-waiting .match-wait-head .match-chips {
+  justify-content: flex-start;
+  gap: 4px;
+}
+
+.match-waiting .invite-tile {
+  align-self: stretch;
+  flex-direction: row;
+  align-items: center;
+  gap: 14px;
+  padding: 12px;
+}
+
+.match-waiting .invite-tile .qr,
+.match-waiting .invite-tile svg {
+  flex: none;
+  width: 120px;
+}
+
+.invite-side {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  text-align: left;
+}
+
+.match-waiting .invite-tile .code {
+  font-size: 30px;
+  letter-spacing: 0.16em;
+}
+
+.match-waiting .invite-side .cta {
+  min-height: 46px;
+  gap: 14px;
+}
+
+.match-waiting .hint {
+  margin: 0;
+}

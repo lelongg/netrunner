@@ -12,7 +12,7 @@ import { useBackClose } from "../back";
 import { settings } from "../settings";
 import { enablePush, notifying, pushSupported } from "../net/push";
 import { FORMAT_DESC, GAME_FORMATS, type GameFormat, dealtFormat, deckFormat } from "../deckrules";
-import { type Matched, type OpenSeek, type Seek, type SeekSide, acceptSeek, cancelSeek, checkSeek, openSeeks, pendingSeek, seek, updateSeek } from "../net/match";
+import { type Matched, type Seek, type SeekSide, cancelSeek, checkSeek, pendingSeek, seek, updateSeek } from "../net/match";
 
 const SIDES: { key: SeekSide; label: string }[] = [
   { key: "corp", label: "Corp" },
@@ -21,18 +21,12 @@ const SIDES: { key: SeekSide; label: string }[] = [
 ];
 const formatLabel = (f: string) => GAME_FORMATS.find((g) => g.key === f)?.label ?? f;
 const sideLabel = (s: SeekSide) => (s === "any" ? "Any side" : s === "corp" ? "Corp" : "Runner");
-const yours = (theirs: SeekSide): SeekSide => (theirs === "corp" ? "runner" : theirs === "runner" ? "corp" : "any");
 
 function since(at: number) {
   const s = Math.max(0, Math.round((Date.now() - at) / 1000));
   if (s < 60) return `${s}s`;
   if (s < 3600) return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
   return `${Math.floor(s / 3600)} h ${Math.floor((s % 3600) / 60)} min`;
-}
-
-function ago(at: number) {
-  const min = Math.max(0, Math.round((Date.now() - at) / 60000));
-  return min < 1 ? "just now" : min < 60 ? `${min} min ago` : `${Math.round(min / 60)} h ago`;
 }
 
 function useTick(on: boolean) {
@@ -57,15 +51,16 @@ function InviteTile({ code }: { code?: string }) {
     } catch {}
   };
   return (
-    <>
-      <div class="invite-tile">
-        {code ? <QrCode value={link} label={`QR code to join game ${code}`} /> : <div class="qr qr-pending" />}
+    <div class="invite-tile">
+      {code ? <QrCode value={link} label={`QR code to join game ${code}`} /> : <div class="qr qr-pending" />}
+      <div class="invite-side">
+        <span class="label">Game code</span>
         <span class="code">{code || "·····"}</span>
+        <Cta onClick={share} disabled={!code} tone="cyan">
+          {copied ? "Copied" : "Share"}
+        </Cta>
       </div>
-      <Cta onClick={share} disabled={!code} tone="cyan">
-        {copied ? "Link copied" : "Share the link"}
-      </Cta>
-    </>
+    </div>
   );
 }
 
@@ -107,7 +102,6 @@ export function Match({ name, db, matchups, onMatched, onClose, onEditDecks, aut
     setDecks((was) => ({ corp: keep("corp", was.corp), runner: keep("runner", was.runner) }));
   }, [format]);
   const [mine, setMine] = useState<Seek | null>(pendingSeek);
-  const [open, setOpen] = useState<OpenSeek[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notify, setNotify] = useState(() => notifying("match"));
@@ -125,17 +119,6 @@ export function Match({ name, db, matchups, onMatched, onClose, onEditDecks, aut
       setBusy(false);
     }
   };
-
-  useEffect(() => {
-    let stop = false;
-    const refresh = () => openSeeks().then((list) => !stop && setOpen(list), () => !stop && setOpen((o) => o ?? []));
-    refresh();
-    const timer = setInterval(refresh, 10000);
-    return () => {
-      stop = true;
-      clearInterval(timer);
-    };
-  }, [mine?.id]);
 
   useEffect(() => {
     if (!mine) return;
@@ -172,7 +155,6 @@ export function Match({ name, db, matchups, onMatched, onClose, onEditDecks, aut
       if ("status" in result) onMatched(result);
       else setMine(result);
     });
-  const take = (o: OpenSeek) => act(async () => onMatched(await acceptSeek(o.id, name)));
   const stopSeeking = () =>
     act(async () => {
       if (mine) await cancelSeek(mine);
@@ -194,7 +176,7 @@ export function Match({ name, db, matchups, onMatched, onClose, onEditDecks, aut
   return (
     <>
       <Ticker>
-        Play online <span class="cyan">{mine ? "waiting" : `${open?.length ?? 0} open`}</span>
+        Play online{mine && <span class="cyan"> waiting</span>}
       </Ticker>
       <div class="screen match">
         <div class="match-bg" aria-hidden="true" />
@@ -207,22 +189,26 @@ export function Match({ name, db, matchups, onMatched, onClose, onEditDecks, aut
 
         {mine && !editing ? (
           <section class="panel section match-waiting">
-            <span class="match-radar" aria-hidden="true">
-              <i />
-              <i />
-              <i />
-              <b />
-            </span>
-            <span class="match-title">Waiting for an opponent</span>
-            <span class="match-chips">
-              <span class="chip">{formatLabel(mine.format)}</span>
-              <span class={`chip side-${mine.side}`}>{sideLabel(mine.side)}</span>
-              <span class="chip">{mine.public === false ? "Private" : "Public"}</span>
-              <span class="chip">
-                <Icon name="eye" /> {mine.spectators === false ? "No spectators" : "Spectators"}
+            <div class="match-wait-head">
+              <span class="match-radar" aria-hidden="true">
+                <i />
+                <i />
+                <i />
+                <b />
               </span>
-              <span class="chip">{since(mine.at)}</span>
-            </span>
+              <div>
+                <span class="match-title">Waiting for an opponent</span>
+                <span class="match-chips">
+                  <span class="chip">{formatLabel(mine.format)}</span>
+                  <span class={`chip side-${mine.side}`}>{sideLabel(mine.side)}</span>
+                  <span class="chip">{mine.public === false ? "Private" : "Public"}</span>
+                  <span class="chip">
+                    <Icon name="eye" /> {mine.spectators === false ? "No spectators" : "Spectators"}
+                  </span>
+                  <span class="chip">{since(mine.at)}</span>
+                </span>
+              </div>
+            </div>
             <InviteTile code={mine.code} />
             <p class="hint">{mine.public === false && "Only people with the code or the link can join. "}The game stays open for 24 hours, even if you close the app.</p>
             {!notify && pushSupported() && (
@@ -310,44 +296,6 @@ export function Match({ name, db, matchups, onMatched, onClose, onEditDecks, aut
         )}
         {error && <p class="error">{error}</p>}
         {choosing && <DeckSheet side={choosing} db={db} matchups={matchups} value={decks[choosing]} format={format} onPick={(d) => choose(choosing, d)} onEditDecks={onEditDecks && (() => onEditDecks(choosing))} onClose={() => setChoosing(null)} />}
-
-        {mine && !editing && (
-          <section class="match-open">
-            <div class="match-open-head">
-              <span class="label">
-                <i class="live-dot" aria-hidden="true" />
-                Open games
-              </span>
-              <span class="label">{open?.length ?? "…"}</span>
-            </div>
-            {open && open.length === 0 && (
-              <div class="match-empty">
-                <Icon name="search" />
-                <p>Nobody is waiting right now. Create a game open to anyone and other players will see it here.</p>
-              </div>
-            )}
-            <ul class="match-list">
-              {(open ?? []).map((o) => (
-                <li>
-                  <button class={`match-row you-${yours(o.side)}`} disabled={busy} onClick={() => take(o)}>
-                    <span class="match-who">
-                      <strong>{o.name}</strong>
-                      <span class="match-chips">
-                        <span class="chip">{formatLabel(o.format)}</span>
-                        <span class={`chip side-${yours(o.side)}`}>{yours(o.side) === "any" ? "Either side" : `You play ${sideLabel(yours(o.side))}`}</span>
-                      </span>
-                      <small>{ago(o.created)}</small>
-                    </span>
-                    <span class="match-play">
-                      Play
-                      <Icon name="arrow-right" />
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
       </div>
     </>
   );
