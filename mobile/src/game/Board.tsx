@@ -25,6 +25,7 @@ import { CardImage, ZoomableCardImage } from "./CardImage";
 import { withTerms } from "./RichText";
 import { motionOff, setSetting, settings } from "../settings";
 import { uiSound } from "../uisound";
+import { MenuDrawer, MenuItem, MenuSection, MenuTile, SettingsSections } from "../screens/SettingsMenu";
 
 interface Props {
   session: Session;
@@ -872,6 +873,41 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
     return () => clearTimeout(t);
   }, [armed]);
   const [menu, setMenu] = useState(false);
+  const [menuTab, setMenuTab] = useState("Game");
+  const closeMenu = (then: () => void) => {
+    setMenu(false);
+    then();
+  };
+  const shareLink = async (url: string, title: string, copied: string) => {
+    try {
+      if (navigator.share) await navigator.share({ title, url });
+      else {
+        await navigator.clipboard.writeText(url);
+        uiSound("ui_copy");
+        tell("Link copied", copied);
+      }
+    } catch {}
+  };
+  const exportJournal = async () => {
+    const text = session.journal();
+    if (!text) return;
+    const name = `pocket-rig-${(session.lobby.code || "game").replace(/[^\w-]/g, "")}.json`;
+    const file = new File([text], name, { type: "application/json" });
+    try {
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: name });
+        return;
+      }
+    } catch (e) {
+      if ((e as Error)?.name === "AbortError") return;
+    }
+    const url = URL.createObjectURL(file);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = name;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
   const [zone, setZone] = useState<ZoneRef | null>(null);
   const [deckOpen, setDeckOpen] = useState(false);
   const autoZone = useRef(false);
@@ -1248,167 +1284,76 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
         {!!session.lobby.watchers && <span class="cyan"> · {session.lobby.watchers} watching</span>}
         {link && link !== "connected" && <span class="yellow"> · {link === "waiting" ? "opponent offline" : "reconnecting"}</span>}
       </Ticker>
-      {menu && <div class="menu-backdrop" onClick={() => setMenu(false)} />}
       {menu && (
-        <nav class="menu panel">
-          <button
-            onClick={() => {
-              setMenu(false);
-              onExit();
-            }}
-          >
-            <Icon name="arrow-left" /> Back
-          </button>
-          {onSwitchSide && (
-            <button
-              onClick={() => {
-                onSwitchSide();
-                setMenu(false);
-              }}
-            >
-              <Icon name="swap" /> {watching ? `View from the ${opp} side` : `Switch to ${opp}`}
-            </button>
+        <MenuDrawer title="Game menu" tabs={["Game", "Settings"]} tab={menuTab} onTab={setMenuTab} onClose={() => setMenu(false)}>
+          {menuTab === "Settings" ? (
+            <SettingsSections />
+          ) : (
+            <>
+              <div class="menu-tiles">
+                <MenuTile icon="deck" label="Deck list" onClick={() => closeMenu(() => setDeckOpen(true))} />
+                <MenuTile icon="history" label="Game log" onClick={() => closeMenu(() => setShowLog(true))} />
+                {canUndo && <MenuTile icon="undo" label="Undo click" onClick={() => closeMenu(() => session.say("/undo-click", side))} />}
+                {onSwitchSide && <MenuTile icon="swap" label={watching ? `${opp === "corp" ? "Corp" : "Runner"} view` : `Play ${opp === "corp" ? "Corp" : "Runner"}`} onClick={() => closeMenu(onSwitchSide)} />}
+                <MenuTile icon={settings.sound ? "sound" : "mute"} label={settings.sound ? "Sound on" : "Sound off"} active={settings.sound} onClick={() => setSetting("sound", !settings.sound)} />
+              </div>
+              {(session.watchUrl || session.rejoinUrl || !watching) && (
+                <MenuSection title="Share">
+                  {session.watchUrl && <MenuItem icon="eye" label="Spectator link" hint="Anyone with it can watch" onClick={() => closeMenu(() => shareLink(session.watchUrl!, "Watch this Netrunner game", "Send it to anyone who wants to watch this game."))} />}
+                  {session.rejoinUrl && <MenuItem icon="link" label="Rejoin link" hint="Keep it private: it takes your seat" onClick={() => closeMenu(() => shareLink(session.rejoinUrl!, "Rejoin my Netrunner game", "Keep it private: it lets anyone take your seat."))} />}
+                  {!watching && <MenuItem icon="share" label="Export game journal" hint="A file to replay or report a bug" onClick={() => closeMenu(exportJournal)} />}
+                </MenuSection>
+              )}
+              {((prompt && ptype !== "run") || session.canFreeSeat) && (
+                <MenuSection title="Troubleshoot">
+                  {prompt && ptype !== "run" && (
+                    <MenuItem
+                      icon="warning"
+                      label="Close stuck prompt"
+                      onClick={() => closeMenu(async () => {
+                        if (await ask({ title: "Close the prompt?", body: "Use this only if the game is stuck.", ok: "Close prompt", danger: true })) closePrompt();
+                      })}
+                    />
+                  )}
+                  {session.canFreeSeat && (
+                    <MenuItem
+                      icon="close"
+                      label="Free opponent's seat"
+                      hint="Someone else can take it"
+                      onClick={() => closeMenu(async () => {
+                        if (await ask({ title: "Free their seat?", body: `${session.lobby.opponentName ?? "Your opponent"} will be disconnected. Anyone with the game code, or watching it, can then take their seat and continue the game.`, ok: "Free seat", danger: true })) session.freeSeat();
+                      })}
+                    />
+                  )}
+                </MenuSection>
+              )}
+              <MenuSection title="Leave">
+                <MenuItem icon="arrow-left" label="Back to home" hint={watching ? undefined : "The game stays saved"} onClick={() => closeMenu(onExit)} />
+                {!watching && onWatch && session.watchUrl && <MenuItem icon="eye" label="Watch instead" onClick={() => closeMenu(onWatch)} />}
+                {!watching && (
+                  <MenuItem
+                    icon="flag"
+                    label="Concede"
+                    tone="danger"
+                    onClick={() => closeMenu(async () => {
+                      if (await ask({ title: "Concede?", body: "Your opponent wins this game.", ok: "Concede", danger: true })) session.concede(side);
+                    })}
+                  />
+                )}
+                {!watching && (
+                  <MenuItem
+                    icon="trash"
+                    label="Delete game"
+                    tone="quiet"
+                    onClick={() => closeMenu(async () => {
+                      if (await ask({ title: "Delete this game?", body: "It is removed from this device and you will not be able to come back to it.", ok: "Delete", danger: true })) onLeave();
+                    })}
+                  />
+                )}
+              </MenuSection>
+            </>
           )}
-          {canUndo && (
-            <button
-              onClick={() => {
-                session.say("/undo-click", side);
-                setMenu(false);
-              }}
-            >
-              <Icon name="undo" /> Undo last click
-            </button>
-          )}
-          <button
-            onClick={() => {
-              setDeckOpen(true);
-              setMenu(false);
-            }}
-          >
-            <Icon name="deck" /> Deck list
-          </button>
-          <button
-            onClick={() => {
-              setSetting("sound", !settings.sound);
-              setMenu(false);
-            }}
-          >
-            <Icon name={settings.sound ? "mute" : "sound"} /> {settings.sound ? "Mute sounds" : "Turn sounds on"}
-          </button>
-          {session.watchUrl && (
-            <button
-              onClick={async () => {
-                const url = session.watchUrl!;
-                try {
-                  if (navigator.share) await navigator.share({ title: "Watch this Netrunner game", url });
-                  else {
-                    await navigator.clipboard.writeText(url);
-                    uiSound("ui_copy");
-                    tell("Link copied", "Send it to anyone who wants to watch this game.");
-                  }
-                } catch {}
-                setMenu(false);
-              }}
-            >
-              <Icon name="eye" /> Spectator link
-            </button>
-          )}
-          {!watching && <button
-            onClick={async () => {
-              setMenu(false);
-              const text = session.journal();
-              if (!text) return;
-              const name = `pocket-rig-${(session.lobby.code || "game").replace(/[^\w-]/g, "")}.json`;
-              const file = new File([text], name, { type: "application/json" });
-              try {
-                if (navigator.canShare?.({ files: [file] })) {
-                  await navigator.share({ files: [file], title: name });
-                  return;
-                }
-              } catch (e) {
-                if ((e as Error)?.name === "AbortError") return;
-              }
-              const url = URL.createObjectURL(file);
-              const a = document.createElement("a");
-              a.href = url;
-              a.download = name;
-              a.click();
-              setTimeout(() => URL.revokeObjectURL(url), 1000);
-            }}
-          >
-            <Icon name="share" /> Export game journal
-          </button>}
-          {session.rejoinUrl && (
-            <button
-              onClick={async () => {
-                const url = session.rejoinUrl!;
-                try {
-                  if (navigator.share) await navigator.share({ title: "Rejoin my Netrunner game", url });
-                  else {
-                    await navigator.clipboard.writeText(url);
-                    uiSound("ui_copy");
-                    tell("Link copied", "Keep it private: it lets anyone take your seat.");
-                  }
-                } catch {}
-                setMenu(false);
-              }}
-            >
-              <Icon name="share" /> Rejoin link
-            </button>
-          )}
-          {session.canFreeSeat && (
-            <button
-              onClick={async () => {
-                setMenu(false);
-                if (await ask({ title: "Free their seat?", body: `${session.lobby.opponentName ?? "Your opponent"} will be disconnected. Anyone with the game code, or watching it, can then take their seat and continue the game.`, ok: "Free seat", danger: true })) session.freeSeat();
-              }}
-            >
-              <Icon name="close" /> Free opponent's seat
-            </button>
-          )}
-          {prompt && ptype !== "run" && (
-            <button
-              onClick={async () => {
-                setMenu(false);
-                if (await ask({ title: "Close the prompt?", body: "Use this only if the game is stuck.", ok: "Close prompt", danger: true })) closePrompt();
-              }}
-            >
-              <Icon name="warning" /> Close stuck prompt
-            </button>
-          )}
-          {!watching && onWatch && session.watchUrl && (
-            <button
-              onClick={() => {
-                setMenu(false);
-                onWatch();
-              }}
-            >
-              <Icon name="eye" /> Watch instead
-            </button>
-          )}
-          {!watching && (
-            <button
-              class="danger"
-              onClick={async () => {
-                setMenu(false);
-                if (await ask({ title: "Concede?", body: "Your opponent wins this game.", ok: "Concede", danger: true })) session.concede(side);
-              }}
-            >
-              <Icon name="flag" /> Concede
-            </button>
-          )}
-          {!watching && (
-            <button
-              class="ghost"
-              onClick={async () => {
-                setMenu(false);
-                if (await ask({ title: "Delete this game?", body: "It is removed from this device and you will not be able to come back to it.", ok: "Delete", danger: true })) onLeave();
-              }}
-            >
-              <Icon name="close" /> Delete game
-            </button>
-          )}
-        </nav>
+        </MenuDrawer>
       )}
       <Toasts toasts={session.actionError ? [...toasts, { id: ACTION_ERROR, type: "error", msg: session.actionError }] : toasts} render={render} dismiss={(id) => (id === ACTION_ERROR ? session.clearActionError() : send("toast", { id }))} />
       <div class="playfield-frame">
