@@ -8770,74 +8770,86 @@ button.player-chip {
   background-position: 50% 75%;
 }
 
-.match-waiting {
-  gap: 12px;
+.screen.match.waiting {
+  height: calc(100dvh - 23px - env(safe-area-inset-top));
+  min-height: 0;
+  overflow: hidden;
 }
 
-.match-wait-head {
-  align-self: stretch;
+.screen.match.waiting .match-waiting {
+  flex: 1;
+  min-height: 0;
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: stretch;
   gap: 14px;
-  text-align: left;
 }
 
 .match-wait-head > div {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  min-width: 0;
-}
-
-.match-waiting .match-wait-head .match-radar {
-  flex: none;
-  width: 60px;
-  height: 60px;
+  align-items: center;
+  gap: 10px;
 }
 
 .match-waiting .match-wait-head .match-title {
-  font-size: 24px;
+  font-size: clamp(28px, 9vw, 40px);
   line-height: 1;
 }
 
-.match-waiting .match-wait-head .match-chips {
-  justify-content: flex-start;
-  gap: 4px;
-}
-
-.match-waiting .invite-tile {
-  align-self: stretch;
-  flex-direction: row;
-  align-items: center;
-  gap: 14px;
-  padding: 12px;
-}
-
-.match-waiting .invite-tile .qr,
-.match-waiting .invite-tile svg {
-  flex: none;
-  width: 120px;
-}
-
-.invite-side {
+.match-stage {
   flex: 1;
+  min-height: 140px;
+  position: relative;
+  display: grid;
+  place-items: center;
+  container-type: size;
+}
+
+.match-waiting .match-stage .match-radar {
+  position: absolute;
+  width: min(100cqw, 100cqh);
+  height: min(100cqw, 100cqh);
+  background:
+    repeating-radial-gradient(circle, transparent 0 calc(16.66% - 1px), rgb(34 211 238 / 0.14) calc(16.66% - 1px) 16.66%),
+    radial-gradient(circle, rgb(34 211 238 / 0.12), transparent 70%);
+}
+
+.match-qr {
+  position: relative;
+  z-index: 1;
+  padding: 0;
+  border: 0;
+  background: none;
+  width: min(56cqw, 56cqh);
+  box-shadow: 0 0 0 6px rgb(5 6 8 / 0.9), 0 0 0 7px rgb(34 211 238 / 0.6), 0 0 40px rgb(34 211 238 / 0.35);
+}
+
+.match-qr svg,
+.match-qr.qr {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+}
+
+.match-code {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
-  text-align: left;
-}
-
-.match-waiting .invite-tile .code {
-  font-size: 30px;
-  letter-spacing: 0.16em;
-}
-
-.match-waiting .invite-side .cta {
-  min-height: 46px;
+  align-items: baseline;
+  justify-content: center;
   gap: 14px;
+}
+
+.match-code .code {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 40px;
+  letter-spacing: 0.24em;
+  color: var(--cyan);
+  text-shadow: 0 0 16px rgb(58 163 181 / 0.5);
 }
 
 .match-waiting .hint {
   margin: 0;
+  text-align: center;
 }

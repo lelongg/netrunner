@@ -165,7 +165,6 @@ function App() {
   const [profile, setProfile] = useState(false);
   openCredits = session ? undefined : () => setCredits(true);
   const [matching, setMatching] = useState(false);
-  const [autoFind, setAutoFind] = useState(false);
   const [seeking, setSeeking] = useState(() => !!pendingSeek());
   const [guide, setGuide] = useState(() => !joinParam && !gameParam && !watchParam && !replayParam && tutorialState() === null);
   const firstRun = guide && tutorialState() === null;
@@ -364,8 +363,20 @@ function App() {
         matchups={loaded.matchups}
         onMatched={startMatched}
         onEditDecks={(side) => setDecks({ side })}
-        autoStart={autoFind}
-        onAutoStarted={() => setAutoFind(false)}
+        onJoin={(code) => {
+          setMatching(false);
+          const existing = loadSave(code);
+          if (existing) return resume(existing);
+          setOpening(code);
+          afterPaint(() => {
+            setSession(new Session(loaded.engine, loaded.db, "guest", code, playerName()));
+            setOpening(null);
+          });
+        }}
+        onWatch={(code) => {
+          setMatching(false);
+          watch(code);
+        }}
         onClose={() => {
           setMatching(false);
           setSeeking(!!pendingSeek());
@@ -411,7 +422,6 @@ function App() {
         onGuide={() => setGuide(true)}
         onCredits={() => setCredits(true)}
         onFind={() => {
-          setAutoFind(!pendingSeek());
           setMatching(true);
         }}
         seeking={seeking}

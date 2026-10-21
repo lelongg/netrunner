@@ -90,7 +90,7 @@ function JoinStatus({ lobby }: { lobby: Session["lobby"] }) {
   );
 }
 
-function QrZoom({ value, code, from, onClose }: { value: string; code: string; from: HTMLElement | null; onClose: () => void }) {
+export function QrZoom({ value, code, from, onClose }: { value: string; code: string; from: HTMLElement | null; onClose: () => void }) {
   const root = useRef<HTMLDivElement>(null);
   const qr = useRef<HTMLDivElement>(null);
   const extra = useRef<HTMLDivElement>(null);

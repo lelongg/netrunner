@@ -27,6 +27,19 @@ export interface OpenSeek {
   format: GameFormat;
   side: SeekSide;
   created: number;
+  code: string;
+  spectators: boolean;
+}
+
+export interface PlayingGame {
+  name: string;
+  opponent: string;
+  format: GameFormat;
+  side: Side;
+  created: number;
+  code: string;
+  spectators: boolean;
+  watchers: number;
 }
 
 export interface Matched {
@@ -83,7 +96,7 @@ export async function seek(name: string, format: GameFormat, side: SeekSide, opt
 }
 
 export async function updateSeek(seek: Seek, format: GameFormat, side: SeekSide, options: GameOptions): Promise<Matched | Seek> {
-  const res = await call(`/match/${seek.id}/update`, { secret: seek.secret, format, side, ...options });
+  const res = await call(`/match/${seek.id}/update`, { secret: seek.secret, format, side, sub: await currentSub("match"), ...options });
   if (res.status === "matched") return seated(res);
   const mine: Seek = { ...seek, format, side, code: res.code ?? seek.code, ...options };
   remember(mine);
@@ -102,14 +115,12 @@ export async function cancelSeek(seek: Seek) {
   await call(`/match/${seek.id}/cancel`, { secret: seek.secret });
 }
 
-export async function openSeeks(): Promise<OpenSeek[]> {
+export async function publicGames(): Promise<{ open: OpenSeek[]; playing: PlayingGame[] }> {
   const res = await call("/match/open");
   const mine = pendingSeek()?.id;
-  return (res.open as OpenSeek[]).filter((o) => o.id !== mine);
+  return { open: (res.open as OpenSeek[]).filter((o) => o.id !== mine && o.code), playing: (res.playing ?? []) as PlayingGame[] };
 }
 
-export async function acceptSeek(id: string, name: string): Promise<Matched> {
-  const old = pendingSeek();
-  if (old) await cancelSeek(old).catch(() => {});
-  return seated(await call(`/match/${id}/accept`, { name, sub: await currentSub("match") }));
+export async function openSeeks(): Promise<OpenSeek[]> {
+  return (await publicGames()).open;
 }

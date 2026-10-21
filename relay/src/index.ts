@@ -154,7 +154,10 @@ export default {
 
     if (url.pathname === "/match/open" && request.method === "GET") {
       if (await limited(env.JOIN_LIMIT, request)) return json({ error: "Too many requests, try again in a minute" }, 429, origin);
-      return json({ open: await matchmaker(env).open() }, 200, origin);
+      const { open, playing } = await matchmaker(env).open();
+      const rooms = await Promise.all(playing.map((g) => env.GAME_ROOM.get(env.GAME_ROOM.idFromName(g.code)).live().catch(() => null)));
+      const live = playing.flatMap((g, i) => (rooms[i]?.players ? [{ ...g, spectators: !!g.spectators, watchers: rooms[i]!.watchers }] : []));
+      return json({ open: open.map((o) => ({ ...o, spectators: !!o.spectators })), playing: live }, 200, origin);
     }
     const seek = url.pathname.match(/^\/match(?:\/([0-9a-f]{16})(?:\/(cancel|accept|update))?)?$/);
     if (seek) {
@@ -180,7 +183,8 @@ export default {
       const who = { name: cleanName(body.name), sub };
       if (action === "update") {
         if (await limited(env.JOIN_LIMIT, request)) return json({ error: "Too many requests, try again in a minute" }, 429, origin);
-        const result = await matchmaker(env).update(id, String(body.secret ?? ""), { format, side: side as MatchSide, pub: body.public !== false, spectators: body.spectators !== false });
+        const sub = body.sub && validSub(body.sub, env.PUSH_ALLOW_LOOPBACK === "1") ? JSON.stringify(body.sub) : null;
+        const result = await matchmaker(env).update(id, String(body.secret ?? ""), { format, side: side as MatchSide, pub: body.public !== false, spectators: body.spectators !== false, sub });
         return json(result, "error" in result ? 409 : 200, origin);
       }
       if (action === "accept") {
@@ -248,6 +252,10 @@ export class GameRoom extends DurableObject<Env> {
     this.sql.exec("CREATE TABLE IF NOT EXISTS pushes (seat INTEGER PRIMARY KEY, sub TEXT NOT NULL, last INTEGER NOT NULL DEFAULT 0)");
     this.sql.exec("CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT NOT NULL)");
     this.sql.exec("CREATE TABLE IF NOT EXISTS entries (seq INTEGER PRIMARY KEY AUTOINCREMENT, seat INTEGER NOT NULL, body TEXT NOT NULL, at INTEGER NOT NULL)");
+  }
+
+  async live(): Promise<{ players: number; watchers: number }> {
+    return { players: this.ctx.getWebSockets("0").length + this.ctx.getWebSockets("1").length, watchers: this.ctx.getWebSockets("watch").length };
   }
 
   async taken(): Promise<boolean> {
@@ -469,6 +477,7 @@ const MATCH_FORMATS = new Set(["casual", "standard", "startup", "core", "eternal
 const MATCH_SIDES = new Set(["corp", "runner", "any"]);
 const MATCH_HOURS = 24;
 const MATCH_OPEN_MAX = 50;
+const MATCH_LIVE_MAX = 20;
 type MatchSide = "corp" | "runner" | "any";
 type Seeker = { name: string; sub: PushSub | null };
 type Matched = { status: "matched"; code: string; seat: Seat; token: string; side: "corp" | "runner"; format: string; opponent: string };
@@ -502,9 +511,19 @@ export class Matchmaker extends DurableObject<Env> {
 
   async open() {
     this.prune();
-    return this.sql
-      .exec<{ id: string; name: string; format: string; side: string; created: number }>("SELECT id, name, format, side, created FROM seeks WHERE code IS NULL AND pub = 1 ORDER BY created DESC LIMIT ?", MATCH_OPEN_MAX)
+    const open = this.sql
+      .exec<{ id: string; name: string; format: string; side: string; created: number; code: string; spectators: number }>(
+        "SELECT id, name, format, side, created, invite AS code, spectators FROM seeks WHERE code IS NULL AND pub = 1 AND invite IS NOT NULL ORDER BY created DESC LIMIT ?",
+        MATCH_OPEN_MAX,
+      )
       .toArray();
+    const playing = this.sql
+      .exec<{ name: string; opponent: string; format: string; side: string; created: number; code: string; spectators: number }>(
+        "SELECT name, opponent, format, assigned AS side, created, code, spectators FROM seeks WHERE code IS NOT NULL AND code != '' AND pub = 1 ORDER BY created DESC LIMIT ?",
+        MATCH_LIVE_MAX,
+      )
+      .toArray();
+    return { open, playing };
   }
 
   async status(id: string, secret: string) {
@@ -552,20 +571,20 @@ export class Matchmaker extends DurableObject<Env> {
     return { status: "waiting", id, secret, code: invite };
   }
 
-  async update(id: string, secret: string, opts: { format: string; side: MatchSide; pub: boolean; spectators: boolean }): Promise<Matched | { status: "waiting"; id: string; secret: string; code: string } | { error: string }> {
+  async update(id: string, secret: string, opts: { format: string; side: MatchSide; pub: boolean; spectators: boolean; sub: string | null }): Promise<Matched | { status: "waiting"; id: string; secret: string; code: string } | { error: string }> {
     const row = this.sql.exec<Record<string, any>>("SELECT * FROM seeks WHERE id = ? AND secret = ? AND code IS NULL", id, secret).toArray()[0];
     if (!row) return { error: "This game is no longer waiting." };
     if (opts.pub) {
       const rows = this.sql.exec<Record<string, any>>("SELECT * FROM seeks WHERE code IS NULL AND pub = 1 AND format = ? AND id != ? ORDER BY created", opts.format, id).toArray();
       const other = rows.find((r) => r.side === "any" || opts.side === "any" || r.side !== opts.side);
-      const who = { name: row.name, sub: row.sub ? JSON.parse(row.sub) : null };
+      const who = { name: row.name, sub: opts.sub ? JSON.parse(opts.sub) : row.sub ? JSON.parse(row.sub) : null };
       const paired = other && (await this.pair(other, who, opts.side));
       if (paired) {
         this.sql.exec("DELETE FROM seeks WHERE id = ? AND code IS NULL", id);
         return paired;
       }
     }
-    this.sql.exec("UPDATE seeks SET format = ?, side = ?, pub = ?, spectators = ? WHERE id = ? AND code IS NULL", opts.format, opts.side, opts.pub ? 1 : 0, opts.spectators ? 1 : 0, id);
+    this.sql.exec("UPDATE seeks SET format = ?, side = ?, pub = ?, spectators = ?, sub = COALESCE(?, sub) WHERE id = ? AND code IS NULL", opts.format, opts.side, opts.pub ? 1 : 0, opts.spectators ? 1 : 0, opts.sub, id);
     return { status: "waiting", id, secret, code: row.invite };
   }
 
