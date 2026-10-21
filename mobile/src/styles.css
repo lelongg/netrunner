@@ -2025,9 +2025,116 @@ form.chat input {
   text-align: center;
 }
 
+.handoff {
+  position: relative;
+  overflow: hidden;
+  --tint: var(--red);
+}
+
+.handoff-corp {
+  --tint: var(--cyan);
+}
+
+.handoff > :not(.handoff-bg) {
+  position: relative;
+  z-index: 1;
+}
+
+.handoff-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse 70% 45% at 50% 48%, color-mix(in srgb, var(--tint) 16%, transparent), transparent 70%);
+}
+
+.handoff-grid {
+  position: absolute;
+  inset: 0;
+  opacity: 0.7;
+}
+
+.handoff-watermark {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) rotate(-90deg);
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 46vh;
+  line-height: 1;
+  white-space: nowrap;
+  color: transparent;
+  -webkit-text-stroke: 1px color-mix(in srgb, var(--tint) 18%, transparent);
+  opacity: 0.8;
+}
+
+.handoff-scan {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 120px;
+  background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--tint) 14%, transparent) 80%, color-mix(in srgb, var(--tint) 45%, transparent) 99%, transparent);
+  animation: handoff-scan 3.6s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+@keyframes handoff-scan {
+  from {
+    transform: translateY(-140px);
+  }
+  to {
+    transform: translateY(100dvh);
+  }
+}
+
+.handoff-mark {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 8px;
+}
+
 .handoff .logo-mark {
   width: 56px;
   height: 56px;
+  filter: drop-shadow(0 0 10px rgb(255 59 48 / 0.55));
+}
+
+.handoff-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1px dashed color-mix(in srgb, var(--tint) 70%, transparent);
+  animation: handoff-spin 14s linear infinite;
+}
+
+.handoff-ring.inner {
+  inset: 16px;
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--tint) 35%, transparent);
+  border-top-color: var(--tint);
+  border-bottom-color: var(--tint);
+  animation-duration: 3.2s;
+  animation-direction: reverse;
+}
+
+@keyframes handoff-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.handoff .big {
+  text-shadow: 0 0 28px color-mix(in srgb, var(--tint) 45%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .handoff-ring,
+  .handoff-scan {
+    animation: none;
+  }
 }
 
 .handoff .big {
