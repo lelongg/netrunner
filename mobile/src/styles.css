@@ -8950,10 +8950,10 @@ button.player-chip {
   transition: translate 0.1s linear;
 }
 
+
 .board .board-grid {
   inset: -4%;
   translate: calc(var(--tx, 0) * -16px) calc(var(--ty, 0) * -12px);
-  transition: translate 0.1s linear;
 }
 
 .board .playfield {
@@ -8961,15 +8961,47 @@ button.player-chip {
 }
 
 .board .playfield > .area {
-  translate: calc(var(--tx, 0) * 7px) calc(var(--ty, 0) * 5px);
-  transition: translate 0.1s linear;
+  translate: calc(var(--tx, 0) * 5px) calc(var(--ty, 0) * 4px);
 }
 
-.board .playfield > .divider ~ .area {
-  translate: calc(var(--tx, 0) * 3px) calc(var(--ty, 0) * 2px);
+.board .playfield > .opp {
+  translate: calc(var(--tx, 0) * 8px) calc(var(--ty, 0) * 6px);
 }
 
-.board .hand {
-  translate: calc(var(--tx, 0) * 5px) 0;
-  transition: translate 0.1s linear;
+.board .dock {
+  position: relative;
+  z-index: 2;
+  margin: 0 -12px -10px;
+  padding: 0 12px calc(10px + env(safe-area-inset-bottom));
+  background: var(--bg);
+  translate: calc(var(--tx, 0) * 9px) calc(var(--ty, 0) * 7px);
+  box-shadow: calc(var(--tx, 0) * -8px) calc(var(--ty, 0) * -8px - 6px) 24px rgb(0 0 0 / 0.55);
+}
+
+.sheet-backdrop > .sheet {
+  margin-bottom: -18px;
+  padding-bottom: calc(34px + env(safe-area-inset-bottom));
+  translate: calc(var(--tx, 0) * 14px) calc(var(--ty, 0) * 11px);
+  box-shadow: calc(var(--tx, 0) * -14px) calc(var(--ty, 0) * -14px - 12px) 40px rgb(0 0 0 / 0.7);
+}
+
+.menu-drawer {
+  right: -18px;
+  bottom: -18px;
+  padding-right: 18px;
+  padding-bottom: 18px;
+  translate: calc(var(--tx, 0) * 14px) calc(var(--ty, 0) * 11px);
+  box-shadow: calc(var(--tx, 0) * -14px - 12px) calc(var(--ty, 0) * -14px) 40px rgb(0 0 0 / 0.7);
+}
+
+.sheet .sheet-head .sheet-img {
+  translate: calc(var(--tx, 0) * 10px) calc(var(--ty, 0) * 8px);
+  transform: perspective(700px) rotateY(calc(var(--tx, 0) * 10deg)) rotateX(calc(var(--ty, 0) * -8deg));
+  filter: drop-shadow(calc(var(--tx, 0) * -10px) calc(var(--ty, 0) * -10px + 10px) 14px rgb(0 0 0 / 0.65));
+}
+
+.card-zoom img,
+.card-peek img {
+  translate: calc(var(--tx, 0) * 24px) calc(var(--ty, 0) * 18px);
+  transform: perspective(800px) rotateY(calc(var(--tx, 0) * 12deg)) rotateX(calc(var(--ty, 0) * -9deg));
 }

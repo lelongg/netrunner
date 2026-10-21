@@ -2854,12 +2854,12 @@
 }
 
 .fx-layer > :not(.fx-border, .fx-finale, .fx-flash, .fx-glitch, .fx-showdown, .fx-shutdown, .fx-split, .fx-vignette, .fx-vr) {
-  translate: calc(var(--tx, 0) * 6px) calc(var(--ty, 0) * 5px);
+  translate: calc(var(--tx, 0) * 5px) calc(var(--ty, 0) * 4px);
 }
 
 .fx-layer > .fx-showcase,
 .fx-showdown > * {
-  translate: calc(var(--tx, 0) * 14px) calc(var(--ty, 0) * 10px);
+  translate: calc(var(--tx, 0) * 20px) calc(var(--ty, 0) * 15px);
 }
 
 .fx-showcase .fx-card-img,
