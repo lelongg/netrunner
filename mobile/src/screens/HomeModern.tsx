@@ -119,11 +119,10 @@ export function HomeArena(props: Props) {
           <span class="deck-frame">
             <span class="deck-card">
               {hero.card && <img src={cardImage(hero.card.code, "large")} alt={hero.card.title} />}
-              <i class="deck-scan" />
+              <i class="deck-card-shine" />
             </span>
           </span>
           <span class="deck-caption">
-            <span class="label">{hero.deck ? "Your deck" : "Featured identity"}</span>
             <strong>{hero.deck ?? hero.card?.title ?? "Build a deck"}</strong>
             <span class="deck-change">
               <Icon name="deck" /> {hero.deck ? "Change deck" : "Build a deck"}

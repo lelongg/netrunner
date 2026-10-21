@@ -8609,8 +8609,6 @@ h1.deck-name.long {
 .arena-link.center {
   align-self: center;
   color: var(--cyan);
-  text-decoration: underline;
-  text-underline-offset: 4px;
 }
 
 .continue {
@@ -8696,7 +8694,8 @@ h1.deck-name.long {
 .deck-frame {
   position: relative;
   padding: 10px;
-  animation: deck-float 6s ease-in-out infinite;
+  transform: perspective(700px) rotateY(-10deg) rotateX(4deg);
+  animation: deck-float 5s ease-in-out infinite;
 }
 
 .deck-frame::before,
@@ -8729,7 +8728,10 @@ h1.deck-name.long {
   aspect-ratio: 300 / 419;
   overflow: hidden;
   clip-path: polygon(0 0, 88% 0, 100% 8%, 100% 100%, 12% 100%, 0 92%);
-  box-shadow: 0 0 40px color-mix(in srgb, var(--fc, var(--cyan)) 40%, transparent);
+}
+
+.deck-frame {
+  filter: drop-shadow(0 18px 30px rgb(0 0 0 / 0.7)) drop-shadow(0 0 22px color-mix(in srgb, var(--fc, var(--cyan)) 45%, transparent));
 }
 
 .deck-card img {
@@ -8739,29 +8741,27 @@ h1.deck-name.long {
   display: block;
 }
 
-.deck-scan {
+.deck-card-shine {
   position: absolute;
-  left: 0;
-  right: 0;
-  top: 0;
-  height: 30%;
-  background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--fc, var(--cyan)) 35%, transparent) 85%, rgb(255 255 255 / 0.5) 99%, transparent);
-  mix-blend-mode: screen;
-  animation: deck-scan 3.4s linear infinite;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 30%, rgb(255 255 255 / 0.35) 45%, transparent 60%);
+  background-size: 250% 100%;
+  animation: deck-shine 4.5s ease-in-out infinite;
 }
 
-@keyframes deck-scan {
-  from {
-    transform: translateY(-110%);
+@keyframes deck-shine {
+  0%,
+  60% {
+    background-position: 130% 0;
   }
-  to {
-    transform: translateY(340%);
+  100% {
+    background-position: -30% 0;
   }
 }
 
 @keyframes deck-float {
   50% {
-    transform: translateY(-6px);
+    transform: perspective(700px) rotateY(8deg) rotateX(-3deg) translateY(-8px);
   }
 }
 
