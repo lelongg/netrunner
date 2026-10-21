@@ -126,7 +126,7 @@ function storedName() {
   }
 }
 
-function EditField({ label, saved, fallback, placeholder, maxLength, valid, raw, onSave }: { label: string; saved: string; fallback: string; placeholder?: string; maxLength?: number; valid?: (v: string) => boolean; raw?: boolean; onSave: (v: string) => void }) {
+function EditField({ title, label, saved, fallback, placeholder, maxLength, valid, raw, onSave }: { title: string; label: string; saved: string; fallback: string; placeholder?: string; maxLength?: number; valid?: (v: string) => boolean; raw?: boolean; onSave: (v: string) => void }) {
   const [value, setValue] = useState(saved);
   useEffect(() => setValue(saved), [saved]);
   const next = value.trim() || fallback;
@@ -134,27 +134,30 @@ function EditField({ label, saved, fallback, placeholder, maxLength, valid, raw,
   const ok = !valid || valid(value.trim());
   const save = () => dirty && ok && onSave(next);
   return (
-    <span class="relay-field">
-      <input value={value} placeholder={placeholder} maxLength={maxLength} spellcheck={!raw} autocapitalize={raw ? "off" : undefined} aria-label={label} onInput={(e) => setValue((e.target as HTMLInputElement).value)} onKeyDown={(e) => e.key === "Enter" && save()} />
-      {dirty && (
-        <button class="ghost" aria-label={`Save ${label}`} title={`Save ${label}`} disabled={!ok} onClick={save}>
-          <Icon name="check" />
-        </button>
-      )}
-      {!dirty && saved !== fallback && (
-        <button
-          class="ghost"
-          aria-label={`Reset ${label}`}
-          title={`Reset ${label}`}
-          onClick={() => {
-            setValue(fallback);
-            onSave(fallback);
-          }}
-        >
-          <Icon name="undo" />
-        </button>
-      )}
-    </span>
+    <label class="field-box">
+      <span class="label">{title}</span>
+      <span class="field-box-row">
+        <input value={value} placeholder={placeholder} maxLength={maxLength} spellcheck={!raw} autocapitalize={raw ? "off" : undefined} aria-label={label} onInput={(e) => setValue((e.target as HTMLInputElement).value)} onKeyDown={(e) => e.key === "Enter" && save()} />
+        {dirty && (
+          <button class="ghost" aria-label={`Save ${label}`} title={`Save ${label}`} disabled={!ok} onClick={save}>
+            <Icon name="check" />
+          </button>
+        )}
+        {!dirty && saved !== fallback && (
+          <button
+            class="ghost"
+            aria-label={`Reset ${label}`}
+            title={`Reset ${label}`}
+            onClick={() => {
+              setValue(fallback);
+              onSave(fallback);
+            }}
+          >
+            <Icon name="undo" />
+          </button>
+        )}
+      </span>
+    </label>
   );
 }
 
@@ -183,22 +186,20 @@ export function SettingsSections() {
         <Toggle label="Keyword glossary" on={settings.glossary} onChange={(v) => setSetting("glossary", v)} />
       </MenuSection>
       <MenuSection title="Player">
-        <div class="setting-field">
-          <span class="label">Name</span>
-          <EditField
-            label="name"
-            saved={name}
-            fallback="Player"
-            maxLength={24}
-            onSave={(v) => {
-              try {
-                localStorage.setItem("nsg.name", v);
-              } catch {}
-              setName(v);
-            }}
-          />
-        </div>
-        <div class="setting-field">
+        <EditField
+          title="Name"
+          label="name"
+          saved={name}
+          fallback="Player"
+          maxLength={24}
+          onSave={(v) => {
+            try {
+              localStorage.setItem("nsg.name", v);
+            } catch {}
+            setName(v);
+          }}
+        />
+        <div class="field-box">
           <span class="label">Default format</span>
           <Picker title="Default format" value={settings.format} onChange={(f: GameFormat) => setSetting("format", f)} options={GAME_FORMATS.map((f) => ({ key: f.key as GameFormat, label: f.label, hint: FORMAT_DESC[f.key as GameFormat] }))} />
         </div>
@@ -224,8 +225,7 @@ export function SettingsSections() {
       )}
       <details class="menu-section menu-advanced">
         <summary>Advanced</summary>
-        <span class="label">Relay server</span>
-        <EditField label="relay" saved={settings.relay} fallback="" placeholder={DEFAULT_RELAY ?? "https://…"} valid={(v) => !v || /^https?:\/\/[^\s/]+/.test(v)} raw onSave={(v) => setSetting("relay", v)} />
+        <EditField title="Relay server" label="relay" saved={settings.relay} fallback="" placeholder={DEFAULT_RELAY ?? "https://…"} valid={(v) => !v || /^https?:\/\/[^\s/]+/.test(v)} raw onSave={(v) => setSetting("relay", v)} />
       </details>
     </>
   );
