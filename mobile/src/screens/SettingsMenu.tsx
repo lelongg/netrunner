@@ -183,6 +183,7 @@ export function SettingsSections() {
       </MenuSection>
       <MenuSection title="Display">
         <Toggle label="Animations" on={settings.animations} onChange={(v) => setSetting("animations", v)} />
+        <Toggle label="Parallax" on={settings.parallax} onChange={(v) => setSetting("parallax", v)} />
         <Toggle label="Keyword glossary" on={settings.glossary} onChange={(v) => setSetting("glossary", v)} />
       </MenuSection>
       <MenuSection title="Player">

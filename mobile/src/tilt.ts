@@ -1,5 +1,5 @@
-import { useEffect } from "preact/hooks";
-import { motionOff } from "./settings";
+import { useEffect, useState } from "preact/hooks";
+import { motionOff, onSettings, settings } from "./settings";
 
 let granted = false;
 
@@ -21,9 +21,13 @@ function screenAngle() {
   return (Number(a) * Math.PI) / 180;
 }
 
+const tiltOn = () => settings.parallax && !motionOff();
+
 export function useTilt(target: { current: HTMLElement | null }, gain = 1) {
+  const [on, setOn] = useState(tiltOn);
+  useEffect(() => onSettings(() => setOn(tiltOn())), []);
   useEffect(() => {
-    if (typeof DeviceOrientationEvent === "undefined" || motionOff()) return;
+    if (typeof DeviceOrientationEvent === "undefined" || !on) return;
     let base: Vec | null = null;
     let want: [number, number] = [0, 0];
     let cur: [number, number] = [0, 0];
@@ -84,5 +88,5 @@ export function useTilt(target: { current: HTMLElement | null }, gain = 1) {
       target.current?.style.removeProperty("--tx");
       target.current?.style.removeProperty("--ty");
     };
-  }, []);
+  }, [on]);
 }
