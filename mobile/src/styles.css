@@ -8758,5 +8758,13 @@ button.player-chip {
 }
 
 .arena .arena-bg.ice {
-  background-position: 50% 84%;
+  inset: auto;
+  top: 50%;
+  left: 50%;
+  width: 116dvh;
+  height: 116vw;
+  margin: -58vw 0 0 -58dvh;
+  rotate: 90deg;
+  background-size: 106% auto;
+  background-position: 50% 75%;
 }
