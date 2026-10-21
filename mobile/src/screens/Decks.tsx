@@ -542,6 +542,7 @@ export function DeckView({ deck, format = "casual", onClose }: { deck: Deck; for
 function DeckEditor({ db, initial, deck0, onClose, onOpen, readOnly }: { db?: CardDb; initial: StoredDeck; deck0?: Deck; onClose: () => void; onOpen?: (d: StoredDeck) => void; readOnly?: boolean }) {
   const [deck, setDeck] = useState<Deck>(() => deck0 ?? fromWire(initial, db!));
   const [format, setFormat] = useState<FormatKey>(formatOf(initial));
+  const [pinned, setPinned] = useState(() => !!initial.id && defaultDeckId(initial.side) === initial.id);
   const [tab, setTab] = useState<Tab>(() => (initial.cards.length || readOnly ? "deck" : "cards"));
   const [detail, setDetail] = useState<{ card: Card; list: Card[] } | null>(null);
   const open = (card: Card, list: Card[] = [card]) => setDetail({ card, list });
@@ -614,9 +615,23 @@ function DeckEditor({ db, initial, deck0, onClose, onOpen, readOnly }: { db?: Ca
               <Icon name="share" />
             </button>
           ) : (
-            <button class="ghost" onClick={() => setMenu(!menu)} aria-label="Deck menu" aria-expanded={menu}>
-              <Icon name={menu ? "close" : "menu"} />
-            </button>
+            <>
+              <button
+                class={`ghost editor-star ${pinned ? "on" : ""}`}
+                onClick={() => {
+                  const next = pinned ? undefined : initial.id;
+                  setDefaultDeckId(side, next);
+                  setPinned(!!next);
+                }}
+                aria-pressed={pinned}
+                aria-label={pinned ? "Default deck, tap to unset" : "Make this the default deck"}
+              >
+                <Icon name="star" />
+              </button>
+              <button class="ghost" onClick={() => setMenu(!menu)} aria-label="Deck menu" aria-expanded={menu}>
+                <Icon name={menu ? "close" : "menu"} />
+              </button>
+            </>
           )}
         </header>
         {menu && (

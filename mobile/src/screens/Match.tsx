@@ -82,7 +82,7 @@ function InviteSheet({ code, status, onClose }: { code: string; status: string; 
   );
 }
 
-export function Match({ name, db, matchups, onMatched, onInvite, onClose, invite, onCancelInvite }: { name: string; db: CardDb; matchups: Matchup[]; onMatched: (m: Matched) => void; onInvite: (format: GameFormat, side?: Side) => void; onClose: () => void; invite?: { code: string; status: string }; onCancelInvite?: () => void }) {
+export function Match({ name, db, matchups, onMatched, onInvite, onClose, invite, onCancelInvite, onEditDecks }: { name: string; db: CardDb; matchups: Matchup[]; onMatched: (m: Matched) => void; onInvite: (format: GameFormat, side?: Side) => void; onClose: () => void; invite?: { code: string; status: string }; onCancelInvite?: () => void; onEditDecks?: (side: Side) => void }) {
   const [decks, setDecks] = useState<Record<Side, WireDeck | undefined>>(() => {
     const pick = (s: Side) => {
       const pinned = defaultStored(s);
@@ -261,7 +261,7 @@ export function Match({ name, db, matchups, onMatched, onInvite, onClose, invite
         )}
         {error && <p class="error">{error}</p>}
         {invite && onCancelInvite && <InviteSheet code={invite.code} status={invite.status} onClose={onCancelInvite} />}
-        {choosing && <DeckSheet side={choosing} db={db} matchups={matchups} value={decks[choosing]} format={format} onPick={(d) => choose(choosing, d)} onClose={() => setChoosing(null)} />}
+        {choosing && <DeckSheet side={choosing} db={db} matchups={matchups} value={decks[choosing]} format={format} onPick={(d) => choose(choosing, d)} onEditDecks={onEditDecks && (() => onEditDecks(choosing))} onClose={() => setChoosing(null)} />}
 
         <section class="match-open">
           <div class="match-open-head">

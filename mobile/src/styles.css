@@ -8443,3 +8443,16 @@ body:has(.tabbar.global) .screen.guide {
   translate: calc(var(--tx, 0) * 10px) calc(var(--ty, 0) * 8px);
   transition: translate 0.1s linear;
 }
+
+.editor-star .icon {
+  height: 18px;
+}
+
+.editor-star.on {
+  color: var(--yellow);
+}
+
+.editor-star.on .icon {
+  fill: var(--yellow);
+  filter: drop-shadow(0 0 6px var(--yellow));
+}

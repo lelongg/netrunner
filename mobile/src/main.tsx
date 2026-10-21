@@ -326,6 +326,7 @@ function App() {
     setDecks(t === "decks" ? {} : false);
     setArchive(t === "history");
     setGuide(t === "learn");
+    setMatching(false);
   };
   const tabs = (active: Tab) => <TabBar global active={active} ready={!!loaded} onTab={goTab} />;
 
@@ -363,6 +364,7 @@ function App() {
         db={loaded.db}
         matchups={loaded.matchups}
         onMatched={startMatched}
+        onEditDecks={(side) => setDecks({ side })}
         invite={inviting && session ? { code: session.lobby.code, status: session.lobby.status } : undefined}
         onInvite={(format, side) => {
           if (!loaded) return;
