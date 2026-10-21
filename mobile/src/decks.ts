@@ -119,6 +119,7 @@ export interface StoredDeck extends WireDeck {
   id: string;
   format?: string;
   updatedAt?: number;
+  cover?: string;
 }
 
 const newDeckId = () => Array.from(crypto.getRandomValues(new Uint32Array(2)), (n) => n.toString(36)).join("");

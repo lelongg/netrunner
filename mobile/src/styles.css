@@ -8734,3 +8734,25 @@ button.player-chip {
   font-size: 10px;
   color: var(--muted);
 }
+
+.cover-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+}
+
+.cover-btn .icon {
+  height: 14px;
+}
+
+.cover-btn.on {
+  color: var(--yellow);
+  border-color: var(--yellow);
+}
+
+.cover-btn.on .icon {
+  fill: var(--yellow);
+}

@@ -551,6 +551,7 @@ function DeckEditor({ db, initial, deck0, onClose, onOpen, readOnly }: { db?: Ca
   const [deck, setDeck] = useState<Deck>(() => deck0 ?? fromWire(initial, db!));
   const [format, setFormat] = useState<FormatKey>(formatOf(initial));
   const [pinned, setPinned] = useState(() => !!initial.id && defaultDeckId(initial.side) === initial.id);
+  const [cover, setCover] = useState(initial.cover);
   const [tab, setTab] = useState<Tab>(() => (initial.cards.length || readOnly ? "deck" : "cards"));
   const [detail, setDetail] = useState<{ card: Card; list: Card[] } | null>(null);
   const open = (card: Card, list: Card[] = [card]) => setDetail({ card, list });
@@ -565,8 +566,8 @@ function DeckEditor({ db, initial, deck0, onClose, onOpen, readOnly }: { db?: Ca
   useEffect(() => {
     if (first.current) return void (first.current = false);
     if (readOnly) return;
-    putDeck({ ...toWire(deck), side, id: initial.id, format });
-  }, [deck, format]);
+    putDeck({ ...toWire(deck), side, id: initial.id, format, cover });
+  }, [deck, format, cover]);
   const a = useMemo(() => analyze(deck, format), [deck, format]);
   const qtyOf = useMemo(() => new Map(deck.cards.map((e) => [e.card.title, e.qty])), [deck]);
   const setQty = (card: Card, qty: number) => {
@@ -733,6 +734,7 @@ function DeckEditor({ db, initial, deck0, onClose, onOpen, readOnly }: { db?: Ca
       </div>
       {detail && (
         <CardSheet
+          cover={readOnly ? undefined : { code: cover, set: setCover }}
           card={detail.card}
           list={detail.list}
           identity={deck.identity}
@@ -1148,7 +1150,7 @@ function CardInfo({ card, identity, format }: { card: Card; identity: Card; form
   );
 }
 
-function CardSheet({ card, list, identity, format, qty, onQty, onGo, onClose }: { card: Card; list: Card[]; identity: Card; format: FormatKey; qty: number; onQty?: (n: number) => void; onGo: (c: Card) => void; onClose: () => void }) {
+function CardSheet({ card, list, identity, format, qty, onQty, onGo, onClose, cover }: { card: Card; list: Card[]; identity: Card; format: FormatKey; qty: number; onQty?: (n: number) => void; onGo: (c: Card) => void; onClose: () => void; cover?: { code?: string; set: (code?: string) => void } }) {
   const index = Math.max(0, list.indexOf(card));
   const step = (dir: -1 | 1) => {
     const next = list[index + dir];
@@ -1184,6 +1186,12 @@ function CardSheet({ card, list, identity, format, qty, onQty, onGo, onClose }: 
             <span class="label">In deck</span>
             {onQty ? <Stepper qty={qty} max={deckLimit(card)} title={card.title} onQty={onQty} /> : <b class="edit-row-qty">{qty}×</b>}
           </div>
+        )}
+        {cover && (
+          <button class={`cover-btn ${cover.code === card.code || (!cover.code && isId) ? "on" : ""}`} onClick={() => cover.set(isId ? undefined : cover.code === card.code ? undefined : card.code)}>
+            <Icon name="star" />
+            {cover.code === card.code || (!cover.code && isId) ? "Deck cover" : "Use as deck cover"}
+          </button>
         )}
         <button class="ghost" onClick={onClose}>
           Close

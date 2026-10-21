@@ -47,16 +47,17 @@ function playerName() {
   }
 }
 
-function featured(db: CardDb | undefined, side: Side): { deck?: string; id?: string; card?: Card } {
+function featured(db: CardDb | undefined, side: Side): { deck?: string; id?: string; card?: Card; identity?: Card } {
   if (!db) return {};
   const pinned = defaultStored(side);
   const wire = pinned ? { ...pinned, ref: pinned.id } : (lastDeck(side) ?? savedDecks().find((d) => d.side === side));
   const own = wire && db.byTitle.get(wire.identity);
   const stored = wire && savedDecks().find((d) => (wire.ref ? d.id === wire.ref : d.side === side && d.name === wire.name));
-  if (own) return { deck: wire!.name, id: stored?.id, card: own };
+  if (own) return { deck: wire!.name, id: stored?.id, card: (stored?.cover && db.byCode.get(stored.cover)) || own, identity: own };
   const ids = db.all.filter((c) => c.type === "Identity" && c.side === (side === "corp" ? "Corp" : "Runner") && c.code >= "30000");
   const day = Math.floor(Date.now() / 86_400_000);
-  return { card: ids[day % Math.max(1, ids.length)] };
+  const id = ids[day % Math.max(1, ids.length)];
+  return { card: id, identity: id };
 }
 
 const SIDE_KEY = "nsg.homeSide";
@@ -258,7 +259,7 @@ export function HomeArena(props: Props) {
   const hero = useMemo(() => featured(db, side), [db, side]);
   const feed = useFeed(props, hero);
   const peek = useCardPeek(hero.card?.code, hero.card?.title ?? "");
-  const tint = FACTION_TINT[factionKey(hero.card?.faction)] ?? (side === "corp" ? "#3aa3b5" : "#ff5a4f");
+  const tint = FACTION_TINT[factionKey(hero.identity?.faction)] ?? (side === "corp" ? "#3aa3b5" : "#ff5a4f");
   const play = () => (mode === "online" ? onFind() : go("local", undefined, mode === "solo"));
   const searching = mode === "online" && seeking;
   const label = searching ? "Searching…" : mode === "online" ? "Play online" : mode === "solo" ? "Play vs bot" : "Play local";
@@ -274,7 +275,7 @@ export function HomeArena(props: Props) {
       </Ticker>
       <div
         ref={arenaEl}
-        class={`screen arena side-${side} faction-${factionKey(hero.card?.faction)}`}
+        class={`screen arena side-${side} faction-${factionKey(hero.identity?.faction)}`}
         onPointerDown={(e) => (swipe.current = { x: e.clientX, y: e.clientY, done: false, drag: false })}
         onPointerMove={(e) => {
           const g = swipe.current;
@@ -312,15 +313,15 @@ export function HomeArena(props: Props) {
         <CursorGrid className="arena-grid" cellSize={32} color={tint} gridColor={tint} radius={110} holdTime={200} fadeDuration={1400} maxOpacity={0.7} fillOpacity={0} gridOpacity={0.1} spotlight={0.3} ambient={motionOff() ? 0 : 0.9} fps={30} tempo={seeking ? 1.8 : 1.2} clickPulse={!motionOff()} intro={!motionOff()} edgeFade={0.08} />
         <header class="arena-top">
           <button class="player-chip" onClick={props.onProfile} aria-label="Your profile">
-            {factionLogoKey(hero.card?.faction) ? (
+            {factionLogoKey(hero.identity?.faction) ? (
               <span key={`av-${side}`} class={`player-glyph ${slide ? "chip-in" : ""}`}>
-                <FactionLogo faction={hero.card?.faction} />
+                <FactionLogo faction={hero.identity?.faction} />
               </span>
             ) : (
-              <Art key={`av-${side}`} card={hero.card} class={`player-avatar ${slide ? "chip-in" : ""}`} />
+              <Art key={`av-${side}`} card={hero.identity} class={`player-avatar ${slide ? "chip-in" : ""}`} />
             )}
             <span key={`pt-${side}`} class={`player-text ${slide ? "chip-in" : ""}`}>
-              <small class="label">{hero.card?.side === "Corp" ? "Corp ID" : "Runner ID"}</small>
+              <small class="label">{hero.identity?.side === "Corp" ? "Corp ID" : "Runner ID"}</small>
               <strong>{playerName()}</strong>
             </span>
           </button>
