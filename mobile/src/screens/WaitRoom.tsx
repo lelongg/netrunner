@@ -9,7 +9,6 @@ import { useTilt } from "../tilt";
 export interface WaitProps {
   code?: string;
   chips: ComponentChildren;
-  hint: string;
   busy: boolean;
   notify?: () => void;
   onCancel: () => void;
@@ -76,67 +75,12 @@ function Radar() {
 
 const letters = (code?: string) => (code || "·····").split("");
 
-function Ticket(p: WaitProps) {
-  const { qr, shareCta, zoom } = useInvite(p.code);
-  return (
-    <section class="wr wr-ticket">
-      <div class="wr-ticket-card">
-        <div class="wr-ticket-top">
-          <span class="label">Pocket Rig · Game invite</span>
-          <span class="match-title">Waiting for an opponent</span>
-          <span class="match-chips">{p.chips}</span>
-        </div>
-        <div class="wr-perf" aria-hidden="true" />
-        <div class="wr-ticket-stub">
-          <div class="wr-stub-in">
-            {qr("wr-qr")}
-            <div class="wr-stub-text">
-              <span class="wr-code">{p.code || "·····"}</span>
-              <span class="label">Scan or enter this code to join</span>
-            </div>
-          </div>
-        </div>
-      </div>
-      {shareCta}
-      <p class="hint">{p.hint}</p>
-      <Actions {...p} />
-      {zoom}
-    </section>
-  );
-}
-
-function Console(p: WaitProps) {
-  const { qr, shareCta, zoom } = useInvite(p.code);
-  return (
-    <section class="wr wr-console">
-      <div class="wr-sky">
-        <Radar />
-        <div class="wr-sky-text">
-          <span class="match-title">Waiting for an opponent</span>
-          <span class="match-chips">{p.chips}</span>
-        </div>
-      </div>
-      <div class="wr-deck panel">
-        <div class="wr-deck-row">
-          {qr("wr-qr")}
-          <div class="wr-deck-code">
-            <span class="label">Game code</span>
-            <span class="wr-code">{p.code || "·····"}</span>
-            <span class="hint">{p.hint}</span>
-          </div>
-        </div>
-        {shareCta}
-        <Actions {...p} />
-      </div>
-      {zoom}
-    </section>
-  );
-}
-
 function Signal(p: WaitProps) {
   const { qr, shareCta, zoom } = useInvite(p.code);
+  const ref = useRef<HTMLElement>(null);
+  useTilt(ref);
   return (
-    <section class="wr wr-signal">
+    <section class="wr wr-signal" ref={ref}>
       <div class="wr-signal-head">
         <span class="live-dot" aria-hidden="true" />
         <span class="label">Waiting for an opponent</span>
@@ -160,34 +104,4 @@ function Signal(p: WaitProps) {
   );
 }
 
-function Card(p: WaitProps) {
-  const { qr, shareCta, zoom } = useInvite(p.code);
-  const ref = useRef<HTMLDivElement>(null);
-  useTilt(ref);
-  return (
-    <section class="wr wr-card" ref={ref}>
-      <div class="wr-card-head">
-        <span class="match-title">Waiting for an opponent</span>
-        <span class="match-chips">{p.chips}</span>
-      </div>
-      <div class="wr-card-stage">
-        <div class="wr-invite-card">
-          <span class="wr-invite-label">Invitation</span>
-          {qr("wr-qr")}
-          <span class="wr-code">{p.code || "·····"}</span>
-          <i class="wr-shine" aria-hidden="true" />
-        </div>
-      </div>
-      {shareCta}
-      <Actions {...p} />
-      {zoom}
-    </section>
-  );
-}
-
-export function WaitRoom(p: WaitProps & { variant: string }) {
-  if (p.variant === "b") return <Console {...p} />;
-  if (p.variant === "c") return <Signal {...p} />;
-  if (p.variant === "d") return <Card {...p} />;
-  return <Ticket {...p} />;
-}
+export const WaitRoom = Signal;

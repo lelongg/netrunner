@@ -1,10 +1,9 @@
-import { useEffect, useRef, useState } from "preact/hooks";
+import { useEffect, useState } from "preact/hooks";
 import type { CardDb, Matchup, Side } from "../engine";
 import { type WireDeck, defaultStored, latest } from "../decks";
 import { lastDeck, setLastDeck } from "../session";
 import { DeckSheet } from "./Lobby";
 import { WaitRoom } from "./WaitRoom";
-import { QrCode } from "../QrCode";
 import { defaultDeck, problemIn } from "./DeckPicker";
 import { DeckRow } from "./Decks";
 import { Cta, Picker, Ticker } from "../ui";
@@ -172,7 +171,6 @@ export function Match({ name, db, matchups, onMatched, onJoin, onWatch, onClose,
 
         {mine ? (
           <WaitRoom
-            variant={localStorage.getItem("nsg.waitLayout") ?? "a"}
             code={mine.code}
             chips={
               <>
@@ -185,7 +183,6 @@ export function Match({ name, db, matchups, onMatched, onJoin, onWatch, onClose,
                 <span class="chip">{since(mine.at)}</span>
               </>
             }
-            hint={`${mine.public === false ? "Only people with the code or the link can join. " : ""}The game stays open for 24 hours, even if you close the app.`}
             busy={busy}
             notify={!notify && pushSupported() ? turnOnNotifications : undefined}
             onCancel={stopSeeking}
