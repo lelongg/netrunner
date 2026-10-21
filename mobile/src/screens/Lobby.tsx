@@ -8,7 +8,7 @@ import type { Session } from "../session";
 import { QrCode } from "../QrCode";
 import { relayUrl } from "../net/relay";
 import { Cta, Picker, Ticker } from "../ui";
-import { DeckPicker } from "./DeckPicker";
+import { DeckPicker, defaultDeck } from "./DeckPicker";
 import { DeckRow, Decks, DeckView } from "./Decks";
 import { useBackClose } from "../back";
 import { Icon } from "../icons";
@@ -297,6 +297,11 @@ export function Lobby({ session, db, matchups, onLeave, onWatch }: Props) {
     session.refreshDecks();
     refreshed(true);
   }, []);
+  useEffect(() => {
+    if ((lobby.role !== "host" && lobby.role !== "guest") || lobby.started || lobby.myDeck || dealtFormat(lobby.format)) return;
+    const d = defaultDeck(lobby.mySide, db, matchups, lobby.format);
+    if (d) session.setDeck(d);
+  }, [lobby.role, lobby.mySide, lobby.format, !!lobby.myDeck]);
   useEffect(() => {
     if (lobby.opponentName) uiSound("ui_join");
   }, [!!lobby.opponentName]);

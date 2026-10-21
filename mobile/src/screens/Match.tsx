@@ -3,6 +3,7 @@ import type { CardDb, Matchup, Side } from "../engine";
 import { type WireDeck, latest } from "../decks";
 import { lastDeck, setLastDeck } from "../session";
 import { DeckSheet } from "./Lobby";
+import { defaultDeck } from "./DeckPicker";
 import { DeckRow } from "./Decks";
 import { Cta, Picker, Ticker } from "../ui";
 import { Icon } from "../icons";
@@ -57,6 +58,10 @@ export function Match({ name, db, matchups, onMatched, onInvite, onClose }: { na
   };
   const [format, setFormat] = useState<GameFormat>(settings.format);
   const [side, setSide] = useState<SeekSide>("any");
+  useEffect(() => {
+    if (dealtFormat(format)) return;
+    setDecks((was) => ({ corp: was.corp ?? defaultDeck("corp", db, matchups, format), runner: was.runner ?? defaultDeck("runner", db, matchups, format) }));
+  }, [format]);
   const [mine, setMine] = useState<Seek | null>(pendingSeek);
   const [open, setOpen] = useState<OpenSeek[] | null>(null);
   const [busy, setBusy] = useState(false);
