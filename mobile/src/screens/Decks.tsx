@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { Card, CardDb, Deck, Matchup, Side } from "../engine";
-import { type StoredDeck, type WireDeck, fromPrecon, fromWire, importNrdb, parseDecklist, putDeck, removeDeck, savedDecks, toWire } from "../decks";
+import { type StoredDeck, type WireDeck, defaultDeckId, setDefaultDeckId, fromPrecon, fromWire, importNrdb, parseDecklist, putDeck, removeDeck, savedDecks, toWire } from "../decks";
 import { type FormatKey, FORMAT_DESC, FORMATS, deckFormat, TYPE_ORDER, analyze, costCurve, deckLimit, groupByType, influenceByFaction, influenceOf, isNeutral, legality, subtypeSpread, toText } from "../deckrules";
 import { CardImage, ZoomableCardImage, useCardPeek } from "../game/CardImage";
 import { RichText } from "../game/RichText";
@@ -60,6 +60,8 @@ export function Decks({ db, matchups, onClose, initialSide, initialDeck }: { db:
     }
   });
   const [decks, setDecks] = useState(savedDecks);
+  const [defaultId, setDefaultId] = useState(() => defaultDeckId(side));
+  useEffect(() => setDefaultId(defaultDeckId(side)), [side]);
   const [editing, setEditing] = useState<StoredDeck | null>(() => (initialDeck ? (savedDecks().find((d) => d.id === initialDeck) ?? null) : null));
   const [creating, setCreating] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -147,7 +149,20 @@ export function Decks({ db, matchups, onClose, initialSide, initialDeck }: { db:
         {mine.length === 0 && <p class="hint decks-empty">No {SIDE_NAME[side]} deck yet. Start from an identity, a precon or a NetrunnerDB list.</p>}
         <ul class="deck-library">
           {mine.map((w) => (
-            <DeckRow key={w.id} db={db} stored={w} onOpen={() => setEditing(w)} />
+            <DeckRow
+              key={w.id}
+              db={db}
+              stored={w}
+              onOpen={() => setEditing(w)}
+              star={{
+                on: defaultId === w.id,
+                onToggle: () => {
+                  const next = defaultId === w.id ? undefined : w.id;
+                  setDefaultDeckId(side, next);
+                  setDefaultId(next);
+                },
+              }}
+            />
           ))}
         </ul>
       </div>
@@ -205,7 +220,7 @@ function FitText({ text, class: className }: { text: string; class: string }) {
   );
 }
 
-export function DeckRow({ db, stored, onOpen, format, selected, disabled, issuesOnly }: { db: CardDb; stored: WireDeck & { format?: string }; onOpen: () => void; format?: FormatKey; selected?: boolean; disabled?: boolean; issuesOnly?: boolean }) {
+export function DeckRow({ db, stored, onOpen, format, selected, disabled, issuesOnly, star }: { db: CardDb; stored: WireDeck & { format?: string }; onOpen: () => void; format?: FormatKey; selected?: boolean; disabled?: boolean; issuesOnly?: boolean; star?: { on: boolean; onToggle: () => void } }) {
   const deck = useMemo(() => {
     try {
       return fromWire(stored, db);
@@ -285,6 +300,11 @@ export function DeckRow({ db, stored, onOpen, format, selected, disabled, issues
             ))}
           </ul>
         </div>
+      )}
+      {star && (
+        <button class={`deck-star ${star.on ? "on" : ""}`} onClick={star.onToggle} aria-pressed={star.on} aria-label={star.on ? "Default deck, tap to unset" : "Make this the default deck"}>
+          <Icon name="star" />
+        </button>
       )}
       {peek.view}
     </li>

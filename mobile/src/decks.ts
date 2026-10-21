@@ -1,4 +1,4 @@
-import type { Card, CardDb, Deck, DeckEntry, PreconDeck, Side } from "./engine";
+import type { Card, CardDb, Deck, DeckEntry, Matchup, PreconDeck, Side } from "./engine";
 
 const normalize = (s: string) =>
   s
@@ -152,6 +152,28 @@ export function putDeck(deck: Omit<StoredDeck, "id"> & { id?: string }): StoredD
   return stored;
 }
 
+const DEFAULT_KEY = (side: Side) => `nsg.defaultDeck.${side}`;
+
+export function defaultDeckId(side: Side): string | undefined {
+  try {
+    return localStorage.getItem(DEFAULT_KEY(side)) ?? undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export function setDefaultDeckId(side: Side, id: string | undefined) {
+  try {
+    if (id) localStorage.setItem(DEFAULT_KEY(side), id);
+    else localStorage.removeItem(DEFAULT_KEY(side));
+  } catch {}
+}
+
+export function defaultStored(side: Side): StoredDeck | undefined {
+  const id = defaultDeckId(side);
+  return id ? savedDecks().find((d) => d.id === id && d.side === side) : undefined;
+}
+
 export function latest(deck: WireDeck, side: Side): WireDeck {
   const saved = savedDecks();
   const found = (deck.ref && saved.find((d) => d.id === deck.ref)) || (!deck.ref && saved.find((d) => d.side === side && d.name === deck.name));
@@ -160,4 +182,25 @@ export function latest(deck: WireDeck, side: Side): WireDeck {
 
 export function removeDeck(id: string) {
   writeDecks(savedDecks().filter((d) => d.id !== id));
+}
+
+const SEEDED = "nsg.seededStarters";
+
+export function seedStarters(db: CardDb, matchups: Matchup[]) {
+  try {
+    if (localStorage.getItem(SEEDED) || savedDecks().length) return;
+    localStorage.setItem(SEEDED, "1");
+  } catch {
+    return;
+  }
+  const starters = matchups.filter((m) => m.corp.name.includes("System Gateway"));
+  for (const m of [...starters].reverse()) {
+    for (const side of ["corp", "runner"] as Side[]) {
+      const p = m[side];
+      try {
+        const stored = putDeck({ ...toWire({ ...fromPrecon(p, db), name: `${p.name} · ${m.title}` }), side, format: "casual" });
+        if (m === starters[0]) setDefaultDeckId(side, stored.id);
+      } catch {}
+    }
+  }
 }

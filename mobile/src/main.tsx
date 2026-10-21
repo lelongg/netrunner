@@ -27,7 +27,7 @@ import { Lobby } from "./screens/Lobby";
 import { Guide } from "./screens/Guide";
 import { FxLab } from "./screens/FxLab";
 import { markTutorial, skipTutorial, tutorialState } from "./tutorial";
-import { fromPrecon, toWire } from "./decks";
+import { fromPrecon, seedStarters, toWire } from "./decks";
 import { type Role, type SavedGame, Session, clearSave, listSaves, loadSave, newRoomCode, saveId } from "./session";
 import "./styles.css";
 import "./fx/fx.css";
@@ -290,7 +290,11 @@ function App() {
 
   useEffect(() => {
     loadEngine()
-      .then(({ engine, db }) => setLoaded({ engine, db, matchups: engine.precons() }))
+      .then(({ engine, db }) => {
+        const matchups = engine.precons();
+        seedStarters(db, matchups);
+        setLoaded({ engine, db, matchups });
+      })
       .catch((e) => setError(`Could not load the engine: ${e}`));
   }, []);
 

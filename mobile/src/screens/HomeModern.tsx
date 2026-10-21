@@ -10,7 +10,7 @@ import { cardImage } from "../engine";
 import { Cta, Ticker } from "../ui";
 import { Icon, type IconName } from "../icons";
 import { lastDeck, saveId } from "../session";
-import { savedDecks } from "../decks";
+import { defaultStored, savedDecks } from "../decks";
 import { motionOff } from "../settings";
 import CursorGrid from "../game/CursorGrid";
 import { QrScan } from "./QrScan";
@@ -46,7 +46,8 @@ function playerName() {
 
 function featured(db: CardDb | undefined, side: Side): { deck?: string; id?: string; card?: Card } {
   if (!db) return {};
-  const wire = lastDeck(side) ?? savedDecks().find((d) => d.side === side);
+  const pinned = defaultStored(side);
+  const wire = pinned ? { ...pinned, ref: pinned.id } : (lastDeck(side) ?? savedDecks().find((d) => d.side === side));
   const own = wire && db.byTitle.get(wire.identity);
   const stored = wire && savedDecks().find((d) => (wire.ref ? d.id === wire.ref : d.side === side && d.name === wire.name));
   if (own) return { deck: wire!.name, id: stored?.id, card: own };

@@ -13,6 +13,7 @@ export function QrScan({ onCode }: { onCode: (code: string) => void }) {
   const video = useRef<HTMLVideoElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [miss, setMiss] = useState(false);
+  const [live, setLive] = useState(false);
   useEffect(() => {
     let stream: MediaStream | null = null;
     let stop = false;
@@ -73,8 +74,9 @@ export function QrScan({ onCode }: { onCode: (code: string) => void }) {
         <p class="hint">{error}</p>
       ) : (
         <>
-          <span class="qr-view">
-            <video ref={video} muted playsInline />
+          <span class={`qr-view ${live ? "live" : ""}`}>
+            <i class="qr-static" />
+            <video ref={video} muted playsInline onPlaying={() => setLive(true)} />
             <i class="qr-corners" />
             <i class="qr-line" />
           </span>

@@ -3,7 +3,7 @@ import type { CardDb, Matchup, Side } from "../engine";
 import { CardImage } from "../game/CardImage";
 import { useBackClose } from "../back";
 import { DeckRow, DeckView } from "./Decks";
-import { type WireDeck, deckSize, fromPrecon, fromWire, putDeck, savedDecks, toWire } from "../decks";
+import { type WireDeck, defaultStored, deckSize, fromPrecon, fromWire, putDeck, savedDecks, toWire } from "../decks";
 import { DeckBrowser } from "./DeckBrowser";
 import { Icon } from "../icons";
 import { type GameFormat, FORMATS, analyze, deckFormat } from "../deckrules";
@@ -41,7 +41,8 @@ function preconChoices(side: Side, db: CardDb, matchups: Matchup[], format: Game
 
 export function defaultDeck(side: Side, db: CardDb, matchups: Matchup[], format: GameFormat): WireDeck | undefined {
   if (format !== "preconstructed") {
-    const own = savedDecks().find((d) => d.side === side && !problemIn(format, db, d));
+    const pinned = defaultStored(side);
+    const own = (pinned && !problemIn(format, db, pinned) ? pinned : undefined) ?? savedDecks().find((d) => d.side === side && !problemIn(format, db, d));
     if (own) return { name: own.name, identity: own.identity, cards: own.cards, ref: own.id };
   }
   return preconChoices(side, db, matchups, format)[0];

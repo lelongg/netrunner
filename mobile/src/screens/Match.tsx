@@ -1,6 +1,6 @@
 import { useEffect, useState } from "preact/hooks";
 import type { CardDb, Matchup, Side } from "../engine";
-import { type WireDeck, latest } from "../decks";
+import { type WireDeck, defaultStored, latest } from "../decks";
 import { lastDeck, setLastDeck } from "../session";
 import { DeckSheet, shareLink } from "./Lobby";
 import { QrCode } from "../QrCode";
@@ -85,6 +85,8 @@ function InviteSheet({ code, status, onClose }: { code: string; status: string; 
 export function Match({ name, db, matchups, onMatched, onInvite, onClose, invite, onCancelInvite }: { name: string; db: CardDb; matchups: Matchup[]; onMatched: (m: Matched) => void; onInvite: (format: GameFormat, side?: Side) => void; onClose: () => void; invite?: { code: string; status: string }; onCancelInvite?: () => void }) {
   const [decks, setDecks] = useState<Record<Side, WireDeck | undefined>>(() => {
     const pick = (s: Side) => {
+      const pinned = defaultStored(s);
+      if (pinned) return { name: pinned.name, identity: pinned.identity, cards: pinned.cards, ref: pinned.id };
       const d = lastDeck(s);
       return d && latest(d, s);
     };
@@ -149,8 +151,12 @@ export function Match({ name, db, matchups, onMatched, onInvite, onClose, invite
     };
   }, [mine?.id]);
 
+  const commitDecks = () => {
+    for (const s of ["corp", "runner"] as Side[]) if (decks[s]) setLastDeck(s, decks[s]!);
+  };
   const find = () =>
     act(async () => {
+      commitDecks();
       const result = await seek(name, format, side);
       if ("status" in result) onMatched(result);
       else setMine(result);
@@ -248,7 +254,7 @@ export function Match({ name, db, matchups, onMatched, onInvite, onClose, invite
             <Cta onClick={find} disabled={busy}>
               Find an opponent
             </Cta>
-            <Cta onClick={() => onInvite(format, side === "any" ? undefined : side)} disabled={busy} tone="cyan">
+            <Cta onClick={() => (commitDecks(), onInvite(format, side === "any" ? undefined : side))} disabled={busy} tone="cyan">
               Invite a friend
             </Cta>
           </section>
