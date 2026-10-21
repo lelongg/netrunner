@@ -19,6 +19,7 @@ export interface Env {
   WATCH_LIMIT?: RateLimit;
   DECKS?: D1Database;
   DECK_LIMIT?: RateLimit;
+  MATCH_LIMIT?: RateLimit;
 }
 
 const DECK_FORMATS = new Set(["standard", "startup", "core", "eternal", "system-gateway", "throwback"]);
@@ -174,7 +175,7 @@ export default {
       const format = String(body.format ?? "");
       const side = String(body.side ?? "");
       if (!id && (!MATCH_FORMATS.has(format) || !MATCH_SIDES.has(side))) return json({ error: "Expected a known format and side=corp|runner|any" }, 400, origin);
-      if ((await limited(env.CREATE_LIMIT, request)) || (await limited(env.CREATE_LIMIT_ALL, null))) return json({ error: "Too many new games, try again in a minute" }, 429, origin);
+      if (await limited(env.MATCH_LIMIT, request)) return json({ error: "Too many searches, try again in a minute" }, 429, origin);
       const sub = body.sub && validSub(body.sub, env.PUSH_ALLOW_LOOPBACK === "1") ? (body.sub as PushSub) : null;
       const who = { name: cleanName(body.name), sub };
       if (action === "accept") {
