@@ -63,7 +63,7 @@ export function DeckPicker({ side, db, matchups, value, onChange, onEditDecks, s
           <ul class="deck-library">
             {mine.length === 0 && <li class="hint">No {side === "corp" ? "Corp" : "Runner"} deck of yours yet.</li>}
             {mine.map(({ deck: d, problem }) => (
-              <DeckRow key={d.id} db={db} stored={d} format={rules ?? "casual"} selected={value?.name === d.name} disabled={!!problem} issuesOnly onOpen={() => onChange({ name: d.name, identity: d.identity, cards: d.cards })} />
+              <DeckRow key={d.id} db={db} stored={d} format={rules ?? "casual"} selected={value?.name === d.name} disabled={!!problem} issuesOnly onOpen={() => onChange({ name: d.name, identity: d.identity, cards: d.cards, ref: d.id })} />
             ))}
           </ul>
           {onEditDecks && (

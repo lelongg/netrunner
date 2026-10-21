@@ -96,6 +96,7 @@ export interface WireDeck {
   name: string;
   identity: string;
   cards: [string, number][];
+  ref?: string;
 }
 
 export const toWire = (d: Deck): WireDeck => ({
@@ -149,6 +150,12 @@ export function putDeck(deck: Omit<StoredDeck, "id"> & { id?: string }): StoredD
   const stored: StoredDeck = { ...deck, id: deck.id ?? newDeckId(), updatedAt: Date.now() };
   writeDecks([stored, ...savedDecks().filter((d) => d.id !== stored.id)]);
   return stored;
+}
+
+export function latest(deck: WireDeck, side: Side): WireDeck {
+  const saved = savedDecks();
+  const found = (deck.ref && saved.find((d) => d.id === deck.ref)) || (!deck.ref && saved.find((d) => d.side === side && d.name === deck.name));
+  return found ? { name: found.name, identity: found.identity, cards: found.cards, ref: found.id } : deck;
 }
 
 export function removeDeck(id: string) {

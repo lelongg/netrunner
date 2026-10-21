@@ -1,6 +1,6 @@
 import type { CardDb, Deck, EngineApi, Side } from "./engine";
 import { HeuristicBot } from "./bot/heuristic.ts";
-import { type WireDeck, engineDeck, fromPrecon, fromWire, toWire } from "./decks";
+import { type WireDeck, engineDeck, fromPrecon, fromWire, latest, toWire } from "./decks";
 import { type GameFormat, analyze, dealtFormat, deckFormat, isGameFormat } from "./deckrules";
 import { type GameHost, type LocalEntry, type Op, type Probe, type ProbeResult, type Seat as ViewSeat, makeHost } from "./game/runner";
 import { owesMove } from "./game/actions";
@@ -604,8 +604,19 @@ export class Session {
     return { ...toWire(fromPrecon(precon, this.db)), name: this.lobby.format === "chimera" ? "Chimera deck" : "Drafted deck" };
   }
 
-  private effectiveDeck(side: Side, chosen?: WireDeck) {
-    return dealtFormat(this.lobby.format) ? this.stand(side) : chosen;
+  private effectiveDeck(side: Side, chosen?: WireDeck): WireDeck | undefined {
+    if (dealtFormat(this.lobby.format)) return this.stand(side);
+    if (!chosen) return chosen;
+    const { ref: _ref, ...deck } = latest(chosen, side);
+    return deck;
+  }
+
+  refreshDecks() {
+    if (this.lobby.started) return;
+    const mine = this.lobby.myDeck && latest(this.lobby.myDeck, this.lobby.mySide);
+    if (mine && JSON.stringify(mine) !== JSON.stringify(this.lobby.myDeck)) this.setDeck(mine);
+    const theirs = this.lobby.role === "local" && this.opponentDeck && latest(this.opponentDeck, other(this.lobby.mySide));
+    if (theirs && JSON.stringify(theirs) !== JSON.stringify(this.opponentDeck)) this.setDeck(theirs, other(this.lobby.mySide));
   }
 
   setFormat(format: GameFormat) {

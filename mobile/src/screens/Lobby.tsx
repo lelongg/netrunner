@@ -292,6 +292,11 @@ export function Lobby({ session, db, matchups, onLeave, onWatch }: Props) {
   if (lobby.status !== "connecting" && lobby.status !== "closed") reached.current = true;
   const inLobby = lobby.role === "local" || (lobby.status !== "closed" && (lobby.status !== "connecting" || reached.current));
 
+  const [, refreshed] = useState(false);
+  useEffect(() => {
+    session.refreshDecks();
+    refreshed(true);
+  }, []);
   useEffect(() => {
     if (lobby.opponentName) uiSound("ui_join");
   }, [!!lobby.opponentName]);
@@ -340,7 +345,18 @@ export function Lobby({ session, db, matchups, onLeave, onWatch }: Props) {
     );
   }
 
-  if (editor) return <Decks db={db} matchups={matchups} initialSide={editor} onClose={() => setEditor(null)} />;
+  if (editor)
+    return (
+      <Decks
+        db={db}
+        matchups={matchups}
+        initialSide={editor}
+        onClose={() => {
+          setEditor(null);
+          session.refreshDecks();
+        }}
+      />
+    );
 
   return (
     <>
