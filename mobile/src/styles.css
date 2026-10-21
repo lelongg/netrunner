@@ -8970,19 +8970,12 @@ button.player-chip {
   translate: calc(var(--tx, 0) * 10px) calc(var(--ty, 0) * 8px);
 }
 
-.board .playfield > .opp {
-  translate: calc(var(--tx, 0) * 18px) calc(var(--ty, 0) * 14px);
-  box-shadow: calc(var(--tx, 0) * -10px) calc(var(--ty, 0) * -10px + 12px) 18px rgb(0 0 0 / 0.75);
-}
 
 .board .dock {
   position: relative;
   z-index: 2;
-  margin: 0 -24px -20px;
-  padding: 0 24px calc(20px + env(safe-area-inset-bottom));
   background: var(--bg);
-  translate: calc(var(--tx, 0) * 20px) calc(var(--ty, 0) * 15px);
-  box-shadow: calc(var(--tx, 0) * -14px) calc(var(--ty, 0) * -14px - 8px) 30px rgb(0 0 0 / 0.65);
+  box-shadow: 0 -8px 30px rgb(0 0 0 / 0.65);
 }
 
 .sheet-backdrop > .sheet {
