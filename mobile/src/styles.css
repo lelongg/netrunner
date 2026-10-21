@@ -43,6 +43,21 @@ body {
   overscroll-behavior: none;
 }
 
+body {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+p,
+.log,
+.card-text,
+input,
+textarea,
+[contenteditable] {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
 body::after {
   content: "";
   position: fixed;
@@ -8932,5 +8947,29 @@ button.player-chip {
 
 .wr-signal-stage .wr-qr {
   translate: calc(var(--tx, 0) * 12px) calc(var(--ty, 0) * 9px);
+  transition: translate 0.1s linear;
+}
+
+.board .board-grid {
+  inset: -4%;
+  translate: calc(var(--tx, 0) * -16px) calc(var(--ty, 0) * -12px);
+  transition: translate 0.1s linear;
+}
+
+.board .playfield {
+  overflow-x: clip;
+}
+
+.board .playfield > .area {
+  translate: calc(var(--tx, 0) * 7px) calc(var(--ty, 0) * 5px);
+  transition: translate 0.1s linear;
+}
+
+.board .playfield > .divider ~ .area {
+  translate: calc(var(--tx, 0) * 3px) calc(var(--ty, 0) * 2px);
+}
+
+.board .hand {
+  translate: calc(var(--tx, 0) * 5px) 0;
   transition: translate 0.1s linear;
 }

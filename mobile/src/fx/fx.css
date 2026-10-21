@@ -2852,3 +2852,17 @@
 .fx-showdown-kind.resolved {
   color: #ff6a5f;
 }
+
+.fx-layer > :not(.fx-border, .fx-finale, .fx-flash, .fx-glitch, .fx-showdown, .fx-shutdown, .fx-split, .fx-vignette, .fx-vr) {
+  translate: calc(var(--tx, 0) * 6px) calc(var(--ty, 0) * 5px);
+}
+
+.fx-layer > .fx-showcase,
+.fx-showdown > * {
+  translate: calc(var(--tx, 0) * 14px) calc(var(--ty, 0) * 10px);
+}
+
+.fx-showcase .fx-card-img,
+.fx-showcase > .tile img {
+  transform: perspective(700px) rotateY(calc(var(--tx, 0) * 12deg)) rotateX(calc(var(--ty, 0) * -9deg));
+}

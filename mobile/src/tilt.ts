@@ -81,6 +81,8 @@ export function useTilt(target: { current: HTMLElement | null }) {
       removeEventListener("deviceorientation", onTilt);
       removeEventListener("pointerdown", unlock);
       cancelAnimationFrame(raf);
+      target.current?.style.removeProperty("--tx");
+      target.current?.style.removeProperty("--ty");
     };
   }, []);
 }
