@@ -19,7 +19,7 @@ import { startEngineWorker } from "./game/workerHost";
 import { type CardDb, type EngineApi, type Matchup, type Side, loadEngine } from "./engine";
 import { Board } from "./game/Board";
 import { storeTicket, ticketFromHash } from "./net/relay";
-import { basicCommands, promptOf, runCommands } from "./game/actions";
+import { awaitingMove, basicCommands, promptOf, runCommands } from "./game/actions";
 import { Handoff } from "./screens/Handoff";
 import { Home } from "./screens/Home";
 import { Lobby } from "./screens/Lobby";
@@ -75,6 +75,27 @@ function corpDecision(view: any) {
   return (server?.content ?? []).some((c: any) => !c.rezzed && (c.type === "Upgrade" || c.type === "Asset"));
 }
 
+function installedCards(view: any, side: Side): any[] {
+  const out: any[] = [];
+  const walk = (c: any) => {
+    if (!c) return;
+    out.push(c);
+    for (const h of c.hosted ?? []) walk(h);
+  };
+  if (side === "corp") for (const server of Object.values<any>(view?.corp?.servers ?? {})) for (const c of [...(server.content ?? []), ...(server.ices ?? [])]) walk(c);
+  else for (const zone of Object.values<any>(view?.runner?.rig ?? {})) for (const c of zone ?? []) walk(c);
+  return out;
+}
+
+function canRespond(view: any, side: Side) {
+  if (!view || view.winner || promptOf(view, side)) return false;
+  const credits = view[side]?.credit ?? 0;
+  return installedCards(view, side).some((c) => {
+    if ((c.abilities ?? []).some((a: any) => a.playable)) return true;
+    return side === "corp" && !c.rezzed && c.type !== "ICE" && c.type !== "Agenda" && (c["current-rez-cost"] ?? c.cost ?? 0) <= credits;
+  });
+}
+
 function canAct(view: any, side: Side) {
   if (!view || view.winner) return false;
   const prompt = promptOf(view, side);
@@ -123,7 +144,10 @@ function App() {
     if (agentParam) (window as any).__nsg = { session, engine: loaded?.engine };
   }, [session, loaded]);
   const hotSeat = !!session && session.lobby.started && session.lobby.role === "local" && !session.lobby.vsBot;
-  const waitingFor = hotSeat && !canAct(session.views[localSide], localSide) && canAct(session.views[otherSide(localSide)], otherSide(localSide)) ? otherSide(localSide) : null;
+  const [responding, setResponding] = useState<{ by: Side; back: Side } | null>(null);
+  const waitingFor = hotSeat && !responding && !canAct(session.views[localSide], localSide) && canAct(session.views[otherSide(localSide)], otherSide(localSide)) ? otherSide(localSide) : null;
+  const respondWindow = hotSeat && !responding && !handoff && awaitingMove(session!.views[localSide], localSide) ? otherSide(localSide) : null;
+  const responder = respondWindow && canRespond(session!.views[respondWindow], respondWindow) ? respondWindow : null;
   useEffect(() => {
     if (waitingFor && handoff !== waitingFor) setHandoff(waitingFor);
   }, [waitingFor]);
@@ -412,7 +436,39 @@ function App() {
       );
     const view = session.views[localSide];
     if (!view) return <Opening label={lobby.vsBot ? "solo game" : "local game"} ready />;
-    return <Board session={session} engine={loaded.engine} db={loaded.db} side={localSide} view={view} handoffLog={handoffLog} onLeave={leave} onExit={exit} />;
+    const sideName = (x: Side) => (x === "corp" ? "Corp" : "Runner");
+    return (
+      <Board
+        session={session}
+        engine={loaded.engine}
+        db={loaded.db}
+        side={localSide}
+        view={view}
+        handoffLog={handoffLog}
+        onLeave={leave}
+        onExit={exit}
+        respond={
+          responding?.by === localSide
+            ? {
+                done: `Done · back to the ${sideName(responding.back)}`,
+                onClick: () => {
+                  const back = responding.back;
+                  setResponding(null);
+                  setHandoff(back);
+                },
+              }
+            : responder
+              ? {
+                  offer: `${sideName(responder)} may respond`,
+                  onClick: () => {
+                    setResponding({ by: responder, back: localSide });
+                    setHandoff(responder);
+                  },
+                }
+              : undefined
+        }
+      />
+    );
   }
 
   if (lobby.role === "spectator") {

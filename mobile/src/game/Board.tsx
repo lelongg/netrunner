@@ -23,7 +23,7 @@ import { Coach } from "./Coach";
 import { type Prober, Verified, useChecked, useVerified } from "./legal";
 import { CardImage, ZoomableCardImage } from "./CardImage";
 import { withTerms } from "./RichText";
-import { motionOff, setSetting, settings } from "../settings";
+import { motionOff, onSettings, setSetting, settings } from "../settings";
 import { uiSound } from "../uisound";
 import { MenuDrawer, MenuItem, MenuSection, MenuTile, SettingsSections } from "../screens/SettingsMenu";
 
@@ -40,6 +40,7 @@ interface Props {
   handoffLog?: number;
   controls?: preact.ComponentChildren;
   quiet?: boolean;
+  respond?: { offer?: string; done?: string; onClick: () => void };
 }
 
 interface ClickMark {
@@ -860,7 +861,7 @@ function markStaged(node: any, staged: Set<unknown>): any {
   return out;
 }
 
-export function Board({ session, engine, db, side, view: live, onSwitchSide, onLeave, onExit, onWatch, handoffLog, controls, quiet }: Props) {
+export function Board({ session, engine, db, side, view: live, onSwitchSide, onLeave, onExit, onWatch, handoffLog, controls, quiet, respond }: Props) {
   const [staged, setStaged] = useState<Set<unknown>>(() => new Set());
   const view = useMemo(() => (staged.size ? markStaged(live, staged) : live), [live, staged]);
   const [selected, setSelected] = useState<any>(null);
@@ -874,6 +875,8 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
   }, [armed]);
   const [menu, setMenu] = useState(false);
   const [menuTab, setMenuTab] = useState("Game");
+  const [, settingsChanged] = useState(0);
+  useEffect(() => onSettings(() => settingsChanged((n) => n + 1)), []);
   const closeMenu = (then: () => void) => {
     setMenu(false);
     then();
@@ -1370,7 +1373,21 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
           {!view.winner && (ice?.rezzed ? <Encounter view={view} render={render} onTap={tap} ice={lastIce?.cid === ice.cid && (view.encounters || view.run?.phase === "encounter-ice") ? lastIce : ice} skip={skipped} onToggle={!watching && side === "runner" && view.encounters && !(prompt && ptype !== "run") ? toggleSub : undefined} /> : lastIce && <Encounter view={view} render={render} onTap={tap} ice={lastIce} passed />)}
           {!view.winner && !watching && side === "runner" && view.encounters && ice?.rezzed && !(prompt && ptype !== "run") && <Breakers view={view} stamp={live} probe={prober} side={side} ice={ice} send={send} onTap={tap} disabled={disabled} skip={skipped} onPartial={breakSome} />}
         </div>
-        {panel}
+        {respond?.done ? (
+          <div class="respond-done">
+            <span class="hint">Rez or use abilities, then hand the device back.</span>
+            <Cta onClick={respond.onClick}>{respond.done}</Cta>
+          </div>
+        ) : (
+          panel
+        )}
+        {respond?.offer && (
+          <button class="respond-offer" onClick={respond.onClick}>
+            <Icon name="swap" />
+            <span>{respond.offer}</span>
+            <small>before your next action</small>
+          </button>
+        )}
         <MeBar view={view} side={side} name={names[side]} />
         <div class="hand" data-anchor={`${side}-hand`}>
           {hand.map((c) => (

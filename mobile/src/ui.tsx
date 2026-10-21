@@ -92,7 +92,9 @@ export function Ticker({ children, action, onFeed, feedKey }: { children: Compon
   });
   return (
     <div class="ticker">
-      <span class="live">LIVE</span>
+      <span class={`live ${onFeed ? "tappable" : ""}`} onClick={onFeed} aria-hidden="true">
+        LIVE
+      </span>
       <span
         class={`feed ${width ? "scrolling" : ""} ${onFeed ? "tappable" : ""}`}
         ref={feed}

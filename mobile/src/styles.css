@@ -7652,3 +7652,51 @@ h1.deck-name.long {
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+.respond-offer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 38px;
+  padding: 6px 12px;
+  text-align: left;
+  text-transform: none;
+  letter-spacing: 0;
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--cyan) 60%, transparent);
+  background: color-mix(in srgb, var(--cyan) 6%, transparent);
+}
+
+.respond-offer .icon {
+  flex: none;
+  height: 14px;
+  color: var(--cyan);
+}
+
+.respond-offer span {
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.respond-offer small {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.respond-done {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 12px 4px;
+}
+
+.respond-done .hint {
+  margin: 0;
+  font-size: 11px;
+}
+
+.ticker .live.tappable {
+  cursor: pointer;
+}
