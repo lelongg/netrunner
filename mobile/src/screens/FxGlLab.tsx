@@ -23,7 +23,29 @@ const CODES: Record<string, string> = {
   "Spin Doctor": "30053",
   Ping: "30055",
   Flyswatter: "35079",
+  "Transfer of Wealth": "35017",
+  "Daily Casts": "26094",
+  "Measured Response": "35078",
+  "Event Horizon": "36058",
+  Botulus: "30004",
+  "Key Performance Indicators": "35077",
+  Pharos: "30063",
+  Unity: "30026",
+  "Seamless Launch": "30040",
+  Sleipnir: "36030",
+  Conduit: "30024",
+  "Humanoid Resources": "35039",
+  "Hansei Review": "30048",
+  Gourmand: "35007",
+  Touchstone: "36021",
+  "Wildcat Strike": "30002",
+  Tocsin: "36060",
+  "Telework Contract": "30027",
+  "Nihilo Agent": "36049",
+  "Semak-samun": "35054",
 };
+
+const ICE = new Set(["Ping", "Flyswatter", "Event Horizon", "Pharos", "Sleipnir", "Tocsin", "Semak-samun"]);
 
 const DEMOS = (Object.keys(FX) as (keyof typeof FX)[]).flatMap((kind) => Object.keys(FX[kind]).map((title) => ({ kind, title, code: CODES[title] })));
 
@@ -37,7 +59,7 @@ export function FxGlLab() {
     setBusy(true);
     const rect = img.current.getBoundingClientRect();
     if (which === "before") {
-      const table = demo.kind === "play" ? PLAY : demo.kind === "install" ? INSTALL : REZ;
+      const table = demo.kind === "play" ? PLAY : demo.kind === "install" ? INSTALL : demo.kind === "rez" ? REZ : {};
       table[demo.title]?.(rect);
       await new Promise((r) => setTimeout(r, 2400));
     } else await glEffect(demo.kind, demo.title, rect, demo.code, img.current, "runner");
@@ -49,7 +71,7 @@ export function FxGlLab() {
         <h1>FX LAB · GL</h1>
       </header>
       <div class="fxgl-stage">
-        <img ref={img} src={`https://card-images.netrunnerdb.com/v2/large/${demo.code}.jpg`} alt={demo.title} crossOrigin="anonymous" />
+        <img ref={img} class={`${ICE.has(demo.title) ? "ice" : ""} ${ICE.has(demo.title) && demo.kind === "install" ? "unrezzed" : ""}`} src={`https://card-images.netrunnerdb.com/v2/large/${demo.code}.jpg`} alt={demo.title} crossOrigin="anonymous" />
       </div>
       <div class="fxgl-row">
         <button disabled={busy} onClick={() => play("before")}>
@@ -63,7 +85,7 @@ export function FxGlLab() {
         {DEMOS.map((d, i) => (
           <li>
             <button class={i === pick ? "on" : ""} disabled={busy} onClick={() => setPick(i)}>
-              {d.title}
+              {d.title} · {d.kind}
             </button>
           </li>
         ))}

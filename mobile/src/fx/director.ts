@@ -3,7 +3,7 @@ import type { Side } from "../engine";
 import { currentIce } from "../game/actions";
 import { serverName } from "../game/text";
 import { type Plan, accessStage, collect, moveKinds, play, prepare } from "./cards";
-import { cleaver, fireSignature, leech, planogramResult, regolith, rezSignature, snare, transmission } from "./signatures";
+import { cleaver, fireSignature, leech, planogramResult, regolith, rezSignature, snare, transmission, useSignature } from "./signatures";
 import { cue, play as sound } from "../sound";
 import { type Point, type Tone, anchor, animate, banner, burst, buzz, haptics, coins, done, flash, floater, gate, glitch, layer, lunge, mid, node, place, pointOf, punch, rays, rectOf, reduced, ring, shake, slash, split, stamp, tileEl, vignette, visible, wrapEl, scoreSegment } from "./core";
 
@@ -404,10 +404,11 @@ function finale(won: boolean, label?: string) {
 }
 
 export interface Hit {
-  kind: "break" | "fire" | "damage" | "purge" | "trash-access" | "access";
+  kind: "break" | "fire" | "use" | "damage" | "purge" | "trash-access" | "access";
   zone?: string;
   ice?: any;
   breaker?: any;
+  card?: any;
   text?: string;
   power?: number;
 }
@@ -435,7 +436,9 @@ function readLog(view: any, from: number, render: (m: unknown) => string, before
       out.push({ kind: "break", ice: iceByTitle(view, m[2], before), breaker: name ? runnerCard(view, name) : undefined, power: all ? 3 : 1 });
     } else if ((m = text.match(/^.+? uses (.+?) to (.+?)\.?$/i)) && !/\brez\b/i.test(m[2])) {
       const ice = iceByTitle(view, m[1], before);
+      const own = ice && ice.title === m[1] ? undefined : runnerCard(view, m[1]);
       if (ice && ice.title === m[1]) out.push({ kind: "fire", ice, text: m[2] });
+      else if (own) out.push({ kind: "use", card: own, text: m[2] });
     } else if ((m = text.match(/(\d+)?\s*(net|meat|core|brain) damage/i)) && /\b(suffers?|takes?|deals?|does|trashes)\b/i.test(text)) {
       out.push({ kind: "damage", text: m[2], power: /core|brain/i.test(m[2]) ? 1.6 : 1 });
     } else if (/purges? virus counters/i.test(text)) out.push({ kind: "purge" });
@@ -741,7 +744,17 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
   }
 
   let t = busy;
+  const used = new Set<unknown>();
+  const effect = (card: any, delay: number, owner: Side) => {
+    if (!card?.cid || used.has(card.cid)) return;
+    used.add(card.cid);
+    setTimeout(() => {
+      const el = tileEl(card.cid) as HTMLElement | null;
+      useSignature(card.title, el ? rectOf(el) : null, card.code, el, owner);
+    }, delay * 1000);
+  };
   for (const h of hits) {
+    if (h.kind === "use") effect(h.card, t, "runner");
     if (h.kind === "break" && h.ice) {
       if (!pointOf(tileEl(h.ice.cid))) continue;
       const delay = t;
@@ -754,6 +767,7 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
         const live = () => pointOf(tileEl(h.ice.cid));
         lunge(breakerEl, live, {
           onHit: () => {
+            effect(h.breaker, 0.4, "runner");
             breakHit(style, live() ?? target, tileEl(h.ice.cid) ?? iceEl, h.power ?? 1);
             if (h.breaker?.title === "Cleaver") cleaver(live() ?? target, tileEl(h.ice.cid) ?? iceEl);
           },
@@ -769,6 +783,7 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
         const at = runnerTarget(me);
         const icePoint = pointOf(iceEl);
         setTimeout(() => fireSignature(h.ice.title, rectOf(tileEl(h.ice.cid)), runnerTarget(me)), 380);
+        effect(h.ice, 0, "corp");
         if (/end the run/i.test(text)) {
           punch(iceEl, 1.12);
           gate(wrapEl(h.ice.cid) ?? iceEl, tone);

@@ -9032,6 +9032,15 @@ button.player-chip {
   box-shadow: 0 20px 40px rgb(0 0 0 / 0.6);
 }
 
+.fxgl-stage img.ice {
+  width: min(48vw, 200px);
+  rotate: 90deg;
+}
+
+.fxgl-stage img.unrezzed {
+  filter: grayscale(0.85) brightness(0.55);
+}
+
 .fxgl-row {
   display: grid;
   grid-template-columns: 1fr 1fr;

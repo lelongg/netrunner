@@ -4974,6 +4974,10 @@ export const INSTALL: Record<string, (r: DOMRect) => void> = {
   "Word on the Street": wordOnTheStreet,
 };
 
+export function useSignature(title: string | undefined, r: DOMRect | null, code?: string, el?: HTMLElement | null, owner?: string) {
+  if (r) glEffect("use", plain(title), r, code, el, owner);
+}
+
 export function installSignature(title: string | undefined, r: DOMRect, code?: string, el?: HTMLElement | null, owner?: string) {
   return glEffect("install", plain(title), r, code, el, owner) ?? void INSTALL[plain(title)]?.(r);
 }
