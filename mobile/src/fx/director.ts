@@ -4,6 +4,7 @@ import { currentIce } from "../game/actions";
 import { serverName } from "../game/text";
 import { type Plan, accessStage, collect, moveKinds, pendingGain, play, prepare } from "./cards";
 import { setAim } from "./gl/aim";
+import { hasGl } from "./gl";
 import { cleaver, fireSignature, leech, planogramResult, regolith, rezSignature, snare, transmission, useSignature, hasUseEffect } from "./signatures";
 import { cue, play as sound } from "../sound";
 import { type Point, type Tone, anchor, animate, banner, burst, buzz, haptics, creditChange, done, flash, floater, gate, glitch, layer, lunge, mid, node, place, pointOf, punch, rays, rectOf, reduced, ring, shake, slash, split, stamp, tileEl, vignette, visible, wrapEl, scoreSegment } from "./core";
@@ -699,6 +700,7 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
     const flip = () => {
       rezFlip(cid, isIce ? KIND_TONE[iceKind(card)] : "blue", isIce && !!now.server);
       setTimeout(() => {
+        if (isIce && card) return showdown(card, "rez", (big, ghost) => rezSignature(card.title, big, card.code, ghost, "corp"));
         const r = rectOf(tileEl(cid));
         if (visible(r)) rezSignature(card?.title, r, card?.code, tileEl(cid) as HTMLElement | null, "corp");
       }, 450);
@@ -826,7 +828,7 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
         const at = runnerTarget(me);
         const icePoint = pointOf(iceEl);
         setTimeout(() => fireSignature(h.ice.title, rectOf(tileEl(h.ice.cid)), runnerTarget(me)), 380);
-        effect(h.ice, 0, "corp");
+        if (hasGl("use", h.ice.title)) showdown(h.ice, "fire", (big, ghost) => useSignature(h.ice.title, big, h.ice.code, ghost, "corp"), shortText(text));
         if (/end the run/i.test(text)) {
           punch(iceEl, 1.12);
           gate(wrapEl(h.ice.cid) ?? iceEl, tone);
@@ -875,10 +877,6 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
     }
   }
 
-  if (now.encounter && now.encounter !== prev.encounter) {
-    const ice = findIn(view, now.ice);
-    if (ice) setTimeout(() => showdown(ice), (t + (prev.rezzed.get(now.ice) === false ? 0.6 : 0)) * 1000);
-  }
 
   if (prev.ice != null && now.ice !== prev.ice && now.server && now.server === prev.server) digitize(wrapEl(prev.ice), "cyan");
 
@@ -941,89 +939,68 @@ function findIn(view: any, cid: unknown): any {
   return found;
 }
 
-function showdown(ice: any) {
+const staged = new Set<unknown>();
+
+function showdown(ice: any, kind: "rez" | "fire", run: (big: DOMRect, ghost: HTMLElement) => Promise<void> | void, caption = "") {
+  if (reduced() || staged.has(ice.cid) || !ice.code) return;
+  staged.add(ice.cid);
   const el = tileEl(ice.cid);
   const r = rectOf(el);
-  if (!el || !visible(r) || reduced()) return;
-  const kind = iceKind(ice);
-  const tone = KIND_TONE[kind];
-  quietUntil = performance.now() + 1800;
-  const sideways = el.classList.contains("sideways");
-  const w = sideways ? Math.min(innerWidth * 0.8, 320) : Math.min(innerWidth * 0.5, 220);
-  const h = sideways ? w * (63 / 88) : w * (88 / 63);
+  const tone = KIND_TONE[iceKind(ice)];
+  quietUntil = performance.now() + 2200;
+  const w = Math.min(innerWidth * 0.8, 320);
+  const h = w * (63 / 88);
   const big = new DOMRect((innerWidth - w) / 2, Math.max(70, innerHeight * 0.42 - h / 2), w, h);
+  const from = visible(r) ? r! : big;
   const stageEl = node(`fx-showdown tone-${tone}`);
-  const ghost = node("fx-ghost fx-showcase", stageEl);
+  const ghost = node("fx-ghost fx-showcase fx-big", stageEl);
   place(ghost, big);
-  const face = el.cloneNode(true) as HTMLElement;
-  face.removeAttribute("data-cid");
-  face.style.opacity = "";
-  if (sideways) {
-    face.style.setProperty("--tile-w", `${h}px`);
-    face.style.setProperty("--tile-h", `${w}px`);
-  }
-  const img = face.querySelector("img");
-  if (img && ice.code) {
-    const hi = new Image();
-    hi.crossOrigin = "anonymous";
-    hi.src = `https://card-images.netrunnerdb.com/v2/large/${ice.code}.jpg`;
-    hi.decode().then(
-      () => {
-        img.removeAttribute("srcset");
-        img.src = hi.src;
-      },
-      () => {},
-    );
-  }
-  ghost.appendChild(face);
+  const img = document.createElement("img");
+  img.className = "fx-ice-img";
+  img.src = `https://card-images.netrunnerdb.com/v2/large/${ice.code}.jpg`;
+  img.alt = ice.title ?? "";
+  img.style.width = `${h}px`;
+  img.style.height = `${w}px`;
+  ghost.appendChild(img);
   const aura = node(`fx-aura tone-${tone}`, ghost);
   const label = node("fx-showdown-label", stageEl);
-  label.innerHTML = "";
   const t1 = document.createElement("span");
   t1.className = "fx-showdown-kind";
-  t1.textContent = `Encounter · ${(ice.subtypes ?? []).slice(0, 2).join(" · ")}`;
+  t1.textContent = kind === "rez" ? `Rez · ${(ice.subtypes ?? []).slice(0, 2).join(" · ")}` : caption || "Subroutine";
   const t2 = document.createElement("span");
   t2.className = "fx-showdown-title";
   t2.textContent = ice.title ?? "";
   label.append(t1, t2);
   label.style.top = `${big.bottom + 14}px`;
-  const sx = r.width / big.width;
-  const sy = r.height / big.height;
   ghost.style.transformOrigin = "0 0";
-  el.style.opacity = "0";
-  animate(stageEl, { opacity: [0, 1] }, { duration: 0.25 });
-  animate(ghost, { x: [r.left - big.left, 0], y: [r.top - big.top, 0], scaleX: [sx, 1], scaleY: [sy, 1], rotate: [-8, 0] }, { type: "spring", visualDuration: 0.45, bounce: 0.3 });
-  animate(aura, { opacity: [0, 1, 0.7], scale: [0.8, 1.08, 1] }, { duration: 0.6 });
-  animate(t1, { opacity: [0, 1], letterSpacing: ["0.8em", "0.28em"] }, { duration: 0.5, delay: 0.15 });
-  animate(t2, { opacity: [0, 1], y: [20, 0], scale: [1.4, 1] }, { type: "spring", visualDuration: 0.4, bounce: 0.4, delay: 0.2 });
-  setTimeout(() => {
-    ring(mid(big), tone, w * 1.9);
-    burst(mid(big), tone, 18, w * 0.8, { size: 5, gravity: 0 });
-    shake(0.5);
-    buzz([40, 30, 40]);
-  }, 300);
-  const hold = 1.1;
-  setTimeout(() => {
-    animate(label, { opacity: 0 }, { duration: 0.2 });
-    animate(aura, { opacity: 0 }, { duration: 0.2 });
-    const back = rectOf(tileEl(ice.cid)) ?? r;
-    animate(ghost, { x: back.left - big.left, y: back.top - big.top, scaleX: back.width / big.width, scaleY: back.height / big.height, rotate: 0 }, { duration: 0.38, ease: [0.5, 0, 0.3, 1] }).finished.then(
-      () => {
-        stageEl.remove();
-        const cur = tileEl(ice.cid);
-        if (cur) {
-          cur.style.opacity = "";
-          punch(cur, 1.12);
-        }
-        el.style.opacity = "";
-      },
-      () => {
-        stageEl.remove();
-        el.style.opacity = "";
-      },
-    );
-    animate(stageEl, { backgroundColor: ["rgba(0,0,0,0.55)", "rgba(0,0,0,0)"] }, { duration: 0.38 });
-  }, hold * 1000);
+  if (el) el.style.opacity = "0";
+  animate(stageEl, { opacity: [0, 1] }, { duration: 0.2 });
+  const arrive = animate(ghost, { x: [from.left - big.left, 0], y: [from.top - big.top, 0], scaleX: [from.width / big.width, 1], scaleY: [from.height / big.height, 1] }, { type: "spring", visualDuration: 0.38, bounce: 0.25 });
+  animate(aura, { opacity: [0, 1, 0.7] }, { duration: 0.5 });
+  animate(t1, { opacity: [0, 1] }, { duration: 0.4, delay: 0.1 });
+  animate(t2, { opacity: [0, 1], y: [16, 0] }, { duration: 0.35, delay: 0.15 });
+  const loaded = img.decode().catch(() => {});
+  Promise.all([arrive.finished.catch(() => {}), loaded])
+    .then(() => Promise.race([Promise.resolve(run(big, ghost)), new Promise((res) => setTimeout(res, 4000))]))
+    .then(() => new Promise((res) => setTimeout(res, 250)))
+    .then(() => {
+      animate(label, { opacity: 0 }, { duration: 0.2 });
+      animate(aura, { opacity: 0 }, { duration: 0.2 });
+      const back = rectOf(tileEl(ice.cid));
+      const to = visible(back) ? back! : from;
+      animate(stageEl, { backgroundColor: ["rgba(0,0,0,0.55)", "rgba(0,0,0,0)"] }, { duration: 0.35 });
+      return animate(ghost, { x: to.left - big.left, y: to.top - big.top, scaleX: to.width / big.width, scaleY: to.height / big.height }, { duration: 0.35, ease: [0.5, 0, 0.3, 1] }).finished.catch(() => {});
+    })
+    .then(() => {
+      stageEl.remove();
+      staged.delete(ice.cid);
+      const cur = tileEl(ice.cid);
+      if (cur) {
+        cur.style.opacity = "";
+        punch(cur, 1.1);
+      }
+      if (el) el.style.opacity = "";
+    });
 }
 
 export function replayFx(before: any, after: any, me: Side, lines: string[] = [], plan?: Plan) {
@@ -1041,6 +1018,7 @@ export function replayFx(before: any, after: any, me: Side, lines: string[] = []
 export let quietUntil = 0;
 
 let codeOf: (title: string) => string | undefined = () => undefined;
+
 
 function accessSource(view: any, title: string, zone: string): { el: Element | null; card?: any } {
   const servers = view.corp?.servers ?? {};

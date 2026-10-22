@@ -4799,7 +4799,7 @@ export const REZ: Record<string, (r: DOMRect) => void> = {
 };
 
 export function rezSignature(title: string | undefined, r: DOMRect, code?: string, el?: HTMLElement | null, owner?: string) {
-  return glEffect("rez", plain(title), r, code, el, owner) ?? void REZ[plain(title)]?.(r);
+  return glEffect("rez", plain(title), r, code, el, owner) ?? (REZ[plain(title)]?.(r), new Promise<void>((res) => setTimeout(res, 900)));
 }
 
 export const FIRE = ["Karuna", "Urtica Cipher", "Tithe", "Anoetic Void"];
@@ -4904,7 +4904,7 @@ export const INSTALL: Record<string, (r: DOMRect) => void> = {
 };
 
 export function useSignature(title: string | undefined, r: DOMRect | null, code?: string, el?: HTMLElement | null, owner?: string, strike?: Element | null) {
-  if (r) glEffect("use", plain(title), r, code, el, owner, strike);
+  return r ? (glEffect("use", plain(title), r, code, el, owner, strike) ?? undefined) : undefined;
 }
 
 export const hasUseEffect = (title: string | undefined) => hasGl("use", plain(title));

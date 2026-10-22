@@ -2875,3 +2875,11 @@
 .fx-layer > .fx-ghost.fx-burn:not(.fx-showcase) {
   filter: drop-shadow(0 0 8px #ff6a00) drop-shadow(calc(var(--tx, 0) * -20px) calc(var(--ty, 0) * -20px + 16px) 18px rgb(0 0 0 / 0.7));
 }
+
+.fx-ice-img {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) rotate(90deg);
+  display: block;
+}
