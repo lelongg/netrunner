@@ -220,3 +220,25 @@ export function lightning(g: Graphics, x0: number, y0: number, x1: number, y1: n
     g.stroke({ width: w, color: a === 1 ? 0xffffff : color, alpha: a, cap: "round", join: "round" });
   }
 }
+
+const FOCUS = `
+precision highp float;
+in vec2 vTextureCoord;
+out vec4 finalColor;
+uniform sampler2D uTexture;
+uniform vec2 uCenter;
+uniform vec2 uRadius;
+uniform float uAspect;
+uniform vec4 uInputClamp;
+void main() {
+  vec4 color = texture(uTexture, vTextureCoord);
+  vec2 uv = (vTextureCoord - uInputClamp.xy) / (uInputClamp.zw - uInputClamp.xy);
+  vec2 d = (uv - uCenter) * vec2(uAspect, 1.0);
+  float k = smoothstep(uRadius.y, uRadius.x, length(d));
+  finalColor = color * k;
+}`;
+
+export function focusFilter(center: [number, number], inner: number, outer: number, aspect: number) {
+  const glProgram = GlProgram.from({ vertex: defaultFilterVert, fragment: FOCUS, name: "focus" });
+  return new Filter({ glProgram, resources: { focus: { uCenter: { value: new Float32Array(center), type: "vec2<f32>" }, uRadius: { value: new Float32Array([inner, outer]), type: "vec2<f32>" }, uAspect: { value: aspect, type: "f32" } } } });
+}

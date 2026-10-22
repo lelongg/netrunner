@@ -1,6 +1,6 @@
 import { BlurFilter, Container, Graphics, Sprite, Text, Texture } from "pixi.js";
 import { GlitchFilter, GlowFilter, MotionBlurFilter, RGBSplitFilter, ShockwaveFilter, TwistFilter, ZoomBlurFilter } from "pixi-filters";
-import { Emitter, cardSprite, dissolveFilter, ease, glowTexture, layer, lightning, run, span, sparkTexture, stage } from "./stage";
+import { Emitter, cardSprite, dissolveFilter, focusFilter, ease, glowTexture, layer, lightning, run, span, sparkTexture, stage } from "./stage";
 
 const GOLD = 0xf6c945;
 const CYAN = 0x22d3ee;
@@ -8,6 +8,8 @@ const GREEN = 0x3ddc84;
 const RED = 0xff3b30;
 const VIOLET = 0xc792ff;
 const WHITE = 0xffffff;
+const CREDIT = "\ue600";
+let glyphFont: Promise<unknown> | null = null;
 
 export type Ready = () => void;
 
@@ -47,10 +49,10 @@ const coinTexture = () =>
     g.arc(32, 32, 21, 0, Math.PI * 2);
     g.stroke();
     g.fillStyle = "rgba(90,60,0,0.85)";
-    g.font = "bold 26px sans-serif";
+    g.font = "30px anr-icon";
     g.textAlign = "center";
     g.textBaseline = "middle";
-    g.fillText("¢", 32, 34);
+    g.fillText(CREDIT, 32, 33);
   });
 
 const billTexture = () =>
@@ -67,10 +69,10 @@ const billTexture = () =>
     g.arc(48, 24, 12, 0, Math.PI * 2);
     g.stroke();
     g.fillStyle = "rgba(20,70,40,0.9)";
-    g.font = "bold 16px sans-serif";
+    g.font = "18px anr-icon";
     g.textAlign = "center";
     g.textBaseline = "middle";
-    g.fillText("¢", 48, 25);
+    g.fillText(CREDIT, 48, 25);
   });
 
 const backTexture = (side: "corp" | "runner") =>
@@ -103,6 +105,8 @@ const bubbleTexture = () =>
   });
 
 async function scene(rect: DOMRect, code: string, ready?: Ready) {
+  glyphFont ??= document.fonts.load("40px anr-icon").catch(() => null);
+  await glyphFont;
   const app = await stage();
   const root = new Container();
   app.stage.addChild(root);
@@ -124,11 +128,21 @@ async function scene(rect: DOMRect, code: string, ready?: Ready) {
   };
 }
 
-function glowLabel(text: string, color: number, size: number) {
-  const t = new Text({ text, style: { fontFamily: "Big Shoulders Display, sans-serif", fontWeight: "900", fontSize: size, fill: 0xffffff, stroke: { color, width: Math.max(2, size * 0.06) } } });
-  t.anchor.set(0.5);
-  t.filters = [new GlowFilter({ color, distance: 14, outerStrength: 2.4, quality: 0.3 })];
-  return t;
+function glowLabel(text: string, color: number, size: number, credit = false) {
+  const box = new Container();
+  const stroke = { color, width: Math.max(2, size * 0.06) };
+  const t = new Text({ text, style: { fontFamily: "Big Shoulders Display, sans-serif", fontWeight: "900", fontSize: size, fill: 0xffffff, stroke } });
+  t.anchor.set(0, 0.5);
+  box.addChild(t);
+  if (credit) {
+    const c = new Text({ text: CREDIT, style: { fontFamily: "anr-icon", fontSize: size * 0.62, fill: 0xffffff, stroke } });
+    c.anchor.set(0, 0.5);
+    c.position.set(t.width + size * 0.06, size * 0.04);
+    box.addChild(c);
+  }
+  box.pivot.set(box.width / 2, 0);
+  box.filters = [new GlowFilter({ color, distance: 14, outerStrength: 2.4, quality: 0.3 })];
+  return box;
 }
 
 function burst(e: Emitter, x: number, y: number, n: number, color: number, speed: number, o: { life?: number; scale?: number; gravity?: number; tex?: Texture } = {}) {
@@ -199,7 +213,7 @@ export async function sureGamble(rect: DOMRect, code: string, ready?: Ready, boa
   const py = rect.top + rect.height * 0.56;
   const panel = new Graphics().roundRect(px, py, w, h, 10).fill({ color: 0x07080a, alpha: 0.88 }).stroke({ color: GOLD, width: 2, alpha: 0.9 });
   root.addChild(panel);
-  const symbols = ["7", "¢", "◆", "★", "¢", "◆", "7"];
+  const symbols = ["7", CREDIT, "◆", "★", CREDIT, "◆", "7"];
   const cell = h - 12;
   const reels = [0, 1, 2].map((i) => {
     const rw = (w - 24) / 3;
@@ -210,7 +224,7 @@ export async function sureGamble(rect: DOMRect, code: string, ready?: Ready, boa
     strip.filters = [blur];
     for (let k = 0; k < 28; k++) {
       const s = symbols[k % symbols.length];
-      const t = new Text({ text: s, style: { fontFamily: "Big Shoulders Display, sans-serif", fontWeight: "900", fontSize: cell * 0.78, fill: s === "7" ? 0xff4d3d : s === "¢" ? GOLD : 0xf2efe6 } });
+      const t = new Text({ text: s, style: { fontFamily: s === CREDIT ? "anr-icon" : "Big Shoulders Display, sans-serif", fontWeight: s === CREDIT ? "normal" : "900", fontSize: cell * (s === CREDIT ? 0.6 : 0.78), fill: s === "7" ? 0xff4d3d : s === CREDIT ? GOLD : 0xf2efe6 } });
       t.anchor.set(0.5);
       t.position.set(x + rw / 2, py + 6 + cell / 2 + k * cell);
       strip.addChild(t);
@@ -290,7 +304,7 @@ export async function hedgeFund(rect: DOMRect, code: string, ready?: Ready, boar
   head.tint = GREEN;
   fx.addChild(head);
   const trail = new Emitter(fx);
-  const label = glowLabel("+9", GREEN, rect.width * 0.36);
+  const label = glowLabel("+9", GREEN, rect.width * 0.36, true);
   label.alpha = 0;
   root.addChild(fx, label);
   const top = pts[pts.length - 1];
@@ -347,7 +361,8 @@ export async function spinDoctor(rect: DOMRect, code: string, ready?: Ready) {
     const p = span(t, 0.05, 1.3);
     const k = Math.sin(Math.PI * p);
     twist.angle = 1.6 * k * k * Math.sin(p * Math.PI * 2);
-    twist.offset = { x: cx, y: cy };
+    const tb = card.getBounds();
+    twist.offset = { x: tb.width / 2 + unit, y: tb.height / 2 + unit };
     const s = 4 * Math.max(0, 1 - Math.abs(t - 0.65) * 3);
     split.red = { x: -s, y: 0 };
     split.blue = { x: s, y: 0 };
@@ -517,55 +532,63 @@ export async function pingRez(rect: DOMRect, code: string, ready?: Ready, board?
 }
 
 export async function creativeCommission(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, fx, done, cx, unit } = await scene(rect, code, ready);
-  const colors = [0xff3b30, 0xf6e03a, CYAN, VIOLET];
-  const strokes = colors.map((c, i) => {
-    const g = new Graphics();
-    root.addChild(g);
-    const y0 = rect.top + rect.height * (0.2 + i * 0.17);
-    const pts = Array.from({ length: 9 }, (_, k) => [rect.left - 10 + ((rect.width + 20) * k) / 8, y0 + Math.sin(k * 1.3 + i) * rect.height * 0.05] as [number, number]);
-    return { g, c, pts, at: 0.05 + i * 0.12 };
-  });
-  const splats = new Emitter(root);
-  const sparks = new Emitter(fx);
-  const label = glowLabel("+5", GOLD, rect.width * 0.34);
+  const { app, root, card, fx, done, cx, unit } = await scene(rect, code, ready);
+  const at = (x: number, y: number): [number, number] => [rect.left + rect.width * x, rect.top + rect.height * y];
+  const shells = [
+    { at: 0.05, from: at(0.62, 0.42), to: at(0.3, 0.24), colors: [0xff4fd8, CYAN], size: 1 },
+    { at: 0.35, from: at(0.8, 1.05), to: at(0.78, -0.06), colors: [0xf6e03a, 0xff6a3d], size: 0.9 },
+    { at: 0.6, from: at(0.15, 1.05), to: at(0.12, 0.02), colors: [VIOLET, CYAN], size: 0.85 },
+    { at: 0.9, from: at(0.5, 1.05), to: at(0.5, 0.1), colors: [GOLD, WHITE], size: 1.35 },
+  ].map((sh) => ({ ...sh, burst: false }));
+  const glow = new GlowFilter({ color: 0xff4fd8, distance: 14, outerStrength: 0, quality: 0.3 });
+  card.filters = [glow];
+  const trails = new Emitter(fx);
+  const stars = new Emitter(fx);
+  const flashes = new Emitter(fx);
+  const label = glowLabel("+5", GOLD, rect.width * 0.34, true);
   label.alpha = 0;
   root.addChild(fx, label);
-  const home = board?.credits ? Array.from({ length: 5 }, (_, i) => homing(fx, sparkTexture(), [cx, rect.top + rect.height * 0.4], pt(board.credits!), 0.95 + i * 0.06, GOLD, 0.6, (Math.random() - 0.5) * 160)) : [];
-  let hit = false;
+  const home = board?.credits ? Array.from({ length: 5 }, (_, i) => homing(fx, sparkTexture(), at(0.5, 0.1), pt(board.credits!), 1.25 + i * 0.06, GOLD, 0.6, (Math.random() - 0.5) * 160)) : [];
   let landed = false;
   await run(app, (t, dt) => {
-    for (const s of strokes) {
-      const k = ease.out(span(t, s.at, s.at + 0.45));
-      s.g.clear();
-      if (k <= 0) continue;
-      const n = k * (s.pts.length - 1);
-      s.g.moveTo(s.pts[0][0], s.pts[0][1]);
-      for (let j = 1; j <= Math.floor(n); j++) s.g.lineTo(s.pts[j][0], s.pts[j][1]);
-      const j = Math.min(s.pts.length - 2, Math.floor(n));
-      const f = n - Math.floor(n);
-      if (n < s.pts.length - 1) s.g.lineTo(s.pts[j][0] + (s.pts[j + 1][0] - s.pts[j][0]) * f, s.pts[j][1] + (s.pts[j + 1][1] - s.pts[j][1]) * f);
-      s.g.stroke({ width: unit * 0.09, color: s.c, alpha: 0.82 * (1 - span(t, 1.6, 2)), cap: "round", join: "round" });
-      if (k > 0 && k < 1 && Math.random() < 0.6) {
-        const p = s.pts[Math.min(s.pts.length - 1, Math.ceil(n))];
-        splats.add(glowTexture(), p[0], p[1], { vx: (Math.random() - 0.5) * 200, vy: (Math.random() - 0.5) * 200, drag: 5, life: 1.2, tint: s.c, scale: 0.12 + Math.random() * 0.12, blend: "normal" });
+    for (const sh of shells) {
+      const k = span(t, sh.at, sh.at + 0.32);
+      if (k > 0 && k < 1) {
+        const e = ease.out(k);
+        const x = sh.from[0] + (sh.to[0] - sh.from[0]) * e;
+        const y = sh.from[1] + (sh.to[1] - sh.from[1]) * e;
+        trails.add(sparkTexture(), x, y, { vx: (Math.random() - 0.5) * 30, vy: 40, life: 0.35, tint: 0xffe2b0, scale: 0.35 * (unit / 180), grow: -0.8 });
+      }
+      if (k >= 1 && !sh.burst) {
+        sh.burst = true;
+        const [x, y] = sh.to;
+        const n = Math.round(40 * sh.size);
+        for (let i = 0; i < n; i++) {
+          const a = (i / n) * Math.PI * 2 + Math.random() * 0.1;
+          const v = unit * 2.1 * sh.size * (0.85 + Math.random() * 0.3);
+          stars.add(sparkTexture(), x, y, { vx: Math.cos(a) * v, vy: Math.sin(a) * v, drag: 2.2, gravity: unit * 1.1, life: 1 + Math.random() * 0.4, tint: sh.colors[i % sh.colors.length], scale: 0.36 * (unit / 180) * sh.size });
+        }
+        flashes.add(glowTexture(), x, y, { life: 0.22, tint: sh.colors[0], scale: (unit / 128) * 0.5 * sh.size, grow: 1.5, alpha: 0.6 });
+        navigator.vibrate?.(12);
       }
     }
-    if (t > 0.75 && !hit) {
-      hit = true;
-      burst(sparks, cx, rect.top + rect.height * 0.4, 40, GOLD, 360, { life: 0.9 });
+    for (const st of stars.list) {
+      if (Math.random() < 0.05) trails.add(sparkTexture(), st.s.x, st.s.y, { vy: 30, life: 0.45, tint: st.s.tint, scale: st.s.scale.x * 0.5, grow: -0.6 });
+      if (st.age > 0.6) st.s.alpha *= Math.random() < 0.3 ? 0.4 : 1;
     }
-    if (flyHome(home, t, sparks) === home.length && home.length && !landed) {
+    glow.outerStrength = 2.2 * Math.sin(Math.PI * span(t, 0, 1.6));
+    trails.step(dt);
+    stars.step(dt);
+    flashes.step(dt);
+    if (flyHome(home, t, trails) === home.length && home.length && !landed) {
       landed = true;
-      landing(sparks, board?.credits, GOLD);
+      landing(trails, board?.credits, GOLD);
     }
-    splats.step(dt);
-    sparks.step(dt);
-    const lk = span(t, 0.75, 1.05);
-    label.position.set(cx, rect.top + rect.height * 0.42 - 26 * ease.out(span(t, 0.75, 2)));
-    label.alpha = lk * (1 - span(t, 1.6, 2));
+    const lk = span(t, 1.25, 1.55);
+    label.position.set(cx, rect.top + rect.height * 0.5 - 24 * ease.out(span(t, 1.25, 2.3)));
+    label.alpha = lk * (1 - span(t, 1.95, 2.3));
     label.scale.set(0.6 + 0.4 * ease.back(lk));
-    return t < 2.05 || sparks.list.length > 0;
+    return t < 2.35 || stars.list.length > 0 || trails.list.length > 0;
   });
   done();
 }
@@ -574,7 +597,7 @@ export async function pettyCash(rect: DOMRect, code: string, ready?: Ready, boar
   const { app, root, fx, done, cx, unit } = await scene(rect, code, ready);
   const bills = new Emitter(root);
   const sparks = new Emitter(fx);
-  const label = glowLabel("+5", GREEN, rect.width * 0.34);
+  const label = glowLabel("+5", GREEN, rect.width * 0.34, true);
   label.alpha = 0;
   root.addChild(fx, label);
   const home = board?.credits ? Array.from({ length: 5 }, (_, i) => homing(fx, sparkTexture(), [cx, rect.top + rect.height * 0.4], pt(board.credits!), 0.85 + i * 0.06, GREEN, 0.6, (Math.random() - 0.5) * 160)) : [];
@@ -677,23 +700,13 @@ export async function jailbreak(rect: DOMRect, code: string, ready?: Ready) {
   done();
 }
 
-export async function ritual(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
+export async function ritual(rect: DOMRect, code: string, ready?: Ready) {
   const { app, root, fx, done, cx, cy } = await scene(rect, code, ready);
   const circle = new Graphics();
   circle.blendMode = "add";
   fx.addChild(circle);
-  const backs = new Container();
-  root.addChild(fx, backs);
+  root.addChild(fx);
   const R = Math.max(rect.width, rect.height) * 0.62;
-  const hand = board?.hand ? pt(board.hand) : ([cx, innerHeight + 80] as [number, number]);
-  const flying = Array.from({ length: 3 }, (_, i) => {
-    const s = new Sprite(backTexture("runner"));
-    s.anchor.set(0.5);
-    s.scale.set((rect.width / 63) * 0.4);
-    s.alpha = 0;
-    backs.addChild(s);
-    return { s, at: 0.9 + i * 0.14, side: i - 1 };
-  });
   await run(app, (t) => {
     circle.clear();
     const k = ease.out(span(t, 0, 0.6));
@@ -715,13 +728,6 @@ export async function ritual(rect: DOMRect, code: string, ready?: Ready, board?:
       circle.moveTo(star[0][0], star[0][1]);
       for (let i = 1; i <= Math.ceil(draw * 5); i++) circle.lineTo(star[i % 5][0], star[i % 5][1]);
       circle.stroke({ width: 2.5, color: 0xe7c9ff, alpha: a });
-    }
-    for (const f of flying) {
-      const fk = span(t, f.at, f.at + 0.6);
-      const e = ease.inOut(fk);
-      f.s.alpha = fk > 0 && fk < 1 ? 1 : 0;
-      f.s.position.set(cx + (hand[0] - cx) * e + Math.sin(e * Math.PI) * f.side * 90, cy + (hand[1] - cy) * e - Math.sin(e * Math.PI) * 60);
-      f.s.rotation = f.side * 0.4 * (1 - e);
     }
     return t < 1.95;
   });
@@ -769,96 +775,65 @@ export async function pinholeThreading(rect: DOMRect, code: string, ready?: Read
 }
 
 export async function mutualFavor(rect: DOMRect, code: string, ready?: Ready) {
-  const { app, root, card, fx, zoom, done, unit } = await scene(rect, code, ready);
-  const at = (x: number, y: number): [number, number] => [rect.left + rect.width * x, rect.top + rect.height * y];
-  const him = at(0.42, 0.3);
-  const her = at(0.72, 0.3);
-  const box = at(0.55, 0.44);
-  const dim = new Graphics().roundRect(rect.left, rect.top, rect.width, rect.height, 10).fill({ color: 0x05060a, alpha: 0.5 });
-  dim.alpha = 0;
-  const spot = new Sprite(glowTexture());
-  spot.anchor.set(0.5);
-  spot.blendMode = "add";
-  spot.tint = 0xffc27a;
-  spot.alpha = 0;
-  root.addChild(dim, spot, fx);
-  const glow = new GlowFilter({ color: GOLD, distance: 16, outerStrength: 0, quality: 0.3 });
-  card.filters = [glow];
-  const ribbons = new Graphics();
-  ribbons.blendMode = "add";
-  fx.addChild(ribbons);
-  const frame = new Graphics();
-  fx.addChild(frame);
-  const bond = new Graphics();
-  bond.blendMode = "add";
-  fx.addChild(bond);
-  const sparks = new Emitter(fx);
-  const path = (from: [number, number], u: number, phase: number): [number, number] => {
-    const x = from[0] + (box[0] - from[0]) * u;
-    const y = from[1] + (box[1] - from[1]) * u + Math.sin(u * Math.PI) * unit * 0.12;
-    const nx = -(box[1] - from[1]);
-    const ny = box[0] - from[0];
-    const len = Math.hypot(nx, ny) || 1;
-    const w = Math.sin(u * Math.PI * 3 + phase) * unit * 0.035 * Math.sin(u * Math.PI);
-    return [x + (nx / len) * w, y + (ny / len) * w];
-  };
-  let met = false;
+  const { app, root, card, fx, done, cx, cy, unit } = await scene(rect, code, ready);
+  const bx = card.scale.x;
+  const by = card.scale.y;
+  const focus: [number, number] = [rect.left + rect.width * 0.56, rect.top + rect.height * 0.42];
+  const frame = new Graphics().roundRect(rect.left, rect.top, rect.width, rect.height, 10).fill(0xffffff);
+  const shot = new Container();
+  root.addChildAt(shot, 0);
+  const blur = new BlurFilter({ strength: 0, quality: 3 });
+  card.filters = [blur];
+  const sharp = new Sprite(card.texture);
+  sharp.anchor.set(0.5);
+  sharp.filters = [focusFilter([0.56, 0.42], 0.12, 0.3, rect.width / rect.height)];
+  shot.addChild(card, sharp);
+  shot.mask = frame;
+  root.addChild(frame);
+  const vignette = new Graphics();
+  root.addChild(vignette, fx);
+  const streak = new Sprite(glowTexture());
+  streak.anchor.set(0.5);
+  streak.blendMode = "add";
+  streak.tint = 0xffd9a0;
+  streak.alpha = 0;
+  fx.addChild(streak);
+  const star = new Sprite(sparkTexture());
+  star.anchor.set(0.5);
+  star.blendMode = "add";
+  star.alpha = 0;
+  fx.addChild(star);
+  const glints = new Emitter(fx);
   await run(app, (t, dt) => {
-    const light = span(t, 0, 0.3) * (1 - span(t, 1.5, 1.9));
-    dim.alpha = light;
-    spot.position.set(box[0], box[1]);
-    spot.scale.set((unit / 128) * (0.9 + 0.2 * span(t, 0.9, 1.2)));
-    spot.alpha = light * 0.3;
-    zoom(1 + 0.03 * ease.out(span(t, 0, 0.4)) - 0.03 * span(t, 1.6, 1.95));
-    ribbons.clear();
-    const k = ease.inOut(span(t, 0.15, 0.9));
-    const fade = 1 - span(t, 1.1, 1.5);
-    for (const [from, color, phase] of [
-      [him, CYAN, 0],
-      [her, 0xff5fd2, Math.PI],
-    ] as const) {
-      for (const [w, a] of [
-        [unit * 0.05, 0.22],
-        [unit * 0.02, 0.6],
-        [unit * 0.008, 1],
-      ] as const) {
-        const p0 = path(from, 0, phase);
-        ribbons.moveTo(p0[0], p0[1]);
-        for (let i = 1; i <= Math.ceil(24 * k); i++) {
-          const p = path(from, Math.min(k, i / 24), phase);
-          ribbons.lineTo(p[0], p[1]);
-        }
-        ribbons.stroke({ width: w, color: a === 1 ? WHITE : color, alpha: a * fade, cap: "round", join: "round" });
-      }
-      if (k > 0 && k < 1) {
-        const h = path(from, k, phase);
-        sparks.add(sparkTexture(), h[0], h[1], { life: 0.35, tint: color, scale: 0.45 * (unit / 180), grow: -1 });
-      }
+    const zin = ease.inOut(span(t, 0, 0.6));
+    const zout = ease.inOut(span(t, 1.25, 1.8));
+    const depth = zin * (1 - zout);
+    const z = 1 + 0.8 * depth;
+    const tx = focus[0] + (cx - focus[0]) * depth;
+    const ty = focus[1] + (cy - focus[1]) * depth;
+    const px = tx - (focus[0] - cx) * z;
+    const py = ty - (focus[1] - cy) * z;
+    for (const s of [card, sharp]) {
+      s.scale.set(bx * z, by * z);
+      s.position.set(px, py);
     }
-    if (k >= 1 && !met) {
-      met = true;
-      burst(sparks, box[0], box[1], 16, GOLD, unit * 1.3, { life: 0.6, scale: 0.35 * (unit / 180) });
-      navigator.vibrate?.([15, 30, 15]);
-    }
-    const fk = span(t, 0.9, 1.6);
-    frame.clear();
-    if (fk > 0 && fk < 1) frame.roundRect(box[0] - unit * 0.17, box[1] - unit * 0.09, unit * 0.34, unit * 0.18, 6).stroke({ width: 2 + 3 * (1 - fk), color: GOLD, alpha: 1 - fk });
-    glow.outerStrength = 1.4 * Math.sin(Math.PI * span(t, 0.9, 1.7));
-    bond.clear();
-    const bk = span(t, 1, 1.85);
-    if (bk > 0 && bk < 1) {
-      const a = Math.sin(Math.PI * bk);
-      const mid: [number, number] = [(him[0] + her[0]) / 2, Math.min(him[1], her[1]) - unit * 0.22];
-      for (const [w, c, al] of [
-        [unit * 0.04, 0xffc27a, 0.3],
-        [unit * 0.012, WHITE, 0.9],
-      ] as const) {
-        bond.moveTo(him[0], him[1]).quadraticCurveTo(mid[0], mid[1], her[0], her[1]);
-        bond.stroke({ width: w, color: c, alpha: al * a, cap: "round" });
-      }
-    }
-    sparks.step(dt);
-    return t < 1.95 || sparks.list.length > 0;
+    blur.strength = 9 * depth;
+    sharp.alpha = 1;
+    vignette.clear();
+    if (depth > 0.01) vignette.roundRect(rect.left, rect.top, rect.width, rect.height, 10).stroke({ width: unit * 0.18, color: 0x000000, alpha: 0.45 * depth, alignment: 0 });
+    const f = span(t, 0.6, 1.05);
+    streak.position.set(tx - unit * 0.6 + f * unit * 1.2, ty);
+    streak.width = unit * 2.2;
+    streak.height = unit * 0.07;
+    streak.alpha = Math.sin(Math.PI * f) * 0.9;
+    const g = span(t, 0.85, 1.25);
+    star.position.set(tx + unit * 0.15, ty - unit * 0.06);
+    star.scale.set((unit / 64) * 0.55 * Math.sin(Math.PI * g));
+    star.rotation = g * 1.5;
+    star.alpha = Math.sin(Math.PI * g);
+    if (t > 0.75 && t < 1.2 && Math.random() < 0.3) glints.add(sparkTexture(), tx + (Math.random() - 0.5) * unit * 0.4, ty + (Math.random() - 0.5) * unit * 0.25, { life: 0.35, tint: 0xfff0d0, scale: 0.25 * (unit / 180), grow: -0.6 });
+    glints.step(dt);
+    return t < 1.85;
   });
   done();
 }
@@ -871,7 +846,7 @@ export async function cleanGetaway(rect: DOMRect, code: string, ready?: Ready, b
   root.addChildAt(streaks, 0);
   const lines: { s: Sprite; v: number }[] = [];
   const sparks = new Emitter(fx);
-  const label = glowLabel("+6", GREEN, rect.width * 0.34);
+  const label = glowLabel("+6", GREEN, rect.width * 0.34, true);
   label.alpha = 0;
   root.addChild(fx, label);
   const home = board?.credits ? Array.from({ length: 6 }, (_, i) => homing(fx, sparkTexture(), [cx, cy], pt(board.credits!), 0.8 + i * 0.06, GREEN, 0.6, (Math.random() - 0.5) * 160)) : [];
@@ -924,7 +899,8 @@ export async function fermenter(rect: DOMRect, code: string, ready?: Ready) {
   const bubbles = new Emitter(fx);
   await run(app, (t, dt) => {
     twist.angle = Math.sin(t * 9) * 0.25 * (1 - span(t, 0.9, 1.4));
-    twist.offset = { x: cx, y: cy };
+    const tb = card.getBounds();
+    twist.offset = { x: tb.width / 2 + unit * 0.3, y: tb.height / 2 + unit * 0.3 };
     glow.outerStrength = 2.5 * Math.sin(Math.PI * span(t, 0, 1.4));
     for (let n = 0; n < 2 && t < 1.2; n++) {
       const x = rect.left + Math.random() * rect.width;
