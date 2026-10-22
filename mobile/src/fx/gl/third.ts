@@ -945,28 +945,18 @@ export async function biawakFire(rect: DOMRect, code: string, ready?: Ready, boa
 }
 
 export async function funhouse(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, card, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const face = at(0.5, 0.76);
-  const wave = new ShockwaveFilter({ center: { x: 0, y: 0 }, amplitude: unit * 0.04, wavelength: unit * 0.5, speed: unit * 0.8, brightness: 1.05, radius: unit * 0.8, time: 0 });
-  card.filters = [wave];
-  const bulbs = new Graphics();
-  bulbs.blendMode = "add";
-  fx.addChild(bulbs);
+  const { app, root, card, fx, done, unit, sideways } = await scene(rect, code, ready, board);
+  const warp = shimmer(root, card, rect, unit * 0.09);
+  const split = new RGBSplitFilter({ red: { x: 0, y: 0 }, green: { x: 0, y: 0 }, blue: { x: 0, y: 0 } });
+  card.filters = [...(card.filters ?? []), split];
   root.addChild(fx);
-  const hues = [0xff4f9a, 0xffd84a, 0x4fd8ff, 0x9dff5a];
   await run(app, (t) => {
-    wave.center = filterPoint(card, ...face);
-    wave.time = (t * 0.8) % 1;
-    bulbs.clear();
-    const on = span(t, 0, 0.2) * (1 - span(t, 1.6, 2));
-    const n = 22;
-    for (let i = 0; i < n; i++) {
-      const u = i / n;
-      const p: Pt = u < 0.5 ? at(0.06 + u * 2 * 0.88, 0.53) : at(0.06 + (u - 0.5) * 2 * 0.88, 0.98);
-      const lit = Math.floor(t * 8 + i) % 3 === 0;
-      bulbs.circle(...p, unit * 0.012).fill({ color: hues[i % hues.length], alpha: on * (lit ? 1 : 0.25) });
-    }
-    return t < 2;
+    const k = Math.sin(Math.PI * span(t, 0, 1.8));
+    warp(t * 2.5, k);
+    const d = 6 * k * Math.sin(t * 7);
+    split.red = sideways ? { x: 0, y: d } : { x: d, y: 0 };
+    split.blue = sideways ? { x: 0, y: -d } : { x: -d, y: 0 };
+    return t < 1.8;
   });
   await done();
 }
