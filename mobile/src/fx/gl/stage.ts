@@ -66,6 +66,12 @@ export const sparkTexture = () =>
     g.fillRect(0, s / 2 - 0.75, s, 1.5);
   });
 
+export function filterPoint(target: Container, x: number, y: number) {
+  const b = target.getBounds();
+  const pad = Math.max(0, ...(target.filters ?? []).map((f) => f.padding));
+  return { x: x - b.x + pad, y: y - b.y + pad };
+}
+
 export async function cardTexture(code: string) {
   const url = `https://card-images.netrunnerdb.com/v2/large/${code}.jpg`;
   return Assets.load<Texture>({ src: url, parser: "texture", data: { crossOrigin: "anonymous" } } as any);

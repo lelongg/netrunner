@@ -33,6 +33,8 @@ export const FX: Record<Kind, Record<string, string>> = {
 };
 
 let ok: boolean | undefined;
+const hidden = new WeakMap<HTMLElement, number>();
+const LIMIT = 6000;
 
 function glOk() {
   if (ok === undefined) {
@@ -63,16 +65,22 @@ export function glEffect(kind: Kind, title: string | undefined, at: DOMRect, cod
   let restore = () => {};
   const ready = () => {
     if (!hide) return;
-    const was = hide.style.visibility;
+    hidden.set(hide, (hidden.get(hide) ?? 0) + 1);
     hide.style.visibility = "hidden";
-    restore = () => (hide.style.visibility = was);
+    restore = () => {
+      restore = () => {};
+      const n = (hidden.get(hide) ?? 1) - 1;
+      if (n > 0) return void hidden.set(hide, n);
+      hidden.delete(hide);
+      hide.style.visibility = "";
+    };
   };
-  return import("./cards")
+  const play = import("./cards")
     .then((m) => (m as unknown as Record<string, (...a: unknown[]) => Promise<void>>)[name](at, code, ready, board))
     .catch(() => {
       ok = false;
-    })
-    .finally(() => restore());
+    });
+  return Promise.race([play, new Promise<void>((r) => setTimeout(r, (window as any).__fxManual ? 6e5 : LIMIT))]).finally(() => restore());
 }
 
 export function warmGl() {

@@ -1,6 +1,6 @@
 import { BlurFilter, Container, DisplacementFilter, type Filter, Graphics, Sprite, Text, Texture } from "pixi.js";
 import { GlitchFilter, GlowFilter, GodrayFilter, MotionBlurFilter, RGBSplitFilter, ShockwaveFilter, TwistFilter } from "pixi-filters";
-import { Emitter, cardSprite, focusFilter, ease, glowTexture, layer, lightning, run, span, sparkTexture, stage } from "./stage";
+import { Emitter, cardSprite, filterPoint, focusFilter, ease, glowTexture, layer, lightning, run, span, sparkTexture, stage } from "./stage";
 
 const GOLD = 0xf6c945;
 const CYAN = 0x22d3ee;
@@ -573,7 +573,7 @@ export async function hedgeFund(rect: DOMRect, code: string, ready?: Ready, boar
 
 export async function spinDoctor(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, card, fx, zoom, done, cx, cy, unit } = await scene(rect, code, ready, board);
-  const twist = new TwistFilter({ radius: Math.hypot(rect.width, rect.height) * 0.6, angle: 0, offset: { x: cx, y: cy }, padding: unit });
+  const twist = new TwistFilter({ radius: Math.hypot(rect.width, rect.height) * 0.6, angle: 0, offset: { x: 0, y: 0 }, padding: unit });
   const split = new RGBSplitFilter({ red: { x: 0, y: 0 }, green: { x: 0, y: 0 }, blue: { x: 0, y: 0 } });
   card.filters = [twist, split];
   const orbit = new Emitter(fx);
@@ -583,8 +583,7 @@ export async function spinDoctor(rect: DOMRect, code: string, ready?: Ready, boa
     const p = span(t, 0.05, 1.3);
     const k = Math.sin(Math.PI * p);
     twist.angle = 1.6 * k * k * Math.sin(p * Math.PI * 2);
-    const tb = card.getBounds();
-    twist.offset = { x: tb.width / 2 + unit, y: tb.height / 2 + unit };
+    twist.offset = filterPoint(card, cx, cy);
     const s = 4 * Math.max(0, 1 - Math.abs(t - 0.65) * 3);
     split.red = { x: -s, y: 0 };
     split.blue = { x: s, y: 0 };
@@ -604,7 +603,7 @@ export async function spinDoctor(rect: DOMRect, code: string, ready?: Ready, boa
 
 export async function pingRez(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, card, fx, done, cx, cy, unit } = await scene(rect, code, ready, board);
-  const wave = new ShockwaveFilter({ center: { x: cx, y: cy }, amplitude: unit * 0.1, wavelength: unit * 0.45, speed: unit * 2.6, brightness: 1.15, radius: -1, time: 0 });
+  const wave = new ShockwaveFilter({ center: { x: 0, y: 0 }, amplitude: unit * 0.1, wavelength: unit * 0.45, speed: 1, brightness: 1.15, radius: -1, time: 0 });
   const split = new RGBSplitFilter({ red: { x: 0, y: 0 }, green: { x: 0, y: 0 }, blue: { x: 0, y: 0 } });
   card.filters = [wave, split];
   const rings = new Graphics();
@@ -621,13 +620,16 @@ export async function pingRez(rect: DOMRect, code: string, ready?: Ready, board?
   const pinged = new Set<number>();
   const others = board?.others ?? [];
   await run(app, (t, dt) => {
-    wave.time = Math.max(0, t - 0.1);
-    wave.center = { x: cx, y: cy };
+    wave.time = Math.max(0, t - 0.1) * speed;
+    wave.center = filterPoint(card, cx, cy);
     const g = t < 0.25 ? (1 - t / 0.25) * 8 : 0;
     split.red = { x: -g, y: 0 };
     split.blue = { x: g, y: g * 0.5 };
     rings.clear();
-    for (let n = 0; n < 3; n++) ringAt(rings, cx, cy, reach, span(t, 0.1 + n * 0.25, 1.2 + n * 0.25), RED, 4);
+    for (let n = 0; n < 3; n++) {
+      const k = span(t, 0.1 + n * 0.25, 1.2 + n * 0.25);
+      if (k > 0 && k < 1) rings.circle(cx, cy, k * reach).stroke({ width: 3 * (1 - k) + 1, color: RED, alpha: 1 - k });
+    }
     const front = Math.max(0, t - 0.1) * speed;
     others.forEach((o, i) => {
       if (pinged.has(i)) return;
@@ -767,7 +769,7 @@ export async function pettyCash(rect: DOMRect, code: string, ready?: Ready, boar
 export async function jailbreak(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, card, fx, done, cx, cy, unit } = await scene(rect, code, ready, board);
   const split = new RGBSplitFilter({ red: { x: 0, y: 0 }, green: { x: 0, y: 0 }, blue: { x: 0, y: 0 } });
-  const wave = new ShockwaveFilter({ center: { x: cx, y: cy }, amplitude: unit * 0.08, wavelength: unit * 0.5, speed: unit * 3, brightness: 1.1, radius: -1, time: 0 });
+  const wave = new ShockwaveFilter({ center: { x: 0, y: 0 }, amplitude: unit * 0.08, wavelength: unit * 0.5, speed: unit * 3, brightness: 1.1, radius: -1, time: 0 });
   card.filters = [wave, split];
   const lock = new Graphics();
   fx.addChild(lock);
@@ -793,6 +795,7 @@ export async function jailbreak(rect: DOMRect, code: string, ready?: Ready, boar
       navigator.vibrate?.([30, 30, 60]);
     }
     wave.time = Math.max(0, t - 0.55);
+    wave.center = filterPoint(card, cx, cy);
     const g = t > 0.55 && t < 0.8 ? (1 - (t - 0.55) / 0.25) * 9 : 0;
     split.red = { x: -g, y: 0 };
     split.blue = { x: g, y: 0 };
@@ -959,7 +962,7 @@ export async function risingTide(rect: DOMRect, code: string, ready?: Ready, boa
   const mask = new Graphics().rect(rect.left, rect.top, rect.width, rect.height).fill(0xffffff);
   water.mask = mask;
   root.addChild(mask, water);
-  const wave = new ShockwaveFilter({ center: { x: cx, y: cy }, amplitude: unit * 0.06, wavelength: unit * 0.4, speed: unit * 2.2, brightness: 1.15, radius: -1, time: 0 });
+  const wave = new ShockwaveFilter({ center: { x: 0, y: 0 }, amplitude: unit * 0.06, wavelength: unit * 0.4, speed: unit * 2.2, brightness: 1.15, radius: -1, time: 0 });
   card.filters = [wave];
   const glints = new Emitter(fx);
   root.addChild(fx);
@@ -972,32 +975,86 @@ export async function risingTide(rect: DOMRect, code: string, ready?: Ready, boa
     if (Math.random() < 0.6 && t < 1.3) glints.add(sparkTexture(), rect.left + Math.random() * rect.width, level + Math.random() * (rect.bottom - level), { life: 0.4, tint: 0x9fe7ff, scale: 0.3 * (unit / 180), grow: -0.5 });
     glints.step(dt);
     wave.time = Math.max(0, t - 0.75);
+    wave.center = filterPoint(card, cx, cy);
     return t < 1.6;
   });
   done();
 }
 
 export async function echelon(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, fx, done, cx, unit } = await scene(rect, code, ready, board);
-  const g = new Graphics();
-  fx.addChild(g);
+  const { app, root, card, fx, done, unit } = await scene(rect, code, ready, board);
+  const at = (x: number, y: number): [number, number] => [rect.left + rect.width * x, rect.top + rect.height * y];
+  const sats = [
+    [0.07, 0.33],
+    [0.35, 0.43],
+    [0.41, 0.33],
+    [0.68, 0.25],
+    [0.87, 0.23],
+    [0.85, 0.38],
+  ].map(([x, y], i) => ({ p: at(x, y), on: 0.15 + i * 0.13, lit: false }));
+  const [ex, ey] = at(0.3, 0.21);
+  const twist = new TwistFilter({ radius: rect.width * 0.22, angle: 0, offset: { x: 0, y: 0 }, padding: unit * 0.2 });
+  card.filters = [twist];
+  const eye = new Sprite(glowTexture());
+  eye.anchor.set(0.5);
+  eye.tint = RED;
+  eye.blendMode = "add";
+  eye.position.set(ex, ey);
+  const net = new Graphics();
+  net.blendMode = "add";
+  fx.addChild(eye, net);
+  const lights = sats.map((st) => {
+    const l = new Sprite(glowTexture());
+    l.anchor.set(0.5);
+    l.tint = VIOLET;
+    l.blendMode = "add";
+    l.position.set(...st.p);
+    l.alpha = 0;
+    fx.addChild(l);
+    return l;
+  });
   const sparks = new Emitter(fx);
+  root.addChild(fx);
+  const lerp = (a: [number, number], b: [number, number], k: number): [number, number] => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
   await run(app, (t, dt) => {
-    g.clear();
-    for (let i = 0; i < 6; i++) {
-      const k = span(t, i * 0.08, 0.35 + i * 0.08);
-      if (k <= 0) continue;
-      const a = (1 - span(t, 1, 1.4)) * Math.min(1, k * 2);
-      const y = rect.bottom - rect.height * (0.1 + i * 0.14) - k * unit * 0.1;
-      const w = rect.width * 0.38;
-      g.moveTo(cx - w, y + unit * 0.12).lineTo(cx, y).lineTo(cx + w, y + unit * 0.12);
-      g.stroke({ width: unit * 0.05, color: RED, alpha: a * 0.35, cap: "round", join: "round" });
-      g.moveTo(cx - w, y + unit * 0.12).lineTo(cx, y).lineTo(cx + w, y + unit * 0.12);
-      g.stroke({ width: unit * 0.018, color: 0xffd6d0, alpha: a, cap: "round", join: "round" });
-      if (k > 0.95 && k < 1 && Math.random() < 0.5) sparks.add(sparkTexture(), cx, y, { life: 0.4, tint: RED, scale: 0.5 * (unit / 180), grow: -1 });
+    const fade = 1 - span(t, 1.9, 2.4);
+    const wake = Math.sin(Math.PI * span(t, 0.2, 2.3));
+    twist.offset = filterPoint(card, ex, ey);
+    twist.angle = 0.7 * wake;
+    eye.alpha = (0.3 + 0.12 * Math.sin(t * 7)) * wake;
+    eye.scale.set((unit / 128) * (0.4 + 0.1 * wake));
+    net.clear();
+    sats.forEach((st, i) => {
+      if (!st.lit && t > st.on) {
+        st.lit = true;
+        sparks.add(sparkTexture(), st.p[0], st.p[1], { life: 0.4, tint: WHITE, scale: 0.4 * (unit / 180), grow: -0.8, spin: 2 });
+        sparks.add(glowTexture(), st.p[0], st.p[1], { life: 0.35, tint: VIOLET, scale: (unit / 128) * 0.1, grow: 0.5, alpha: 0.7 });
+      }
+      lights[i].alpha = st.lit ? (0.3 + 0.12 * Math.sin(t * 9 + i)) * fade : 0;
+      lights[i].scale.set((unit / 128) * 0.08);
+      if (i === 0) return;
+      const k = ease.out(span(t, st.on - 0.05, st.on + 0.2));
+      if (k <= 0) return;
+      const b = lerp(sats[i - 1].p, st.p, k);
+      net.moveTo(...sats[i - 1].p).lineTo(...b);
+    });
+    net.stroke({ width: unit * 0.012, color: VIOLET, alpha: 0.3 * fade });
+    sats.forEach((st, i) => {
+      if (!i) return;
+      const k = ease.out(span(t, st.on - 0.05, st.on + 0.2));
+      if (k > 0) net.moveTo(...sats[i - 1].p).lineTo(...lerp(sats[i - 1].p, st.p, k));
+    });
+    net.stroke({ width: unit * 0.004, color: 0xe6dcff, alpha: 0.8 * fade });
+    const pk = span(t, 1.2, 1.8);
+    if (pk > 0 && pk < 1) {
+      const f = pk * (sats.length - 1);
+      const j = Math.min(sats.length - 2, Math.floor(f));
+      const [px, py] = lerp(sats[j].p, sats[j + 1].p, f - j);
+      sparks.add(glowTexture(), px, py, { life: 0.25, tint: 0xd8c8ff, scale: (unit / 128) * 0.07, grow: -0.1 });
+      sparks.add(sparkTexture(), px, py, { life: 0.3, tint: WHITE, scale: 0.4 * (unit / 180), grow: -0.8 });
     }
     sparks.step(dt);
-    return t < 1.45;
+    return t < 2.4 || sparks.list.length > 0;
   });
   done();
 }
