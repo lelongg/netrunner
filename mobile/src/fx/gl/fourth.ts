@@ -141,7 +141,7 @@ export async function smartwareDistributor(rect: DOMRect, code: string, ready?: 
   const buyer: Pt = at(0.66, 0.24);
   const boxes = new Emitter(fx);
   const stickers = [at(0.06, 0.12), at(0.15, 0.2), at(0.26, 0.3), at(0.08, 0.27)].map((p) => {
-    const s = glowSprite(fx, sparkTexture(), WHITE);
+    const s = glowSprite(fx, sparkTexture(), 0xfff0c0);
     s.position.set(...p);
     return s;
   });
@@ -149,13 +149,13 @@ export async function smartwareDistributor(rect: DOMRect, code: string, ready?: 
   await run(app, (t, dt) => {
     stickers.forEach((s, i) => {
       const g = Math.sin(Math.PI * span(t, 0.1 + i * 0.2, 0.4 + i * 0.2));
-      s.alpha = g;
+      s.alpha = 0.6 * g;
       s.rotation = t * 2;
       s.scale.set((unit / 120) * 0.25 * g);
     });
     if (t > 0.3 && t < 1.4 && Math.random() < 0.15) {
       const v = [(buyer[0] - window[0]) * 0.9, (buyer[1] - window[1]) * 0.9 - unit * 0.3];
-      boxes.add(cubeTexture(), ...window, { vx: v[0], vy: v[1], gravity: unit * 0.6, spin: rnd(-3, 3), life: 1, tint: [0x9be8ff, 0x6affb8, 0xffd84a][Math.floor(rnd(0, 3))], scale: (unit / 180) * rnd(0.5, 0.8) });
+      boxes.add(cubeTexture(), ...window, { vx: v[0], vy: v[1], gravity: unit * 0.6, spin: rnd(-3, 3), life: 1, tint: [0x4fa8d8, 0x3aaa78, 0xd8a83a][Math.floor(rnd(0, 3))], scale: (unit / 180) * rnd(0.5, 0.8), alpha: 0.85, blend: "normal" });
     }
     boxes.step(dt);
     return t < 1.8 || boxes.list.length > 0;
@@ -377,9 +377,9 @@ export async function floodTheMarket(rect: DOMRect, code: string, ready?: Ready,
     if (t < 1.4)
       for (let n = 0; n < 2; n++) {
         const [x, y] = at(rnd(0, 1), rnd(0.05, 0.15));
-        petals.add(petalTexture(), x, y, { vx: unit * rnd(0.05, 0.25), vy: unit * rnd(0.1, 0.25), spin: rnd(-3, 3), life: rnd(1, 1.5), tint: Math.random() < 0.6 ? 0xffc0e0 : PINK, scale: (unit / 180) * rnd(0.25, 0.45) });
+        petals.add(petalTexture(), x, y, { vx: unit * rnd(0.05, 0.25), vy: unit * rnd(0.1, 0.25), spin: rnd(-3, 3), life: rnd(1, 1.5), tint: Math.random() < 0.6 ? 0xffb0d0 : 0xe86aa8, scale: (unit / 180) * rnd(0.25, 0.45), alpha: 0.85, blend: "normal" });
       }
-    if (t < 1.2 && Math.random() < 0.15) holos.add(cubeTexture(), ...at(rnd(0.15, 0.85), rnd(0.25, 0.45)), { vy: -unit * 0.08, spin: rnd(-1, 1), life: 0.9, tint: Math.random() < 0.5 ? 0x9be8ff : PINK, scale: (unit / 180) * rnd(0.6, 1), alpha: 0.6 });
+    if (t < 1.2 && Math.random() < 0.15) holos.add(cubeTexture(), ...at(rnd(0.15, 0.85), rnd(0.25, 0.45)), { vy: -unit * 0.08, spin: rnd(-1, 1), life: 0.9, tint: Math.random() < 0.5 ? 0x9be8ff : PINK, scale: (unit / 180) * rnd(0.6, 1), alpha: 0.3 });
     for (const p of petals.list) p.s.x += Math.sin(p.age * 4 + p.s.y * 0.03) * 0.5;
     petals.step(dt);
     holos.step(dt);
@@ -550,54 +550,78 @@ export async function chromatophoresEffect(rect: DOMRect, code: string, ready?: 
 
 export async function whitespace(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, card, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const glare = at(0.3, 0.7);
-  const bloom = glowSprite(fx, glowTexture(), WHITE);
-  bloom.position.set(...glare);
+  const core = at(0.3, 0.7);
+  const wave = new ShockwaveFilter({ center: { x: 0, y: 0 }, amplitude: unit * 0.02, wavelength: unit * 0.35, speed: unit * 0.9, brightness: 1, radius: unit * 0.7, time: 0 });
+  card.filters = [wave];
   const shards = new Emitter(fx);
+  const pulse = glowSprite(fx, glowTexture(), 0xdfeaf5);
+  pulse.position.set(...core);
   root.addChild(fx);
   await run(app, (t, dt) => {
-    const k = Math.sin(Math.PI * span(t, 0.1, 1.4));
-    bloom.alpha = 0.55 * k;
-    bloom.scale.set((unit / 128) * (0.3 + 0.45 * k));
-    card.tint = k > 0.6 ? 0xf0f6ff : WHITE;
+    wave.center = filterPoint(card, ...core);
+    wave.time = t % 1.1;
+    const k = Math.sin(Math.PI * span(t, 0.1, 1.6));
+    pulse.alpha = 0.25 * k;
+    pulse.scale.set((unit / 128) * (0.3 + 0.08 * Math.sin(t * 5)));
     if (t < 1.3 && Math.random() < 0.5) {
       const a = rnd(0, Math.PI * 2);
-      shards.add(cubeTexture(), glare[0] + Math.cos(a) * unit * 0.1, glare[1] + Math.sin(a) * unit * 0.1, { vx: Math.cos(a) * unit * 0.6, vy: Math.sin(a) * unit * 0.6, spin: rnd(-4, 4), life: 0.8, tint: 0xe8f2ff, scale: (unit / 180) * rnd(0.3, 0.6), alpha: 0.8 });
+      const d = unit * rnd(0.12, 0.2);
+      shards.add(cubeTexture(), core[0] + Math.cos(a) * d, core[1] + Math.sin(a) * d, { vx: Math.cos(a) * unit * 0.35, vy: Math.sin(a) * unit * 0.35, spin: rnd(-2, 2), drag: 0.6, life: 1.1, tint: Math.random() < 0.5 ? 0x8f9aa6 : 0x5f6a76, scale: (unit / 180) * rnd(0.3, 0.6), alpha: 0.85, blend: "normal" });
     }
     shards.step(dt);
-    return t < 1.5 || shards.list.length > 0;
+    return t < 1.7 || shards.list.length > 0;
+  });
+  await done();
+}
+
+export async function whitespaceFire(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
+  const { app, root, card, fx, done, unit, at } = await scene(rect, code, ready, board);
+  const core = at(0.3, 0.7);
+  const shards = new Emitter(fx);
+  const wave = new ShockwaveFilter({ center: { x: 0, y: 0 }, amplitude: unit * 0.05, wavelength: unit * 0.4, speed: unit * 1.8, brightness: 1.05, radius: unit * 0.9, time: 0 });
+  card.filters = [wave];
+  root.addChild(fx);
+  const pieces = Array.from({ length: 22 }, () => {
+    const a = rnd(0, Math.PI * 2);
+    const d = unit * rnd(0.45, 0.8);
+    const s = glowSprite(fx, cubeTexture(), Math.random() < 0.5 ? 0x8f9aa6 : 0x5f6a76);
+    s.blendMode = "normal";
+    return { s, from: [core[0] + Math.cos(a) * d, core[1] + Math.sin(a) * d] as Pt, spin: rnd(-6, 6) };
+  });
+  let burstDone = false;
+  await run(app, (t, dt) => {
+    const k = ease.inOut(span(t, 0, 0.45));
+    for (const p of pieces) {
+      p.s.position.set(...lerp(p.from, core, k));
+      p.s.alpha = t < 0.45 ? 0.9 : 0;
+      p.s.rotation = p.spin * t;
+      p.s.scale.set((unit / 180) * 0.5 * (1 - 0.5 * k));
+    }
+    if (t > 0.45 && !burstDone) {
+      burstDone = true;
+      for (let i = 0; i < 22; i++) {
+        const a = rnd(0, Math.PI * 2);
+        shards.add(cubeTexture(), ...core, { vx: Math.cos(a) * unit * 1.4, vy: Math.sin(a) * unit * 1.4, drag: 1.5, spin: rnd(-6, 6), life: 0.7, tint: 0x8f9aa6, scale: (unit / 180) * 0.45, alpha: 0.9, blend: "normal" });
+      }
+      navigator.vibrate?.(30);
+    }
+    wave.center = filterPoint(card, ...core);
+    wave.time = Math.max(0, t - 0.45);
+    card.tint = t > 0.45 && t < 0.6 ? 0xeef3f8 : WHITE;
+    shards.step(dt);
+    return t < 1.1 || shards.list.length > 0;
   });
   card.tint = WHITE;
   await done();
 }
 
-export async function whitespaceFire(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const glare = at(0.3, 0.7);
-  const white = new Graphics();
-  app.stage.addChild(white);
-  const bloom = glowSprite(fx, glowTexture(), WHITE);
-  bloom.position.set(...glare);
-  root.addChild(fx);
-  await run(app, (t) => {
-    const k = Math.sin(Math.PI * span(t, 0, 0.8));
-    bloom.alpha = k;
-    bloom.scale.set((unit / 128) * (0.3 + 0.8 * k));
-    white.clear();
-    white.rect(0, 0, innerWidth, innerHeight).fill({ color: WHITE, alpha: 0.18 * Math.max(0, 1 - Math.abs(t - 0.35) / 0.25) });
-    return t < 0.9;
-  });
-  white.destroy();
-  await done();
-}
-
 export async function syailendra(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const tower = at(0.42, 0.62);
+  const tower = at(0.24, 0.62);
   const g = new Graphics();
   g.blendMode = "add";
   fx.addChild(g);
-  const lights = Array.from({ length: 14 }, () => at(rnd(0.4, 0.8), rnd(0.58, 0.95)));
+  const lights = Array.from({ length: 14 }, () => at(rnd(0.45, 0.72), rnd(0.57, 0.92)));
   const peak = glowSprite(fx, sparkTexture(), WHITE);
   peak.position.set(...tower);
   root.addChild(fx);
@@ -609,8 +633,14 @@ export async function syailendra(rect: DOMRect, code: string, ready?: Ready, boa
       g.circle(...p, unit * 0.012).fill({ color: 0xbfe6ff, alpha: on * lit });
     });
     const k = span(t, 0.2, 1.4);
-    const c = at(0.2, 0.75);
-    g.ellipse(...c, unit * 0.08, unit * (0.2 + 0.05 * Math.sin(t * 4))).stroke({ width: 2, color: 0x9be8ff, alpha: on * Math.sin(Math.PI * k) });
+    const ring: number[] = [];
+    for (let i = 0; i <= 40; i++) {
+      const a = (i / 40) * Math.PI * 2;
+      ring.push(...at(0.24 + 0.115 * Math.cos(a), 0.76 + 0.19 * Math.sin(a)));
+    }
+    g.poly(ring, false).stroke({ width: 2, color: 0x9be8ff, alpha: on * Math.sin(Math.PI * k) });
+    const ra = t * 2.5;
+    g.circle(...at(0.24 + 0.115 * Math.cos(ra), 0.76 + 0.19 * Math.sin(ra)), unit * 0.02).fill({ color: WHITE, alpha: on * Math.sin(Math.PI * k) });
     peak.alpha = on;
     peak.rotation = t;
     peak.scale.set((unit / 120) * 0.35);
@@ -621,7 +651,7 @@ export async function syailendra(rect: DOMRect, code: string, ready?: Ready, boa
 
 export async function syailendraFire(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, card, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const tower = at(0.42, 0.62);
+  const tower = at(0.24, 0.62);
   const glitch = new GlitchFilter({ slices: 8, offset: 0, fillMode: 2, red: { x: 0, y: 0 }, blue: { x: 0, y: 0 } });
   card.filters = [glitch];
   const g = new Graphics();
@@ -755,6 +785,6 @@ export async function kessleroidFire(rect: DOMRect, code: string, ready?: Ready,
 }
 
 export const whitespacePose = pose(WHITE, [0.3, 0.7]);
-export const syailendraPose = pose(0x9be8ff, [0.42, 0.62]);
+export const syailendraPose = pose(0x9be8ff, [0.24, 0.62]);
 export const flywheelPose = pose(0xff7ac8, [0.42, 0.78]);
 export const kessleroidPose = pose(RED, [0.55, 0.74]);
