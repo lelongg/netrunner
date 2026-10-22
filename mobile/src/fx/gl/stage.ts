@@ -165,39 +165,6 @@ export const ease = {
 
 export const span = (t: number, a: number, b: number) => Math.min(1, Math.max(0, (t - a) / (b - a)));
 
-const DISSOLVE = `
-precision highp float;
-in vec2 vTextureCoord;
-out vec4 finalColor;
-uniform sampler2D uTexture;
-uniform float uProgress;
-uniform vec3 uEdge;
-uniform vec4 uInputClamp;
-float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-float noise(vec2 p) {
-  vec2 i = floor(p); vec2 f = fract(p);
-  float a = hash(i), b = hash(i + vec2(1.0, 0.0)), c = hash(i + vec2(0.0, 1.0)), d = hash(i + vec2(1.0, 1.0));
-  vec2 u = f * f * (3.0 - 2.0 * f);
-  return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
-}
-void main() {
-  vec4 color = texture(uTexture, vTextureCoord);
-  vec2 uv = (vTextureCoord - uInputClamp.xy) / (uInputClamp.zw - uInputClamp.xy);
-  float n = noise(uv * 18.0) * 0.55 + noise(uv * 5.0) * 0.45;
-  float h = (1.0 - uv.y) * 0.7 + n * 0.3;
-  float edge = uProgress * 1.15 - h;
-  float shown = smoothstep(0.0, 0.02, edge);
-  float rim = smoothstep(0.09, 0.0, edge) * step(0.0, edge);
-  float scan = 0.85 + 0.15 * sin(uv.y * 420.0);
-  vec3 c = color.rgb * mix(scan, 1.0, smoothstep(0.2, 0.6, edge)) + uEdge * rim * 2.2;
-  finalColor = vec4(c * color.a, color.a) * max(shown, rim);
-}`;
-
-export function dissolveFilter(edge: [number, number, number]) {
-  const glProgram = GlProgram.from({ vertex: defaultFilterVert, fragment: DISSOLVE, name: "dissolve" });
-  return new Filter({ glProgram, resources: { dissolve: { uProgress: { value: 0, type: "f32" }, uEdge: { value: new Float32Array(edge), type: "vec3<f32>" } } } });
-}
-
 export function lightning(g: Graphics, x0: number, y0: number, x1: number, y1: number, jag: number, color: number, width: number) {
   const pts: [number, number][] = [[x0, y0]];
   const n = 10;
