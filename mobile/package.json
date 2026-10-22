@@ -24,6 +24,8 @@
     "@fontsource/space-mono": "^5.2.5",
     "jsqr": "^1.4.0",
     "motion": "13.4.6",
+    "pixi-filters": "6.1.5",
+    "pixi.js": "8.21.0",
     "preact": "^10.24.3",
     "trystero": "0.25.4",
     "uqr": "0.1.3"

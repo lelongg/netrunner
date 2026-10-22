@@ -29,6 +29,7 @@ import { type Tab, TabBar } from "./screens/HomeModern";
 import { Lobby } from "./screens/Lobby";
 import { Guide } from "./screens/Guide";
 import { FxLab } from "./screens/FxLab";
+import { FxGlLab } from "./screens/FxGlLab";
 import { markTutorial, skipTutorial, tutorialState } from "./tutorial";
 import { fromPrecon, seedStarters, toWire } from "./decks";
 import { type Role, type SavedGame, Session, clearSave, listSaves, loadSave, newRoomCode, saveId } from "./session";
@@ -610,7 +611,9 @@ installUiSounds();
 setMood("menu");
 startEngineWorker();
 render(
-  new URLSearchParams(location.search).has("animations") ? (
+  new URLSearchParams(location.search).has("fxgl") ? (
+    <FxGlLab />
+  ) : new URLSearchParams(location.search).has("animations") ? (
     <>
       <FxLab />
       <UpdateBanner />
