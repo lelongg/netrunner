@@ -116,10 +116,23 @@ export async function scene(rect: DOMRect, code: string, ready?: Ready, board?: 
   const sideways = rect.width > rect.height * 1.1;
   const cw = sideways ? rect.height : rect.width;
   const ch = sideways ? rect.width : rect.height;
+  const marks = (window as any).__fxAnchors ? new Graphics() : null;
+  const seen = new Set<string>();
   const at = (u: number, v: number): [number, number] => {
     const dx = (u - 0.5) * cw;
     const dy = (v - 0.5) * ch;
-    return sideways ? [rect.left + rect.width / 2 - dy, rect.top + rect.height / 2 + dx] : [rect.left + rect.width / 2 + dx, rect.top + rect.height / 2 + dy];
+    const p: [number, number] = sideways ? [rect.left + rect.width / 2 - dy, rect.top + rect.height / 2 + dx] : [rect.left + rect.width / 2 + dx, rect.top + rect.height / 2 + dy];
+    const key = `${u},${v}`;
+    if (marks && Number.isInteger(Math.round(u * 1e4) / 10) && Number.isInteger(Math.round(v * 1e4) / 10) && Math.abs(u * 1000 - Math.round(u * 1000)) < 1e-6 && Math.abs(v * 1000 - Math.round(v * 1000)) < 1e-6 && !seen.has(key)) {
+      seen.add(key);
+      marks
+        .moveTo(p[0] - 5, p[1])
+        .lineTo(p[0] + 5, p[1])
+        .moveTo(p[0], p[1] - 5)
+        .lineTo(p[0], p[1] + 5)
+        .stroke({ width: 2, color: 0xff0000 });
+    }
+    return p;
   };
   const bx = card.scale.x;
   const by = card.scale.y;
@@ -170,6 +183,7 @@ export async function scene(rect: DOMRect, code: string, ready?: Ready, board?: 
       return t < 0.28;
     });
   };
+  if (marks) app.stage.addChild(marks);
   ready?.();
   if (hit) await glide(1);
   return {
@@ -186,6 +200,7 @@ export async function scene(rect: DOMRect, code: string, ready?: Ready, board?: 
       app.ticker.remove(release);
       root.destroy({ children: true });
       world?.destroy({ children: true });
+      marks?.destroy();
     },
     cx: rect.left + rect.width / 2,
     cy: rect.top + rect.height / 2,
@@ -299,7 +314,7 @@ export const petalTexture = () =>
 export const puffTexture = (n: number) =>
   painted(`puff${n}`, 128, 128, (g) => {
     let seed = n * 9301 + 49297;
-    const rand = () => ((seed = (seed * 9301 + 49297) % 233280) / 233280);
+    const rand = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
     for (let i = 0; i < 26; i++) {
       const a = rand() * Math.PI * 2;
       const d = Math.pow(rand(), 0.7) * 34;
@@ -362,5 +377,95 @@ export class Smoke {
       p.s.alpha = p.alpha * Math.min(1, k * 5) * Math.pow(1 - k, 1.5);
     }
     return this.list.length > 0;
+  }
+}
+
+const FLAME_RAMP: [number, number, number, number][] = [
+  [0, 255, 236, 170],
+  [0.1, 255, 196, 90],
+  [0.3, 255, 130, 40],
+  [0.6, 235, 70, 25],
+  [0.85, 120, 25, 12],
+  [1, 40, 10, 8],
+];
+
+function flameColor(k: number) {
+  let i = 1;
+  while (i < FLAME_RAMP.length - 1 && FLAME_RAMP[i][0] < k) i++;
+  const [k0, r0, g0, b0] = FLAME_RAMP[i - 1];
+  const [k1, r1, g1, b1] = FLAME_RAMP[i];
+  const f = Math.min(1, Math.max(0, (k - k0) / (k1 - k0)));
+  return (Math.round(r0 + (r1 - r0) * f) << 16) | (Math.round(g0 + (g1 - g0) * f) << 8) | Math.round(b0 + (b1 - b0) * f);
+}
+
+export const flameTexture = () =>
+  painted("flame", 64, 128, (g) => {
+    const grad = g.createRadialGradient(32, 84, 2, 32, 76, 46);
+    grad.addColorStop(0, "rgba(255,255,255,1)");
+    grad.addColorStop(0.35, "rgba(255,255,255,0.55)");
+    grad.addColorStop(1, "rgba(255,255,255,0)");
+    g.fillStyle = grad;
+    g.beginPath();
+    g.moveTo(32, 4);
+    g.bezierCurveTo(52, 50, 62, 80, 50, 108);
+    g.quadraticCurveTo(32, 128, 14, 108);
+    g.bezierCurveTo(2, 80, 12, 50, 32, 4);
+    g.fill();
+  });
+
+interface Flame {
+  s: Sprite;
+  vx: number;
+  vy: number;
+  age: number;
+  life: number;
+  size: number;
+  phase: number;
+}
+
+export class Fire {
+  list: Flame[] = [];
+  smoke: Smoke | null;
+  constructor(
+    public parent: Container,
+    smokeParent?: Container,
+    public lift = 0,
+  ) {
+    this.smoke = smokeParent ? new Smoke(smokeParent) : null;
+  }
+  emit(x: number, y: number, o: { vx: number; vy: number; size: number; life?: number }) {
+    const s = new Sprite(flameTexture());
+    s.anchor.set(0.5, 0.7);
+    s.position.set(x, y);
+    s.blendMode = "add";
+    s.alpha = 0;
+    this.parent.addChild(s);
+    this.list.push({ s, vx: o.vx, vy: o.vy, age: 0, life: o.life ?? 0.55 + Math.random() * 0.25, size: o.size, phase: Math.random() * 10 });
+  }
+  step(dt: number) {
+    for (let i = this.list.length - 1; i >= 0; i--) {
+      const p = this.list[i];
+      p.age += dt;
+      const k = p.age / p.life;
+      if (k >= 1) {
+        if (this.smoke && Math.random() < 0.35) this.smoke.puff(p.s.x, p.s.y, { vx: p.vx * 0.2, vy: p.vy * 0.2 - this.lift * 0.3, life: 1.2, size: p.size * 1.4, grow: 2, tint: 0x3a2a26, alpha: 0.35 });
+        p.s.destroy();
+        this.list.splice(i, 1);
+        continue;
+      }
+      p.vy -= this.lift * dt;
+      p.vx *= 1 - 1.2 * dt;
+      p.vy *= 1 - 1.2 * dt;
+      const wob = Math.sin(p.age * 18 + p.phase) * p.size * 0.6;
+      p.s.x += (p.vx + wob * (p.vy / (Math.hypot(p.vx, p.vy) + 1))) * dt;
+      p.s.y += (p.vy - wob * (p.vx / (Math.hypot(p.vx, p.vy) + 1))) * dt;
+      p.s.rotation = Math.atan2(p.vy, p.vx) + Math.PI / 2;
+      const swell = k < 0.2 ? 0.5 + 2.5 * k : 1 - 0.45 * (k - 0.2);
+      p.s.scale.set((p.size / 64) * swell * 0.8, (p.size / 64) * swell * (1.2 + Math.hypot(p.vx, p.vy) / (p.size * 6)));
+      p.s.tint = flameColor(k);
+      p.s.alpha = 0.7 * Math.min(1, k * 8) * (1 - k * k);
+    }
+    this.smoke?.step(dt);
+    return this.list.length > 0 || (this.smoke?.list.length ?? 0) > 0;
   }
 }

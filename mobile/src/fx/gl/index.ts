@@ -133,7 +133,10 @@ const rect = (sel: string) => {
 };
 
 function boardFor(owner: string | undefined, self: Element | null | undefined, strike?: Element | null): Board {
-  const others = [...document.querySelectorAll(".playfield .tile[data-cid]")].filter((el) => el !== self && !self?.contains(el)).map((el) => el.getBoundingClientRect()).filter((r) => r.width > 0 && r.bottom > 0 && r.top < innerHeight);
+  const others = [...document.querySelectorAll(".playfield .tile[data-cid]")]
+    .filter((el) => el !== self && !self?.contains(el))
+    .map((el) => el.getBoundingClientRect())
+    .filter((r) => r.width > 0 && r.bottom > 0 && r.top < innerHeight);
   const radius = self ? parseFloat(getComputedStyle(self).borderTopLeftRadius) || 0 : 0;
   const a = aim();
   const tile = (cid: string) => rect(`.playfield .tile[data-cid="${CSS.escape(cid)}"]`);
@@ -187,9 +190,7 @@ export function glEffect(kind: Kind, title: string | undefined, at: DOMRect, cod
       freed();
     };
   }
-  const play = import("./cards")
-    .then((m) => (m as unknown as Record<string, (...a: unknown[]) => Promise<void>>)[name](at, code, ready, board))
-    .catch((e) => console.error("fx", name, e));
+  const play = import("./cards").then((m) => (m as unknown as Record<string, (...a: unknown[]) => Promise<void>>)[name](at, code, ready, board)).catch((e) => console.error("fx", name, e));
   return Promise.race([play, early, new Promise<void>((r) => setTimeout(r, (window as any).__fxManual ? 6e5 : LIMIT))]).finally(() => restore());
 }
 

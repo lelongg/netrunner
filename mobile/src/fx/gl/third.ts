@@ -1,8 +1,8 @@
 import { Graphics } from "pixi.js";
 import { GlitchFilter, GlowFilter, MotionBlurFilter, RGBSplitFilter, ShockwaveFilter } from "pixi-filters";
 import { Emitter, ease, filterPoint, glowTexture, lightning, run, span, sparkTexture } from "./stage";
-import { type Board, Smoke, CREDIT, CYAN, GOLD, RED, type Ready, VIOLET, WHITE, burst, flyHome, homing, painted, pt, scene, shimmer } from "./kit";
-import { type Pt, glowSprite, lerp, pose, prism, rnd, strikeFx, tether } from "./more";
+import { type Board, Fire, Smoke, CREDIT, CYAN, GOLD, RED, type Ready, VIOLET, WHITE, burst, flyHome, homing, painted, pt, scene, shimmer } from "./kit";
+import { type Pt, glowSprite, lerp, pose, prism, rnd, shardTexture, strikeFx, tether } from "./more";
 
 const ORANGE = 0xff8a2a;
 const PINK = 0xff4f9a;
@@ -615,7 +615,7 @@ export async function azimat(rect: DOMRect, code: string, ready?: Ready, board?:
       o.position.set(face[0] + Math.cos(a) * r, face[1] + Math.sin(a) * r * 0.6);
       o.alpha = 1 - span(t, 0.9, 1.1);
       o.scale.set((unit / 128) * 0.1);
-      if (Math.random() < 0.6) trail.add(sparkTexture(), o.x, o.y, { life: 0.3, tint: i ? 0x6affb8 : 0xff7a4a, scale: 0.2 * (unit / 180), grow: -0.4 });
+      if (t < 1 && Math.random() < 0.6) trail.add(sparkTexture(), o.x, o.y, { life: 0.3, tint: i ? 0x6affb8 : 0xff7a4a, scale: 0.2 * (unit / 180), grow: -0.4 });
     });
     trail.step(dt);
     return t < 1.1 || trail.list.length > 0;
@@ -675,9 +675,24 @@ export async function buzzsaw(rect: DOMRect, code: string, ready?: Ready, board?
   await done();
 }
 
+function wireApple(g: Graphics, c: Pt, r: number, spin: number, alpha: number) {
+  for (let i = 0; i < 6; i++) {
+    const a = spin + (i / 6) * Math.PI;
+    const w = Math.abs(Math.cos(a)) * r;
+    const front = Math.sin(a) > 0;
+    g.ellipse(c[0], c[1], Math.max(0.5, w), r).stroke({ width: front ? 1.6 : 1, color: front ? 0xff6a6a : RED, alpha: alpha * (front ? 1 : 0.5) });
+  }
+  for (let i = 1; i < 5; i++) {
+    const y = c[1] - r + (2 * r * i) / 5;
+    const hw = Math.sqrt(Math.max(0, r * r - (y - c[1]) ** 2));
+    g.ellipse(c[0], y, hw, hw * 0.18).stroke({ width: 1, color: 0xff6a6a, alpha: alpha * 0.8 });
+  }
+}
+
 export async function principiaPose(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const apple = at(0.27, 0.33);
+  const apple = at(0.27, 0.34);
+  const R = unit * 0.25;
   const g = new Graphics();
   g.blendMode = "add";
   fx.addChild(g);
@@ -689,47 +704,80 @@ export async function principiaPose(rect: DOMRect, code: string, ready?: Ready, 
   const end = at(0.63, 0.39);
   let landed = false;
   await run(app, (t, dt) => {
-    const k = span(t, 0.1, 0.9);
+    const on = Math.sin(Math.PI * span(t, 0, 1.7));
+    g.clear();
+    wireApple(g, apple, R, t * 2.2, 0.9 * on);
+    const k = span(t, 0.2, 1);
     const e = k * k;
     const u = 1 - e;
     const p: Pt = [u * u * top[0] + 2 * u * e * mid[0] + e * e * end[0], u * u * top[1] + 2 * u * e * mid[1] + e * e * end[1]];
     ball.position.set(...p);
     ball.alpha = k > 0 ? 1 - span(t, 1.3, 1.6) : 0;
-    ball.scale.set((unit / 128) * 0.1);
-    if (k > 0 && k < 1) trail.add(sparkTexture(), ...p, { life: 0.5, tint: GOLD, scale: 0.2 * (unit / 180), grow: -0.3 });
+    ball.scale.set((unit / 128) * 0.12);
+    if (k > 0 && k < 1) trail.add(sparkTexture(), ...p, { life: 0.5, tint: GOLD, scale: 0.22 * (unit / 180), grow: -0.3 });
     if (k >= 1 && !landed) {
       landed = true;
-      burst(trail, ...end, 14, GOLD, unit * 0.8, { life: 0.5, scale: 0.3 });
+      burst(trail, ...end, 16, GOLD, unit * 0.8, { life: 0.5, scale: 0.3 });
     }
-    g.clear();
-    const pulse = Math.sin(Math.PI * span(t, 0.9, 1.6));
-    if (pulse > 0) for (let i = 1; i < 4; i++) g.ellipse(...apple, unit * 0.24 * (i / 4), unit * 0.24).stroke({ width: 1.2, color: RED, alpha: 0.8 * pulse });
+    const rk = span(t, 1, 1.6);
+    if (rk > 0 && rk < 1) g.ellipse(...end, unit * 0.25 * ease.out(rk), unit * 0.08 * ease.out(rk)).stroke({ width: 1.5, color: GOLD, alpha: 1 - rk });
     trail.step(dt);
-    return t < 1.7 || trail.list.length > 0;
+    return t < 1.75 || trail.list.length > 0;
   });
   await done();
 }
 
 export async function principia(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const sc = await scene(rect, code, ready, board);
-  const { app, root, fx, done, unit, at } = sc;
-  const apple = at(0.27, 0.33);
+  const { app, root, fx, done, unit, at, world, strike } = sc;
+  const apple = at(0.27, 0.34);
   const g = new Graphics();
   g.blendMode = "add";
   fx.addChild(g);
+  const arc = new Graphics();
+  arc.blendMode = "add";
+  world.addChild(arc);
+  const ball = glowSprite(world, glowTexture(), GOLD);
+  const bits = new Emitter(world);
   root.addChild(fx);
-  const impact = strikeFx(sc, "apple", RED, apple);
+  let hit = false;
   await run(
     app,
-    (t) => {
+    (t, dt) => {
       g.clear();
-      const pulse = Math.sin(Math.PI * span(t, 0, 0.6));
-      for (let i = 1; i < 4; i++) g.ellipse(...apple, unit * 0.24 * (i / 4), unit * 0.24).stroke({ width: 1.2, color: RED, alpha: 0.9 * pulse });
-      return t < 0.6;
+      wireApple(g, apple, unit * 0.25, t * 6, Math.sin(Math.PI * span(t, 0, 0.6)));
+      arc.clear();
+      if (!strike) return t < 0.7;
+      const src = root.toGlobal({ x: apple[0], y: apple[1] });
+      const k = span(t, 0.1, 0.45);
+      const peak: Pt = [(src.x + strike[0]) / 2, Math.min(src.y, strike[1]) - unit * 0.6];
+      const q = (s: number): Pt => [(1 - s) ** 2 * src.x + 2 * (1 - s) * s * peak[0] + s * s * strike[0], (1 - s) ** 2 * src.y + 2 * (1 - s) * s * peak[1] + s * s * strike[1]];
+      if (k > 0 && k < 1) {
+        const p = q(k * k);
+        ball.position.set(...p);
+        ball.alpha = 1;
+        ball.scale.set((unit / 128) * 0.14);
+        bits.add(sparkTexture(), ...p, { life: 0.3, tint: GOLD, scale: 0.25 * (unit / 180), grow: -0.5 });
+      } else ball.alpha = 0;
+      if (k >= 1 && !hit) {
+        hit = true;
+        burst(bits, ...strike, 24, GOLD, unit * 2, { life: 0.5, scale: 0.35 });
+        for (let i = 0; i < 14; i++) bits.add(shardTexture(), ...strike, { vx: rnd(-1, 1) * unit * 2, vy: -unit * rnd(0.3, 1.6), gravity: unit * 4, spin: rnd(-8, 8), life: 0.7, tint: 0xbfe6ff, scale: (unit / 180) * rnd(0.3, 0.55), blend: "normal" });
+        navigator.vibrate?.(30);
+      }
+      const r = span(t, 0.45, 0.9);
+      if (r > 0 && r < 1) {
+        arc.circle(...strike, unit * (0.1 + 0.7 * ease.out(r))).stroke({ width: unit * 0.02 * (1 - r) + 1, color: GOLD, alpha: 1 - r });
+        for (let i = 0; i < 6; i++) {
+          const a = (i / 6) * Math.PI * 2 + 0.4;
+          lightning(arc, strike[0], strike[1], strike[0] + Math.cos(a) * unit * 0.4 * ease.out(r), strike[1] + Math.sin(a) * unit * 0.4 * ease.out(r), unit * 0.06, 0xbfe6ff, unit * 0.006 * (1 - r) + 0.5);
+        }
+      }
+      bits.step(dt);
+      return t < 1 || bits.list.length > 0;
     },
-    sc.strike ? 1.4 : 1,
+    sc.strike ? 1.3 : 1,
   );
-  await impact;
   await done();
 }
 
@@ -798,22 +846,38 @@ export async function bumiFire(rect: DOMRect, code: string, ready?: Ready, board
   await done();
 }
 
+function breath(at: (u: number, v: number) => Pt, unit: number, power: number) {
+  const mouth = at(0.535, 0.595);
+  const tip = at(0.55, 0.45);
+  const len = Math.hypot(tip[0] - mouth[0], tip[1] - mouth[1]) || 1;
+  const dir: Pt = [(tip[0] - mouth[0]) / len, (tip[1] - mouth[1]) / len];
+  return (fire: Fire) => {
+    for (let n = 0; n < 2; n++) {
+      const spread = rnd(-0.18, 0.18);
+      const c = Math.cos(spread);
+      const sn = Math.sin(spread);
+      const v = unit * rnd(1.4, 2.2) * power;
+      fire.emit(mouth[0] + rnd(-2, 2), mouth[1] + rnd(-2, 2), { vx: (dir[0] * c - dir[1] * sn) * v, vy: (dir[0] * sn + dir[1] * c) * v, size: unit * rnd(0.05, 0.09) * power, life: rnd(0.3, 0.5) });
+    }
+  };
+}
+
 export async function biawak(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, card, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const maw = at(0.4, 0.58);
   const heat = shimmer(root, card, rect, unit * 0.03);
-  const embers = new Emitter(fx);
+  const fire = new Fire(fx, root, unit * 0.5);
   const glow = glowSprite(fx, glowTexture(), ORANGE);
-  glow.position.set(...maw);
+  glow.position.set(...at(0.535, 0.595));
+  const blow = breath(at, unit, 1);
   root.addChild(fx);
   await run(app, (t, dt) => {
-    const roar = Math.sin(Math.PI * span(t, 0.3, 1.3));
+    const roar = Math.sin(Math.PI * span(t, 0.25, 1.35));
     heat(t, roar);
-    glow.alpha = 0.7 * roar;
-    glow.scale.set((unit / 128) * (0.15 + 0.2 * roar));
-    if (roar > 0.2 && Math.random() < 0.8) embers.add(sparkTexture(), maw[0] + rnd(-4, 4), maw[1] + rnd(-4, 4), { vx: rnd(-1, 1) * unit * 0.4, vy: rnd(-1, 1) * unit * 0.4, drag: 1, life: 0.6, tint: Math.random() < 0.5 ? 0xffd27a : ORANGE, scale: 0.25 * (unit / 180), grow: -0.2 });
-    embers.step(dt);
-    return t < 1.6 || embers.list.length > 0;
+    glow.alpha = 0.55 * roar;
+    glow.scale.set((unit / 128) * (0.2 + 0.2 * roar));
+    if (roar > 0.15) blow(fire);
+    fire.step(dt);
+    return t < 1.5 || fire.list.length > 0;
   });
   await done();
 }
@@ -823,21 +887,24 @@ export async function biawakFire(rect: DOMRect, code: string, ready?: Ready, boa
   const claws = new Graphics();
   claws.blendMode = "add";
   fx.addChild(claws);
+  const fire = new Fire(fx, root, unit * 0.5);
   const sparks = new Emitter(fx);
+  const blow = breath(at, unit, 1.4);
   root.addChild(fx);
   const a = at(0.25, 0.62);
   const b = at(0.7, 0.95);
   await run(app, (t, dt) => {
     claws.clear();
     zoom(1 + 0.04 * Math.sin(Math.PI * span(t, 0, 0.3)));
+    if (t < 0.35) blow(fire);
     for (let i = 0; i < 3; i++) {
-      const k = ease.out(span(t, 0.1 + i * 0.05, 0.3 + i * 0.05));
+      const k = ease.out(span(t, 0.3 + i * 0.05, 0.5 + i * 0.05));
       if (k <= 0) continue;
       const off = (i - 1) * unit * 0.12;
       const from: Pt = [a[0] + off, a[1]];
       const to: Pt = [b[0] + off, b[1]];
       const head = lerp(from, to, k);
-      const fade = 1 - span(t, 0.5, 0.9);
+      const fade = 1 - span(t, 0.7, 1.1);
       claws
         .moveTo(...from)
         .lineTo(...head)
@@ -850,7 +917,8 @@ export async function biawakFire(rect: DOMRect, code: string, ready?: Ready, boa
     }
     card.tint = t < 0.3 ? 0xffd8c0 : WHITE;
     sparks.step(dt);
-    return t < 0.95 || sparks.list.length > 0;
+    fire.step(dt);
+    return t < 1.15 || sparks.list.length > 0 || fire.list.length > 0;
   });
   card.tint = WHITE;
   await done();

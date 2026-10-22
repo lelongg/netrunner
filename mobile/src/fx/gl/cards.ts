@@ -78,8 +78,8 @@ export async function sureGamble(rect: DOMRect, code: string, ready?: Ready, boa
 }
 
 export async function overclock(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, card, fx, zoom, done, unit } = await scene(rect, code, ready, board);
-  const eye: [number, number] = [rect.left + rect.width * 0.49, rect.top + rect.height * 0.25];
+  const { app, root, card, fx, zoom, done, unit, at } = await scene(rect, code, ready, board);
+  const eye = at(0.49, 0.25);
   const glitch = new GlitchFilter({ slices: 10, offset: 0, fillMode: 2, red: { x: 0, y: 0 }, blue: { x: 0, y: 0 } });
   card.filters = [glitch];
   const heat = shimmer(root, card, rect, unit * 0.03);
@@ -114,11 +114,10 @@ export async function overclock(rect: DOMRect, code: string, ready?: Ready, boar
 }
 
 export async function ritual(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, card, fx, done, unit } = await scene(rect, code, ready, board);
-  const at = (x: number, y: number): [number, number] => [rect.left + rect.width * x, rect.top + rect.height * y];
+  const { app, root, card, fx, done, unit, at } = await scene(rect, code, ready, board);
   const rays = new GodrayFilter({ angle: -28, gain: 0.45, lacunarity: 2.6, parallel: true, time: 0, alpha: 0 });
   card.filters = [rays];
-  const holo = at(0.28, 0.4);
+  const holo = at(0.47, 0.42);
   const halo = new Sprite(glowTexture());
   halo.anchor.set(0.5);
   halo.blendMode = "add";
@@ -147,11 +146,28 @@ export async function ritual(rect: DOMRect, code: string, ready?: Ready, board?:
 }
 
 export async function dzmzInstall(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, fx, done, unit } = await scene(rect, code, ready, board);
-  const c: [number, number] = [rect.left + rect.width * 0.7, rect.top + rect.height * 0.3];
+  const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
+  const c = at(0.7, 0.3);
   const R = unit * 0.16;
-  const atoms: [number, number, number][] = [[0, 0, 0], [1, 0, 0], [-0.5, 0.86, 0], [-0.5, -0.86, 0], [0, 0, 1], [0, 0, -1], [1.6, 0.8, 0.4], [-1.2, 1.6, -0.3]];
-  const bonds = [[0, 1], [0, 2], [0, 3], [0, 4], [0, 5], [1, 6], [2, 7]];
+  const atoms: [number, number, number][] = [
+    [0, 0, 0],
+    [1, 0, 0],
+    [-0.5, 0.86, 0],
+    [-0.5, -0.86, 0],
+    [0, 0, 1],
+    [0, 0, -1],
+    [1.6, 0.8, 0.4],
+    [-1.2, 1.6, -0.3],
+  ];
+  const bonds = [
+    [0, 1],
+    [0, 2],
+    [0, 3],
+    [0, 4],
+    [0, 5],
+    [1, 6],
+    [2, 7],
+  ];
   const mol = new Graphics();
   mol.blendMode = "add";
   fx.addChild(mol);
@@ -187,8 +203,8 @@ export async function dzmzInstall(rect: DOMRect, code: string, ready?: Ready, bo
 }
 
 export async function fermenter(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, card, fx, done, unit } = await scene(rect, code, ready, board);
-  const sphere: [number, number] = [rect.left + rect.width * 0.48, rect.top + rect.height * 0.3];
+  const { app, root, card, fx, done, unit, at } = await scene(rect, code, ready, board);
+  const sphere = at(0.48, 0.3);
   const heat = shimmer(root, card, rect, unit * 0.03);
   const glow = new Sprite(glowTexture());
   glow.anchor.set(0.5);
@@ -230,30 +246,30 @@ export async function carmen(rect: DOMRect, code: string, ready?: Ready, board?:
   await run(
     app,
     (t, dt) => {
-    const k = Math.sin(Math.PI * span(t, 0, 2.1));
-    ribbons.clear();
-    for (let r = 0; r < 3; r++) {
-      const phase = r * 2.1;
-      const pts: [number, number][] = [];
-      for (let i = 0; i <= 28; i++) {
-        const u = i / 28;
-        const a = phase + u * Math.PI * 1.6 + t * (1.8 + r * 0.3);
-        const rad = unit * (0.08 + u * 0.16);
-        pts.push([her[0] + Math.cos(a) * rad, her[1] + u * unit * 0.5 + Math.sin(a) * rad * 0.35]);
+      const k = Math.sin(Math.PI * span(t, 0, 2.1));
+      ribbons.clear();
+      for (let r = 0; r < 3; r++) {
+        const phase = r * 2.1;
+        const pts: [number, number][] = [];
+        for (let i = 0; i <= 28; i++) {
+          const u = i / 28;
+          const a = phase + u * Math.PI * 1.6 + t * (1.8 + r * 0.3);
+          const rad = unit * (0.08 + u * 0.16);
+          pts.push([her[0] + Math.cos(a) * rad, her[1] + u * unit * 0.5 + Math.sin(a) * rad * 0.35]);
+        }
+        for (const [w, a] of [
+          [unit * 0.05, 0.18],
+          [unit * 0.012, 0.85],
+        ] as const) {
+          ribbons.moveTo(pts[0][0], pts[0][1]);
+          for (const p of pts.slice(1)) ribbons.lineTo(p[0], p[1]);
+          ribbons.stroke({ width: w, color: r === 1 ? 0x9fe3ff : 0x3d8bff, alpha: a * k, cap: "round", join: "round" });
+        }
       }
-      for (const [w, a] of [
-        [unit * 0.05, 0.18],
-        [unit * 0.012, 0.85],
-      ] as const) {
-        ribbons.moveTo(pts[0][0], pts[0][1]);
-        for (const p of pts.slice(1)) ribbons.lineTo(p[0], p[1]);
-        ribbons.stroke({ width: w, color: r === 1 ? 0x9fe3ff : 0x3d8bff, alpha: a * k, cap: "round", join: "round" });
-      }
-    }
-    if (Math.random() < 0.45 && t < 1.8) petals.add(petalTexture(), her[0] + (Math.random() - 0.5) * unit * 0.8, her[1] + (Math.random() - 0.2) * unit * 0.6, { vx: 25 + Math.random() * 25, vy: -12 + Math.random() * 20, spin: (Math.random() - 0.5) * 3, life: 1.2, tint: 0xa8dcff, scale: (0.25 + Math.random() * 0.25) * (unit / 180) });
-    petals.step(dt);
-    return t < 2.15 || petals.list.length > 0;
-  },
+      if (Math.random() < 0.45 && t < 1.8) petals.add(petalTexture(), her[0] + (Math.random() - 0.5) * unit * 0.8, her[1] + (Math.random() - 0.2) * unit * 0.6, { vx: 25 + Math.random() * 25, vy: -12 + Math.random() * 20, spin: (Math.random() - 0.5) * 3, life: 1.2, tint: 0xa8dcff, scale: (0.25 + Math.random() * 0.25) * (unit / 180) });
+      petals.step(dt);
+      return t < 2.15 || petals.list.length > 0;
+    },
     sc.strike ? 2.2 : 1,
   );
   await impact;
@@ -261,8 +277,7 @@ export async function carmen(rect: DOMRect, code: string, ready?: Ready, board?:
 }
 
 export async function predictivePlanogram(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, fx, done, unit } = await scene(rect, code, ready, board);
-  const at = (x: number, y: number): [number, number] => [rect.left + rect.width * x, rect.top + rect.height * y];
+  const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
   const prey = at(0.58, 0.19);
   const grid = new Graphics();
   grid.blendMode = "add";
@@ -300,17 +315,17 @@ export async function predictivePlanogram(rect: DOMRect, code: string, ready?: R
 }
 
 export async function hedgeFund(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, fx, done } = await scene(rect, code, ready, board);
-  const dim = new Graphics().roundRect(rect.left, rect.top, rect.width, rect.height, 10).fill({ color: 0x020806, alpha: 0.55 });
+  const { app, root, fx, done, at } = await scene(rect, code, ready, board);
+  const dim = new Graphics().poly([...at(0.03, 0.08), ...at(0.97, 0.08), ...at(0.97, 0.52), ...at(0.03, 0.52)]).fill({ color: 0x020806, alpha: 0.5 });
   const grid = new Graphics();
-  for (let i = 1; i < 6; i++) grid.moveTo(rect.left + 8, rect.top + (rect.height * i) / 6).lineTo(rect.right - 8, rect.top + (rect.height * i) / 6);
+  for (let i = 1; i < 6; i++) grid.moveTo(...at(0.05, 0.08 + (0.44 * i) / 6)).lineTo(...at(0.95, 0.08 + (0.44 * i) / 6));
   grid.stroke({ color: GREEN, width: 1, alpha: 0.18 });
   root.addChild(dim, grid);
   const pts: [number, number][] = [];
-  let y = rect.bottom - rect.height * 0.15;
+  let v = 0.47;
   for (let i = 0; i <= 12; i++) {
-    pts.push([rect.left + rect.width * 0.08 + (rect.width * 0.84 * i) / 12, y]);
-    y -= (rect.height * 0.55) / 12 + (Math.random() - 0.35) * rect.height * 0.08 * (i % 3 === 2 ? -1.6 : 1);
+    pts.push(at(0.08 + (0.84 * i) / 12, Math.max(0.12, v)));
+    v -= 0.3 / 12 + (Math.random() - 0.35) * 0.05 * (i % 3 === 2 ? -1.6 : 1);
   }
   const line = new Graphics();
   fx.addChild(line);
@@ -384,7 +399,8 @@ export async function spinDoctor(rect: DOMRect, code: string, ready?: Ready, boa
 }
 
 export async function pingRez(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, card, fx, done, cx, cy, unit } = await scene(rect, code, ready, board);
+  const { app, root, card, fx, done, unit, at } = await scene(rect, code, ready, board);
+  const [bx, by] = at(0.41, 0.74);
   const wave = new ShockwaveFilter({ center: { x: 0, y: 0 }, amplitude: unit * 0.1, wavelength: unit * 0.45, speed: 1, brightness: 1.15, radius: -1, time: 0 });
   const split = new RGBSplitFilter({ red: { x: 0, y: 0 }, green: { x: 0, y: 0 }, blue: { x: 0, y: 0 } });
   card.filters = [wave, split];
@@ -403,20 +419,20 @@ export async function pingRez(rect: DOMRect, code: string, ready?: Ready, board?
   const others = board?.others ?? [];
   await run(app, (t, dt) => {
     wave.time = Math.max(0, t - 0.1) * speed;
-    wave.center = filterPoint(card, cx, cy);
+    wave.center = filterPoint(card, bx, by);
     const g = t < 0.25 ? (1 - t / 0.25) * 8 : 0;
     split.red = { x: -g, y: 0 };
     split.blue = { x: g, y: g * 0.5 };
     rings.clear();
     for (let n = 0; n < 3; n++) {
       const k = span(t, 0.1 + n * 0.25, 1.2 + n * 0.25);
-      if (k > 0 && k < 1) rings.circle(cx, cy, k * reach).stroke({ width: 3 * (1 - k) + 1, color: RED, alpha: 1 - k });
+      if (k > 0 && k < 1) rings.circle(bx, by, k * reach).stroke({ width: 3 * (1 - k) + 1, color: RED, alpha: 1 - k });
     }
     const front = Math.max(0, t - 0.1) * speed;
     others.forEach((o, i) => {
       if (pinged.has(i)) return;
       const [ox, oy] = pt(o);
-      if (Math.hypot(ox - cx, oy - cy) > front) return;
+      if (Math.hypot(ox - bx, oy - by) > front) return;
       pinged.add(i);
       dots.add(glowTexture(), ox, oy, { life: 0.5, tint: RED, scale: Math.min(o.width, o.height) / 70, grow: 1 });
       dots.add(sparkTexture(), ox, oy, { life: 0.4, tint: WHITE, scale: 0.5, grow: -1 });
@@ -424,10 +440,10 @@ export async function pingRez(rect: DOMRect, code: string, ready?: Ready, board?
     if (t < 1.2 && Math.random() < 0.5) {
       const a = Math.random() * Math.PI * 2;
       const d = Math.max(rect.width, rect.height) * (0.6 + Math.random() * 0.6);
-      dots.add(sparkTexture(), cx + Math.cos(a) * d, cy + Math.sin(a) * d, { life: 0.5, tint: RED, scale: 0.35 * (unit / 180), grow: -0.6 });
+      dots.add(sparkTexture(), bx + Math.cos(a) * d, by + Math.sin(a) * d, { life: 0.5, tint: RED, scale: 0.35 * (unit / 180), grow: -0.6 });
     }
     dots.step(dt);
-    core.position.set(cx, cy);
+    core.position.set(bx, by);
     core.scale.set((1 + 3 * span(t, 0, 0.3)) * (unit / 180));
     core.alpha = (1 - span(t, 0.1, 0.6)) * 0.9;
     card.tint = t < 0.3 ? 0xffd0c8 : WHITE;
@@ -437,8 +453,7 @@ export async function pingRez(rect: DOMRect, code: string, ready?: Ready, board?
 }
 
 export async function creativeCommission(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, card, fx, done, unit } = await scene(rect, code, ready, board);
-  const at = (x: number, y: number): [number, number] => [rect.left + rect.width * x, rect.top + rect.height * y];
+  const { app, root, card, fx, done, unit, at } = await scene(rect, code, ready, board);
   const [dx, dy] = at(0.25, 0.3);
   const R = rect.width * 0.27;
   const [sx, sy] = at(0.49, 0.27);
@@ -499,7 +514,10 @@ export async function creativeCommission(rect: DOMRect, code: string, ready?: Re
         const q = st.pts[n - 1];
         const hx = dx + q.r * Math.cos(q.a + spin);
         const hy = dy + q.r * Math.sin(q.a + spin);
-        beam.moveTo(sx, sy).lineTo(hx, hy).stroke({ width: unit * 0.006, color: st.color, alpha: 0.55 });
+        beam
+          .moveTo(sx, sy)
+          .lineTo(hx, hy)
+          .stroke({ width: unit * 0.006, color: st.color, alpha: 0.55 });
         if (Math.random() < 0.6) motes.add(sparkTexture(), hx, hy, { vx: (Math.random() - 0.5) * unit * 0.3, vy: (Math.random() - 0.5) * unit * 0.3, life: 0.5, drag: 2, tint: st.color, scale: 0.22 * (unit / 180), grow: -0.3 });
       }
     }
@@ -543,14 +561,15 @@ export async function pettyCash(rect: DOMRect, code: string, ready?: Ready, boar
 }
 
 export async function jailbreak(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, card, fx, done, cx, cy, unit } = await scene(rect, code, ready, board);
+  const { app, card, fx, done, unit, at } = await scene(rect, code, ready, board);
+  const [cx, cy] = at(0.5, 0.3);
   const split = new RGBSplitFilter({ red: { x: 0, y: 0 }, green: { x: 0, y: 0 }, blue: { x: 0, y: 0 } });
   const wave = new ShockwaveFilter({ center: { x: 0, y: 0 }, amplitude: unit * 0.08, wavelength: unit * 0.5, speed: unit * 3, brightness: 1.1, radius: -1, time: 0 });
   card.filters = [wave, split];
   const lock = new Graphics();
   fx.addChild(lock);
   const shards = new Emitter(fx);
-  const s = unit * 0.5;
+  const s = unit * 0.38;
   let broke = false;
   await run(app, (t, dt) => {
     lock.clear();
@@ -560,8 +579,15 @@ export async function jailbreak(rect: DOMRect, code: string, ready?: Ready, boar
     const a = lk * (1 - span(t, 0.75, 0.95));
     if (a > 0) {
       const x = cx + shake;
-      lock.roundRect(x - s * 0.45, cy - s * 0.1, s * 0.9, s * 0.7, 8).fill({ color: 0x0b0c0e, alpha: 0.9 * a }).stroke({ color: RED, width: 3, alpha: a });
-      lock.moveTo(x - s * 0.28, cy - s * 0.1).lineTo(x - s * 0.28, cy - s * 0.35 - open * s * 0.25).arc(x, cy - s * 0.35 - open * s * 0.25, s * 0.28, Math.PI, 0).lineTo(x + s * 0.28, cy - s * 0.1 - open * s * 0.25);
+      lock
+        .roundRect(x - s * 0.45, cy - s * 0.1, s * 0.9, s * 0.7, 8)
+        .fill({ color: 0x0b0c0e, alpha: 0.9 * a })
+        .stroke({ color: RED, width: 3, alpha: a });
+      lock
+        .moveTo(x - s * 0.28, cy - s * 0.1)
+        .lineTo(x - s * 0.28, cy - s * 0.35 - open * s * 0.25)
+        .arc(x, cy - s * 0.35 - open * s * 0.25, s * 0.28, Math.PI, 0)
+        .lineTo(x + s * 0.28, cy - s * 0.1 - open * s * 0.25);
       lock.stroke({ width: 5, color: RED, alpha: a });
       lock.circle(x, cy + s * 0.22, s * 0.07).fill({ color: RED, alpha: a });
     }
@@ -582,8 +608,8 @@ export async function jailbreak(rect: DOMRect, code: string, ready?: Ready, boar
 }
 
 export async function pinholeThreading(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, fx, done, unit } = await scene(rect, code, ready, board);
-  const [hx, hy] = [rect.left + rect.width * 0.38, rect.top + rect.height * 0.27];
+  const { app, fx, done, unit, at } = await scene(rect, code, ready, board);
+  const [hx, hy] = at(0.38, 0.27);
   const x0 = rect.left - unit * 0.6;
   const len = rect.width + unit * 1.2;
   const uh = (hx - x0) / len;
@@ -626,10 +652,10 @@ export async function pinholeThreading(rect: DOMRect, code: string, ready?: Read
 }
 
 export async function mutualFavor(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, card, fx, done, cx, cy, unit } = await scene(rect, code, ready, board);
+  const { app, root, card, fx, done, cx, cy, unit, at } = await scene(rect, code, ready, board);
   const bx = card.scale.x;
   const by = card.scale.y;
-  const focus: [number, number] = [rect.left + rect.width * 0.55, rect.top + rect.height * 0.34];
+  const focus = at(0.55, 0.34);
   const frame = new Graphics().roundRect(rect.left, rect.top, rect.width, rect.height, 10).fill(0xffffff);
   const shot = new Container();
   root.addChildAt(shot, 0);
@@ -745,17 +771,17 @@ export async function risingTide(rect: DOMRect, code: string, ready?: Ready, boa
   await run(
     app,
     (t, dt) => {
-    const level = rect.bottom - rect.height * ease.out(span(t, 0, 0.8)) * 0.9 * (1 - ease.inOut(span(t, 1, 1.5)));
-    water.clear();
-    water.moveTo(rect.left, rect.bottom);
-    for (let i = 0; i <= 20; i++) water.lineTo(rect.left + (rect.width * i) / 20, level + Math.sin(i * 0.9 + t * 9) * unit * 0.03);
-    water.lineTo(rect.right, rect.bottom).closePath().fill({ color: 0x1673c9, alpha: 0.45 });
-    if (Math.random() < 0.6 && t < 1.3) glints.add(sparkTexture(), rect.left + Math.random() * rect.width, level + Math.random() * (rect.bottom - level), { life: 0.4, tint: 0x9fe7ff, scale: 0.3 * (unit / 180), grow: -0.5 });
-    glints.step(dt);
-    wave.time = Math.max(0, t - 0.75);
-    wave.center = filterPoint(card, cx, cy);
-    return t < 1.6;
-  },
+      const level = rect.bottom - rect.height * ease.out(span(t, 0, 0.8)) * 0.9 * (1 - ease.inOut(span(t, 1, 1.5)));
+      water.clear();
+      water.moveTo(rect.left, rect.bottom);
+      for (let i = 0; i <= 20; i++) water.lineTo(rect.left + (rect.width * i) / 20, level + Math.sin(i * 0.9 + t * 9) * unit * 0.03);
+      water.lineTo(rect.right, rect.bottom).closePath().fill({ color: 0x1673c9, alpha: 0.45 });
+      if (Math.random() < 0.6 && t < 1.3) glints.add(sparkTexture(), rect.left + Math.random() * rect.width, level + Math.random() * (rect.bottom - level), { life: 0.4, tint: 0x9fe7ff, scale: 0.3 * (unit / 180), grow: -0.5 });
+      glints.step(dt);
+      wave.time = Math.max(0, t - 0.75);
+      wave.center = filterPoint(card, cx, cy);
+      return t < 1.6;
+    },
     sc.strike ? 1.6 : 1,
   );
   await impact;
@@ -801,45 +827,45 @@ export async function echelon(rect: DOMRect, code: string, ready?: Ready, board?
   await run(
     app,
     (t, dt) => {
-    const fade = 1 - span(t, 1.9, 2.4);
-    const wake = Math.sin(Math.PI * span(t, 0.2, 2.3));
-    twist.offset = filterPoint(card, ex, ey);
-    twist.angle = 0.7 * wake;
-    eye.alpha = (0.3 + 0.12 * Math.sin(t * 7)) * wake;
-    eye.scale.set((unit / 128) * (0.4 + 0.1 * wake));
-    net.clear();
-    sats.forEach((st, i) => {
-      if (!st.lit && t > st.on) {
-        st.lit = true;
-        sparks.add(sparkTexture(), st.p[0], st.p[1], { life: 0.4, tint: WHITE, scale: 0.4 * (unit / 180), grow: -0.8, spin: 2 });
-        sparks.add(glowTexture(), st.p[0], st.p[1], { life: 0.35, tint: VIOLET, scale: (unit / 128) * 0.1, grow: 0.5, alpha: 0.7 });
+      const fade = 1 - span(t, 1.9, 2.4);
+      const wake = Math.sin(Math.PI * span(t, 0.2, 2.3));
+      twist.offset = filterPoint(card, ex, ey);
+      twist.angle = 0.7 * wake;
+      eye.alpha = (0.3 + 0.12 * Math.sin(t * 7)) * wake;
+      eye.scale.set((unit / 128) * (0.4 + 0.1 * wake));
+      net.clear();
+      sats.forEach((st, i) => {
+        if (!st.lit && t > st.on) {
+          st.lit = true;
+          sparks.add(sparkTexture(), st.p[0], st.p[1], { life: 0.4, tint: WHITE, scale: 0.4 * (unit / 180), grow: -0.8, spin: 2 });
+          sparks.add(glowTexture(), st.p[0], st.p[1], { life: 0.35, tint: VIOLET, scale: (unit / 128) * 0.1, grow: 0.5, alpha: 0.7 });
+        }
+        lights[i].alpha = st.lit ? (0.3 + 0.12 * Math.sin(t * 9 + i)) * fade : 0;
+        lights[i].scale.set((unit / 128) * 0.08);
+        if (i === 0) return;
+        const k = ease.out(span(t, st.on - 0.05, st.on + 0.2));
+        if (k <= 0) return;
+        const b = lerp(sats[i - 1].p, st.p, k);
+        net.moveTo(...sats[i - 1].p).lineTo(...b);
+      });
+      net.stroke({ width: unit * 0.012, color: VIOLET, alpha: 0.3 * fade });
+      sats.forEach((st, i) => {
+        if (!i) return;
+        const k = ease.out(span(t, st.on - 0.05, st.on + 0.2));
+        if (k > 0) net.moveTo(...sats[i - 1].p).lineTo(...lerp(sats[i - 1].p, st.p, k));
+      });
+      net.stroke({ width: unit * 0.004, color: 0xe6dcff, alpha: 0.8 * fade });
+      const pk = span(t, 1.2, 1.8);
+      if (pk > 0 && pk < 1) {
+        const f = pk * (sats.length - 1);
+        const j = Math.min(sats.length - 2, Math.floor(f));
+        const [px, py] = lerp(sats[j].p, sats[j + 1].p, f - j);
+        sparks.add(glowTexture(), px, py, { life: 0.25, tint: 0xd8c8ff, scale: (unit / 128) * 0.07, grow: -0.1 });
+        sparks.add(sparkTexture(), px, py, { life: 0.3, tint: WHITE, scale: 0.4 * (unit / 180), grow: -0.8 });
       }
-      lights[i].alpha = st.lit ? (0.3 + 0.12 * Math.sin(t * 9 + i)) * fade : 0;
-      lights[i].scale.set((unit / 128) * 0.08);
-      if (i === 0) return;
-      const k = ease.out(span(t, st.on - 0.05, st.on + 0.2));
-      if (k <= 0) return;
-      const b = lerp(sats[i - 1].p, st.p, k);
-      net.moveTo(...sats[i - 1].p).lineTo(...b);
-    });
-    net.stroke({ width: unit * 0.012, color: VIOLET, alpha: 0.3 * fade });
-    sats.forEach((st, i) => {
-      if (!i) return;
-      const k = ease.out(span(t, st.on - 0.05, st.on + 0.2));
-      if (k > 0) net.moveTo(...sats[i - 1].p).lineTo(...lerp(sats[i - 1].p, st.p, k));
-    });
-    net.stroke({ width: unit * 0.004, color: 0xe6dcff, alpha: 0.8 * fade });
-    const pk = span(t, 1.2, 1.8);
-    if (pk > 0 && pk < 1) {
-      const f = pk * (sats.length - 1);
-      const j = Math.min(sats.length - 2, Math.floor(f));
-      const [px, py] = lerp(sats[j].p, sats[j + 1].p, f - j);
-      sparks.add(glowTexture(), px, py, { life: 0.25, tint: 0xd8c8ff, scale: (unit / 128) * 0.07, grow: -0.1 });
-      sparks.add(sparkTexture(), px, py, { life: 0.3, tint: WHITE, scale: 0.4 * (unit / 180), grow: -0.8 });
-    }
-    sparks.step(dt);
-    return t < 2.4 || sparks.list.length > 0;
-  },
+      sparks.step(dt);
+      return t < 2.4 || sparks.list.length > 0;
+    },
     sc.strike ? 2.2 : 1,
   );
   await impact;
@@ -847,28 +873,32 @@ export async function echelon(rect: DOMRect, code: string, ready?: Ready, board?
 }
 
 export async function docklandsPass(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, fx, done, unit } = await scene(rect, code, ready, board);
+  const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
   const gate = new Graphics();
   gate.blendMode = "add";
   fx.addChild(gate);
-  const flash = new Graphics();
-  root.addChild(fx, flash);
-  await run(app, (t) => {
+  const pass = glowSprite(fx, glowTexture(), GREEN);
+  pass.position.set(...at(0.52, 0.42));
+  const sparks = new Emitter(fx);
+  root.addChild(fx);
+  let granted = false;
+  await run(app, (t, dt) => {
     gate.clear();
     const k = ease.inOut(span(t, 0.05, 0.75));
-    const y = rect.top + rect.height * k;
+    const v = 0.08 + 0.46 * k;
     const a = k > 0 && k < 1 ? 1 : 0;
-    gate.rect(rect.left - unit * 0.15, y - 1.5, rect.width + unit * 0.3, 3).fill({ color: RED, alpha: a });
-    gate.rect(rect.left - unit * 0.15, y - 10, rect.width + unit * 0.3, 20).fill({ color: RED, alpha: 0.12 * a });
-    for (let i = 0; i < 14; i++) {
-      const bx = rect.left + rect.width * 0.12 + (rect.width * 0.76 * i) / 14;
-      const bw = ((rect.width * 0.76) / 14) * (0.3 + ((i * 7) % 5) / 6);
-      gate.rect(bx, rect.top + rect.height * 0.8, bw, rect.height * 0.1).fill({ color: GREEN, alpha: span(t, 0.75, 0.9) * (1 - span(t, 1.2, 1.5)) * 0.8 });
+    gate.poly([...at(0.04, v - 0.004), ...at(0.96, v - 0.004), ...at(0.96, v + 0.004), ...at(0.04, v + 0.004)]).fill({ color: RED, alpha: a });
+    gate.poly([...at(0.04, v - 0.03), ...at(0.96, v - 0.03), ...at(0.96, v + 0.03), ...at(0.04, v + 0.03)]).fill({ color: RED, alpha: 0.12 * a });
+    const g = span(t, 0.75, 1.5);
+    if (g > 0 && !granted) {
+      granted = true;
+      burst(sparks, ...at(0.52, 0.42), 16, GREEN, unit * 0.9, { life: 0.5, scale: 0.3 });
     }
-    flash.clear();
-    const fk = span(t, 0.75, 1.2);
-    if (fk > 0 && fk < 1) flash.roundRect(rect.left, rect.top, rect.width, rect.height, 6).stroke({ color: GREEN, width: 3 + 6 * (1 - fk), alpha: 1 - fk });
-    return t < 1.55;
+    pass.alpha = Math.sin(Math.PI * g);
+    pass.scale.set((unit / 128) * 0.25);
+    if (g > 0 && g < 1) gate.poly([...at(0.04, 0.08), ...at(0.96, 0.08), ...at(0.96, 0.54), ...at(0.04, 0.54)]).stroke({ color: GREEN, width: 2 + 4 * (1 - g), alpha: 1 - g });
+    sparks.step(dt);
+    return t < 1.55 || sparks.list.length > 0;
   });
   await done();
 }
@@ -914,4 +944,4 @@ export async function flyswatter(rect: DOMRect, code: string, ready?: Ready, boa
 export const warm = () => stage();
 export * from "./more";
 export * from "./third";
-import { strikeFx } from "./more";
+import { glowSprite, strikeFx } from "./more";

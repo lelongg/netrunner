@@ -116,6 +116,7 @@ export async function cardSprite(parent: Container, code: string, rect: DOMRect,
 }
 
 let speed = 1;
+const MAX_SECONDS = 6;
 
 export function setFxSpeed(n: number) {
   speed = n;
@@ -129,7 +130,7 @@ export function run(a: Application, tick: Tick, pace = 1) {
     const fn = (ticker: Ticker) => {
       const dt = ((window as any).__fxManual ? 1 / 30 : Math.min(0.05, ticker.deltaMS / 1000)) * pace * speed;
       t += dt;
-      if (tick(t, dt) === false) {
+      if (tick(t, dt) === false || t > MAX_SECONDS) {
         a.ticker.remove(fn);
         done();
       }
