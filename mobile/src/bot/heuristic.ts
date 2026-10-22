@@ -32,6 +32,8 @@ export class HeuristicBot {
   private runs = 0;
   private banned = new Set<string>();
   private last = { key: "", signature: "", count: 0 };
+  private pending = { key: "", signature: "" };
+  private confirmed = false;
   private duds = new Set<string>();
   private pendingRun: { cids: string[]; points: number; breached: boolean } | null = null;
 
@@ -64,7 +66,8 @@ export class HeuristicBot {
         this.last = { key: "", signature: "", count: 0 };
         return this.fallback(view);
       }
-    } else this.last = { key, signature, count: 0 };
+    } else if (!this.confirmed) this.last = { key, signature, count: 0 };
+    this.pending = { key, signature };
     if (move.command === "run") {
       this.runs++;
       const key = Object.keys(view.corp?.servers ?? {}).find((k) => serverLabel(k) === (move.args as any)?.server);
@@ -72,6 +75,12 @@ export class HeuristicBot {
       this.pendingRun = content.length ? { cids: content.filter((c) => !c.rezzed && !c["advance-counter"]).map((c) => c.cid), points: view.runner?.["agenda-point"] ?? 0, breached: false } : null;
     }
     return move;
+  }
+
+  applied(move: Move) {
+    this.confirmed = true;
+    const key = `${move.command}:${move.say ?? ""}:${JSON.stringify(move.args ?? null)}`;
+    if (key !== this.last.key || this.pending.signature !== this.last.signature) this.last = { key, signature: this.pending.key === key ? this.pending.signature : "", count: 0 };
   }
 
   private trackRun(view: any) {

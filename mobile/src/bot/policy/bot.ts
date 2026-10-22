@@ -121,7 +121,7 @@ export class PolicyBot {
     if (obs.prompt && obs.promptType !== "run") {
       if (obs.promptType === "waiting") return { stage: "idle", proposals: [] };
       const p = this.answerPrompt(obs);
-      return { stage: "prompt", proposals: p ? [p] : [], unhandled: p ? undefined : `prompt not handled: ${obs.promptType} "${obs.promptText}"${obs.prompt.card?.title ? ` from ${obs.prompt.card.title}` : ""}` };
+      return { stage: "prompt", proposals: p, unhandled: p.length ? undefined : `prompt not handled: ${obs.promptType} "${obs.promptText}"${obs.prompt.card?.title ? ` from ${obs.prompt.card.title}` : ""}` };
     }
     const step = basicCommands(obs.view, this.side).find((c) => TURN_COMMANDS.has(c.command) && c.enabled !== false);
     if (step) return { stage: "turn", proposals: [{ move: { command: step.command, args: step.args }, score: 500, why: step.label, kind: "turn" }] };
@@ -150,14 +150,16 @@ export class PolicyBot {
     return next;
   }
 
-  private answerPrompt(obs: Observation): Proposal | null {
+  private answerPrompt(obs: Observation): Proposal[] {
     if (obs.promptType === "mulligan") {
       const advice = this.policy?.mulligan?.(obs) ?? this.genericMulligan(obs);
-      return mulliganProposal(obs, advice.keep, advice.why);
+      const p = mulliganProposal(obs, advice.keep, advice.why);
+      return p ? [p] : [];
     }
     const deck = this.policy?.prompt?.(obs, this.currentPlan(obs));
-    if (deck) return deck;
-    return breakSubChoice(obs) ?? genericPrompt(obs, this.plan);
+    const out = [deck, breakSubChoice(obs), ...genericPrompt(obs, this.plan)].filter((p): p is Proposal => !!p);
+    out.forEach((p, i) => (p.score -= i * 0.001));
+    return out;
   }
 
   private genericMulligan(obs: Observation): { keep: boolean; why: string } {

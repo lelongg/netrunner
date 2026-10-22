@@ -53,7 +53,7 @@ function plan(obs: Observation, current: Plan | null): Plan {
   const points = Number(obs.me["agenda-point"] ?? 0);
   const need = Number(obs.me["agenda-point-req"] ?? 7);
   const cov = coverage(obs);
-  const threat = obs.servers.find((s) => s.remote && s.content.some((c: any) => agendaProgress(c).have >= 2 || (!c.rezzed && !c.title && s.ices.length > 0)));
+  const threat = obs.servers.find((s) => s.remote && s.content.some((c: any) => agendaProgress(c).have >= 1 || (!c.rezzed && !c.title && s.ices.length > 0 && obs.turn >= 3 && cov.size >= 1)));
   if (threat && obs.credits >= 3) return keep("contest", `the Corp is setting up ${threat.label}: get into it before it scores`, { server: threat.label });
   if (points >= need - 2 && obs.credits >= 4) return keep("closing", "two points away: hit R&D and HQ every turn");
   if (obs.credits < 5 || cov.size < 2) return keep("setup", "economy first, then Cleaver, Unity and Carmen");

@@ -271,7 +271,7 @@ function playGame({ seed, matchup, players, maxActions, full }) {
     errors,
     stuck,
     points: [v.corp["agenda-point"], v.runner["agenda-point"]],
-    stats: { runs: count(/to make a run on/), steals: count(/ steals /), scored: count(/ scores? /), rezIce: count(/rezzes .* (protecting|ice)/i), breaks: count(/to break/), corpCredits: v.corp.credit, runnerCredits: v.runner.credit, rig: (v.runner.rig.program ?? []).map((c) => c.title).join("+") },
+    stats: { runs: count(/to make a run on/), steals: count(/ steals /), scored: count(/ scores? /), rezIce: count(/ to rez /i), breaks: count(/to break/), corpCredits: v.corp.credit, runnerCredits: v.runner.credit, rig: (v.runner.rig.program ?? []).map((c) => c.title).join("+") },
     bots: { corp: botStats("corp"), runner: botStats("runner") },
     situations,
     log: actions,

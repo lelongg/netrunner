@@ -1,7 +1,6 @@
-import { cardRef } from "../../game/actions.ts";
 import type { Candidate } from "../../game/candidates.ts";
-import { byCommand, installedThisTurn } from "./observe.ts";
-import { fromCandidate, labelCost } from "./runs.ts";
+import { byCommand } from "./observe.ts";
+import { fromCandidate } from "./runs.ts";
 import { ICE_TYPES, type IceType, agendaProgress, coverage, estimateRun, gainOf, isEconomy, isIcebreaker, isTrap, iceTypes, playCostOf, rezCostOf, strengthOf, subtypes, tagged } from "./tactics.ts";
 import type { Observation, Plan, Proposal } from "./types.ts";
 
@@ -105,7 +104,9 @@ export function serverValue(obs: Observation, server: Observation["servers"][num
   if (!server.content.length) return 0;
   const adv = Math.max(0, ...server.content.map((c: any) => agendaProgress(c).have));
   const unknown = server.content.some((c: any) => (!c.title || c.type === "Agenda") && (agendaProgress(c).have > 0 || !obs.memory.duds.has(c.cid)));
-  return unknown ? 5 + adv * 3 : server.content.some((c: any) => c.rezzed) ? 2.5 : 0.5;
+  if (unknown) return 5 + adv * 3;
+  const trashable = server.content.some((c: any) => c.rezzed && c.trash != null && obs.credits >= Number(c.trash) + 3 && isEconomy(obs.info(c).text));
+  return trashable ? 2 : 0;
 }
 
 export function runProposals(obs: Observation, limit = 2): Proposal[] {
@@ -191,4 +192,3 @@ export function corpFreeProposals(obs: Observation): Proposal[] {
   return out;
 }
 
-export { cardRef, installedThisTurn, labelCost };

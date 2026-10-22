@@ -1,5 +1,4 @@
 import { cardRef, findCard } from "../../game/actions.ts";
-import type { Candidate } from "../../game/candidates.ts";
 import { agendaProgress, isIcebreaker, playCostOf, rezCostOf, strengthOf } from "./tactics.ts";
 import type { Observation, Plan, Proposal } from "./types.ts";
 
@@ -36,17 +35,19 @@ function trace(obs: Observation): Proposal {
   return { move: numberMove(obs, spend), score: 50, why: `trace: spend ${spend}`, kind: "trace" };
 }
 
-export function genericSelect(obs: Observation): Proposal | null {
+export function genericSelect(obs: Observation): Proposal[] {
   const cards = selectable(obs);
   const done = choices(obs).find((c) => c.value === "Done");
   const msg = obs.promptText;
   const mine = (c: any) => c.side === (obs.side === "corp" ? "Corp" : "Runner");
+  const out: Proposal[] = [];
   let pick: any;
   let why = "";
   if (/^choose a credit providing card/i.test(msg)) {
     const funded = cards.find((c) => Number(c.counter?.credit ?? 0) > 0);
-    if (funded) return { move: selectMove(obs, funded), score: 30, why: `pay with the credits on ${funded.title}`, kind: "select" };
-    if (done) return { move: choiceMove(obs, done), score: 30, why: "pay the rest from the credit pool", kind: "select" };
+    if (funded) out.push({ move: selectMove(obs, funded), score: 30, why: `pay with the credits on ${funded.title}`, kind: "select" });
+    if (done) out.push({ move: choiceMove(obs, done), score: 25, why: "pay the rest from the credit pool", kind: "select" });
+    return out;
   }
   if (/discard/i.test(msg)) {
     pick = [...cards].sort((a, b) => cardWorth(obs, a) - cardWorth(obs, b))[0];
@@ -59,9 +60,9 @@ export function genericSelect(obs: Observation): Proposal | null {
     pick = cards.find((c) => (hostile ? !mine(c) : mine(c))) ?? cards[0];
     why = hostile ? "target an opposing card" : "target one of my cards";
   }
-  if (pick) return { move: selectMove(obs, pick), score: 30, why, kind: "select" };
-  if (done) return { move: choiceMove(obs, done), score: 20, why: "nothing left to select", kind: "select" };
-  return null;
+  if (pick) out.push({ move: selectMove(obs, pick), score: 30, why, kind: "select" });
+  if (done) out.push({ move: choiceMove(obs, done), score: 20, why: "nothing left to select", kind: "select" });
+  return out;
 }
 
 export function scoreChoice(obs: Observation, label: string, value: any): { score: number; why: string } {
@@ -79,35 +80,27 @@ export function scoreChoice(obs: Observation, label: string, value: any): { scor
   return { score: 16, why: "default choice" };
 }
 
-export function genericPrompt(obs: Observation, plan: Plan | null): Proposal | null {
+export function genericPrompt(obs: Observation, plan: Plan | null): Proposal[] {
   const prompt = obs.prompt;
-  if (!prompt) return null;
+  if (!prompt) return [];
   const ptype = obs.promptType;
-  if (ptype === "waiting" || ptype === "run") return null;
+  if (ptype === "waiting" || ptype === "run") return [];
   if (ptype === "select") return genericSelect(obs);
-  if (ptype === "trace") return trace(obs);
+  if (ptype === "trace") return [trace(obs)];
   const ch = prompt.choices;
-  if (ch === "credit") return { move: numberMove(obs, 0), score: 20, why: "spend no credits", kind: "number" };
+  if (ch === "credit") return [{ move: numberMove(obs, 0), score: 20, why: "spend no credits", kind: "number" }];
   if (ch && !Array.isArray(ch) && typeof ch === "object") {
-    if (ch.number != null) return { move: numberMove(obs, Number(ch.default ?? ch.minimum ?? 0)), score: 20, why: "default amount", kind: "number" };
+    if (ch.number != null) return [{ move: numberMove(obs, Number(ch.default ?? ch.minimum ?? 0)), score: 20, why: "default amount", kind: "number" }];
     if (ch.counter) {
       const card = findCard(obs.view, prompt.card?.cid);
-      return { move: numberMove(obs, Number(card?.counter?.[ch.counter] ?? 0)), score: 20, why: "all counters", kind: "number" };
+      return [{ move: numberMove(obs, Number(card?.counter?.[ch.counter] ?? 0)), score: 20, why: "all counters", kind: "number" }];
     }
-    if (ch["card-title"] !== undefined) return { move: numberMove(obs, (obs.side === "corp" ? "Hedge Fund" : "Sure Gamble") as any), score: 20, why: "name a common card", kind: "title" };
+    if (ch["card-title"] !== undefined) return [{ move: numberMove(obs, (obs.side === "corp" ? "Hedge Fund" : "Sure Gamble") as any), score: 20, why: "name a common card", kind: "title" }];
   }
-  const list = choices(obs);
-  if (list.length) {
-    let best: { c: any; score: number; why: string } | null = null;
-    for (const c of list) {
-      const label = choiceLabel(obs, c);
-      const { score, why } = scoreChoice(obs, label, c.value);
-      const s = score + obs.random() * 0.01;
-      if (!best || s > best.score) best = { c, score: s, why };
-    }
-    if (best) return { move: choiceMove(obs, best.c), score: best.score, why: best.why, kind: "choice" };
-  }
-  return null;
+  return choices(obs).map((c) => {
+    const { score, why } = scoreChoice(obs, choiceLabel(obs, c), c.value);
+    return { move: choiceMove(obs, c), score: score + obs.random() * 0.01, why, kind: "choice" };
+  });
 }
 
 export function mulliganProposal(obs: Observation, keep: boolean, why: string): Proposal | null {
@@ -118,4 +111,3 @@ export function mulliganProposal(obs: Observation, keep: boolean, why: string): 
 export const agendaToAdvance = (cards: any[]) => [...cards].filter((c) => c.type === "Agenda").sort((a, b) => agendaProgress(b).have - agendaProgress(a).have)[0];
 export const cheapestIce = (cards: any[]) => [...cards].filter((c) => c.type === "ICE").sort((a, b) => rezCostOf(a) - rezCostOf(b))[0];
 export const strongestIce = (cards: any[]) => [...cards].filter((c) => c.type === "ICE").sort((a, b) => strengthOf(b) - strengthOf(a))[0];
-export type { Candidate };
