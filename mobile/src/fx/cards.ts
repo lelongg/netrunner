@@ -1,7 +1,8 @@
 import { cardImage } from "../engine";
+import { letGoEffects } from "./gl";
 import { installSignature, orbitalStrike, scoreSignature, signature } from "./signatures";
 import type { Side } from "../engine";
-import { anchor, animate, creditChange, points, scoreSegments, banner, burst, buzz, done, flash, floater, layer, mid, node, place, punch, rays, rectOf, reduced, ring, shake, tileEl, visible, type Point, type Tone } from "./core";
+import { anchor, animate, creditChange, tapToSkip, points, scoreSegments, banner, burst, buzz, done, flash, floater, layer, mid, node, place, punch, rays, rectOf, reduced, ring, shake, tileEl, visible, type Point, type Tone } from "./core";
 
 export interface Info {
   cid: unknown;
@@ -301,7 +302,9 @@ async function showcase(m: Move, kind: Kind, me: Side) {
     const runner = rectOf(anchor("runner-panel"));
     setTimeout(() => orbitalStrike(visible(runner) ? mid(runner) : [innerWidth / 2, 90]), 1750);
   }
-  if (special) await special;
+  const tap = tapToSkip(() => rectOf(ghost));
+  const skipped = tap.promise.then(letGoEffects);
+  if (special) await Promise.race([special, skipped]);
   else if (kind === "play" || kind === "install") {
     ring(center, tone, big.width * 1.6);
     burst(center, tone, 14, big.width * 0.8, { size: 5, gravity: 0 });
@@ -318,9 +321,9 @@ async function showcase(m: Move, kind: Kind, me: Side) {
   }
   if (!special) {
     animate(glow, { opacity: [0, 1, 0.75] }, { duration: hold + 0.3, times: [0, 0.4, 1], ease: "easeOut", keep: true });
-    await new Promise((r) => setTimeout(r, 140));
-    await animate(ghost, { scaleX: [1, 1.04], scaleY: [1, 1.04] }, { duration: hold, ease: "easeInOut" }).finished;
+    await Promise.race([new Promise((r) => setTimeout(r, 140)).then(() => animate(ghost, { scaleX: [1, 1.04], scaleY: [1, 1.04] }, { duration: hold, ease: "easeInOut" }).finished), skipped]);
   }
+  tap.dispose();
   animate(glow, { opacity: [0.75, 0] }, { duration: 0.3, ease: "easeOut", keep: true });
   const owner = info?.owner;
   if (kind === "play" && owner && pendingGain[owner]) {

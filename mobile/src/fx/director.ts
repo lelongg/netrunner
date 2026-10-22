@@ -4,10 +4,10 @@ import { currentIce } from "../game/actions";
 import { serverName } from "../game/text";
 import { type Plan, accessStage, collect, moveKinds, pendingGain, play, prepare } from "./cards";
 import { setAim } from "./gl/aim";
-import { hasGl } from "./gl";
+import { hasGl, letGoEffects } from "./gl";
 import { cleaver, fireSignature, leech, planogramResult, regolith, rezSignature, snare, transmission, useSignature, hasUseEffect } from "./signatures";
 import { cue, play as sound } from "../sound";
-import { type Point, type Tone, anchor, animate, banner, burst, buzz, haptics, creditChange, done, flash, floater, gate, glitch, layer, lunge, mid, node, place, pointOf, punch, rays, rectOf, reduced, ring, shake, slash, split, stamp, tileEl, vignette, visible, wrapEl, scoreSegment } from "./core";
+import { type Point, type Tone, anchor, animate, banner, burst, buzz, haptics, creditChange, tapToSkip, done, flash, floater, gate, glitch, layer, lunge, mid, node, place, pointOf, punch, rays, rectOf, reduced, ring, shake, slash, split, stamp, tileEl, vignette, visible, wrapEl, scoreSegment } from "./core";
 
 export type IceKind = "sentry" | "gate" | "barrier" | "other";
 
@@ -981,7 +981,10 @@ function showdown(ice: any, kind: "rez" | "fire", run: (big: DOMRect, ghost: HTM
   animate(t2, { opacity: [0, 1], y: [16, 0] }, { duration: 0.35, delay: 0.15 });
   const loaded = img.decode().catch(() => {});
   Promise.all([arrive.finished.catch(() => {}), loaded])
-    .then(() => Promise.race([Promise.resolve(run(big, ghost)), new Promise((res) => setTimeout(res, 4000))]))
+    .then(() => {
+      const tap = tapToSkip(() => rectOf(ghost));
+      return Promise.race([Promise.resolve(run(big, ghost)), tap.promise.then(letGoEffects), new Promise((res) => setTimeout(res, 4000))]).finally(tap.dispose);
+    })
     .then(() => new Promise((res) => setTimeout(res, 250)))
     .then(() => {
       animate(label, { opacity: 0 }, { duration: 0.2 });

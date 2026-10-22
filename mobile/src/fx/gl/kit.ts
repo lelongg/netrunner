@@ -22,6 +22,7 @@ export interface Board {
   strikeTrack?: () => DOMRect | null;
   cap?: number;
   free?: () => void;
+  hook?: (letGo: () => void) => void;
   advanced?: DOMRect[];
   gone?: DOMRect[];
   host?: DOMRect | null;
@@ -163,19 +164,26 @@ export async function scene(rect: DOMRect, code: string, ready?: Ready, board?: 
   follow();
   app.ticker.add(follow, undefined, 1);
   let alive = 0;
-  const release = (ticker: { deltaMS: number }) => {
-    alive += (window as any).__fxManual ? 1 / 30 : ticker.deltaMS / 1000;
-    if (!board?.cap || alive < board.cap) return;
+  let released = false;
+  const letGo = (fadeOut = true) => {
+    if (released) return;
+    released = true;
     app.ticker.remove(release);
     card.visible = false;
-    board.free?.();
+    board?.free?.();
+    if (!fadeOut) return;
     const fade = (tk: { deltaMS: number }) => {
       root.alpha = Math.max(0, root.alpha - ((window as any).__fxManual ? 1 / 30 : tk.deltaMS / 1000) / 0.55);
       if (root.alpha <= 0) app.ticker.remove(fade);
     };
     app.ticker.add(fade);
   };
+  const release = (ticker: { deltaMS: number }) => {
+    alive += (window as any).__fxManual ? 1 / 30 : ticker.deltaMS / 1000;
+    if (board?.cap && alive >= board.cap) letGo();
+  };
   if (board?.cap) app.ticker.add(release);
+  board?.hook?.(() => letGo(false));
   world = layer(app.stage);
   const glide = (to: number) => {
     const from = reach;

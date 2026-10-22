@@ -177,6 +177,12 @@ let ok: boolean | undefined;
 const hidden = new WeakMap<HTMLElement, number>();
 const LIMIT = 6000;
 const CAP = 1.7;
+const live = new Set<() => void>();
+
+export function letGoEffects() {
+  for (const f of live) f();
+  live.clear();
+}
 
 function glOk() {
   if (ok === undefined) {
@@ -245,15 +251,19 @@ export function glEffect(kind: Kind, title: string | undefined, at: DOMRect, cod
   };
   let freed: () => void = () => {};
   const early = new Promise<void>((r) => (freed = r));
-  if (kind === "play" && !strike) {
-    board.cap = CAP;
+  if (!strike) {
+    if (kind === "play") board.cap = CAP;
     board.free = () => {
       restore();
       freed();
     };
+    board.hook = (letGo) => live.add(letGo);
   }
   const play = import("./cards").then((m) => (m as unknown as Record<string, (...a: unknown[]) => Promise<void>>)[name](at, code, ready, board)).catch((e) => console.error("fx", name, e));
-  return Promise.race([play, early, new Promise<void>((r) => setTimeout(r, (window as any).__fxManual ? 6e5 : LIMIT))]).finally(() => restore());
+  return Promise.race([play, early, new Promise<void>((r) => setTimeout(r, (window as any).__fxManual ? 6e5 : LIMIT))]).finally(() => {
+    restore();
+    if (board.hook) live.clear();
+  });
 }
 
 export function warmGl() {

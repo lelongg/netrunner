@@ -419,3 +419,23 @@ export function creditChange(side: string, delta: number, from: Point | null) {
     floater([at[0], top], `−${-delta}`, "white", 30, true);
   }
 }
+
+export function tapToSkip(area: () => DOMRect | null) {
+  let skip: () => void = () => {};
+  const promise = new Promise<void>((r) => (skip = r));
+  const down = (e: PointerEvent) => {
+    const r = area();
+    if (!r || e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) return;
+    e.stopPropagation();
+    e.preventDefault();
+    const swallow = (c: Event) => {
+      c.stopPropagation();
+      c.preventDefault();
+    };
+    addEventListener("click", swallow, { capture: true, once: true });
+    setTimeout(() => removeEventListener("click", swallow, { capture: true }), 400);
+    skip();
+  };
+  addEventListener("pointerdown", down, { capture: true });
+  return { promise, dispose: () => removeEventListener("pointerdown", down, { capture: true }) };
+}
