@@ -1,5 +1,5 @@
 import { useEffect, useState } from "preact/hooks";
-import { motionOff, onSettings } from "./settings";
+import { motionOff, onSettings, settings } from "./settings";
 
 let granted = false;
 
@@ -21,7 +21,7 @@ function screenAngle() {
   return (Number(a) * Math.PI) / 180;
 }
 
-const tiltOn = () => !motionOff();
+const tiltOn = () => settings.parallax && !motionOff();
 
 export function useTilt(target: { current: HTMLElement | null }, gain = 1) {
   const [on, setOn] = useState(tiltOn);

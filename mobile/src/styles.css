@@ -8986,15 +8986,6 @@ button.player-chip {
   box-shadow: calc(var(--tx, 0) * -24px) calc(var(--ty, 0) * -24px - 14px) 50px rgb(0 0 0 / 0.8);
 }
 
-.menu-drawer {
-  right: -34px;
-  bottom: -34px;
-  padding-right: 34px;
-  padding-bottom: 34px;
-  translate: calc(var(--tx, 0) * 30px) calc(var(--ty, 0) * 24px);
-  box-shadow: calc(var(--tx, 0) * -24px - 14px) calc(var(--ty, 0) * -24px) 50px rgb(0 0 0 / 0.8);
-}
-
 .sheet .sheet-head .sheet-img {
   translate: calc(var(--tx, 0) * 12px) calc(var(--ty, 0) * 14px);
   transform: perspective(700px) rotateY(calc(var(--tx, 0) * 16deg)) rotateX(calc(var(--ty, 0) * -12deg));
