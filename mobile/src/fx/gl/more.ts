@@ -6,7 +6,9 @@ import { type Board, CREDIT, CYAN, GOLD, GREEN, RED, type Ready, VIOLET, WHITE, 
 type Pt = [number, number];
 const ORANGE = 0xff8a2a;
 const PINK = 0xff4f9a;
-const TOXIC = 0xb6f04a;
+const TOXIC = 0xff4a6a;
+const EMBER = 0xff9a5a;
+const FLESH = 0xffd6e4;
 
 const glyphTexture = () =>
   painted("glyph", 48, 48, (g) => {
@@ -64,6 +66,22 @@ const shardTexture = () =>
     g.lineTo(18, 36);
     g.closePath();
     g.fill();
+    g.stroke();
+  });
+
+const leafTexture = () =>
+  painted("leaf", 40, 22, (g) => {
+    g.fillStyle = "#fff";
+    g.beginPath();
+    g.moveTo(2, 11);
+    g.quadraticCurveTo(20, -4, 38, 11);
+    g.quadraticCurveTo(20, 26, 2, 11);
+    g.fill();
+    g.strokeStyle = "rgba(0,0,0,0.35)";
+    g.lineWidth = 1.5;
+    g.beginPath();
+    g.moveTo(4, 11);
+    g.lineTo(36, 11);
     g.stroke();
   });
 
@@ -708,7 +726,7 @@ export async function botulusPose(rect: DOMRect, code: string, ready?: Ready, bo
   const heart = at(0.44, 0.32);
   const wobble = shimmer(root, card, rect, unit * 0.05);
   const spores = new Emitter(fx);
-  const core = glowSprite(fx, glowTexture(), TOXIC);
+  const core = glowSprite(fx, glowTexture(), FLESH);
   core.position.set(...heart);
   const vine = new Graphics();
   vine.blendMode = "add";
@@ -724,7 +742,7 @@ export async function botulusPose(rect: DOMRect, code: string, ready?: Ready, bo
     if (t < 1.3 && Math.random() < 0.9) {
       const a = rnd(0, Math.PI * 2);
       const d = unit * rnd(0.05, 0.3);
-      spores.add(glowTexture(), heart[0] + Math.cos(a) * d, heart[1] + Math.sin(a) * d * 0.7, { vx: Math.cos(a) * unit * 0.15, vy: Math.sin(a) * unit * 0.1 - unit * 0.08, drag: 0.8, life: rnd(0.8, 1.3), tint: Math.random() < 0.6 ? TOXIC : ORANGE, scale: (unit / 128) * rnd(0.035, 0.07) });
+      spores.add(glowTexture(), heart[0] + Math.cos(a) * d, heart[1] + Math.sin(a) * d * 0.7, { vx: Math.cos(a) * unit * 0.15, vy: Math.sin(a) * unit * 0.1 - unit * 0.08, drag: 0.8, life: rnd(0.8, 1.3), tint: Math.random() < 0.6 ? TOXIC : EMBER, scale: (unit / 128) * rnd(0.035, 0.07) });
     }
     vine.clear();
     if (host) {
@@ -749,7 +767,7 @@ export async function botulus(rect: DOMRect, code: string, ready?: Ready, board?
   card.filters = [split];
   const wobble = shimmer(root, card, rect, unit * 0.04);
   const spores = new Emitter(fx);
-  const flash = glowSprite(fx, glowTexture(), TOXIC);
+  const flash = glowSprite(fx, glowTexture(), FLESH);
   flash.position.set(...heart);
   const vine = new Graphics();
   vine.blendMode = "add";
@@ -1014,7 +1032,7 @@ export async function gourmand(rect: DOMRect, code: string, ready?: Ready, board
 
 export async function eventHorizon(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, card, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const hole = at(0.48, 0.77);
+  const hole = at(0.56, 0.76);
   const twist = new TwistFilter({ radius: unit * 0.5, angle: 0, offset: { x: 0, y: 0 }, padding: unit * 0.3 });
   card.filters = [twist];
   const fall = new Emitter(fx);
@@ -1051,7 +1069,7 @@ export async function eventHorizon(rect: DOMRect, code: string, ready?: Ready, b
 
 export async function eventHorizonFire(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, card, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const hole = at(0.48, 0.77);
+  const hole = at(0.56, 0.76);
   const twist = new TwistFilter({ radius: unit * 0.6, angle: 0, offset: { x: 0, y: 0 }, padding: unit * 0.3 });
   card.filters = [twist];
   const fall = new Emitter(fx);
@@ -1090,7 +1108,7 @@ export async function eventHorizonFire(rect: DOMRect, code: string, ready?: Read
 
 export async function pharos(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, card, fx, done, unit, at, sideways } = await scene(rect, code, ready, board);
-  const lamp = at(0.08, 0.77);
+  const lamp = at(0.2, 0.77);
   const rays = new GodrayFilter({ angle: sideways ? 60 : -30, gain: 0.5, lacunarity: 2.4, parallel: true, time: 0, alpha: 0 });
   card.filters = [rays];
   const beam = new Graphics();
@@ -1123,7 +1141,7 @@ export async function pharos(rect: DOMRect, code: string, ready?: Ready, board?:
 
 export async function pharosFire(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const lamp = at(0.08, 0.77);
+  const lamp = at(0.2, 0.77);
   const flare = glowSprite(fx, glowTexture(), 0xfff6d8);
   const star = glowSprite(fx, sparkTexture(), WHITE);
   flare.position.set(...lamp);
@@ -1189,33 +1207,38 @@ export async function sleipnirFire(rect: DOMRect, code: string, ready?: Ready, b
   const { app, root, card, fx, done, unit, at, sideways } = await scene(rect, code, ready, board);
   const split = new RGBSplitFilter({ red: { x: 0, y: 0 }, green: { x: 0, y: 0 }, blue: { x: 0, y: 0 } });
   card.filters = [split];
-  const streaks = new Graphics();
-  streaks.blendMode = "add";
-  fx.addChild(streaks);
+  const shards = new Emitter(fx);
   root.addChild(fx);
   const hues = [0xff5a5a, 0xffb347, 0xfff36a, 0x7dff9a, 0x6ad8ff, 0xb68bff];
-  await run(app, (t) => {
-    const k = Math.sin(Math.PI * span(t, 0, 0.8));
-    split.red = sideways ? { x: 0, y: -10 * k } : { x: -10 * k, y: 0 };
-    split.blue = sideways ? { x: 0, y: 10 * k } : { x: 10 * k, y: 0 };
-    streaks.clear();
-    const head = span(t, 0, 0.6);
-    hues.forEach((h, i) => {
-      const u = 0.2 + i * 0.12;
-      const v1 = 1 - 0.45 * head * head;
-      streaks
-        .moveTo(...at(u, Math.min(0.98, v1 + 0.25)))
-        .lineTo(...at(u, v1))
-        .stroke({ width: unit * 0.025, color: h, alpha: 0.7 * (1 - span(t, 0.5, 0.9)) });
+  const beats = [0.08, 0.26, 0.44, 0.62];
+  const fired = beats.map(() => false);
+  await run(app, (t, dt) => {
+    let kick = 0;
+    beats.forEach((b, i) => {
+      kick = Math.max(kick, t > b ? Math.max(0, 1 - (t - b) / 0.15) : 0);
+      if (t > b && !fired[i]) {
+        fired[i] = true;
+        const [x, y] = at(0.3 + (i % 2) * 0.4, 0.64 + (i < 2 ? 0 : 0.2));
+        for (let n = 0; n < 14; n++) {
+          const a = rnd(0, Math.PI * 2);
+          const v = unit * rnd(0.4, 1.1);
+          shards.add(sparkTexture(), x, y, { vx: Math.cos(a) * v, vy: Math.sin(a) * v, drag: 2.5, life: rnd(0.35, 0.6), tint: hues[n % hues.length], scale: 0.32 * (unit / 180) });
+        }
+        shards.add(glowTexture(), x, y, { life: 0.25, tint: hues[(i * 2) % hues.length], scale: (unit / 128) * 0.25, grow: 1.2, alpha: 0.7 });
+      }
     });
-    return t < 0.95;
+    const d = 7 * kick;
+    split.red = sideways ? { x: 0, y: -d } : { x: -d, y: 0 };
+    split.blue = sideways ? { x: 0, y: d } : { x: d, y: 0 };
+    shards.step(dt);
+    return t < 0.95 || shards.list.length > 0;
   });
   await done();
 }
 
 export async function tocsin(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, card, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const bell = at(0.73, 0.74);
+  const bell = at(0.66, 0.78);
   const wave = new ShockwaveFilter({ center: { x: 0, y: 0 }, amplitude: unit * 0.025, wavelength: unit * 0.15, speed: unit * 1.2, brightness: 1.1, radius: unit * 0.9, time: 0 });
   card.filters = [wave];
   const rings = new Graphics();
@@ -1245,7 +1268,7 @@ export async function tocsin(rect: DOMRect, code: string, ready?: Ready, board?:
 
 export async function tocsinFire(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, card, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const bell = at(0.73, 0.74);
+  const bell = at(0.66, 0.78);
   const rings = new Graphics();
   rings.blendMode = "add";
   fx.addChild(rings);
@@ -1295,57 +1318,52 @@ export async function semakSamun(rect: DOMRect, code: string, ready?: Ready, boa
 
 export async function semakFire(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, card, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const glitch = new GlitchFilter({ slices: 10, offset: 0, fillMode: 2, red: { x: 0, y: 0 }, blue: { x: 0, y: 0 } });
-  card.filters = [glitch];
-  const vines = new Graphics();
-  vines.blendMode = "add";
-  fx.addChild(vines);
+  const sway = shimmer(root, card, rect, unit * 0.06);
   const eyes = [at(0.3, 0.7), at(0.36, 0.7)].map((p) => {
     const s = glowSprite(fx, glowTexture(), RED);
     s.position.set(...p);
     return s;
   });
+  const leaves = new Emitter(fx);
   root.addChild(fx);
-  const lashes = Array.from({ length: 5 }, (_, i) => ({ from: at(rnd(0.1, 0.9), 0.98), to: at(rnd(0.1, 0.9), rnd(0.5, 0.7)), at: i * 0.07 }));
   const grip = board?.grip ? pt(board.grip) : null;
-  const hits = new Emitter(fx);
+  const swarm = grip ? Array.from({ length: 10 }, (_, i) => homing(fx, leafTexture(), at(rnd(0.15, 0.85), rnd(0.6, 0.9)), grip, 0.35 + i * 0.03, 0xb6ff5a, (unit / 180) * 0.4, rnd(-1, 1) * unit * 0.8)) : [];
   let struck = false;
+  let shed = false;
   await run(app, (t, dt) => {
-    glitch.offset = t < 0.4 && Math.random() < 0.5 ? unit * 0.04 : 0;
-    vines.clear();
-    for (const l of lashes) {
-      const k = span(t, l.at, l.at + 0.25);
-      if (k <= 0) continue;
-      const a = 1 - span(t, 0.5, 0.9);
-      const tip = lerp(l.from, l.to, ease.out(k));
-      vines
-        .moveTo(...l.from)
-        .quadraticCurveTo(l.from[0] + unit * 0.2, (l.from[1] + tip[1]) / 2, ...tip)
-        .stroke({ width: unit * 0.014, color: 0xd6ff4a, alpha: a });
-    }
-    if (grip) {
-      const k = ease.out(span(t, 0.1, 0.45));
-      const head = tether(vines, at(0.5, 0.9), grip, k, 0xd6ff4a, unit * 0.012, 1 - span(t, 0.7, 1.1), unit * 0.05, t);
-      if (k >= 1 && !struck) {
-        struck = true;
-        burst(hits, ...head, 22, RED, unit * 1.3, { life: 0.5, scale: 0.4 });
-        navigator.vibrate?.([30, 20, 30]);
-      }
-    }
-    const open = Math.sin(Math.PI * span(t, 0, 0.8));
+    const shiver = Math.sin(Math.PI * span(t, 0, 0.9));
+    sway(t * 3, shiver);
+    const dusk = span(t, 0, 0.25) * (1 - span(t, 0.7, 1));
+    const g = Math.round(255 - 110 * dusk);
+    card.tint = (g << 16) | (Math.round(255 - 70 * dusk) << 8) | g;
+    const open = Math.sin(Math.PI * span(t, 0.15, 0.85));
     for (const e of eyes) {
       e.alpha = open;
-      e.scale.set((unit / 128) * 0.08, (unit / 128) * 0.035 * open);
+      e.scale.set((unit / 128) * 0.09, (unit / 128) * 0.04 * open);
     }
-    hits.step(dt);
-    return t < (grip ? 1.2 : 1) || hits.list.length > 0;
+    if (!shed && t > 0.3) {
+      shed = true;
+      for (let i = 0; i < 18; i++) {
+        const [x, y] = at(rnd(0.1, 0.9), rnd(0.55, 0.95));
+        leaves.add(leafTexture(), x, y, { vx: rnd(-1, 1) * unit * 0.6, vy: -unit * rnd(0.2, 0.6), gravity: unit * 0.8, spin: rnd(-6, 6), life: rnd(0.5, 0.8), tint: Math.random() < 0.5 ? 0xb6ff5a : 0x4f9a2a, scale: (unit / 180) * rnd(0.3, 0.5), blend: "normal" });
+      }
+    }
+    for (const h of swarm) h.s.rotation += dt * 8;
+    if (flyHome(swarm, t, leaves, 0xb6ff5a) === swarm.length && swarm.length && !struck) {
+      struck = true;
+      burst(leaves, ...grip!, 22, RED, unit * 1.3, { life: 0.5, scale: 0.4 });
+      navigator.vibrate?.([30, 20, 30]);
+    }
+    leaves.step(dt);
+    return t < (grip ? 1.2 : 1) || leaves.list.length > 0;
   });
+  card.tint = WHITE;
   await done();
 }
 
 export async function pingFire(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const ball = at(0.4, 0.67);
+  const ball = at(0.41, 0.74);
   const rings = new Graphics();
   rings.blendMode = "add";
   fx.addChild(rings);
@@ -1367,7 +1385,7 @@ export async function pingFire(rect: DOMRect, code: string, ready?: Ready, board
 
 export async function flyswatterFire(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, card, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const c = at(0.6, 0.72);
+  const c = at(0.58, 0.78);
   const mesh = new Graphics();
   mesh.blendMode = "add";
   fx.addChild(mesh);
@@ -1400,12 +1418,12 @@ export const echelonPose = pose(VIOLET, [0.85, 0.38]);
 export const carmenPose = pose(CYAN, [0.67, 0.16]);
 export const risingTidePose = pose(0x6ad8ff, [0.5, 0.3]);
 export const fermenterPose = pose(PINK, [0.48, 0.3]);
-export const pingPose = pose(0xfff36a, [0.4, 0.67]);
-export const flyswatterPose = pose(CYAN, [0.6, 0.72]);
-export const eventHorizonPose = pose(GOLD, [0.48, 0.77]);
-export const pharosPose = pose(0xfff1c0, [0.08, 0.77]);
+export const pingPose = pose(0xfff36a, [0.41, 0.74]);
+export const flyswatterPose = pose(CYAN, [0.58, 0.78]);
+export const eventHorizonPose = pose(GOLD, [0.56, 0.76]);
+export const pharosPose = pose(0xfff1c0, [0.2, 0.77]);
 export const sleipnirPose = pose(0xb68bff, [0.45, 0.72]);
-export const tocsinPose = pose(0x7dffc4, [0.73, 0.74]);
+export const tocsinPose = pose(0x7dffc4, [0.66, 0.78]);
 export const semakPose = pose(0xd6ff4a, [0.33, 0.7]);
 
 type Strike = { app: import("pixi.js").Application; root: import("pixi.js").Container; world: import("pixi.js").Container; strike: Pt | null; unit: number; at: (u: number, v: number) => Pt };
