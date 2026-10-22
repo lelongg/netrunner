@@ -886,41 +886,50 @@ export async function biawakFire(rect: DOMRect, code: string, ready?: Ready, boa
   const { app, root, card, fx, done, unit, at, zoom } = await scene(rect, code, ready, board);
   const claws = new Graphics();
   claws.blendMode = "add";
-  fx.addChild(claws);
+  app.stage.addChild(claws);
   const fire = new Fire(fx, root, unit * 0.5);
-  const sparks = new Emitter(fx);
+  const sparks = new Emitter(app.stage);
   const blow = breath(at, unit, 1.4);
   root.addChild(fx);
-  const a = at(0.25, 0.62);
-  const b = at(0.7, 0.95);
+  const target = board?.runner ?? null;
+  const box = target ?? new DOMRect(innerWidth / 2 - unit * 0.6, innerHeight - unit * 0.9, unit * 1.2, unit * 0.6);
+  const reach = Math.max(box.width, box.height * 1.6);
+  const c: Pt = [box.left + box.width / 2, box.top + box.height / 2];
+  let hit = false;
   await run(app, (t, dt) => {
     claws.clear();
-    zoom(1 + 0.04 * Math.sin(Math.PI * span(t, 0, 0.3)));
+    zoom(1 + 0.05 * Math.sin(Math.PI * span(t, 0, 0.35)));
     if (t < 0.35) blow(fire);
     for (let i = 0; i < 3; i++) {
-      const k = ease.out(span(t, 0.3 + i * 0.05, 0.5 + i * 0.05));
+      const k = ease.out(span(t, 0.35 + i * 0.05, 0.55 + i * 0.05));
       if (k <= 0) continue;
-      const off = (i - 1) * unit * 0.12;
-      const from: Pt = [a[0] + off, a[1]];
-      const to: Pt = [b[0] + off, b[1]];
+      const off = (i - 1) * reach * 0.16;
+      const from: Pt = [c[0] - reach * 0.35 + off, c[1] - reach * 0.3];
+      const to: Pt = [c[0] + reach * 0.25 + off, c[1] + reach * 0.3];
       const head = lerp(from, to, k);
-      const fade = 1 - span(t, 0.7, 1.1);
+      const fade = 1 - span(t, 0.75, 1.15);
       claws
         .moveTo(...from)
         .lineTo(...head)
-        .stroke({ width: unit * 0.03 * (1 - k * 0.5), color: ORANGE, alpha: 0.5 * fade });
+        .stroke({ width: unit * 0.035 * (1 - k * 0.5), color: ORANGE, alpha: 0.5 * fade });
       claws
         .moveTo(...from)
         .lineTo(...head)
-        .stroke({ width: unit * 0.008, color: 0xfff0d0, alpha: fade });
+        .stroke({ width: unit * 0.01, color: 0xfff0d0, alpha: fade });
       if (k < 1 && Math.random() < 0.8) sparks.add(sparkTexture(), ...head, { vx: rnd(-1, 1) * unit * 0.5, vy: rnd(-1, 1) * unit * 0.5, life: 0.3, tint: ORANGE, scale: 0.25 * (unit / 180), grow: -0.5 });
+    }
+    if (!hit && t > 0.4) {
+      hit = true;
+      if (target) prism(document.querySelector('[data-anchor="runner-panel"]'), 0.4);
+      navigator.vibrate?.([30, 20, 30]);
     }
     card.tint = t < 0.3 ? 0xffd8c0 : WHITE;
     sparks.step(dt);
     fire.step(dt);
-    return t < 1.15 || sparks.list.length > 0 || fire.list.length > 0;
+    return t < 1.2 || sparks.list.length > 0 || fire.list.length > 0;
   });
   card.tint = WHITE;
+  claws.destroy();
   await done();
 }
 

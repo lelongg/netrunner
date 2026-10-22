@@ -65,9 +65,29 @@ const CODES: Record<string, string> = {
   Doomscroll: "35063",
   "Tread Lightly": "30012",
   Azimat: "35029",
+  "Lie Low": "35015",
+  Whitespace: "30074",
+  "Phat Gioan Baotixita": "35051",
+  "Devadatta Drone": "35031",
+  "Open Market": "35022",
+  "Smartware Distributor": "30033",
+  Unleash: "36044",
+  "Public Trail": "30057",
+  Syailendra: "35076",
+  "Rent Rioters": "35011",
+  "Sang Kancil": "35020",
+  Tailgate: "36012",
+  "Flood the Market": "36053",
+  Flywheel: "36059",
+  Kessleroid: "35075",
+  "Public Access Plaza": "35062",
+  Retribution: "30065",
+  "Beta Build": "36019",
+  Scrounge: "35004",
+  Chromatophores: "35030",
 };
 
-const ICE = new Set(["Ping", "Flyswatter", "Event Horizon", "Pharos", "Sleipnir", "Tocsin", "Semak-samun", "Bumi 1.0", "Biawak", "Funhouse", "Bran 1.0", "Doomscroll"]);
+const ICE = new Set(["Ping", "Flyswatter", "Event Horizon", "Pharos", "Sleipnir", "Tocsin", "Semak-samun", "Bumi 1.0", "Biawak", "Funhouse", "Bran 1.0", "Doomscroll", "Whitespace", "Syailendra", "Flywheel", "Kessleroid"]);
 const KINDS: Kind[] = ["play", "install", "rez", "use"];
 const KIND_LABEL: Record<Kind, string> = { play: "Play", install: "Install", rez: "Rez", use: "Effect" };
 const SPEEDS = [1, 0.5, 0.25];

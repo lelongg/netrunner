@@ -944,4 +944,5 @@ export async function flyswatter(rect: DOMRect, code: string, ready?: Ready, boa
 export const warm = () => stage();
 export * from "./more";
 export * from "./third";
+export * from "./fourth";
 import { glowSprite, strikeFx } from "./more";

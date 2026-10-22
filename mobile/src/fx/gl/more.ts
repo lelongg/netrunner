@@ -1546,7 +1546,7 @@ export const semakPose = pose(0xd6ff4a, [0.33, 0.7]);
 
 type Strike = { app: import("pixi.js").Application; root: import("pixi.js").Container; world: import("pixi.js").Container; strike: Pt | null; unit: number; at: (u: number, v: number) => Pt };
 
-export function strikeFx(sc: Strike, style: "ribbons" | "bolts" | "splash" | "cubes" | "saw" | "apple", color: number, from: Pt): Promise<void> {
+export function strikeFx(sc: Strike, style: "ribbons" | "bolts" | "splash" | "cubes" | "saw" | "apple" | "leap", color: number, from: Pt): Promise<void> {
   const { app, root, world, strike, unit } = sc;
   if (!strike) return Promise.resolve();
   const g = new Graphics();
@@ -1600,6 +1600,17 @@ export function strikeFx(sc: Strike, style: "ribbons" | "bolts" | "splash" | "cu
           bits.add(sparkTexture(), strike[0] + Math.cos(a) * r, strike[1] + Math.sin(a) * r, { vx: -Math.sin(a) * unit * 2, vy: Math.cos(a) * unit * 2, gravity: unit * 2, life: 0.4, tint: Math.random() < 0.5 ? 0xffd27a : color, scale: (unit / 180) * 0.3 });
         }
       }
+    } else if (style === "leap") {
+      const k2 = span(t, 0, 0.4);
+      if (k2 > 0 && k2 < 1) {
+        const peak: Pt = [(src.x + strike[0]) / 2, Math.min(src.y, strike[1]) - unit * 0.8];
+        const q = (s2: number): Pt => [(1 - s2) ** 2 * src.x + 2 * (1 - s2) * s2 * peak[0] + s2 * s2 * strike[0], (1 - s2) ** 2 * src.y + 2 * (1 - s2) * s2 * peak[1] + s2 * s2 * strike[1]];
+        g.moveTo(...q(Math.max(0, k2 - 0.3)));
+        for (let i = 1; i <= 12; i++) g.lineTo(...q(Math.max(0, k2 - 0.3) + ((0.3 * i) / 12) * Math.min(1, k2 / 0.3)));
+        g.stroke({ width: unit * 0.04, color, alpha: 0.8, cap: "round" });
+        bits.add(sparkTexture(), ...q(k2), { life: 0.4, tint: color, scale: (unit / 180) * 0.4, grow: -0.6 });
+      }
+      if (t > 0.4 && t < 0.45) for (let i = 0; i < 16; i++) bits.add(glowTexture(), strike[0] + rnd(-1, 1) * R * 0.3, strike[1], { vx: rnd(-1, 1) * unit * 0.8, vy: -unit * rnd(0.6, 1.6), gravity: unit * 3, life: 0.6, tint: 0x9be8ff, scale: (unit / 128) * 0.05 });
     } else if (style === "apple") {
       const k2 = ease.out(span(t, 0, 0.4));
       if (k2 < 1) {
