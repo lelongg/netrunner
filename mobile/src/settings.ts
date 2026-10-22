@@ -45,5 +45,9 @@ export function onSettings(fn: () => void) {
 export const motionOff = () => !settings.animations || matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 export function applySettings() {
-  document.documentElement.classList.toggle("no-motion", !settings.animations);
+  const root = document.documentElement;
+  const waking = settings.animations && root.classList.contains("no-motion");
+  root.classList.toggle("no-motion", !settings.animations);
+  if (!waking) return;
+  for (const a of document.getAnimations()) if (a instanceof CSSAnimation && a.effect?.getTiming().iterations !== Infinity) a.finish();
 }

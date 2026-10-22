@@ -8998,3 +8998,7 @@ button.player-chip {
   transform: perspective(800px) rotateY(calc(var(--tx, 0) * 18deg)) rotateX(calc(var(--ty, 0) * -14deg));
   filter: drop-shadow(calc(var(--tx, 0) * -24px) calc(var(--ty, 0) * -24px + 16px) 22px rgb(0 0 0 / 0.75));
 }
+
+.arena-play.seeking {
+  --cyan: #22d3ee;
+}
