@@ -75,8 +75,9 @@ export async function cardSprite(parent: Container, code: string, rect: DOMRect)
   const tex = await cardTexture(code);
   const s = new Sprite(tex);
   s.anchor.set(0.5);
-  s.width = rect.width;
-  s.height = rect.height;
+  const sideways = rect.width > rect.height * 1.1;
+  s.rotation = sideways ? Math.PI / 2 : 0;
+  s.scale.set((sideways ? rect.height : rect.width) / tex.width, (sideways ? rect.width : rect.height) / tex.height);
   s.position.set(rect.left + rect.width / 2, rect.top + rect.height / 2);
   parent.addChild(s);
   return s;

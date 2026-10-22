@@ -665,7 +665,7 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
       rezFlip(cid, isIce ? KIND_TONE[iceKind(card)] : "blue", isIce && !!now.server);
       setTimeout(() => {
         const r = rectOf(tileEl(cid));
-        if (visible(r)) rezSignature(card?.title, r);
+        if (visible(r)) rezSignature(card?.title, r, card?.code, tileEl(cid) as HTMLElement | null, "corp");
       }, 450);
     };
     const to = isIce && messaged ? pointOf(tileEl(cid)) : null;

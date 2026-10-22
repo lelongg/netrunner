@@ -1,4 +1,5 @@
 import { type Point, anchor, animate, burst, buzz, coins, done, flash, floater, node, pointOf, punch, rays, reduced, ring, shake, slash, vignette } from "./core";
+import { glEffect } from "./gl";
 
 const SVG = "http://www.w3.org/2000/svg";
 
@@ -4868,8 +4869,8 @@ export const REZ: Record<string, (r: DOMRect) => void> = {
   "Shackleton Grid": shackleton,
 };
 
-export function rezSignature(title: string | undefined, r: DOMRect) {
-  REZ[plain(title)]?.(r);
+export function rezSignature(title: string | undefined, r: DOMRect, code?: string, el?: HTMLElement | null, owner?: string) {
+  return glEffect("rez", plain(title), r, code, el, owner) ?? void REZ[plain(title)]?.(r);
 }
 
 export const FIRE = ["Karuna", "Urtica Cipher", "Tithe", "Anoetic Void"];
@@ -4973,8 +4974,8 @@ export const INSTALL: Record<string, (r: DOMRect) => void> = {
   "Word on the Street": wordOnTheStreet,
 };
 
-export function installSignature(title: string | undefined, r: DOMRect) {
-  INSTALL[plain(title)]?.(r);
+export function installSignature(title: string | undefined, r: DOMRect, code?: string, el?: HTMLElement | null, owner?: string) {
+  return glEffect("install", plain(title), r, code, el, owner) ?? void INSTALL[plain(title)]?.(r);
 }
 
 export const PLAY: Record<string, (r: DOMRect) => void> = {
@@ -5057,6 +5058,6 @@ export const PLAY: Record<string, (r: DOMRect) => void> = {
   "Vulture Fund": vultureFund,
 };
 
-export function signature(title: string | undefined, card: DOMRect) {
-  PLAY[plain(title)]?.(card);
+export function signature(title: string | undefined, card: DOMRect, code?: string, el?: HTMLElement | null, owner?: string) {
+  return glEffect("play", plain(title), card, code, el, owner) ?? void PLAY[plain(title)]?.(card);
 }

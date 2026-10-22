@@ -226,7 +226,7 @@ function land(el: HTMLElement | null, info: Info | undefined, strong: boolean) {
   ring(at, info?.type === "ICE" ? "blue" : sideTone(info?.owner), strong ? 150 : 100);
   burst(at, info?.type === "ICE" ? "blue" : sideTone(info?.owner), strong ? 16 : 8, strong ? 70 : 45, { size: 4, gravity: 10 });
   if (info?.type === "ICE") shake(0.45);
-  installSignature(info?.title, r);
+  installSignature(info?.title, r, info?.code, el, info?.owner);
 }
 
 function stage(width: number) {
@@ -293,13 +293,14 @@ async function showcase(m: Move, kind: Kind, me: Side) {
   const arrive = animate(ghost, { x: [src.left - big.left, 0], y: [src.top - big.top, 0], scaleX: [sx, 1], scaleY: [sy, 1], rotate: [mine ? 0 : -12, 0], opacity: [0.4, 1] }, { type: "spring", visualDuration: 0.42, bounce: 0.28 });
   await Promise.race([arrive.finished, new Promise((r) => setTimeout(r, 300))]);
   const center = mid(big);
-  if (kind === "play") signature(info?.title, big);
+  const special = kind === "play" ? signature(info?.title, big, info?.code, ghost, info?.owner) : undefined;
   if (kind === "score" || kind === "steal") setTimeout(() => scoreSignature(info?.title, big), 1400);
   if (kind === "score" && info?.title === "Orbital Superiority") {
     const runner = rectOf(anchor("runner-panel"));
     setTimeout(() => orbitalStrike(visible(runner) ? mid(runner) : [innerWidth / 2, 90]), 1750);
   }
-  if (kind === "play") {
+  if (special) await special;
+  else if (kind === "play") {
     ring(center, tone, big.width * 1.6);
     burst(center, tone, 14, big.width * 0.8, { size: 5, gravity: 0 });
     buzz(25);
