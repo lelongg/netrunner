@@ -4,8 +4,7 @@ import { DEFAULT_RELAY } from "../net/relay";
 import { onSettings, setSetting, settings } from "../settings";
 import { Icon, type IconName } from "../icons";
 import { notifying, pushSupported, setNotify } from "../net/push";
-import { Picker, tell } from "../ui";
-import { FORMAT_DESC, GAME_FORMATS, type GameFormat } from "../deckrules";
+import { tell } from "../ui";
 import { play } from "../sound";
 
 function Toggle({ label, on, onChange }: { label: string; on: boolean; onChange: (on: boolean) => void }) {
@@ -118,14 +117,6 @@ export function MenuDrawer({ title, tabs, tab, onTab, onClose, children }: { tit
   );
 }
 
-function storedName() {
-  try {
-    return localStorage.getItem("nsg.name") ?? "Player";
-  } catch {
-    return "Player";
-  }
-}
-
 export function EditField({ title, label, saved, fallback, placeholder, maxLength, valid, raw, onSave }: { title: string; label: string; saved: string; fallback: string; placeholder?: string; maxLength?: number; valid?: (v: string) => boolean; raw?: boolean; onSave: (v: string) => void }) {
   const [value, setValue] = useState(saved);
   useEffect(() => setValue(saved), [saved]);
@@ -164,7 +155,6 @@ export function EditField({ title, label, saved, fallback, placeholder, maxLengt
 export function SettingsSections() {
   const [, setTick] = useState(0);
   useEffect(() => onSettings(() => setTick((t) => t + 1)), []);
-  const [name, setName] = useState(storedName);
   return (
     <>
       <MenuSection title="Audio">
@@ -183,27 +173,7 @@ export function SettingsSections() {
       </MenuSection>
       <MenuSection title="Display">
         <Toggle label="Animations" on={settings.animations} onChange={(v) => setSetting("animations", v)} />
-        <Toggle label="Parallax" on={settings.parallax} onChange={(v) => setSetting("parallax", v)} />
         <Toggle label="Keyword glossary" on={settings.glossary} onChange={(v) => setSetting("glossary", v)} />
-      </MenuSection>
-      <MenuSection title="Player">
-        <EditField
-          title="Name"
-          label="name"
-          saved={name}
-          fallback="Player"
-          maxLength={24}
-          onSave={(v) => {
-            try {
-              localStorage.setItem("nsg.name", v);
-            } catch {}
-            setName(v);
-          }}
-        />
-        <div class="field-box">
-          <span class="label">Default format</span>
-          <Picker title="Default format" value={settings.format} onChange={(f: GameFormat) => setSetting("format", f)} options={GAME_FORMATS.map((f) => ({ key: f.key as GameFormat, label: f.label, hint: FORMAT_DESC[f.key as GameFormat] }))} />
-        </div>
       </MenuSection>
       {pushSupported() && (
         <MenuSection title="Notifications">

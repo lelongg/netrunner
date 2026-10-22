@@ -764,8 +764,14 @@ const TOAST_MS = 4000;
 const ACTION_ERROR = "action-error";
 const TOAST_MAX = 3;
 
-function Toasts({ toasts, render, dismiss }: { toasts: any[]; render: (m: unknown) => string; dismiss: (id: string) => void }) {
+function Toasts({ toasts: all, render, dismiss: drop }: { toasts: any[]; render: (m: unknown) => string; dismiss: (id: string) => void }) {
   const timers = useRef(new Map<string, number>());
+  const [gone, setGone] = useState<ReadonlySet<string>>(new Set());
+  const dismiss = (id: string) => {
+    setGone((g) => new Set(g).add(id));
+    drop(id);
+  };
+  const toasts = all.filter((t) => !gone.has(t.id));
   useEffect(() => {
     const live = new Set(toasts.map((t) => t.id));
     for (const t of toasts) {
@@ -792,11 +798,11 @@ function Toasts({ toasts, render, dismiss }: { toasts: any[]; render: (m: unknow
     group.ids.push(t.id);
     groups.set(text, group);
   }
-  const all = [...groups.values()];
-  const hidden = all.length - TOAST_MAX;
+  const shown = [...groups.values()];
+  const hidden = shown.length - TOAST_MAX;
   return (
     <div class="toasts" aria-live="polite">
-      {all.slice(-TOAST_MAX).map((g) => (
+      {shown.slice(-TOAST_MAX).map((g) => (
         <button class={`toast ${g.type}`} onClick={() => g.ids.forEach(dismiss)}>
           {glyphs(g.text)}
           {g.ids.length > 1 && <span class="toast-count"> ×{g.ids.length}</span>}
