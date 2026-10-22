@@ -52,7 +52,8 @@ const rect = (sel: string) => {
 
 function boardFor(owner: string | undefined, self: Element | null | undefined): Board {
   const others = [...document.querySelectorAll(".playfield .tile[data-cid]")].filter((el) => el !== self && !self?.contains(el)).map((el) => el.getBoundingClientRect()).filter((r) => r.width > 0 && r.bottom > 0 && r.top < innerHeight);
-  return { credits: owner ? rect(`[data-anchor="${owner}-credits"]`) : null, hand: owner ? rect(`[data-anchor="${owner}-hand"]`) : null, others };
+  const radius = self ? parseFloat(getComputedStyle(self).borderTopLeftRadius) || 0 : 0;
+  return { credits: owner ? rect(`[data-anchor="${owner}-credits"]`) : null, hand: owner ? rect(`[data-anchor="${owner}-hand"]`) : null, others, radius };
 }
 
 export function glEffect(kind: Kind, title: string | undefined, at: DOMRect, code: string | undefined, hide?: HTMLElement | null, owner?: string): Promise<void> | null {

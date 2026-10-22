@@ -71,11 +71,29 @@ export async function cardTexture(code: string) {
   return Assets.load<Texture>({ src: url, parser: "texture", data: { crossOrigin: "anonymous" } } as any);
 }
 
-export async function cardSprite(parent: Container, code: string, rect: DOMRect) {
-  const tex = await cardTexture(code);
+function rounded(tex: Texture, r: number) {
+  const key = `${tex.uid}:${r.toFixed(1)}`;
+  const hit = textures.get(key);
+  if (hit) return hit;
+  const c = document.createElement("canvas");
+  c.width = tex.width;
+  c.height = tex.height;
+  const g = c.getContext("2d")!;
+  g.beginPath();
+  g.roundRect(0, 0, c.width, c.height, r);
+  g.clip();
+  g.drawImage(tex.source.resource as CanvasImageSource, 0, 0, c.width, c.height);
+  const t = Texture.from(c);
+  textures.set(key, t);
+  return t;
+}
+
+export async function cardSprite(parent: Container, code: string, rect: DOMRect, radius = 0) {
+  const sideways = rect.width > rect.height * 1.1;
+  const raw = await cardTexture(code);
+  const tex = radius > 0 ? rounded(raw, (radius * raw.width) / (sideways ? rect.height : rect.width)) : raw;
   const s = new Sprite(tex);
   s.anchor.set(0.5);
-  const sideways = rect.width > rect.height * 1.1;
   s.rotation = sideways ? Math.PI / 2 : 0;
   s.scale.set((sideways ? rect.height : rect.width) / tex.width, (sideways ? rect.width : rect.height) / tex.height);
   s.position.set(rect.left + rect.width / 2, rect.top + rect.height / 2);

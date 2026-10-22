@@ -9030,7 +9030,7 @@ button.player-chip {
 
 .fxgl-stage img {
   width: min(62vw, 260px);
-  border-radius: 4.5% / 3.2%;
+  border-radius: 10px;
   box-shadow: 0 20px 40px rgb(0 0 0 / 0.6);
 }
 
