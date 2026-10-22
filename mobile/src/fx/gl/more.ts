@@ -1203,28 +1203,51 @@ export async function sleipnir(rect: DOMRect, code: string, ready?: Ready, board
   await done();
 }
 
+function prism(el: Element | null, duration: number) {
+  if (!(el instanceof HTMLElement) || !el.animate) return;
+  const f = (d: number) => `drop-shadow(${-d}px 0 rgba(255,60,90,0.9)) drop-shadow(${d}px 0 rgba(60,200,255,0.9)) drop-shadow(0 ${d * 0.6}px rgba(255,240,90,0.7))`;
+  el.animate(
+    [
+      { filter: f(0), transform: "translateX(0)" },
+      { filter: f(6), transform: "translateX(-3px)", offset: 0.12 },
+      { filter: f(2), transform: "translateX(2px)", offset: 0.3 },
+      { filter: f(7), transform: "translateX(-2px)", offset: 0.5 },
+      { filter: f(3), transform: "translateX(1px)", offset: 0.7 },
+      { filter: f(0), transform: "translateX(0)" },
+    ],
+    { duration: duration * 1000, easing: "ease-out" },
+  );
+}
+
 export async function sleipnirFire(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, card, fx, done, unit, at, sideways } = await scene(rect, code, ready, board);
   const split = new RGBSplitFilter({ red: { x: 0, y: 0 }, green: { x: 0, y: 0 }, blue: { x: 0, y: 0 } });
   card.filters = [split];
-  const shards = new Emitter(fx);
+  const shards = new Emitter(app.stage);
+  const target = board?.runner ?? null;
   root.addChild(fx);
   const hues = [0xff5a5a, 0xffb347, 0xfff36a, 0x7dff9a, 0x6ad8ff, 0xb68bff];
-  const beats = [0.08, 0.26, 0.44, 0.62];
+  const beats = [0.12, 0.3, 0.48, 0.66];
   const fired = beats.map(() => false);
+  const spot = (i: number): Pt => {
+    if (!target) return at(0.3 + (i % 2) * 0.4, 0.64 + (i < 2 ? 0 : 0.2));
+    return [target.left + target.width * (0.2 + 0.2 * i), target.top + target.height * (i % 2 ? 0.35 : 0.7)];
+  };
+  if (target) prism(document.querySelector('[data-anchor="runner-panel"]'), 0.95);
   await run(app, (t, dt) => {
     let kick = 0;
     beats.forEach((b, i) => {
       kick = Math.max(kick, t > b ? Math.max(0, 1 - (t - b) / 0.15) : 0);
       if (t > b && !fired[i]) {
         fired[i] = true;
-        const [x, y] = at(0.3 + (i % 2) * 0.4, 0.64 + (i < 2 ? 0 : 0.2));
-        for (let n = 0; n < 14; n++) {
-          const a = rnd(0, Math.PI * 2);
-          const v = unit * rnd(0.4, 1.1);
-          shards.add(sparkTexture(), x, y, { vx: Math.cos(a) * v, vy: Math.sin(a) * v, drag: 2.5, life: rnd(0.35, 0.6), tint: hues[n % hues.length], scale: 0.32 * (unit / 180) });
+        const [x, y] = spot(i);
+        for (let n = 0; n < 16; n++) {
+          const a = rnd(-Math.PI, 0);
+          const v = unit * rnd(0.4, 1.2);
+          shards.add(sparkTexture(), x, y, { vx: Math.cos(a) * v, vy: Math.sin(a) * v, drag: 2.5, gravity: unit * 1.5, life: rnd(0.35, 0.6), tint: hues[n % hues.length], scale: 0.32 * (unit / 180) });
         }
-        shards.add(glowTexture(), x, y, { life: 0.25, tint: hues[(i * 2) % hues.length], scale: (unit / 128) * 0.25, grow: 1.2, alpha: 0.7 });
+        shards.add(glowTexture(), x, y, { life: 0.25, tint: hues[(i * 2) % hues.length], scale: (unit / 128) * 0.3, grow: 1.4, alpha: 0.8 });
+        navigator.vibrate?.(15);
       }
     });
     const d = 7 * kick;
