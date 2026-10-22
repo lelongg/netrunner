@@ -2,7 +2,7 @@ import { motionOff } from "../../settings";
 import type { Board } from "./kit";
 import { aim } from "./aim";
 
-export type Kind = "play" | "install" | "rez" | "use";
+export type Kind = "play" | "install" | "rez" | "use" | "score";
 
 export const FX: Record<Kind, Record<string, string>> = {
   play: {
@@ -242,6 +242,24 @@ export const FX: Record<Kind, Record<string, string>> = {
     Mycoweb: "mycowebFire",
     "N-Pot": "nPotFire",
     Lamplighter: "lamplighterFire",
+  },
+  score: {
+    "Luminal Transubstantiation": "luminalScore",
+    "Longevity Serum": "longevityScore",
+    "Tomorrow's Headline": "tomorrowsHeadline",
+    "Above the Law": "aboveTheLaw",
+    "Offworld Office": "offworldOfficeScore",
+    "Orbital Superiority": "orbitalScore",
+    "Send a Message": "sendAMessage",
+    "Superconducting Hub": "superconductingHubScore",
+    "Aggressive Trendsetting": "aggressiveTrendsettingScore",
+    "Project Ingatan": "projectIngatanScore",
+    Proprionegation: "proprionegationScore",
+    "Sericulture Expansion": "sericultureScore",
+    "Embedded Reporting": "embeddedReportingScore",
+    "Next Big Thing": "nextBigThingScore",
+    Greenmail: "greenmailScore",
+    "Off the Books": "offTheBooksScore",
   },
 };
 

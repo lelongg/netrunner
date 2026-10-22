@@ -1,6 +1,6 @@
 import { cardImage } from "../engine";
 import { letGoEffects } from "./gl";
-import { installSignature, orbitalStrike, scoreSignature, signature } from "./signatures";
+import { installSignature, orbitalStrike, scoreGl, scoreSignature, signature } from "./signatures";
 import type { Side } from "../engine";
 import { anchor, animate, creditChange, tapToSkip, points, scoreSegments, banner, burst, buzz, done, flash, floater, layer, mid, node, place, punch, rays, rectOf, reduced, ring, shake, tileEl, visible, type Point, type Tone } from "./core";
 
@@ -296,8 +296,14 @@ async function showcase(m: Move, kind: Kind, me: Side) {
   const arrive = animate(ghost, { x: [src.left - big.left, 0], y: [src.top - big.top, 0], scaleX: [sx, 1], scaleY: [sy, 1], rotate: [mine ? 0 : -12, 0], opacity: [0.4, 1] }, { type: "spring", visualDuration: 0.42, bounce: 0.28 });
   await Promise.race([arrive.finished, new Promise((r) => setTimeout(r, 300))]);
   const center = mid(big);
-  const special = kind === "play" ? signature(info?.title, big, info?.code, ghost, info?.owner) : kind === "install" ? (installSignature(info?.title, big, info?.code, ghost, info?.owner) ?? undefined) : undefined;
-  if (kind === "score" || kind === "steal") setTimeout(() => scoreSignature(info?.title, big), 1400);
+  const scored = kind === "score" || kind === "steal";
+  const special = kind === "play" ? signature(info?.title, big, info?.code, ghost, info?.owner) : kind === "install" ? (installSignature(info?.title, big, info?.code, ghost, info?.owner) ?? undefined) : scored ? scoreGl(info?.title, big, info?.code, ghost, info?.owner) : undefined;
+  if (scored && !special) setTimeout(() => scoreSignature(info?.title, big), 1400);
+  if (scored && special) {
+    banner(kind === "steal" ? "Stolen" : "Scored", info?.title ?? "", kind === "steal" ? "red" : "gold", { size: "xl", hold: 1.2 });
+    ring(center, tone, big.width * 1.4);
+    buzz([40, 40, 120]);
+  }
   if (kind === "score" && info?.title === "Orbital Superiority") {
     const runner = rectOf(anchor("runner-panel"));
     setTimeout(() => orbitalStrike(visible(runner) ? mid(runner) : [innerWidth / 2, 90]), 1750);

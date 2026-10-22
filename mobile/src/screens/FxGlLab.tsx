@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
-import { INSTALL, PLAY, REZ } from "../fx/signatures";
+import { INSTALL, PLAY, REZ, SCORE } from "../fx/signatures";
 import { FX, type Kind, glEffect } from "../fx/gl";
 import { setAim } from "../fx/gl/aim";
 import { setFxSpeed } from "../fx/gl/stage";
@@ -148,13 +148,29 @@ const CODES: Record<string, string> = {
   Plutus: "35073",
   Lamplighter: "35080",
   "Mahkota Langit Grid": "35082",
+  "Luminal Transubstantiation": "30036",
+  "Longevity Serum": "30044",
+  "Tomorrow's Headline": "30052",
+  "Above the Law": "30060",
+  "Offworld Office": "30067",
+  "Orbital Superiority": "30068",
+  "Send a Message": "30069",
+  "Superconducting Hub": "30070",
+  "Aggressive Trendsetting": "35037",
+  "Project Ingatan": "35038",
+  Proprionegation: "35048",
+  "Sericulture Expansion": "35049",
+  "Embedded Reporting": "35059",
+  "Next Big Thing": "35060",
+  Greenmail: "35070",
+  "Off the Books": "35071",
 };
 
 const ICE = new Set(["Ping", "Flyswatter", "Event Horizon", "Pharos", "Sleipnir", "Tocsin", "Semak-samun", "Bumi 1.0", "Biawak", "Funhouse", "Bran 1.0", "Doomscroll", "Whitespace", "Syailendra", "Flywheel", "Kessleroid", "Lethe", "Scatter Field", "Lionsmane", "Empiricist", "Vicsek", "Ansel 1.0", "Diviner", "Karuna", "Ballista", "Palisade", "Tithe", "Mycoweb", "N-Pot", "Lamplighter"]);
-const KINDS: Kind[] = ["play", "install", "rez", "use"];
-const KIND_LABEL: Record<Kind, string> = { play: "Play", install: "Install", rez: "Rez", use: "Effect" };
+const KINDS: Kind[] = ["play", "install", "rez", "use", "score"];
+const KIND_LABEL: Record<Kind, string> = { play: "Play", install: "Install", rez: "Rez", use: "Effect", score: "Score" };
 const SPEEDS = [1, 0.5, 0.25];
-const OLD: Partial<Record<Kind, Record<string, (r: DOMRect) => void>>> = { play: PLAY, install: INSTALL, rez: REZ };
+const OLD: Partial<Record<Kind, Record<string, (r: DOMRect) => void>>> = { play: PLAY, install: INSTALL, rez: REZ, score: SCORE };
 
 const CARDS = Object.keys(CODES)
   .map((title) => ({ title, code: CODES[title], ice: ICE.has(title), kinds: KINDS.filter((k) => FX[k][title]) }))

@@ -4708,6 +4708,10 @@ export function scoreSignature(title: string | undefined, card: DOMRect) {
   SCORE[plain(title)]?.(card);
 }
 
+export function scoreGl(title: string | undefined, r: DOMRect, code?: string, el?: HTMLElement | null, owner?: string) {
+  return glEffect("score", plain(title), r, code, el, owner) ?? undefined;
+}
+
 export const REZ: Record<string, (r: DOMRect) => void> = {
   "Border Control": borderControl,
   "Palisade": palisade,
