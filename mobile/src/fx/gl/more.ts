@@ -928,26 +928,55 @@ export async function conduitPose(rect: DOMRect, code: string, ready?: Ready, bo
 }
 
 export async function conduit(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, card, fx, done, unit, at } = await scene(rect, code, ready, board);
+  const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
+  const mouth = at(0.85, 0.17);
   const cube = at(0.45, 0.27);
-  const twist = new TwistFilter({ radius: unit * 0.45, angle: 0, offset: { x: 0, y: 0 }, padding: unit * 0.2 });
-  card.filters = [twist];
-  const drops = new Emitter(fx);
+  const exit = at(0.05, 0.42);
+  const g = new Graphics();
+  g.blendMode = "add";
+  fx.addChild(g);
   const core = glowSprite(fx, glowTexture(), 0xe6ff6a);
   core.position.set(...cube);
+  const drops = new Emitter(fx);
   root.addChild(fx);
-  for (let i = 0; i < 28; i++) {
-    const a = rnd(0, Math.PI * 2);
-    const d = unit * rnd(0.4, 0.8);
-    drops.add(sparkTexture(), cube[0] + Math.cos(a) * d, cube[1] + Math.sin(a) * d, { vx: -Math.cos(a) * d * 2.2, vy: -Math.sin(a) * d * 2.2, life: 0.45, tint: i % 3 ? 0xe6ff6a : GREEN, scale: 0.28 * (unit / 180) });
-  }
+  const nx = -(exit[1] - mouth[1]);
+  const ny = exit[0] - mouth[0];
+  const nl = Math.hypot(nx, ny);
+  const ring = (k: number, alpha: number) => {
+    const [x, y] = lerp(mouth, exit, k);
+    const r = unit * (0.07 + 0.16 * k);
+    const ux = (exit[0] - mouth[0]) / nl;
+    const uy = (exit[1] - mouth[1]) / nl;
+    const pts: number[] = [];
+    for (let i = 0; i < 24; i++) {
+      const a = (i / 24) * Math.PI * 2;
+      const p = Math.cos(a) * r * 0.35;
+      const q = Math.sin(a) * r;
+      pts.push(x + ux * p + (nx / nl) * q, y + uy * p + (ny / nl) * q);
+    }
+    g.poly(pts).stroke({ width: unit * 0.01, color: 0xe6ff6a, alpha });
+  };
+  const streaks = Array.from({ length: 22 }, () => ({ at: rnd(0, 0.7), off: rnd(-1, 1), len: rnd(0.1, 0.22) }));
   await run(app, (t, dt) => {
-    twist.offset = filterPoint(card, ...cube);
-    twist.angle = 1.2 * Math.sin(Math.PI * span(t, 0, 0.9));
-    core.alpha = t < 0.45 ? t / 0.45 : Math.max(0, 1 - (t - 0.45) / 0.4);
-    core.scale.set((unit / 128) * (0.15 + 0.5 * span(t, 0.35, 0.6)));
+    g.clear();
+    for (let n = 0; n < 3; n++) {
+      const k = span(t, n * 0.14, n * 0.14 + 0.7);
+      if (k > 0 && k < 1) ring(ease.inOut(k), Math.sin(Math.PI * k));
+    }
+    for (const s of streaks) {
+      const k = span(t, s.at, s.at + 0.35);
+      if (k <= 0 || k >= 1) continue;
+      const w = unit * (0.04 + 0.18 * k) * s.off;
+      const a = lerp(mouth, exit, Math.max(0, k - s.len));
+      const b = lerp(mouth, exit, k);
+      g.moveTo(a[0] + (nx / nl) * w, a[1] + (ny / nl) * w).lineTo(b[0] + (nx / nl) * w, b[1] + (ny / nl) * w).stroke({ width: unit * 0.008, color: 0xe6ff6a, alpha: Math.sin(Math.PI * k) });
+    }
+    const pass = Math.max(0, 1 - Math.abs(t - 0.45) / 0.25);
+    core.alpha = 0.25 + 0.6 * pass;
+    core.scale.set((unit / 128) * (0.18 + 0.15 * pass));
+    if (t > 0.3 && t < 0.8 && Math.random() < 0.5) drops.add(sparkTexture(), cube[0], cube[1], { vx: (exit[0] - mouth[0]) * 0.8 + rnd(-30, 30), vy: (exit[1] - mouth[1]) * 0.8 + rnd(-30, 30), life: 0.5, tint: GREEN, scale: 0.25 * (unit / 180), grow: -0.4 });
     drops.step(dt);
-    return t < 1 || drops.list.length > 0;
+    return t < 1.1 || drops.list.length > 0;
   });
   await done();
 }
@@ -1203,6 +1232,22 @@ export async function sleipnir(rect: DOMRect, code: string, ready?: Ready, board
   await done();
 }
 
+function prism(el: Element | null, duration: number) {
+  if (!(el instanceof HTMLElement) || !el.animate) return;
+  const f = (d: number) => `drop-shadow(${-d}px 0 rgba(255,60,90,0.9)) drop-shadow(${d}px 0 rgba(60,200,255,0.9)) drop-shadow(0 ${d * 0.6}px rgba(255,240,90,0.7))`;
+  el.animate(
+    [
+      { filter: f(0), transform: "translateX(0)" },
+      { filter: f(6), transform: "translateX(-3px)", offset: 0.15 },
+      { filter: f(2), transform: "translateX(2px)", offset: 0.33 },
+      { filter: f(7), transform: "translateX(-2px)", offset: 0.5 },
+      { filter: f(3), transform: "translateX(1px)", offset: 0.68 },
+      { filter: f(0), transform: "translateX(0)" },
+    ],
+    { duration: duration * 1000, easing: "ease-out" },
+  );
+}
+
 export async function sleipnirFire(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, card, fx, done, unit, at, sideways } = await scene(rect, code, ready, board);
   const split = new RGBSplitFilter({ red: { x: 0, y: 0 }, green: { x: 0, y: 0 }, blue: { x: 0, y: 0 } });
@@ -1213,6 +1258,7 @@ export async function sleipnirFire(rect: DOMRect, code: string, ready?: Ready, b
   const beats = [0.12, 0.3, 0.48, 0.66];
   const fired = beats.map(() => false);
   const spot = (i: number): Pt => at(0.25 + 0.17 * i, i % 2 ? 0.66 : 0.86);
+  prism(document.querySelector('[data-anchor="runner-panel"]'), 1);
   await run(app, (t, dt) => {
     let kick = 0;
     beats.forEach((b, i) => {
@@ -1229,10 +1275,8 @@ export async function sleipnirFire(rect: DOMRect, code: string, ready?: Ready, b
         navigator.vibrate?.(15);
       }
     });
-    const d = 3 + 8 * kick;
-    const w = Math.sin(t * 23) * 2;
-    split.red = sideways ? { x: w, y: -d } : { x: -d, y: w };
-    split.green = sideways ? { x: -w, y: 0 } : { x: 0, y: -w };
+    const d = 5 * kick;
+    split.red = sideways ? { x: 0, y: -d } : { x: -d, y: 0 };
     split.blue = sideways ? { x: 0, y: d } : { x: d, y: 0 };
     shards.step(dt);
     return t < 0.95 || shards.list.length > 0;
