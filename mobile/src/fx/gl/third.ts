@@ -225,7 +225,9 @@ export async function tungstenTailor(rect: DOMRect, code: string, ready?: Ready,
 
 export async function byte(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, card, fx, done, unit, at, zoom } = await scene(rect, code, ready, board);
-  const maw = at(0.42, 0.3);
+  const maw = at(0.6, 0.28);
+  const tail = at(0.3, 0.44);
+  const head = at(0.88, 0.13);
   const split = new RGBSplitFilter({ red: { x: 0, y: 0 }, green: { x: 0, y: 0 }, blue: { x: 0, y: 0 } });
   card.filters = [split];
   const bolts = new Graphics();
@@ -234,26 +236,35 @@ export async function byte(rect: DOMRect, code: string, ready?: Ready, board?: B
   const flash = glowSprite(fx, glowTexture(), PINK);
   flash.position.set(...maw);
   root.addChild(fx);
+  const len = Math.hypot(head[0] - tail[0], head[1] - tail[1]);
+  const nx = -(head[1] - tail[1]) / len;
+  const ny = (head[0] - tail[0]) / len;
+  const edge = (u: number, side: number): Pt => {
+    const [x, y] = lerp(tail, head, u);
+    const w = unit * 0.2 * Math.sin(Math.PI * Math.min(1, u * 1.1));
+    return [x + nx * w * side, y + ny * w * side];
+  };
   let next = 0;
   await run(app, (t) => {
     const snap = ease.back(span(t, 0.15, 0.4));
-    zoom(1 + 0.08 * snap - 0.08 * span(t, 0.6, 1));
+    zoom(1 + 0.06 * snap - 0.06 * span(t, 0.6, 1));
     const k = 1 - span(t, 0.3, 0.9);
-    split.red = { x: -8 * k * snap, y: 0 };
-    split.blue = { x: 8 * k * snap, y: 0 };
+    split.red = { x: -6 * k * snap, y: 0 };
+    split.blue = { x: 6 * k * snap, y: 0 };
     if (t > next) {
       next = t + rnd(0.04, 0.09);
       bolts.clear();
       if (t < 1.1)
         for (let i = 0; i < 3; i++) {
-          const a = rnd(-0.4, 0.4) + (i % 2 ? Math.PI * 0.75 : -Math.PI * 0.25);
-          const r1 = unit * 0.12;
-          const r2 = unit * rnd(0.35, 0.55);
-          lightning(bolts, maw[0] + Math.cos(a) * r1, maw[1] + Math.sin(a) * r1 * 0.6, maw[0] + Math.cos(a) * r2, maw[1] + Math.sin(a) * r2 * 0.6, unit * 0.1, i % 2 ? CYAN : PINK, unit * 0.008);
+          const side = i % 2 ? 1 : -1;
+          const u = rnd(0.1, 0.8);
+          const a = edge(u, side);
+          const b = edge(u + rnd(0.1, 0.2), side);
+          lightning(bolts, ...a, ...b, unit * 0.06, i % 2 ? CYAN : PINK, unit * 0.007);
         }
     }
-    flash.alpha = Math.max(0, 1 - Math.abs(t - 0.3) / 0.25) * 0.8;
-    flash.scale.set((unit / 128) * 0.6);
+    flash.alpha = Math.max(0, 1 - Math.abs(t - 0.3) / 0.25) * 0.7;
+    flash.scale.set((unit / 128) * 0.35);
     if (snap > 0.9 && t < 0.45) navigator.vibrate?.(40);
     return t < 1.2;
   });
