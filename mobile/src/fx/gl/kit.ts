@@ -160,6 +160,7 @@ export async function scene(rect: DOMRect, code: string, ready?: Ready, board?: 
     const rs = r && r.width ? r.width / rect.width : 1;
     root.scale.set(rs * (1 + (grow - 1) * k));
   };
+  follow();
   app.ticker.add(follow, undefined, 1);
   let alive = 0;
   const release = (ticker: { deltaMS: number }) => {

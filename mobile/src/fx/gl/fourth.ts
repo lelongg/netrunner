@@ -126,7 +126,7 @@ export async function openMarket(rect: DOMRect, code: string, ready?: Ready, boa
       const k = span(t, 0.1 + i * 0.15, 0.35 + i * 0.15);
       const flick = k > 0 && k < 1 ? (Math.random() < 0.5 ? 0.2 : 1) : 1;
       s.alpha = k * flick * (1 - span(t, 1.7, 2.1)) * 0.9;
-      s.scale.set((unit / 64) * 0.28);
+      s.scale.set((unit / 64) * 0.2);
     });
     if (t < 1.6 && Math.random() < 0.4) motes.add(sparkTexture(), ...at(rnd(0.1, 0.9), rnd(0.3, 0.48)), { vy: -unit * 0.05, life: 0.6, tint: signs[Math.floor(rnd(0, 5))][1], scale: 0.18 * (unit / 180), grow: -0.2 });
     motes.step(dt);
@@ -262,7 +262,7 @@ export async function publicTrail(rect: DOMRect, code: string, ready?: Ready, bo
 export async function rentRioters(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, card, fx, done, unit, at } = await scene(rect, code, ready, board);
   const sign = glowSprite(fx, glowTexture(), 0xff6ad0);
-  sign.position.set(...at(0.55, 0.12));
+  sign.position.set(...at(0.22, 0.15));
   const fists = [at(0.08, 0.27), at(0.34, 0.15), at(0.62, 0.12), at(0.86, 0.15)];
   const flashes = new Emitter(fx);
   const smoke = new Smoke(root);
@@ -271,7 +271,7 @@ export async function rentRioters(rect: DOMRect, code: string, ready?: Ready, bo
   await run(app, (t, dt) => {
     const chant = Math.max(0, Math.sin(t * 9)) * (1 - span(t, 1.5, 1.9));
     sign.alpha = (0.35 + 0.4 * (Math.random() < 0.85 ? 1 : 0)) * (1 - span(t, 1.6, 2));
-    sign.scale.set((unit / 128) * 0.45);
+    sign.scale.set((unit / 128) * 0.25);
     if (chant > 0.95) {
       const f = fists[Math.floor(Math.random() * fists.length)];
       flashes.add(glowTexture(), ...f, { life: 0.25, tint: 0xfff0d0, scale: (unit / 128) * 0.08, grow: 0.4 });
@@ -557,8 +557,8 @@ export async function whitespace(rect: DOMRect, code: string, ready?: Ready, boa
   root.addChild(fx);
   await run(app, (t, dt) => {
     const k = Math.sin(Math.PI * span(t, 0.1, 1.4));
-    bloom.alpha = 0.9 * k;
-    bloom.scale.set((unit / 128) * (0.4 + 1.2 * k));
+    bloom.alpha = 0.55 * k;
+    bloom.scale.set((unit / 128) * (0.3 + 0.45 * k));
     card.tint = k > 0.6 ? 0xf0f6ff : WHITE;
     if (t < 1.3 && Math.random() < 0.5) {
       const a = rnd(0, Math.PI * 2);
@@ -582,9 +582,9 @@ export async function whitespaceFire(rect: DOMRect, code: string, ready?: Ready,
   await run(app, (t) => {
     const k = Math.sin(Math.PI * span(t, 0, 0.8));
     bloom.alpha = k;
-    bloom.scale.set((unit / 128) * (0.5 + 3 * k));
+    bloom.scale.set((unit / 128) * (0.3 + 0.8 * k));
     white.clear();
-    white.rect(0, 0, innerWidth, innerHeight).fill({ color: WHITE, alpha: 0.35 * Math.max(0, 1 - Math.abs(t - 0.35) / 0.25) });
+    white.rect(0, 0, innerWidth, innerHeight).fill({ color: WHITE, alpha: 0.18 * Math.max(0, 1 - Math.abs(t - 0.35) / 0.25) });
     return t < 0.9;
   });
   white.destroy();
@@ -663,11 +663,19 @@ export async function flywheel(rect: DOMRect, code: string, ready?: Ready, board
   await run(app, (t, dt) => {
     const spin = span(t, 0, 0.8) * (1 - span(t, 1.4, 1.9));
     rim.clear();
+    for (let i = 0; i < 3; i++) {
+      const a0 = t * 16 * spin + (i * Math.PI * 2) / 3;
+      const pts: number[] = [];
+      for (let s2 = 0; s2 <= 10; s2++) {
+        const a = a0 + s2 * 0.12;
+        pts.push(hub[0] + Math.cos(a) * unit * 0.33, hub[1] + Math.sin(a) * unit * 0.15);
+      }
+      rim.poly(pts, false).stroke({ width: unit * 0.02, color: i % 2 ? 0x9dff5a : 0xff7ac8, alpha: 0.8 * spin });
+    }
     for (let i = 0; i < 4; i++) {
       const a = t * 16 * spin + (i * Math.PI) / 2;
-      rim.ellipse(hub[0], hub[1], unit * 0.33, unit * 0.15).stroke({ width: 1, color: CYAN, alpha: 0 });
       const p: Pt = [hub[0] + Math.cos(a) * unit * 0.33, hub[1] + Math.sin(a) * unit * 0.15];
-      rim.circle(...p, unit * 0.015).fill({ color: WHITE, alpha: spin });
+      rim.circle(...p, unit * 0.022).fill({ color: WHITE, alpha: spin });
       if (Math.random() < 0.5 * spin) sparks.add(sparkTexture(), ...p, { vx: -Math.sin(a) * unit * 1.2, vy: Math.cos(a) * unit * 0.6, gravity: unit, life: 0.35, tint: Math.random() < 0.5 ? 0xff7ac8 : 0x9dff5a, scale: 0.2 * (unit / 180) });
     }
     blur.velocity = { x: 3 * spin, y: 0 };
@@ -704,7 +712,7 @@ export async function kessleroid(rect: DOMRect, code: string, ready?: Ready, boa
   const glow = glowSprite(fx, glowTexture(), RED);
   glow.position.set(...core);
   const heat = shimmer(root, card, rect, unit * 0.02);
-  const debris = Array.from({ length: 18 }, (_, i) => ({ s: glowSprite(fx, cubeTexture(), 0xbfd6e6), a: (i / 18) * Math.PI * 2, r: rnd(0.28, 0.4), w: rnd(0.8, 1.6) * (i % 2 ? 1 : -1) }));
+  const debris = Array.from({ length: 18 }, (_, i) => ({ s: glowSprite(fx, cubeTexture(), 0xe6f2ff), a: (i / 18) * Math.PI * 2, r: rnd(0.28, 0.4), w: rnd(0.8, 1.6) * (i % 2 ? 1 : -1) }));
   root.addChild(fx);
   await run(app, (t, dt) => {
     const on = span(t, 0, 0.3) * (1 - span(t, 1.6, 2));
@@ -716,7 +724,7 @@ export async function kessleroid(rect: DOMRect, code: string, ready?: Ready, boa
       d.s.position.set(core[0] + Math.cos(d.a) * unit * d.r, core[1] + Math.sin(d.a) * unit * d.r * 0.55);
       d.s.alpha = on * (Math.sin(d.a) > 0 ? 0.9 : 0.4);
       d.s.rotation = d.a * 2;
-      d.s.scale.set((unit / 180) * 0.3);
+      d.s.scale.set((unit / 180) * 0.55);
     }
     return t < 2;
   });
@@ -733,8 +741,8 @@ export async function kessleroidFire(rect: DOMRect, code: string, ready?: Ready,
   const src = root.toGlobal({ x: core[0], y: core[1] });
   for (let i = 0; i < 40; i++) {
     const a = rnd(0, Math.PI * 2);
-    const v = unit * rnd(0.8, 2.4);
-    debris.add(i % 3 ? cubeTexture() : shardTexture(), src.x, src.y, { vx: Math.cos(a) * v, vy: Math.sin(a) * v, drag: 0.8, spin: rnd(-8, 8), life: rnd(0.6, 1), tint: i % 4 ? 0xbfd6e6 : RED, scale: (unit / 180) * rnd(0.25, 0.45), blend: i % 3 ? "add" : "normal" });
+    const v = unit * rnd(0.5, 1.4);
+    debris.add(i % 3 ? cubeTexture() : shardTexture(), src.x, src.y, { vx: Math.cos(a) * v, vy: Math.sin(a) * v, drag: 0.8, spin: rnd(-8, 8), life: rnd(0.6, 1), tint: i % 4 ? 0xe6f2ff : RED, scale: (unit / 180) * rnd(0.4, 0.7), blend: i % 3 ? "add" : "normal" });
   }
   navigator.vibrate?.([30, 20, 30]);
   await run(app, (t, dt) => {
