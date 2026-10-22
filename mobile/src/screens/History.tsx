@@ -655,20 +655,17 @@ function ReplayPlayer({ replay, engine, db, script, onClose }: { replay: Replay;
           max={last}
           value={index}
           aria-label="Replay position"
-          onInput={(e) => {
-            setPlaying(false);
-            go(Number((e.target as HTMLInputElement).value), false);
-          }}
+          onInput={(e) => go(Number((e.target as HTMLInputElement).value), false)}
         />
       </div>
       <div class="replay-buttons">
-        <button aria-label="Previous step" onClick={() => (setPlaying(false), go(index - 1, false))} disabled={index === 0}>
+        <button aria-label="Previous step" onClick={() => go(index - 1, false)} disabled={index === 0}>
           <Icon name="step-back" />
         </button>
         <button class="primary replay-play" aria-label={playing ? "Pause" : "Play"} onClick={() => (index >= last && replay.done ? (go(0, false), setPlaying(true)) : setPlaying(!playing))}>
           <Icon name={playing ? "pause" : "play"} />
         </button>
-        <button aria-label="Next step" onClick={() => (setPlaying(false), go(index + 1, true))} disabled={index >= frames.length - 1}>
+        <button aria-label="Next step" onClick={() => go(index + 1, true)} disabled={index >= frames.length - 1}>
           <Icon name="step-forward" />
         </button>
         <button class="replay-chip" aria-label="Playback speed" onClick={() => setSpeed(SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length])}>
