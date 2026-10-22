@@ -1315,22 +1315,50 @@ export async function tocsin(rect: DOMRect, code: string, ready?: Ready, board?:
 }
 
 export async function tocsinFire(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, card, fx, done, unit, at } = await scene(rect, code, ready, board);
+  const { app, root, card, fx, done, unit, at, sideways } = await scene(rect, code, ready, board);
   const bell = at(0.66, 0.78);
-  const rings = new Graphics();
-  rings.blendMode = "add";
-  fx.addChild(rings);
+  const JADE = 0x7dffc4;
+  const arcs = new Graphics();
+  arcs.blendMode = "add";
+  fx.addChild(arcs);
+  const glow = glowSprite(fx, glowTexture(), 0xe8fff4);
+  glow.position.set(...bell);
+  const dust = new Emitter(fx);
   root.addChild(fx);
-  await run(app, (t) => {
-    rings.clear();
-    for (let n = 0; n < 4; n++) {
-      const k = span(t, n * 0.12, n * 0.12 + 0.7);
-      if (k > 0 && k < 1) rings.circle(bell[0], bell[1], unit * (0.1 + 1.2 * ease.out(k))).stroke({ width: unit * 0.012 * (1 - k) + 1, color: n % 2 ? RED : 0xffd0c8, alpha: 1 - k });
-    }
-    card.tint = Math.sin(t * 30) > 0 && t < 0.6 ? 0xffc8c0 : WHITE;
-    return t < 1.1;
+  const tolls = [0.05, 0.42, 0.79];
+  const rung = tolls.map(() => false);
+  const base = card.position.clone();
+  const up = sideways ? -Math.PI : -Math.PI / 2;
+  await run(app, (t, dt) => {
+    arcs.clear();
+    let hit = 0;
+    tolls.forEach((s, i) => {
+      const since = t - s;
+      if (since < 0) return;
+      hit = Math.max(hit, Math.max(0, 1 - since / 0.3));
+      if (!rung[i]) {
+        rung[i] = true;
+        for (let n = 0; n < 10; n++) dust.add(sparkTexture(), ...at(rnd(0.5, 0.82), rnd(0.52, 0.6)), { vx: rnd(-6, 6), vy: unit * rnd(0.1, 0.3), gravity: unit * 0.6, life: rnd(0.6, 1), tint: 0xe8fff4, scale: 0.18 * (unit / 180) });
+        navigator.vibrate?.(35);
+      }
+      for (let n = 0; n < 3; n++) {
+        const k = span(since, n * 0.07, n * 0.07 + 0.55);
+        if (k <= 0 || k >= 1) continue;
+        const r = unit * (0.12 + 0.75 * ease.out(k));
+        for (const side of [up + Math.PI / 2, up - Math.PI / 2]) {
+          arcs.arc(bell[0], bell[1], r, side - 0.55, side + 0.55);
+          arcs.stroke({ width: unit * (0.018 - n * 0.004) * (1 - k) + 1, color: n ? JADE : WHITE, alpha: (1 - k) * 0.9 });
+        }
+      }
+    });
+    const swing = Math.sin(t * 38) * hit * unit * 0.012;
+    card.position.set(base.x + (sideways ? 0 : swing), base.y + (sideways ? swing : 0));
+    glow.alpha = 0.25 + 0.75 * hit;
+    glow.scale.set((unit / 128) * (0.18 + 0.22 * hit));
+    dust.step(dt);
+    return t < 1.4 || dust.list.length > 0;
   });
-  card.tint = WHITE;
+  card.position.copyFrom(base);
   await done();
 }
 
