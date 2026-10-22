@@ -45,9 +45,29 @@ const CODES: Record<string, string> = {
   "Telework Contract": "30027",
   "Nihilo Agent": "36049",
   "Semak-samun": "35054",
+  "Government Subsidy": "30064",
+  "Verbal Plasticity": "30034",
+  "Anthill Excavation Contract": "35072",
+  "The Tungsten Tailor": "36003",
+  "Byte!": "35050",
+  "Bigger Picture": "35065",
+  "Top-Down Solutions": "35044",
+  "Bumi 1.0": "35041",
+  Buzzsaw: "30005",
+  Myoshu: "36061",
+  Biawak: "35074",
+  "Self-modifying Code": "26090",
+  Funhouse: "30054",
+  "Bran 1.0": "30039",
+  "Reanimation Protocol": "36062",
+  Principia: "35032",
+  "Manegarm Skunkworks": "30042",
+  Doomscroll: "35063",
+  "Tread Lightly": "30012",
+  Azimat: "35029",
 };
 
-const ICE = new Set(["Ping", "Flyswatter", "Event Horizon", "Pharos", "Sleipnir", "Tocsin", "Semak-samun"]);
+const ICE = new Set(["Ping", "Flyswatter", "Event Horizon", "Pharos", "Sleipnir", "Tocsin", "Semak-samun", "Bumi 1.0", "Biawak", "Funhouse", "Bran 1.0", "Doomscroll"]);
 const KINDS: Kind[] = ["play", "install", "rez", "use"];
 const KIND_LABEL: Record<Kind, string> = { play: "Play", install: "Install", rez: "Rez", use: "Effect" };
 const SPEEDS = [1, 0.5, 0.25];
@@ -94,7 +114,7 @@ export function FxGlLab() {
     if (old) {
       OLD[kind]?.[card.title]?.(rect);
       await new Promise((r) => setTimeout(r, 2400));
-    } else await glEffect(kind, card.title, rect, card.code, el, "runner", aimed && kind === "use" ? q(".fxgl-target") : null);
+    } else await glEffect(kind, card.title, rect, card.code, el, "runner", aimed && kind === "use" ? (stage.current?.querySelector(".fxgl-target") ?? null) : null);
     setBusy(false);
     if (run.current === id) run.current = 0;
   };

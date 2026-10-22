@@ -13,13 +13,15 @@ let glyphFont: Promise<unknown> | null = null;
 export type Ready = () => void;
 
 export interface Board {
-  credits?: DOMRect | null;
   hand?: DOMRect | null;
   others: DOMRect[];
   radius?: number;
   track?: () => DOMRect | null;
   dim?: boolean;
   strike?: DOMRect | null;
+  strikeTrack?: () => DOMRect | null;
+  cap?: number;
+  free?: () => void;
   advanced?: DOMRect[];
   gone?: DOMRect[];
   host?: DOMRect | null;
@@ -129,19 +131,38 @@ export async function scene(rect: DOMRect, code: string, ready?: Ready, board?: 
   const grow = hit ? Math.min(3, Math.max(1, (Math.min(hit.width, hit.height) * 1.5) / Math.min(rect.width, rect.height))) : 1;
   let reach = 0;
   root.pivot.set(x0, y0);
+  let world: Container | null = null;
   const follow = () => {
     const r = board?.track?.();
     const [x, y] = r && r.width ? mid(r) : [x0, y0];
+    const sr = board?.strikeTrack?.();
+    const [nx, ny] = sr && sr.width ? mid(sr) : [hx, hy];
+    world?.position.set(nx - hx, ny - hy);
     const k = ease.inOut(reach);
     const len = Math.hypot(x - hx, y - hy) || 1;
     const gap = hit ? Math.min(rect.width, rect.height) * grow * 0.75 + Math.min(hit.width, hit.height) * 0.45 : 0;
-    const tx = hx + ((x - hx) / len) * gap;
-    const ty = hy + ((y - hy) / len) * gap;
+    const tx = nx + ((x - hx) / len) * gap;
+    const ty = ny + ((y - hy) / len) * gap;
     root.position.set(x + (tx - x) * k, y + (ty - y) * k);
-    root.scale.set(1 + (grow - 1) * k);
+    const rs = r && r.width ? r.width / rect.width : 1;
+    root.scale.set(rs * (1 + (grow - 1) * k));
   };
   app.ticker.add(follow, undefined, 1);
-  const world = layer(app.stage);
+  let alive = 0;
+  const release = (ticker: { deltaMS: number }) => {
+    alive += (window as any).__fxManual ? 1 / 30 : ticker.deltaMS / 1000;
+    if (!board?.cap || alive < board.cap) return;
+    app.ticker.remove(release);
+    card.visible = false;
+    board.free?.();
+    const fade = (tk: { deltaMS: number }) => {
+      root.alpha = Math.max(0, root.alpha - ((window as any).__fxManual ? 1 / 30 : tk.deltaMS / 1000) / 0.55);
+      if (root.alpha <= 0) app.ticker.remove(fade);
+    };
+    app.ticker.add(fade);
+  };
+  if (board?.cap) app.ticker.add(release);
+  world = layer(app.stage);
   const glide = (to: number) => {
     const from = reach;
     return run(app, (t) => {
@@ -156,14 +177,15 @@ export async function scene(rect: DOMRect, code: string, ready?: Ready, board?: 
     root,
     card,
     fx,
-    world,
+    world: world as Container,
     strike: hit ? ([hx, hy] as [number, number]) : null,
     zoom: (f: number) => card.scale.set(bx * f, by * f),
     done: async () => {
       if (hit) await glide(0);
       app.ticker.remove(follow);
+      app.ticker.remove(release);
       root.destroy({ children: true });
-      world.destroy({ children: true });
+      world?.destroy({ children: true });
     },
     cx: rect.left + rect.width / 2,
     cy: rect.top + rect.height / 2,
@@ -273,3 +295,72 @@ export const petalTexture = () =>
     g.ellipse(24, 12, 22, 7, 0, 0, Math.PI * 2);
     g.fill();
   });
+
+export const puffTexture = (n: number) =>
+  painted(`puff${n}`, 128, 128, (g) => {
+    let seed = n * 9301 + 49297;
+    const rand = () => ((seed = (seed * 9301 + 49297) % 233280) / 233280);
+    for (let i = 0; i < 26; i++) {
+      const a = rand() * Math.PI * 2;
+      const d = Math.pow(rand(), 0.7) * 34;
+      const x = 64 + Math.cos(a) * d;
+      const y = 64 + Math.sin(a) * d * 0.85;
+      const r = 14 + rand() * 22;
+      const grad = g.createRadialGradient(x, y, 0, x, y, r);
+      const alpha = 0.1 + rand() * 0.12;
+      grad.addColorStop(0, `rgba(255,255,255,${alpha})`);
+      grad.addColorStop(0.6, `rgba(255,255,255,${alpha * 0.45})`);
+      grad.addColorStop(1, "rgba(255,255,255,0)");
+      g.fillStyle = grad;
+      g.fillRect(0, 0, 128, 128);
+    }
+  });
+
+interface Puff {
+  s: Sprite;
+  vx: number;
+  vy: number;
+  age: number;
+  life: number;
+  size: number;
+  grow: number;
+  spin: number;
+  alpha: number;
+  phase: number;
+}
+
+export class Smoke {
+  list: Puff[] = [];
+  constructor(public parent: Container) {}
+  puff(x: number, y: number, o: { vx?: number; vy?: number; life?: number; size: number; grow?: number; tint?: number; alpha?: number; add?: boolean }) {
+    const s = new Sprite(puffTexture(Math.floor(Math.random() * 4)));
+    s.anchor.set(0.5);
+    s.position.set(x, y);
+    s.tint = o.tint ?? 0xffffff;
+    s.blendMode = o.add ? "add" : "normal";
+    s.rotation = Math.random() * Math.PI * 2;
+    s.alpha = 0;
+    this.parent.addChild(s);
+    this.list.push({ s, vx: o.vx ?? 0, vy: o.vy ?? 0, age: 0, life: o.life ?? 1.6, size: o.size, grow: o.grow ?? 1.4, spin: (Math.random() - 0.5) * 0.6, alpha: o.alpha ?? 0.6, phase: Math.random() * 6 });
+  }
+  step(dt: number) {
+    for (let i = this.list.length - 1; i >= 0; i--) {
+      const p = this.list[i];
+      p.age += dt;
+      const k = p.age / p.life;
+      if (k >= 1) {
+        p.s.destroy();
+        this.list.splice(i, 1);
+        continue;
+      }
+      p.vx *= 1 - 0.6 * dt;
+      p.vy *= 1 - 0.4 * dt;
+      p.s.x += (p.vx + Math.sin(p.age * 2.2 + p.phase) * p.size * 0.15) * dt;
+      p.s.y += p.vy * dt;
+      p.s.rotation += p.spin * dt;
+      p.s.scale.set((p.size / 128) * (1 + (p.grow - 1) * ease.out(k)));
+      p.s.alpha = p.alpha * Math.min(1, k * 5) * Math.pow(1 - k, 1.5);
+    }
+    return this.list.length > 0;
+  }
+}

@@ -1,16 +1,16 @@
 import { type Container, type Filter, Graphics, Sprite, type Texture } from "pixi.js";
 import { GlitchFilter, GlowFilter, GodrayFilter, RGBSplitFilter, ShockwaveFilter, TwistFilter } from "pixi-filters";
 import { Emitter, ease, filterPoint, glowTexture, lightning, run, span, sparkTexture } from "./stage";
-import { type Board, CREDIT, CYAN, GOLD, GREEN, RED, type Ready, VIOLET, WHITE, burst, flyHome, homing, landing, painted, pt, scene, shimmer } from "./kit";
+import { type Board, Smoke, CREDIT, CYAN, GOLD, GREEN, RED, type Ready, VIOLET, WHITE, burst, flyHome, homing, painted, pt, scene, shimmer } from "./kit";
 
-type Pt = [number, number];
+export type Pt = [number, number];
 const ORANGE = 0xff8a2a;
 const PINK = 0xff4f9a;
 const TOXIC = 0xff4a6a;
 const EMBER = 0xff9a5a;
 const FLESH = 0xffd6e4;
 
-const glyphTexture = () =>
+export const glyphTexture = () =>
   painted("glyph", 48, 48, (g) => {
     g.fillStyle = "#fff";
     g.font = "40px anr-icon";
@@ -45,7 +45,7 @@ const chatTexture = () =>
     g.fillRect(9, 16, 36, 3);
   });
 
-const cubeTexture = () =>
+export const cubeTexture = () =>
   painted("cube", 32, 32, (g) => {
     g.fillStyle = "rgba(255,255,255,0.35)";
     g.fillRect(6, 6, 20, 20);
@@ -54,7 +54,7 @@ const cubeTexture = () =>
     g.strokeRect(6, 6, 20, 20);
   });
 
-const shardTexture = () =>
+export const shardTexture = () =>
   painted("shard", 40, 40, (g) => {
     g.fillStyle = "#0a0a0d";
     g.strokeStyle = "rgba(255,255,255,0.85)";
@@ -69,7 +69,7 @@ const shardTexture = () =>
     g.stroke();
   });
 
-const leafTexture = () =>
+export const leafTexture = () =>
   painted("leaf", 40, 22, (g) => {
     g.fillStyle = "#fff";
     g.beginPath();
@@ -85,20 +85,10 @@ const leafTexture = () =>
     g.stroke();
   });
 
-const smokeTexture = () =>
-  painted("smoke", 64, 64, (g) => {
-    const r = g.createRadialGradient(32, 32, 2, 32, 32, 30);
-    r.addColorStop(0, "rgba(255,255,255,0.7)");
-    r.addColorStop(0.6, "rgba(255,255,255,0.25)");
-    r.addColorStop(1, "rgba(255,255,255,0)");
-    g.fillStyle = r;
-    g.fillRect(0, 0, 64, 64);
-  });
+export const lerp = (a: Pt, b: Pt, k: number): Pt => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
+export const rnd = (a: number, b: number) => a + Math.random() * (b - a);
 
-const lerp = (a: Pt, b: Pt, k: number): Pt => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
-const rnd = (a: number, b: number) => a + Math.random() * (b - a);
-
-function tether(g: Graphics, a: Pt, b: Pt, k: number, color: number, width: number, alpha = 1, wobble = 0, t = 0): Pt {
+export function tether(g: Graphics, a: Pt, b: Pt, k: number, color: number, width: number, alpha = 1, wobble = 0, t = 0): Pt {
   const d = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
   const nx = -(b[1] - a[1]) / d;
   const ny = (b[0] - a[0]) / d;
@@ -125,7 +115,7 @@ function addFilter(target: Sprite, f: Filter) {
   target.filters = [...((target.filters as Filter[] | undefined) ?? []), f];
 }
 
-function glowSprite(parent: Container, tex: Texture, tint: number) {
+export function glowSprite(parent: Container, tex: Texture, tint: number) {
   const s = new Sprite(tex);
   s.anchor.set(0.5);
   s.blendMode = "add";
@@ -135,7 +125,7 @@ function glowSprite(parent: Container, tex: Texture, tint: number) {
   return s;
 }
 
-function quad(g: Graphics, at: (u: number, v: number) => Pt, u0: number, v0: number, u1: number, v1: number) {
+export function quad(g: Graphics, at: (u: number, v: number) => Pt, u0: number, v0: number, u1: number, v1: number) {
   return g.poly([...at(u0, v0), ...at(u1, v0), ...at(u1, v1), ...at(u0, v1)]);
 }
 
@@ -200,8 +190,6 @@ export async function transferOfWealth(rect: DOMRect, code: string, ready?: Read
   const trail = new Emitter(fx);
   const glyphs = Array.from({ length: 22 }, (_, i) => ({ at: 0.15 + i * 0.045, arc: rnd(0.05, 0.16), s: glowSprite(fx, glyphTexture(), 0x9ff7d8) }));
   root.addChild(fx);
-  const home = board?.credits ? Array.from({ length: 4 }, (_, i) => homing(fx, sparkTexture(), at(0.3, 0.315), pt(board.credits!), 1.45 + i * 0.07, GOLD, 0.6, rnd(-80, 80))) : [];
-  let landed = false;
   let flashed = false;
   await run(app, (t, dt) => {
     const fill = ease.inOut(span(t, 0.25, 1.35));
@@ -229,10 +217,6 @@ export async function transferOfWealth(rect: DOMRect, code: string, ready?: Read
       burst(trail, x1, y0, 16, 0x9ff7d8, unit * 1.4, { life: 0.5, scale: 0.35 });
     }
     trail.step(dt);
-    if (flyHome(home, t, trail) === home.length && home.length && !landed) {
-      landed = true;
-      landing(trail, board?.credits, GOLD);
-    }
     return t < 2.15 || trail.list.length > 0;
   });
   await done();
@@ -450,8 +434,6 @@ export async function hanseiReview(rect: DOMRect, code: string, ready?: Ready, b
   const table = glowSprite(fx, glowTexture(), GREEN);
   table.position.set(...at(0.68, 0.3));
   root.addChild(fx);
-  const home = board?.credits ? Array.from({ length: 5 }, (_, i) => homing(fx, sparkTexture(), at(0.77, 0.22), pt(board.credits!), 1.3 + i * 0.06, GOLD, 0.6, rnd(-90, 90))) : [];
-  let landed = false;
   await run(app, (t, dt) => {
     const fade = 1 - span(t, 1.7, 2.1);
     glass.clear();
@@ -470,10 +452,6 @@ export async function hanseiReview(rect: DOMRect, code: string, ready?: Ready, b
     table.alpha = (0.35 + 0.25 * (Math.random() < 0.15 ? 0 : 1)) * Math.sin(Math.PI * span(t, 0, 1.9));
     table.scale.set((unit / 128) * 0.18);
     petals.step(dt);
-    if (flyHome(home, t, petals) === home.length && home.length && !landed) {
-      landed = true;
-      landing(petals, board?.credits, GOLD);
-    }
     return (t < 2.1 && fade > 0) || petals.list.length > 0;
   });
   await done();
@@ -486,7 +464,7 @@ export async function wildcatStrike(rect: DOMRect, code: string, ready?: Ready, 
   const hot = glowSprite(fx, sparkTexture(), 0xffe0d0);
   const wash = glowSprite(fx, glowTexture(), 0xff2a1a);
   for (const s of [core, hot, wash]) s.position.set(...flare);
-  const smoke = new Emitter(root);
+  const smoke = new Smoke(root);
   const sparks = new Emitter(fx);
   root.addChild(fx);
   await run(app, (t, dt) => {
@@ -501,8 +479,7 @@ export async function wildcatStrike(rect: DOMRect, code: string, ready?: Ready, 
     wash.scale.set((unit / 128) * 1.6);
     card.tint = on > 0 ? (flick > 0.9 ? 0xffd6d0 : 0xffe9e4) : WHITE;
     if (on > 0 && Math.random() < 0.7) sparks.add(sparkTexture(), flare[0], flare[1], { vx: rnd(-1, 1) * unit * 0.5, vy: -unit * rnd(0.1, 0.6), gravity: unit * 1.8, life: rnd(0.4, 0.8), tint: Math.random() < 0.5 ? 0xff6a3d : 0xffd0a0, scale: 0.2 * (unit / 180) });
-    if (on > 0 && Math.random() < 0.55) smoke.add(smokeTexture(), flare[0] + rnd(-3, 3), flare[1] - unit * 0.02, { vx: unit * rnd(0.05, 0.15), vy: -unit * rnd(0.2, 0.32), life: 1.4, tint: 0xe08a8a, scale: (unit / 128) * rnd(0.12, 0.2), grow: 0.3, alpha: 0.55, blend: "normal" });
-    for (const p of smoke.list) p.s.x += Math.sin(p.age * 3) * 0.3;
+    if (on > 0 && Math.random() < 0.35) smoke.puff(flare[0] + rnd(-3, 3), flare[1] - unit * 0.03, { vx: unit * rnd(0.04, 0.12), vy: -unit * rnd(0.15, 0.25), life: 1.8, size: unit * rnd(0.12, 0.18), grow: 2.6, tint: 0xe39a9a, alpha: 0.55 });
     sparks.step(dt);
     smoke.step(dt);
     return t < 2.1 || smoke.list.length > 0;
@@ -576,7 +553,7 @@ export async function teleworkContract(rect: DOMRect, code: string, ready?: Read
   });
   const cockpit = glowSprite(fx, glowTexture(), CYAN);
   cockpit.position.set(...at(0.82, 0.225));
-  const dust = new Emitter(root);
+  const dust = new Smoke(root);
   const rocks = new Emitter(fx);
   const sparks = new Emitter(fx);
   root.addChild(fx);
@@ -590,7 +567,7 @@ export async function teleworkContract(rect: DOMRect, code: string, ready?: Read
     cockpit.alpha = on * 0.5;
     cockpit.scale.set((unit / 128) * 0.14);
     const drilling = t > 0.35 && t < 1.5;
-    if (drilling && Math.random() < 0.6) dust.add(smokeTexture(), bite[0] + rnd(-1, 1) * unit * 0.08, bite[1], { vx: rnd(-1, 1) * unit * 0.3, vy: -unit * rnd(0.05, 0.2), drag: 1.2, life: 1.3, tint: 0x8a7a68, scale: (unit / 128) * rnd(0.18, 0.28), grow: 0.25, alpha: 0.5, blend: "normal" });
+    if (drilling && Math.random() < 0.35) dust.puff(bite[0] + rnd(-1, 1) * unit * 0.06, bite[1], { vx: rnd(-1, 1) * unit * 0.2, vy: -unit * rnd(0.04, 0.12), life: 1.6, size: unit * rnd(0.12, 0.2), grow: 2.2, tint: 0xb8a690, alpha: 0.6 });
     if (drilling && Math.random() < 0.35) rocks.add(sparkTexture(), bite[0], bite[1], { vx: rnd(-1, 1) * unit * 0.6, vy: -unit * rnd(0.4, 0.9), gravity: unit * 0.6, life: 1.2, tint: Math.random() < 0.5 ? 0xffd27a : 0xffffff, scale: 0.32 * (unit / 180) });
     if (drilling && Math.random() < 0.5) sparks.add(sparkTexture(), bite[0] + rnd(-4, 4), bite[1] + rnd(-4, 4), { vx: rnd(-1, 1) * unit * 0.8, vy: -unit * rnd(0.2, 0.8), gravity: unit * 1.5, life: 0.35, tint: 0xfff0b0, scale: 0.35 * (unit / 180) });
     const rumble = drilling ? unit * 0.004 : 0;
@@ -1232,7 +1209,7 @@ export async function sleipnir(rect: DOMRect, code: string, ready?: Ready, board
   await done();
 }
 
-function prism(el: Element | null, duration: number) {
+export function prism(el: Element | null, duration: number) {
   if (!(el instanceof HTMLElement) || !el.animate) return;
   const f = (d: number) => `drop-shadow(${-d}px 0 rgba(255,60,90,0.9)) drop-shadow(${d}px 0 rgba(60,200,255,0.9)) drop-shadow(0 ${d * 0.6}px rgba(255,240,90,0.7))`;
   el.animate(
@@ -1504,7 +1481,7 @@ export const semakPose = pose(0xd6ff4a, [0.33, 0.7]);
 
 type Strike = { app: import("pixi.js").Application; root: import("pixi.js").Container; world: import("pixi.js").Container; strike: Pt | null; unit: number; at: (u: number, v: number) => Pt };
 
-export function strikeFx(sc: Strike, style: "ribbons" | "bolts" | "splash" | "cubes", color: number, from: Pt): Promise<void> {
+export function strikeFx(sc: Strike, style: "ribbons" | "bolts" | "splash" | "cubes" | "saw" | "apple", color: number, from: Pt): Promise<void> {
   const { app, root, world, strike, unit } = sc;
   if (!strike) return Promise.resolve();
   const g = new Graphics();
@@ -1544,6 +1521,30 @@ export function strikeFx(sc: Strike, style: "ribbons" | "bolts" | "splash" | "cu
         g.quadraticCurveTo(strike[0] - R * 0.2, strike[1] - R * (0.9 * w), strike[0] + R * (w * 1.2 - 0.2), strike[1] + R * 0.2);
         g.stroke({ width: unit * 0.05, color, alpha: 0.6 * (1 - k) });
       }
+    } else if (style === "saw") {
+      const spin = t * 30;
+      const k2 = span(t, 0.1, 0.7);
+      if (k2 > 0 && k2 < 1) {
+        const r = R * 0.45;
+        for (let i = 0; i < 3; i++) {
+          const a = spin + (i * Math.PI * 2) / 3;
+          g.arc(strike[0], strike[1], r, a, a + 1.4).stroke({ width: unit * 0.03, color, alpha: 0.8 * (1 - k2) });
+        }
+        if (Math.random() < 0.9) {
+          const a = rnd(0, Math.PI * 2);
+          bits.add(sparkTexture(), strike[0] + Math.cos(a) * r, strike[1] + Math.sin(a) * r, { vx: -Math.sin(a) * unit * 2, vy: Math.cos(a) * unit * 2, gravity: unit * 2, life: 0.4, tint: Math.random() < 0.5 ? 0xffd27a : color, scale: (unit / 180) * 0.3 });
+        }
+      }
+    } else if (style === "apple") {
+      const k2 = ease.out(span(t, 0, 0.4));
+      if (k2 < 1) {
+        const y = strike[1] - R * 1.4 * (1 - k2 * k2);
+        const r = R * 0.3;
+        g.circle(strike[0], y, r).stroke({ width: 1.5, color, alpha: 0.9 });
+        for (let i = 1; i < 4; i++) g.ellipse(strike[0], y, r * (i / 4), r).stroke({ width: 1, color, alpha: 0.7 });
+        for (let i = 1; i < 4; i++) g.ellipse(strike[0], y - r + (2 * r * i) / 4, r * Math.sin((Math.PI * i) / 4), r * 0.15).stroke({ width: 1, color, alpha: 0.7 });
+      }
+      if (t > 0.4 && t < 0.45) for (let i = 0; i < 18; i++) bits.add(shardTexture(), strike[0], strike[1], { vx: rnd(-1, 1) * unit * 2.4, vy: -unit * rnd(0.4, 2), gravity: unit * 4, spin: rnd(-8, 8), life: 0.7, tint: color, scale: (unit / 180) * rnd(0.3, 0.6), blend: "normal" });
     } else if (style === "cubes" && t < 0.35 && Math.random() < 0.9) {
       bits.add(cubeTexture(), src.x, src.y, { vx: (strike[0] - src.x) * 3.2 + rnd(-40, 40), vy: (strike[1] - src.y) * 3.2 + rnd(-40, 40), life: 0.3, spin: 6, tint: Math.random() < 0.5 ? 0xbfe9ff : 0xffd3a8, scale: (unit / 180) * 0.45 });
     }

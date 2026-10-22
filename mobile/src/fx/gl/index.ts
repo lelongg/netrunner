@@ -23,6 +23,12 @@ export const FX: Record<Kind, Record<string, string>> = {
     "Seamless Launch": "seamlessLaunch",
     "Hansei Review": "hanseiReview",
     "Wildcat Strike": "wildcatStrike",
+    "Government Subsidy": "governmentSubsidy",
+    "Bigger Picture": "biggerPicture",
+    "Top-Down Solutions": "topDownSolutions",
+    Myoshu: "myoshu",
+    "Reanimation Protocol": "reanimationProtocol",
+    "Tread Lightly": "treadLightly",
   },
   install: {
     "DZMZ Optimizer": "dzmzInstall",
@@ -45,6 +51,17 @@ export const FX: Record<Kind, Record<string, string>> = {
     Sleipnir: "sleipnirPose",
     Tocsin: "tocsinPose",
     "Semak-samun": "semakPose",
+    "Verbal Plasticity": "verbalPlasticity",
+    "The Tungsten Tailor": "tungstenTailor",
+    Buzzsaw: "buzzsawPose",
+    "Self-modifying Code": "selfModifyingCodePose",
+    Principia: "principiaPose",
+    Azimat: "azimatPose",
+    "Bumi 1.0": "bumiPose",
+    Biawak: "biawakPose",
+    Funhouse: "funhousePose",
+    "Bran 1.0": "branPose",
+    Doomscroll: "doomscrollPose",
   },
   rez: {
     "Spin Doctor": "spinDoctor",
@@ -57,6 +74,14 @@ export const FX: Record<Kind, Record<string, string>> = {
     "Semak-samun": "semakSamun",
     "Humanoid Resources": "humanoidResources",
     "Nihilo Agent": "nihiloAgent",
+    "Anthill Excavation Contract": "anthillExcavation",
+    "Byte!": "byte",
+    "Manegarm Skunkworks": "manegarmSkunkworks",
+    "Bumi 1.0": "bumi",
+    Biawak: "biawak",
+    Funhouse: "funhouse",
+    "Bran 1.0": "bran",
+    Doomscroll: "doomscroll",
   },
   use: {
     Fermenter: "fermenter",
@@ -74,12 +99,22 @@ export const FX: Record<Kind, Record<string, string>> = {
     Sleipnir: "sleipnirFire",
     Tocsin: "tocsinFire",
     "Semak-samun": "semakFire",
+    Buzzsaw: "buzzsaw",
+    "Self-modifying Code": "selfModifyingCode",
+    Principia: "principia",
+    Azimat: "azimat",
+    "Bumi 1.0": "bumiFire",
+    Biawak: "biawakFire",
+    Funhouse: "funhouseFire",
+    "Bran 1.0": "branFire",
+    Doomscroll: "doomscrollFire",
   },
 };
 
 let ok: boolean | undefined;
 const hidden = new WeakMap<HTMLElement, number>();
 const LIMIT = 6000;
+const CAP = 1.7;
 
 function glOk() {
   if (ok === undefined) {
@@ -97,7 +132,7 @@ const rect = (sel: string) => {
   return r && r.width > 0 ? r : null;
 };
 
-function boardFor(owner: string | undefined, self: Element | null | undefined, strike?: DOMRect | null): Board {
+function boardFor(owner: string | undefined, self: Element | null | undefined, strike?: Element | null): Board {
   const others = [...document.querySelectorAll(".playfield .tile[data-cid]")].filter((el) => el !== self && !self?.contains(el)).map((el) => el.getBoundingClientRect()).filter((r) => r.width > 0 && r.bottom > 0 && r.top < innerHeight);
   const radius = self ? parseFloat(getComputedStyle(self).borderTopLeftRadius) || 0 : 0;
   const a = aim();
@@ -105,7 +140,6 @@ function boardFor(owner: string | undefined, self: Element | null | undefined, s
   const cid = (self as HTMLElement | null | undefined)?.dataset?.cid;
   const host = cid ? a.hostOf.get(cid) : undefined;
   return {
-    credits: owner ? rect(`[data-anchor="${owner}-credits"]`) : null,
     hand: owner ? rect(`[data-anchor="${owner}-hand"]`) : null,
     others,
     radius,
@@ -118,7 +152,8 @@ function boardFor(owner: string | undefined, self: Element | null | undefined, s
     grip: a.gripLost > 0 ? rect('[data-anchor="runner-hand"]') : null,
     access: rect(".fx-showdown .fx-showcase"),
     runner: rect('[data-anchor="runner-panel"]'),
-    strike,
+    strike: strike ? strike.getBoundingClientRect() : null,
+    strikeTrack: strike ? () => (strike.isConnected ? strike.getBoundingClientRect() : null) : undefined,
   };
 }
 
@@ -126,7 +161,7 @@ export function hasGl(kind: Kind, title: string | undefined) {
   return !!title && !!FX[kind][title] && !motionOff() && glOk();
 }
 
-export function glEffect(kind: Kind, title: string | undefined, at: DOMRect, code: string | undefined, hide?: HTMLElement | null, owner?: string, strike?: DOMRect | null): Promise<void> | null {
+export function glEffect(kind: Kind, title: string | undefined, at: DOMRect, code: string | undefined, hide?: HTMLElement | null, owner?: string, strike?: Element | null): Promise<void> | null {
   const name = title ? FX[kind][title] : undefined;
   if (!name || !code || motionOff() || !glOk()) return null;
   const board = boardFor(owner, hide, strike);
@@ -143,12 +178,19 @@ export function glEffect(kind: Kind, title: string | undefined, at: DOMRect, cod
       hide.style.visibility = "";
     };
   };
+  let freed: () => void = () => {};
+  const early = new Promise<void>((r) => (freed = r));
+  if (kind === "play" && !strike) {
+    board.cap = CAP;
+    board.free = () => {
+      restore();
+      freed();
+    };
+  }
   const play = import("./cards")
     .then((m) => (m as unknown as Record<string, (...a: unknown[]) => Promise<void>>)[name](at, code, ready, board))
-    .catch(() => {
-      ok = false;
-    });
-  return Promise.race([play, new Promise<void>((r) => setTimeout(r, (window as any).__fxManual ? 6e5 : LIMIT))]).finally(() => restore());
+    .catch((e) => console.error("fx", name, e));
+  return Promise.race([play, early, new Promise<void>((r) => setTimeout(r, (window as any).__fxManual ? 6e5 : LIMIT))]).finally(() => restore());
 }
 
 export function warmGl() {

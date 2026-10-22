@@ -964,6 +964,14 @@ textarea:focus {
   flex: none;
 }
 
+.opp .big .count,
+.me-bar .big .count {
+  display: inline-block;
+  min-width: 2ch;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
 .opp-info {
   display: flex;
   flex-direction: column;

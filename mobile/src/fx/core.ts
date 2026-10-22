@@ -402,3 +402,20 @@ export function gate(target: Element | null, tone: Tone = "orange") {
   animate(seam, { opacity: [0, 1, 0.6], scaleY: [0.2, 1.15, 1] }, { duration: 0.35, delay: 0.22 });
   done(animate(el, { opacity: [1, 1, 0] }, { duration: 1.1, times: [0, 0.7, 1] }), el);
 }
+
+export function creditChange(side: string, delta: number, from: Point | null) {
+  if (!delta) return;
+  const el = anchor(`${side}-credits`);
+  const at = pointOf(el);
+  if (!at || !el) return;
+  const top = el.getBoundingClientRect().top - 14;
+  punch(el.closest(".big") ?? el, delta > 0 ? 1.3 : 1.15);
+  if (delta > 0) {
+    coins(from ?? [at[0] + (Math.random() - 0.5) * 30, at[1] + 70], at, delta, "gold");
+    floater([at[0], top], `+${delta}`, "gold", 30, true);
+    setTimeout(() => burst(at, "gold", 10, 40, { size: 4, gravity: 0 }), 500);
+  } else {
+    if (from) coins(at, from, -delta, "gold");
+    floater([at[0], top], `−${-delta}`, "white", 30, true);
+  }
+}

@@ -1,7 +1,7 @@
 import { BlurFilter, Container, Graphics, Sprite, Text, Texture } from "pixi.js";
 import { GlitchFilter, GlowFilter, GodrayFilter, MotionBlurFilter, RGBSplitFilter, ShockwaveFilter, TwistFilter } from "pixi-filters";
 import { Emitter, filterPoint, focusFilter, ease, glowTexture, lightning, run, span, sparkTexture, stage } from "./stage";
-import { type Board, CREDIT, CYAN, GOLD, GREEN, RED, type Ready, VIOLET, WHITE, billTexture, bubbleTexture, burst, coinTexture, flyHome, homing, landing, petalTexture, pt, ringAt, scene, shimmer } from "./kit";
+import { type Board, Smoke, CREDIT, CYAN, GOLD, GREEN, RED, type Ready, VIOLET, WHITE, billTexture, bubbleTexture, burst, coinTexture, petalTexture, pt, ringAt, scene, shimmer } from "./kit";
 
 export async function sureGamble(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, card, fx, zoom, done, cx } = await scene(rect, code, ready, board);
@@ -44,9 +44,7 @@ export async function sureGamble(rect: DOMRect, code: string, ready?: Ready, boa
   flare.blendMode = "add";
   flare.alpha = 0;
   fx.addChild(flare);
-  const home = board?.credits ? Array.from({ length: 9 }, (_, i) => homing(fx, sparkTexture(), [cx, py + h / 2], pt(board.credits!), 1.35 + i * 0.05, GOLD, 0.6, (Math.random() - 0.5) * 180)) : [];
   let burstAt = 0;
-  let hit = false;
   await run(app, (t, dt) => {
     zoom(1 + 0.05 * ease.back(span(t, 0, 0.3)) - 0.05 * span(t, 1.9, 2.3));
     glow.outerStrength = 3 * span(t, 0, 0.3) * (1 - span(t, 1.9, 2.3)) + (burstAt ? 2 * Math.max(0, 1 - (t - burstAt) * 2) : 0);
@@ -70,10 +68,6 @@ export async function sureGamble(rect: DOMRect, code: string, ready?: Ready, boa
     flare.scale.set(f > 0 ? 2 + f * 10 : 0);
     flare.alpha = f > 0 ? Math.max(0, 0.9 - f * 1.6) : 0;
     for (const c of coins.list) c.s.scale.x = Math.cos(c.age * 14) * c.s.scale.y;
-    if (flyHome(home, t, sparks) === home.length && home.length && !hit) {
-      hit = true;
-      landing(sparks, board?.credits, GOLD);
-    }
     sparks.step(dt);
     coins.step(dt);
     panel.alpha = 1 - span(t, 1.9, 2.3);
@@ -131,7 +125,7 @@ export async function ritual(rect: DOMRect, code: string, ready?: Ready, board?:
   halo.tint = 0x6fe3ff;
   fx.addChild(halo);
   const motes = new Emitter(fx);
-  const steam = new Emitter(root);
+  const steam = new Smoke(root);
   root.addChild(fx);
   await run(app, (t, dt) => {
     const k = Math.sin(Math.PI * span(t, 0, 2.3));
@@ -143,9 +137,8 @@ export async function ritual(rect: DOMRect, code: string, ready?: Ready, board?:
     if (Math.random() < 0.5 && t < 2) motes.add(sparkTexture(), rect.left + Math.random() * rect.width * 0.7, rect.top + Math.random() * rect.height * 0.5, { vx: 6 + Math.random() * 10, vy: -4 + Math.random() * 8, life: 1.2, tint: 0xfff1cf, scale: (0.1 + Math.random() * 0.12) * (unit / 180), alpha: 0.8 });
     if (Math.random() < 0.3 && t < 1.9) {
       const [sx, sy] = at(0.78 + Math.random() * 0.03, 0.29);
-      steam.add(glowTexture(), sx, sy, { vx: (Math.random() - 0.5) * 6, vy: -18 - Math.random() * 10, life: 1.4, tint: 0xffffff, scale: (unit / 128) * 0.12, grow: 0.12, alpha: 0.35, blend: "normal" });
+      steam.puff(sx, sy, { vx: (Math.random() - 0.5) * 6, vy: -unit * 0.12, life: 1.8, size: unit * 0.08, grow: 2.4, alpha: 0.35 });
     }
-    for (const s of steam.list) s.s.x += Math.sin(s.age * 3 + s.s.y * 0.05) * 0.25;
     motes.step(dt);
     steam.step(dt);
     return t < 2.3;
@@ -307,7 +300,7 @@ export async function predictivePlanogram(rect: DOMRect, code: string, ready?: R
 }
 
 export async function hedgeFund(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, fx, done, cx } = await scene(rect, code, ready, board);
+  const { app, root, fx, done } = await scene(rect, code, ready, board);
   const dim = new Graphics().roundRect(rect.left, rect.top, rect.width, rect.height, 10).fill({ color: 0x020806, alpha: 0.55 });
   const grid = new Graphics();
   for (let i = 1; i < 6; i++) grid.moveTo(rect.left + 8, rect.top + (rect.height * i) / 6).lineTo(rect.right - 8, rect.top + (rect.height * i) / 6);
@@ -329,8 +322,6 @@ export async function hedgeFund(rect: DOMRect, code: string, ready?: Ready, boar
   const trail = new Emitter(fx);
   root.addChild(fx);
   const top = pts[pts.length - 1];
-  const home = board?.credits ? Array.from({ length: 9 }, (_, i) => homing(fx, sparkTexture(), top, pt(board.credits!), 1.2 + i * 0.05, GOLD, 0.6, (Math.random() - 0.5) * 160)) : [];
-  let hit = false;
   await run(app, (t, dt) => {
     dim.alpha = span(t, 0, 0.2) * (1 - span(t, 1.8, 2.2));
     grid.alpha = dim.alpha;
@@ -356,10 +347,6 @@ export async function hedgeFund(rect: DOMRect, code: string, ready?: Ready, boar
     head.scale.set(0.8 + 0.2 * Math.sin(t * 30));
     head.alpha = 1 - span(t, 1.2, 1.5);
     if (t < 1.1 && Math.random() < 0.8) trail.add(sparkTexture(), hx, hy, { vx: (Math.random() - 0.5) * 60, vy: 30 + Math.random() * 60, life: 0.6, tint: GREEN, scale: 0.25 + Math.random() * 0.2, grow: -0.3 });
-    if (flyHome(home, t, trail) === home.length && home.length && !hit) {
-      hit = true;
-      landing(trail, board?.credits, GOLD);
-    }
     trail.step(dt);
     return t < 2.25 || trail.list.length > 0;
   });
@@ -540,8 +527,6 @@ export async function pettyCash(rect: DOMRect, code: string, ready?: Ready, boar
   const bills = new Emitter(root);
   const sparks = new Emitter(fx);
   root.addChild(fx);
-  const home = board?.credits ? Array.from({ length: 5 }, (_, i) => homing(fx, sparkTexture(), [cx, rect.top + rect.height * 0.4], pt(board.credits!), 0.85 + i * 0.06, GREEN, 0.6, (Math.random() - 0.5) * 160)) : [];
-  let landed = false;
   let spawned = 0;
   await run(app, (t, dt) => {
     while (spawned < 22 && t > spawned * 0.035) {
@@ -550,10 +535,6 @@ export async function pettyCash(rect: DOMRect, code: string, ready?: Ready, boar
     }
     for (const b of bills.list) b.s.scale.y = Math.abs(Math.cos(b.age * 9)) * b.s.scale.x * 0.9 + 0.1 * b.s.scale.x;
     if (Math.random() < 0.5 && t < 1.2) sparks.add(sparkTexture(), cx + (Math.random() - 0.5) * rect.width, rect.top + Math.random() * rect.height * 0.6, { life: 0.5, tint: GREEN, scale: 0.4, grow: -0.7 });
-    if (flyHome(home, t, sparks, GREEN) === home.length && home.length && !landed) {
-      landed = true;
-      landing(sparks, board?.credits, GREEN);
-    }
     bills.step(dt);
     sparks.step(dt);
     return t < 1.95 || bills.list.length > 0 || sparks.list.length > 0;
@@ -709,7 +690,7 @@ export async function mutualFavor(rect: DOMRect, code: string, ready?: Ready, bo
 }
 
 export async function cleanGetaway(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, card, fx, zoom, done, cx, cy } = await scene(rect, code, ready, board);
+  const { app, root, card, fx, zoom, done, cx } = await scene(rect, code, ready, board);
   const blur = new MotionBlurFilter({ velocity: { x: 0, y: 0 }, kernelSize: 11 });
   card.filters = [blur];
   const streaks = new Container();
@@ -717,8 +698,6 @@ export async function cleanGetaway(rect: DOMRect, code: string, ready?: Ready, b
   const lines: { s: Sprite; v: number }[] = [];
   const sparks = new Emitter(fx);
   root.addChild(fx);
-  const home = board?.credits ? Array.from({ length: 6 }, (_, i) => homing(fx, sparkTexture(), [cx, cy], pt(board.credits!), 0.8 + i * 0.06, GREEN, 0.6, (Math.random() - 0.5) * 160)) : [];
-  let landed = false;
   await run(app, (t, dt) => {
     const dash = Math.sin(Math.PI * span(t, 0.1, 0.6));
     card.x = cx + dash * rect.width * 0.12;
@@ -743,10 +722,6 @@ export async function cleanGetaway(rect: DOMRect, code: string, ready?: Ready, b
         l.s.destroy();
         lines.splice(i, 1);
       }
-    }
-    if (flyHome(home, t, sparks, GREEN) === home.length && home.length && !landed) {
-      landed = true;
-      landing(sparks, board?.credits, GREEN);
     }
     sparks.step(dt);
     return t < 1.85 || lines.length > 0 || sparks.list.length > 0;
@@ -938,4 +913,5 @@ export async function flyswatter(rect: DOMRect, code: string, ready?: Ready, boa
 
 export const warm = () => stage();
 export * from "./more";
+export * from "./third";
 import { strikeFx } from "./more";

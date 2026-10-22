@@ -1,4 +1,4 @@
-import { type Point, anchor, animate, burst, buzz, coins, done, flash, floater, node, pointOf, punch, rays, reduced, ring, shake, slash, vignette } from "./core";
+import { type Point, anchor, animate, burst, buzz, done, flash, floater, node, pointOf, punch, rays, reduced, ring, shake, slash, vignette } from "./core";
 import { glEffect, hasGl } from "./gl";
 
 const SVG = "http://www.w3.org/2000/svg";
@@ -22,8 +22,6 @@ export function hedgeFund(card: DOMRect) {
   const tip: Point = [card.left + card.width + 20, card.top + card.height * 0.15 + card.height * 0.7 * 0.07];
   setTimeout(() => {
     burst(tip, "gold", 18, 60, { size: 5, gravity: 60 });
-    const to = pointOf(anchor("corp-credits"));
-    if (to) coins(tip, to, 8, "gold");
     buzz([15, 15, 15, 15, 40]);
   }, 560);
   done(animate(el, { opacity: [1, 1, 0] }, { duration: 1.5, times: [0, 0.8, 1] }), el);
@@ -285,14 +283,10 @@ export function urtica(at: Point) {
 
 export function tithe(ice: Point) {
   if (reduced()) return;
-  const from = pointOf(anchor("runner-panel")) ?? [innerWidth / 2, innerHeight - 120];
-  coins(from, ice, 1, "gold");
   setTimeout(() => {
     ring(ice, "gold", 110);
     burst(ice, "gold", 16, 50, { size: 5, gravity: 0 });
     floater([ice[0], ice[1] - 20], "Tithe +1", "gold", 50, true);
-    const to = pointOf(anchor("corp-credits"));
-    if (to) coins(ice, to, 1, "gold");
   }, 600);
 }
 
@@ -414,8 +408,6 @@ export function dirtyLaundry(card: DOMRect) {
     done(animate(b, { x: [0, Math.cos(a) * d], y: [0, Math.sin(a) * d - 40], scale: [0.2, 1, 1.3], opacity: [0, 1, 0] }, { duration: 1.2, delay: 0.3 + Math.random() * 0.4, ease: "easeOut" }), b);
   }
   setTimeout(() => {
-    const to = pointOf(anchor("runner-credits"));
-    if (to) coins(at, to, 5, "gold");
     buzz([15, 15, 15, 15, 15, 60]);
   }, 1100);
 }
@@ -474,7 +466,6 @@ export function accountSiphon(card: DOMRect) {
   animate(pipe, { scaleX: [0, 1] }, { duration: 0.35, ease: "easeOut" });
   done(animate(pipe, { opacity: [1, 1, 0] }, { duration: 1.6, times: [0, 0.8, 1] }), pipe);
   setTimeout(() => {
-    coins(from, to, 5, "gold");
     ring(from, "red", 80);
     buzz([20, 20, 20, 20, 20]);
   }, 350);
@@ -613,9 +604,6 @@ export function sweepsWeek(card: DOMRect) {
   }
   animate(tv, { scale: [0.2, 1.05, 1], opacity: [0, 1] }, { duration: 0.35 });
   setTimeout(() => {
-    const to = pointOf(anchor("corp-credits"));
-    const r = tv.getBoundingClientRect();
-    if (to) coins([r.left + r.width / 2, r.top], to, 4, "gold");
     buzz([20, 20, 20, 60]);
   }, 900);
   done(animate(tv, { opacity: [1, 1, 0] }, { duration: 1.8, times: [0, 0.8, 1] }), tv);
@@ -886,8 +874,6 @@ export function padCampaign(r: DOMRect) {
   const at: Point = [r.left + r.width / 2, r.top + r.height * 0.35];
   for (let i = 0; i < 4; i++) ring(at, "blue", 60 + i * 50, i * 0.12);
   setTimeout(() => {
-    const to = pointOf(anchor("corp-credits"));
-    if (to) coins(at, to, 1, "gold");
   }, 400);
   buzz([10, 20, 10]);
 }
@@ -1039,7 +1025,6 @@ export function offworldOffice(card: DOMRect) {
   if (reduced()) return;
   const to = pointOf(anchor("corp-credits"));
   if (!to) return;
-  for (let i = 0; i < 7; i++) setTimeout(() => coins([card.left + Math.random() * card.width, card.top], to, 1, "gold"), i * 90);
   setTimeout(() => floater([to[0], to[1] - 30], "+7", "gold", 50, true), 700);
 }
 
@@ -1152,8 +1137,6 @@ export function fermenter(r: DOMRect) {
     done(animate(b, { y: [0, -r.height * (0.6 + Math.random() * 0.5)], scale: [0.4, 1, 1.3], opacity: [0, 1, 0] }, { duration: 1.1, delay: i * 0.07, ease: "easeOut" }), b);
   }
   setTimeout(() => {
-    const to = pointOf(anchor("runner-credits"));
-    if (to) coins(center(r), to, 2, "gold");
   }, 800);
 }
 
@@ -1307,8 +1290,6 @@ export function redTeam(r: DOMRect) {
   sight.style.top = `${at[1]}px`;
   animate(sight, { scale: [2, 0.7], rotate: [90, 0] }, { duration: 0.4, ease: "easeOut" });
   fade(sight, 1.1);
-  const from = pointOf(anchor("runner-credits"));
-  if (from) setTimeout(() => coins(from, at, 6, "gold"), 300);
 }
 
 
@@ -1408,13 +1389,6 @@ function rain(r: DOMRect, n: number, color: string, rise = false, spread = 1) {
   }
 }
 
-function credits(at: Point, n: number, side: "corp" | "runner", gain = true) {
-  const pile = pointOf(anchor(`${side}-credits`));
-  if (!pile) return;
-  if (gain) coins(at, pile, n, "gold");
-  else coins(pile, at, n, "gold");
-}
-
 function strokes(r: DOMRect, cls: string, d: string, duration = 0.6) {
   if (reduced()) return;
   const el = svgBox(`fx-stroke ${cls}`, r, `<path pathLength="1" d="${d}"/>`);
@@ -1497,7 +1471,6 @@ export function knickknack(r: DOMRect) {
 export function greenmail(card: DOMRect) {
   if (reduced()) return;
   rain(card, 16, "#3ddc84", false, 1.2);
-  setTimeout(() => credits(center(card), 2, "corp"), 300);
 }
 
 
@@ -1581,7 +1554,6 @@ export function kessleroid(r: DOMRect) {
 
 export function pettyCash(card: DOMRect) {
   if (reduced()) return;
-  credits(center(card), 5, "corp");
   setTimeout(() => floater([card.left + card.width / 2, card.top], "+5", "gold", 40, true), 300);
 }
 
@@ -1802,7 +1774,6 @@ export function vultureFund(card: DOMRect) {
   const ys = Array.from({ length: 13 }, (_, k) => Math.sin(k * 0.6) * card.width * 0.25 - card.height * 0.45);
   animate(bird, { x: xs, y: ys }, { duration: 1.6, ease: "linear" });
   fade(bird, 1.7);
-  setTimeout(() => credits(center(card), 14, "corp"), 500);
 }
 
 export function hypeMachine(r: DOMRect) {
@@ -1974,7 +1945,6 @@ export function violetClearance(card: DOMRect) {
   }, 800);
   setTimeout(() => {
     const at = center(card);
-    credits(at, 8, "corp");
     flyCards(at, pointOf(anchor("corp-hand")) ?? [innerWidth / 2, 40], 4, "violet", 0.3);
   }, 1000);
   for (const el of [reader, key]) done(animate(el, { opacity: [1, 1, 0] }, { duration: 1.9, times: [0, 0.85, 1] }), el);
@@ -2216,9 +2186,6 @@ export function biggerPicture(card: DOMRect) {
     for (let i = 0; i < 3; i++) after(i * 150, () => ring(runner, "red", 70 + i * 40));
   });
   after(900, () => {
-    const from = spot("runner-credits", runner);
-    const to = spot("corp-credits", [40, 40]);
-    coins(from, to, 5, "gold");
     buzz([20, 20, 20, 60]);
   });
 }
@@ -2282,7 +2249,6 @@ export function caveatEmptor(card: DOMRect) {
   after(80, () => buzz([5, 5, 5, 5, 5, 5, 5]));
   after(800, () => {
     animate(receipt, { scale: [1, 0.2], rotate: [0, 220], opacity: [1, 0] }, { duration: 0.35, ease: "easeIn" }).finished.then(() => receipt.remove(), () => receipt.remove());
-    credits(center(card), 6, "corp");
     const pip = [...document.querySelectorAll('[data-anchor="runner-clicks"] i')].pop();
     if (pip) animate(pip, { opacity: [1, 0.1, 0.4], scale: [1, 1.6, 1] }, { duration: 0.6, delay: 0.3 });
   });
@@ -2326,7 +2292,6 @@ export function cleanGetaway(card: DOMRect) {
     buzz(30);
   });
   after(700, () => {
-    for (let i = 0; i < 6; i++) after(i * 60, () => coins(server, spot("runner-credits", runner), 1, "gold"));
     for (const dx of [-8, 8]) {
       const light = chip("fx-mote", [server[0] + dx, server[1]], 6, 6);
       light.style.background = "#ff3b30";
@@ -2647,7 +2612,6 @@ export function flywheel(r: DOMRect) {
   done(animate(wheel, { opacity: [0, 1, 1, 0] }, { duration: 1.7, times: [0, 0.1, 0.85, 1] }), wheel);
   for (let k = 0; k < 2; k++)
     after(500 + k * 450, () => {
-      credits(at, 1, "corp");
       flyCards(at, spot("corp-hand", [innerWidth * 0.7, 60]), 1, "blue");
       burst([at[0] + r.width * 0.55, at[1]], "cyan", 8, 40, { size: 3, gravity: 40 });
       buzz(20);
@@ -2674,11 +2638,8 @@ export function governmentSubsidy(card: DOMRect) {
   sig.querySelector("svg")!.setAttribute("preserveAspectRatio", "none");
   after(350, () => draw(sig, 0.4));
   after(850, () => {
-    const to = spot("corp-credits", [40, 40]);
-    const r = cheque.getBoundingClientRect();
     animate(cheque, { scale: [1, 0.2], opacity: [1, 0] }, { duration: 0.35 }).finished.then(() => cheque.remove(), () => cheque.remove());
     sig.remove();
-    for (let i = 0; i < 5; i++) after(i * 70, () => coins([r.left + Math.random() * r.width, r.top + r.height / 2], to, 3, "gold"));
     buzz([20, 20, 20, 20, 80]);
   });
 }
@@ -2714,7 +2675,6 @@ export function hanseiReview(card: DOMRect) {
     after(500, () => burst([hq[0], hq[1] + 60], "orange", 12, 30, { size: 4, gravity: -40 }));
   });
   after(1000, () => {
-    credits(at, 10, "corp");
     buzz([20, 60]);
   });
 }
@@ -2749,7 +2709,6 @@ export function humanoidResources(r: DOMRect) {
   }
   after(900, () => {
     const at = center(r);
-    credits(at, 4, "corp");
     flyCards(at, spot("corp-hand", [innerWidth * 0.7, 60]), 3, "blue", 0.1);
     burst(at, "blue", 16, 50, { size: 5, shards: true, gravity: 50 });
     buzz([20, 20, 60]);
@@ -2777,10 +2736,6 @@ export function ipEnforcement(card: DOMRect) {
   });
 }
 
-function drain(from: Point, to: Point, n: number, delay = 0) {
-  after(delay * 1000, () => coins(from, to, n, "gold"));
-}
-
 function pips(anchorName: string, n: number, color: string, delay = 0) {
   const all = [...document.querySelectorAll<HTMLElement>(`[data-anchor="${anchorName}"] i`)];
   all.slice(-n).forEach((p, i) => animate(p, { scale: [1, 1.9, 1], backgroundColor: ["#1e2227", color, color, "#1e2227"] } as any, { duration: 0.9, delay: delay + i * 0.15 }));
@@ -2795,13 +2750,9 @@ function burn(at: Point, delay = 0) {
 export function idiosyncresis(r: DOMRect) {
   if (reduced()) return;
   const at = center(r);
-  const corp = spot("corp-credits", [40, 40]);
-  const runner = spot("runner-credits", RUNNER);
   for (let i = 0; i < 3; i++) {
     const t = chip("fx-advtoken", [r.left + r.width * (0.25 + i * 0.25), r.top + r.height * 0.2], 14, 14);
     done(animate(t, { y: [0, -30], scale: [1, 1.4, 0], opacity: [1, 1, 0] }, { duration: 0.5, delay: 0.2 + i * 0.3 }), t);
-    drain(at, corp, 3, 0.5 + i * 0.3);
-    drain(runner, corp, 2, 0.6 + i * 0.3);
     after(500 + i * 300, () => buzz(20));
   }
   after(1400, () => {
@@ -2926,7 +2877,6 @@ export function luanaCampos(r: DOMRect) {
   travel(orb, corp, center(r), 0.6, { delay: 0.3, arc: 40 }).finished.then(() => {
     orb.remove();
     ring(center(r), "violet", 70);
-    credits(center(r), 3, "corp");
     flyCards(center(r), spot("corp-hand", [innerWidth * 0.7, 60]), 1, "blue");
     buzz([20, 40]);
   }, () => orb.remove());
@@ -2976,7 +2926,6 @@ export function magistrate(r: DOMRect) {
   after(700, () => {
     ring(at, "gold", 70);
     buzz(40);
-    coins(spot("runner-credits", RUNNER), spot("corp-credits", [40, 40]), 3, "gold");
   });
 }
 
@@ -3109,7 +3058,7 @@ export function mitraAman(r: DOMRect) {
     animate(inn, { y: [0, 60], x: [0, -10] }, { duration: 0.5, delay: 0.5, ease: "easeInOut" });
     for (const el of [out, inn]) done(animate(el, { opacity: [0, 1, 1, 0] }, { duration: 1.2, delay: 0.4, times: [0, 0.1, 0.85, 1] }), el);
   }
-  after(1000, () => (credits(center(r), 3, "corp"), burst(center(r), "blue", 14, 40, { size: 4, shards: true, gravity: 40 })));
+  after(1000, () => burst(center(r), "blue", 14, 40, { size: 4, shards: true, gravity: 40 }));
 }
 
 export function mutualFavor(card: DOMRect) {
@@ -3235,7 +3184,6 @@ export function nicoCampaign(r: DOMRect) {
     const coin = box("fx-coin-flat", new DOMRect(r.left + r.width * 0.3, r.bottom - 10 - i * 7, r.width * 0.4, 8));
     done(animate(coin, { y: [-40, 0], opacity: [0, 1, 1, 0] }, { duration: 1.6, delay: i * 0.05, times: [0, 0.15, 0.8, 1], ease: "easeIn" }), coin);
   }
-  after(900, () => credits(center(r), 3, "corp"));
 }
 
 export function nihilo(r: DOMRect) {
@@ -3275,7 +3223,6 @@ export function openMarket(r: DOMRect) {
     const coin = disc("fx-coin-big", [r.left + r.width * (0.2 + (i % 3) * 0.3), r.top - 20], 14);
     done(animate(coin, { y: [0, r.height * (0.4 + Math.floor(i / 3) * 0.2)], opacity: [0, 1, 1, 0] }, { duration: 0.9, delay: 0.3 + i * 0.07, times: [0, 0.2, 0.8, 1], ease: "easeIn" }), coin);
   }
-  after(1200, () => credits(center(r), 1, "runner"));
 }
 
 export function ottoCampaign(r: DOMRect) {
@@ -3288,7 +3235,6 @@ export function ottoCampaign(r: DOMRect) {
     const coin = box("fx-coin-flat", new DOMRect(r.left + r.width * 0.3, r.bottom - 10 - i * 7, r.width * 0.4, 8));
     done(animate(coin, { y: [-40, 0], opacity: [0, 1, 1, 0] }, { duration: 1.4, delay: 0.4 + i * 0.05, times: [0, 0.15, 0.8, 1], ease: "easeIn" }), coin);
   }
-  after(1100, () => credits(center(r), 2, "corp"));
 }
 
 export function palisade(r: DOMRect) {
@@ -3317,7 +3263,6 @@ export function pantograph(r: DOMRect) {
   draw(el, 0.4);
   animate(el, { scaleX: [0.3, 1.6, 1] }, { duration: 1, ease: "easeInOut" });
   done(animate(el, { opacity: [1, 1, 0] }, { duration: 1.5, times: [0, 0.8, 1] }), el);
-  after(500, () => credits(center(r), 1, "runner"));
   after(800, () => {
     const hand = spot("runner-hand", RUNNER);
     const c = box("fx-mini-card", new DOMRect(hand[0] - 10, hand[1] - 14, 20, 28));
@@ -3355,7 +3300,6 @@ export function peerReview(card: DOMRect) {
       done(animate(eye, { scale: [0, 1.4, 1, 0], opacity: [0, 1, 1, 0] }, { duration: 0.8 }), eye);
     });
   });
-  after(900, () => credits(center(card), 7, "corp"));
   after(1200, () => {
     const server = pointOf(document.querySelector(".server")) ?? [innerWidth / 2, innerHeight * 0.25];
     const last = fan[3];
@@ -3375,9 +3319,7 @@ export function pennyshaver(r: DOMRect) {
   done(animate(coin, { opacity: [1, 1, 0] }, { duration: 0.55 }), coin);
   after(550, () => (ring([r.left + r.width / 2, r.top + r.height * 0.15], "gold", 40), buzz(20)));
   after(900, () => {
-    const at = center(r);
     animate(document.querySelector(".fx-slot") ?? slot, { scaleX: [1, 1.4, 1] }, { duration: 0.3 });
-    coins(at, spot("runner-credits", RUNNER), 4, "gold");
     buzz([10, 10, 10, 30]);
   });
 }
@@ -3493,10 +3435,8 @@ export function predictivePlanogram(card: DOMRect) {
 
 export function planogramResult(text: string) {
   if (reduced()) return;
-  const mid: Point = [innerWidth / 2, innerHeight * 0.45];
   const gain = /gain 3/i.test(text);
   const draw = /draw 3/i.test(text);
-  if (gain) credits(mid, 3, "corp");
   if (draw) flyCards(spot("corp-deck", [innerWidth * 0.3, 60]), spot("corp-hand", [innerWidth * 0.7, 60]), 3, "blue", gain ? 0.35 : 0);
 }
 
@@ -3628,7 +3568,6 @@ export function sacrificeZone(card: DOMRect) {
   if (reduced()) return;
   strokes(inset(card, 0, 0.5 - 0.5 * (card.width / card.height), 1, card.width / card.height), "scale", "M50 5 A45 45 0 1 1 49.9 5 M50 5 L77 85 L5 35 H95 L23 85 Z", 0.9);
   for (let i = 0; i < 12; i++) after(400 + i * 60, () => burst([card.left + card.width * (0.2 + Math.random() * 0.6), card.top + card.height * (0.3 + Math.random() * 0.4)], "red", 3, 20, { size: 4, gravity: -80 }));
-  after(1000, () => credits(center(card), 3, "corp"));
 }
 
 export function sangKancil(r: DOMRect) {
@@ -3693,7 +3632,6 @@ export function sellOut(card: DOMRect) {
   travel(c, from, mid, 0.5, { arc: 40 }).finished.then(() => {
     animate(c, { scale: [1, 0], rotate: [0, 180] }, { duration: 0.25 }).finished.then(() => c.remove(), () => c.remove());
     burst(mid, "gold", 18, 50, { size: 4, gravity: 20 });
-    coins(mid, spot("runner-credits", RUNNER), 4, "gold");
     buzz([20, 20, 40]);
     after(600, () => flyCards(spot("runner-deck", RUNNER), spot("runner-hand", RUNNER), 2));
   }, () => c.remove());
@@ -3739,7 +3677,6 @@ export function sideHustle(r: DOMRect) {
   }
   after(1200, () => {
     burst(center(r), "gold", 14, 40, { size: 4, gravity: 0 });
-    credits(center(r), 6, "runner");
   });
 }
 
@@ -3767,7 +3704,6 @@ export function smartware(r: DOMRect) {
     done(animate(coin, { y: [0, 30 + r.height * 0.3], opacity: [0, 1, 1, 0] }, { duration: 0.8, delay: i * 0.12, times: [0, 0.2, 0.8, 1], ease: "easeIn" }), coin);
     after(500 + i * 120, () => buzz(10));
   }
-  after(1000, () => credits(center(r), 1, "runner"));
 }
 
 export function spinDoctor(r: DOMRect) {
@@ -3909,7 +3845,6 @@ export function teleworkContract(r: DOMRect) {
   done(animate(screen, { opacity: [0, 1, 1, 0] }, { duration: 1.6, times: [0, 0.1, 0.85, 1] }), screen);
   after(700, () => {
     floater([r.left + r.width / 2, r.top], "9¢", "gold", 30, true);
-    credits(center(r), 3, "runner");
   });
 }
 
@@ -4029,9 +3964,6 @@ export function transferOfWealth(card: DOMRect) {
   runTo(hq, 0.6);
   after(650, () => {
     ring(hq, "cyan", 80);
-    const corp = spot("corp-credits", [40, 40]);
-    const runner = spot("runner-credits", RUNNER);
-    coins(corp, runner, 6, "gold");
     tagRunner(1, 0.5);
   });
 }
@@ -4265,7 +4197,7 @@ export function commercialBankers(r: DOMRect) {
   animate(vault, { rotate: [0, -180] }, { duration: 0.8, ease: "easeInOut" });
   animate(vault, { scaleX: [1, 1, 0.1] }, { duration: 1.1, times: [0, 0.7, 1] });
   done(animate(vault, { opacity: [0, 1, 1, 0] }, { duration: 1.2, times: [0, 0.1, 0.85, 1] }), vault);
-  after(1000, () => (credits(at, 3, "corp"), buzz([20, 20, 40])));
+  after(1000, () => buzz([20, 20, 40]));
 }
 
 export function cyberdex(r: DOMRect) {
@@ -4429,8 +4361,6 @@ export function femmeFatale(r: DOMRect) {
 export function hostileTakeover(card: DOMRect) {
   if (reduced()) return;
   const at = center(card);
-  const corp = spot("corp-credits", [40, 40]);
-  for (let i = 0; i < 7; i++) after(i * 70, () => coins([card.left + Math.random() * card.width, at[1]], corp, 1, "gold"));
   after(300, () => buzz([20, 20, 20, 20, 20]));
   badPub(at, 0.8);
 }
@@ -4525,7 +4455,6 @@ export function liberatedAccount(r: DOMRect) {
     const coin = box("fx-coin-flat", new DOMRect(r.left + r.width * 0.3, r.bottom - 10 - i * 7, r.width * 0.4, 8));
     done(animate(coin, { y: [-40, 0], opacity: [0, 1, 1, 0] }, { duration: 1.3, delay: 0.4 + i * 0.05, times: [0, 0.15, 0.8, 1], ease: "easeIn" }), coin);
   }
-  after(1200, () => credits(at, 4, "runner"));
 }
 
 export function mimic(r: DOMRect) {
@@ -4974,7 +4903,7 @@ export const INSTALL: Record<string, (r: DOMRect) => void> = {
   "Word on the Street": wordOnTheStreet,
 };
 
-export function useSignature(title: string | undefined, r: DOMRect | null, code?: string, el?: HTMLElement | null, owner?: string, strike?: DOMRect | null) {
+export function useSignature(title: string | undefined, r: DOMRect | null, code?: string, el?: HTMLElement | null, owner?: string, strike?: Element | null) {
   if (r) glEffect("use", plain(title), r, code, el, owner, strike);
 }
 

@@ -1,7 +1,7 @@
 import { cardImage } from "../engine";
 import { installSignature, orbitalStrike, scoreSignature, signature } from "./signatures";
 import type { Side } from "../engine";
-import { anchor, animate, points, scoreSegments, banner, burst, buzz, done, flash, floater, layer, mid, node, place, punch, rays, rectOf, reduced, ring, shake, tileEl, visible, type Point, type Tone } from "./core";
+import { anchor, animate, creditChange, points, scoreSegments, banner, burst, buzz, done, flash, floater, layer, mid, node, place, punch, rays, rectOf, reduced, ring, shake, tileEl, visible, type Point, type Tone } from "./core";
 
 export interface Info {
   cid: unknown;
@@ -170,6 +170,8 @@ function kindOf(m: Move, me: Side, lines: string[]): Kind {
   return "move";
 }
 
+export const pendingGain: Partial<Record<string, number>> = {};
+
 export const accessStage: { current: { title: string; at: Point; end: () => void } | null } = { current: null };
 
 let cinema: Promise<void> = Promise.resolve();
@@ -314,10 +316,17 @@ async function showcase(m: Move, kind: Kind, me: Side) {
     buzz([40, 40, 40, 40, 120]);
     banner(kind === "steal" ? "Stolen" : "Scored", info?.title ?? "", kind === "steal" ? "red" : "gold", { size: "xl", hold: hold + 0.2 });
   }
-  animate(glow, { opacity: [0, 1, 0.75] }, { duration: hold + 0.3, times: [0, 0.4, 1], ease: "easeOut", keep: true });
-  await new Promise((r) => setTimeout(r, 140));
-  await animate(ghost, { scaleX: [1, 1.04], scaleY: [1, 1.04] }, { duration: hold, ease: "easeInOut" }).finished;
+  if (!special) {
+    animate(glow, { opacity: [0, 1, 0.75] }, { duration: hold + 0.3, times: [0, 0.4, 1], ease: "easeOut", keep: true });
+    await new Promise((r) => setTimeout(r, 140));
+    await animate(ghost, { scaleX: [1, 1.04], scaleY: [1, 1.04] }, { duration: hold, ease: "easeInOut" }).finished;
+  }
   animate(glow, { opacity: [0.75, 0] }, { duration: 0.3, ease: "easeOut", keep: true });
+  const owner = info?.owner;
+  if (kind === "play" && owner && pendingGain[owner]) {
+    creditChange(owner, pendingGain[owner]!, center);
+    delete pendingGain[owner];
+  }
   if (kind === "score" || kind === "steal") {
     points(center, scoreSegments(m.to?.holder ?? "corp", info?.points ?? 1), kind === "steal" ? "red" : "gold");
     burst(center, tone, 36, big.width * 0.9, { size: 6, gravity: 0, shards: true });

@@ -2,11 +2,11 @@ import { useLayoutEffect, useRef } from "preact/hooks";
 import type { Side } from "../engine";
 import { currentIce } from "../game/actions";
 import { serverName } from "../game/text";
-import { type Plan, accessStage, collect, moveKinds, play, prepare } from "./cards";
+import { type Plan, accessStage, collect, moveKinds, pendingGain, play, prepare } from "./cards";
 import { setAim } from "./gl/aim";
 import { cleaver, fireSignature, leech, planogramResult, regolith, rezSignature, snare, transmission, useSignature, hasUseEffect } from "./signatures";
 import { cue, play as sound } from "../sound";
-import { type Point, type Tone, anchor, animate, banner, burst, buzz, haptics, coins, done, flash, floater, gate, glitch, layer, lunge, mid, node, place, pointOf, punch, rays, rectOf, reduced, ring, shake, slash, split, stamp, tileEl, vignette, visible, wrapEl, scoreSegment } from "./core";
+import { type Point, type Tone, anchor, animate, banner, burst, buzz, haptics, creditChange, done, flash, floater, gate, glitch, layer, lunge, mid, node, place, pointOf, punch, rays, rectOf, reduced, ring, shake, slash, split, stamp, tileEl, vignette, visible, wrapEl, scoreSegment } from "./core";
 
 export type IceKind = "sentry" | "gate" | "barrier" | "other";
 
@@ -624,7 +624,7 @@ function sounds(prev: Snap, now: Snap, view: any, me: Side, lines: string[], hea
   } else if (now.phase === "success" && prev.phase !== "success" && now.server) sound("breach");
 }
 
-function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown) => string, focus: Point | null, hits: Hit[]) {
+function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown) => string, focus: Point | null, hits: Hit[], showcased: Set<string> = new Set()) {
   if (reduced()) return;
   let busy = 0;
 
@@ -651,19 +651,14 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
   for (const s of SIDES) {
     const delta = now.credits[s] - prev.credits[s];
     if (!delta) continue;
-    const el = anchor(`${s}-credits`);
-    const at = pointOf(el);
-    if (!at) continue;
-    punch(el!.closest(".big") ?? el, delta > 0 ? 1.3 : 1.15);
-    if (delta > 0) {
-      const from: Point = focus ?? [at[0] + (Math.random() - 0.5) * 30, at[1] + 70];
-      coins(from, at, delta, "gold");
-      floater([at[0], el!.getBoundingClientRect().top - 14], `+${delta}`, "gold", 30, true);
-      setTimeout(() => burst(at, "gold", 10, 40, { size: 4, gravity: 0 }), 500);
-    } else {
-      if (focus) coins(at, focus, -delta, "gold");
-      floater([at[0], el!.getBoundingClientRect().bottom + 12], `−${-delta}`, "white", -30);
-    }
+    if (delta > 0 && showcased.has(s)) {
+      pendingGain[s] = (pendingGain[s] ?? 0) + delta;
+      setTimeout(() => {
+        const left = pendingGain[s];
+        delete pendingGain[s];
+        if (left) creditChange(s, left, null);
+      }, 5000);
+    } else creditChange(s, delta, focus);
   }
 
   if (now.clicks[me] < prev.clicks[me] && now.active === prev.active) {
@@ -801,7 +796,7 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
           setTimeout(() => {
             const el = tileEl(h.breaker.cid) as HTMLElement | null;
             const ice = tileEl(h.ice.cid);
-            if (el && ice) useSignature(h.breaker.title, rectOf(el), h.breaker.code, el, "runner", rectOf(ice));
+            if (el && ice) useSignature(h.breaker.title, rectOf(el), h.breaker.code, el, "runner", ice);
           }, delay * 1000);
         }
         t += 0.45;
@@ -1221,7 +1216,7 @@ export function useFx(view: any, me: Side, render: (m: unknown) => string, quiet
         const moved = new Set(p.moves.map((m) => String(m.cid)));
         flipSiblings(rects.current, moved);
         play(p, me, lines);
-        events(prev, now, view, me, render, focusPoint(p, prev, now), hits);
+        events(prev, now, view, me, render, focusPoint(p, prev, now), hits, new Set(moveKinds(p, me, lines).filter((k) => k.kind === "play" && k.owner).map((k) => k.owner!)));
       }
       sounds(prev, now, view, me, lines, heard.current ?? 0, p ? moveKinds(p, me, lines) : [], hits);
     }
