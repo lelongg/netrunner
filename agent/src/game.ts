@@ -3,12 +3,13 @@ import { type SavedGame, Session, listSaves, loadSave } from "../../mobile/src/s
 import { type Script, type SharedGame, scriptOf, scriptOfShared } from "../../mobile/src/game/replay";
 import { makeHost } from "../../mobile/src/game/runner";
 import { type Store, browserStore } from "../../mobile/src/store";
-import { basicCommands, cardCommands, cardRef, currentIce, findCard, promptOf, runCommands } from "../../mobile/src/game/actions";
+import { basicCommands, promptOf, runCommands } from "../../mobile/src/game/actions";
+import { candidateActions } from "../../mobile/src/game/candidates";
+import { cardLine, gameLines, logLines } from "../../mobile/src/game/describe";
 import { type WireDeck, fromPrecon, importNrdb, toWire } from "../../mobile/src/decks";
 import { relayUrl, storeTicket } from "../../mobile/src/net/relay";
 import { FORMATS, GAME_FORMATS, type FormatKey, type GameFormat, analyze, dealtFormat, deckFormat } from "../../mobile/src/deckrules";
 
-const FACE_INDEX: Record<string, number> = { back: 0, brewery: 0, tank: 1, greenhouse: 2, tenure: 0, subsurface: 1, disposal: 2 };
 
 export interface Loaded {
   engine: EngineApi;
@@ -50,7 +51,6 @@ interface Action {
   check?: boolean;
 }
 
-const other = (s: Side): Side => (s === "corp" ? "runner" : "corp");
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const shuffle = <T>(xs: T[]) => {
   const a = [...xs];
@@ -60,14 +60,6 @@ const shuffle = <T>(xs: T[]) => {
   }
   return a;
 };
-const SERVER_NAMES: Record<string, string> = { hq: "HQ", rd: "R&D", archives: "Archives" };
-const serverName = (key: string) => SERVER_NAMES[key] ?? (key.startsWith("remote") ? `Server ${key.slice(6)}` : key);
-
-function remoteKeys(servers: Record<string, any>) {
-  return Object.keys(servers ?? {})
-    .filter((k) => k.startsWith("remote"))
-    .sort((a, b) => Number(a.slice(6)) - Number(b.slice(6)));
-}
 
 const runnerPassed = (view: any) => (view.encounters ?? view.run)?.["no-action"] === "runner";
 
@@ -408,192 +400,19 @@ export class Agent {
     return `${(globalThis as any).location.origin}${(globalThis as any).location.pathname}?join=${this.session!.lobby.code}`;
   }
 
-  private cardLine(c: any, viewer: Side): string {
-    if (!c) return "?";
-    const known = c.title && (c.side?.toLowerCase() === viewer || c.rezzed || c.seen || c.side === "Runner");
-    if (!known) return c.type === "ICE" || c.zone?.[2] === "ices" ? "unrezzed ice" : "facedown card";
-    const bits: string[] = [];
-    if (c.type) bits.push(c.type + (c.subtypes?.length ? ` (${c.subtypes.join(", ")})` : ""));
-    if (c.side === "Corp" && c.zone?.[0] === "servers" && !c.rezzed) bits.push("unrezzed");
-    const str = c["current-strength"] ?? c.strength;
-    if ((c.type === "ICE" || (c.subtypes ?? []).includes("Icebreaker")) && str != null) bits.push(`str ${str}`);
-    const adv = (c["advance-counter"] ?? 0) + (c["extra-advance-counter"] ?? 0);
-    if (adv) bits.push(`${adv} advancement`);
-    if (c.advancementcost && c.type === "Agenda") bits.push(`needs ${c["current-advancement-requirement"] ?? c.advancementcost}`);
-    for (const [k, v] of Object.entries<any>(c.counter ?? {})) if (v) bits.push(`${v} ${k} counters`);
-    if (c["rec-counter"]) bits.push(`${c["rec-counter"]} recurring credits`);
-    if (c.hosted?.length) bits.push(`hosting: ${c.hosted.map((h: any) => this.cardLine(h, viewer)).join(", ")}`);
-    return `${c.title}${bits.length ? ` [${bits.join(", ")}]` : ""}`;
-  }
-
   private gameLines(): [string, string][] {
     const s = this.session!;
     const side = s.lobby.mySide;
-    const opp = other(side);
-    const view = s.views[side];
-    const L: [string, string][] = [];
-    const name = (sd: Side) => view[sd]?.user?.username ?? sd;
-    if (view.winner) L.push(["over", `GAME OVER: ${view.winner} (${name(view.winner)}) wins${view.reason ? ` by ${view.reason}` : ""}.`]);
-    L.push(["turn", `Turn ${view.turn ?? 0} · active: ${view["active-player"]} · you are the ${side.toUpperCase()} (${name(side)}) vs ${name(opp)}`]);
-    const pts = (p: any) => `${p["agenda-point"] ?? 0}/${p["agenda-point-req"] ?? 7} points`;
-    const stats = (p: any, sd: Side) => {
-      const out = [`${p.credit ?? 0} credits`, `${p.click ?? 0} clicks`, pts(p), `${p["hand-count"] ?? (p.hand ?? []).length} cards in ${sd === "corp" ? "HQ" : "grip"}`, `${p["deck-count"] ?? 0} in ${sd === "corp" ? "R&D" : "stack"}`];
-      if (sd === "runner") {
-        if (p.memory) out.push(`MU ${p.memory.used ?? 0}/${p.memory.available ?? 0}`);
-        out.push(`${p.tag?.total ?? 0} tags`);
-        if (p.link) out.push(`link ${p.link}`);
-        if (p["brain-damage"]) out.push(`${p["brain-damage"]} core damage`);
-      } else {
-        const bp = (p["bad-publicity"]?.base ?? 0) + (p["bad-publicity"]?.additional ?? 0);
-        if (bp) out.push(`${bp} bad publicity`);
-      }
-      return out.join(" · ");
-    };
-    const area = (sd: Side, who: string, prefix: string) => {
-      const p = view[sd] ?? {};
-      const out: [string, string][] = [];
-      if (p.identity?.title) {
-        const i = p.identity.face ? FACE_INDEX[String(p.identity.face)] : undefined;
-        const face = i == null ? undefined : (this.db.byTitle.get(p.identity.title) as any)?.["face-texts"]?.[i];
-        out.push([`${prefix}.id`, face ? `${who} identity: ${p.identity.title}, flipped to ${face.title} (${face.text.replace(/\n/g, " ")})` : `${who} identity: ${p.identity.title}`]);
-      }
-      if (sd === "corp") {
-        for (const key of ["hq", "rd", "archives", ...remoteKeys(p.servers)]) {
-          const srv = p.servers?.[key];
-          if (!srv) continue;
-          const ices: any[] = srv.ices ?? [];
-          const content: any[] = srv.content ?? [];
-          if (!ices.length && !content.length && key.startsWith("remote")) continue;
-          const iceText = ices.length ? `ice (outermost first) ${[...ices].reverse().map((c) => this.cardLine(c, side)).join(" > ")}` : "no ice";
-          out.push([`${prefix}.${key}`, `${who} ${serverName(key)}: ${iceText}${content.length ? ` | in root: ${content.map((c) => this.cardLine(c, side)).join(", ")}` : ""}`]);
-        }
-      } else {
-        let any = false;
-        for (const k of ["program", "hardware", "resource", "facedown"]) {
-          const cards: any[] = p.rig?.[k] ?? [];
-          if (cards.length) any = true;
-          out.push([`${prefix}.${k}`, cards.length ? `${who} ${k}s: ${cards.map((c) => this.cardLine(c, side)).join(", ")}` : ""]);
-        }
-        if (!any) out.push([`${prefix}.rig`, `${who} rig: nothing installed`]);
-      }
-      const scored: any[] = p.scored ?? [];
-      out.push([`${prefix}.scored`, scored.length ? `${who} scored agendas: ${scored.map((c) => `${c.title} (${c["agendapoints"] ?? "?"} pts)`).join(", ")}` : ""]);
-      const discard: any[] = p.discard ?? [];
-      const total = Math.max(discard.length, Number(p["discard-count"] ?? 0));
-      const titles = discard.filter((c) => c.title).map((c) => c.title);
-      const hidden = total - titles.length;
-      out.push([`${prefix}.discard`, total ? `${who} ${sd === "corp" ? "Archives discard pile" : "heap"}: ${[...titles, ...(hidden ? [`${hidden} facedown`] : [])].join(", ")}` : ""]);
-      const current: any[] = p.current ?? [];
-      out.push([`${prefix}.current`, current.length ? `${who} current: ${current.map((c) => c.title).join(", ")}` : ""]);
-      return out;
-    };
-    const me = view[side] ?? {};
-    L.push(["me", `You (${side}): ${stats(me, side)}`]);
-    const hand: any[] = me.hand ?? [];
-    L.push(["hand", `Your hand: ${hand.length ? hand.map((c) => `${c.title} [${c.type}${c.cost != null ? `, cost ${c.cost}` : ""}]`).join("; ") : "empty"}`]);
-    L.push(...area(side, "Your", "mine"));
-    L.push(["opp", `Opponent (${opp}): ${stats(view[opp] ?? {}, opp)}`]);
-    L.push(...area(opp, "Their", "theirs"));
-    if (view.run) {
-      const run = view.run;
-      L.push(["run", `RUN on ${serverName(run.server?.[0] ?? "")} · phase ${run.phase} · position ${run.position}`]);
-      const ice = currentIce(view);
-      if (ice) {
-        L.push(["run.ice", `Current ice: ${this.cardLine(ice, side)}`]);
-        if (ice.rezzed)
-          (ice.subroutines ?? []).forEach((sub: any, i: number) => {
-            const by = sub.broken && sub.breaker != null ? findCard(view, sub.breaker)?.title : undefined;
-            L.push([`run.sub${i}`, `  subroutine: ${this.render(sub.label)} — ${sub.broken ? `broken${by ? ` by ${by}` : ""}` : sub.fired ? "fired" : sub.resolve === false ? "will not fire" : "unbroken"}`]);
-          });
-      }
-    }
-    const prompt = promptOf(view, side);
-    if (prompt) L.push(["prompt", `PROMPT (${prompt["prompt-type"] ?? "other"}): ${this.render(prompt.msg)}${prompt.card?.title ? ` — from ${prompt.card.title}` : ""}`]);
-    if (s.actionError) L.push(["error", `LAST ACTION FAILED: ${s.actionError}`]);
-    return L.filter(([, t]) => t);
+    return gameLines(s.views[side], side, { render: this.render, db: this.db, actionError: s.actionError });
   }
 
   private logLines(): string[] {
-    const view = this.session!.views[this.session!.lobby.mySide];
-    return (view?.log ?? []).map((e: any) => (e.user === "__system__" ? this.render(e.text) : `${e.user?.username ?? "?"} says: ${this.render(e.text)}`));
+    return logLines(this.session!.views[this.session!.lobby.mySide], this.render);
   }
 
   private buildActions(): Omit<Action, "id">[] {
     const s = this.session!;
-    const side = s.lobby.mySide;
-    const view = s.views[side];
-    if (!view || view.winner) return [];
-    const out: Omit<Action, "id">[] = [];
-    const seen = new Set<string>();
-    const push = (a: Omit<Action, "id">) => {
-      const key = JSON.stringify([a.command, a.args, a.say]);
-      if (seen.has(key)) return;
-      seen.add(key);
-      out.push(a);
-    };
-    const prompt = promptOf(view, side);
-    const ptype = prompt?.["prompt-type"];
-    const me = view[side] ?? {};
-    if (prompt && ptype !== "run" && ptype !== "waiting") {
-      const eid = prompt.eid;
-      const choices = prompt.choices;
-      if (choices && typeof choices === "object" && !Array.isArray(choices) && choices.number != null)
-        push({ label: `Choose a number`, command: "choice", args: { eid }, amount: { min: Number(choices.minimum ?? 0), max: Number(choices.number) } });
-      else if (ptype === "trace") push({ label: `Spend credits on the trace`, command: "choice", args: { eid }, amount: { min: 0, max: Number(choices ?? 0) } });
-      else if (choices === "credit") push({ label: `Choose an amount of credits`, command: "choice", args: { eid }, amount: { min: 0, max: Number(me.credit ?? 0) } });
-      else if (choices && typeof choices === "object" && !Array.isArray(choices) && choices["card-title"] !== undefined) push({ label: `Name a card`, command: "choice", args: { eid }, text: true });
-      else if (choices && typeof choices === "object" && !Array.isArray(choices) && choices.counter) {
-        const card = findCard(view, prompt.card?.cid);
-        push({ label: `Choose a number of ${choices.counter} counters`, command: "choice", args: { eid }, amount: { min: 0, max: Number(card?.counter?.[choices.counter] ?? 0) } });
-      } else if (Array.isArray(choices)) {
-        for (const cid of prompt.selectable ?? []) {
-          const card = findCard(view, cid);
-          if (card) push({ label: `Select ${this.cardLine(card, side)}${card.zone ? ` (${card.zone.join(" ")})` : ""}`, command: "select", args: { card: cardRef(card), eid } });
-        }
-        for (const c of choices) {
-          if (c.value === "Hide") continue;
-          const label = c.value && typeof c.value === "object" ? c.value.title ?? this.render(c.value) : this.render(c.value);
-          push({ label: ptype === "select" ? `${label} (finish selecting)` : `Choose: ${label}`, command: "choice", args: { eid, choice: { uuid: c.uuid } } });
-        }
-        if (ptype === "select" && !(prompt.selectable ?? []).length && choices.every((c: any) => c.value === "Hide")) push({ label: "Close the prompt (no valid target)", command: "say", say: "/close-prompt" });
-      }
-      return out;
-    }
-    const inRun = !!(view.run || view.encounters);
-    const base = inRun ? runCommands(view, side) : basicCommands(view, side);
-    for (const c of base) {
-      if (c.enabled === false || c.command === "toggle-auto-no-action") continue;
-      if (c.command === "generate-runnable-zones") {
-        const corp = view.corp ?? {};
-        for (const key of ["hq", "rd", "archives", ...remoteKeys(corp.servers)]) push({ label: `Run on ${serverName(key)}`, group: "Run on", short: serverName(key), command: "run", args: { server: serverName(key) } });
-        continue;
-      }
-      push({ label: this.render(c.label), command: c.command, args: c.args, check: !!c.check });
-    }
-    const cards: any[] = [];
-    const collect = (x: any) => {
-      if (!x || typeof x !== "object") return;
-      if (Array.isArray(x)) return x.forEach(collect);
-      if (x.cid && x.title) cards.push(x);
-      for (const k of ["hand", "servers", "ices", "content", "rig", "program", "hardware", "resource", "facedown", "hosted", "identity", "current", "scored", "play-area", "discard", "hq", "rd", "archives"]) if (k in x) collect(x[k]);
-      if (x.servers) for (const v of Object.values(x.servers)) collect(v);
-    };
-    collect(view[side]);
-    collect(view[other(side)]);
-    for (const card of cards) {
-      for (const c of cardCommands(card, view, side)) {
-        if (c.enabled === false || c.command === "select" || c.command === "choice") continue;
-        if (c.command === "generate-install-list") {
-          const servers = view.corp?.servers ?? {};
-          const remotes = remoteKeys(servers).map(serverName);
-          const targets = card.type === "ICE" || card.type === "Upgrade" ? ["HQ", "R&D", "Archives", ...remotes, "New remote"] : [...remotes, "New remote"];
-          for (const t of targets) push({ label: `Install ${card.title} in ${t}`, group: `Install ${card.title} in`, short: t, command: "play", args: { card: cardRef(card), server: t } });
-          continue;
-        }
-        push({ label: `${card.title}: ${this.render(c.label)}`, command: c.command, args: c.args, check: !!c.check });
-      }
-    }
-    return out;
+    return candidateActions(s.views[s.lobby.mySide], s.lobby.mySide, this.render);
   }
 
   private async legal(): Promise<Omit<Action, "id">[]> {
@@ -848,10 +667,10 @@ export class Agent {
       const out: string[] = [];
       if (side === "corp")
         for (const [key, srv] of Object.entries<any>(v.corp?.servers ?? {})) {
-          const cards = [...(srv.ices ?? []).map((c: any) => `ice ${this.cardLine(c, "corp")}`), ...(srv.content ?? []).map((c: any) => this.cardLine(c, "corp"))];
+          const cards = [...(srv.ices ?? []).map((c: any) => `ice ${cardLine(c, "corp")}`), ...(srv.content ?? []).map((c: any) => cardLine(c, "corp"))];
           if (cards.length) out.push(`  ${key}: ${cards.join("; ")}`);
         }
-      else for (const k of ["program", "hardware", "resource"]) for (const c of v.runner?.rig?.[k] ?? []) out.push(`  ${k}: ${this.cardLine(c, "runner")}`);
+      else for (const k of ["program", "hardware", "resource"]) for (const c of v.runner?.rig?.[k] ?? []) out.push(`  ${k}: ${cardLine(c, "runner")}`);
       const scored = (v[side]?.scored ?? []).map((c: any) => c.title).join(", ");
       if (scored) out.push(`  scored: ${scored}`);
       const hand = (v[side]?.hand ?? []).map((c: any) => c.title).join(", ");

@@ -1,5 +1,5 @@
 import type { CardDb, Deck, EngineApi, Side } from "./engine";
-import { HeuristicBot } from "./bot/heuristic.ts";
+import { type Bot, makeBot } from "./bot/index.ts";
 import { type WireDeck, engineDeck, fromPrecon, fromWire, latest, toWire } from "./decks";
 import { type GameFormat, analyze, dealtFormat, deckFormat, isGameFormat } from "./deckrules";
 import { type GameHost, type LocalEntry, type Op, type Probe, type ProbeResult, type Seat as ViewSeat, makeHost } from "./game/runner";
@@ -210,7 +210,7 @@ export class Session {
   private seed?: number[];
   private log: LocalEntry[] = [];
   private closed = false;
-  private bot?: HeuristicBot;
+  private bot?: Bot;
   private botTimer?: number;
   private transport?: Transport;
   private seat: Seat = 0;
@@ -475,7 +475,7 @@ export class Session {
     if (!this.booted) return;
     if (this.watching) return this.commit(["spectator"], () => this.emit());
     this.commit([this.lobby.mySide], () => {
-      if (this.autoplay && !this.bot) this.bot = new HeuristicBot(this.lobby.mySide, (title) => this.db.byTitle.get(title) as any);
+      if (this.autoplay && !this.bot) this.bot = makeBot(this.lobby.mySide, this.lobby.myDeck, (title) => this.db.byTitle.get(title) as any);
       this.settleEnd();
       this.emit();
       this.scheduleBot();
@@ -565,7 +565,7 @@ export class Session {
 
   private makeBot() {
     if (!this.lobby.vsBot) return;
-    this.bot = new HeuristicBot(other(this.lobby.mySide), (title) => this.db.byTitle.get(title) as any);
+    this.bot = makeBot(other(this.lobby.mySide), this.opponentDeck, (title) => this.db.byTitle.get(title) as any);
   }
 
   private scheduleBot() {
@@ -578,6 +578,7 @@ export class Session {
       if (this.pending) return;
       const move = bot.decide(this.views[bot.side]);
       if (!move) return;
+      bot.applied?.(move);
       if (move.say) this.say(move.say, bot.side);
       else if (this.online()) this.send(move.command, move.args ?? null);
       else this.perform({ side: bot.side, kind: "act", command: move.command, args: move.args ?? null });

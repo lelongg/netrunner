@@ -1,0 +1,194 @@
+import { cardRef } from "../../game/actions.ts";
+import type { Candidate } from "../../game/candidates.ts";
+import { byCommand, installedThisTurn } from "./observe.ts";
+import { fromCandidate, labelCost } from "./runs.ts";
+import { ICE_TYPES, type IceType, agendaProgress, coverage, estimateRun, gainOf, isEconomy, isIcebreaker, isTrap, iceTypes, playCostOf, rezCostOf, strengthOf, subtypes, tagged } from "./tactics.ts";
+import type { Observation, Plan, Proposal } from "./types.ts";
+
+export const playOf = (obs: Observation, card: any, server?: string): Candidate | undefined => byCommand(obs, "play", (c) => (c.args as any)?.card?.cid === card.cid && (server === undefined || (c.args as any)?.server === server))[0];
+export const cardAction = (obs: Observation, card: any, command: string, label?: RegExp): Candidate | undefined => byCommand(obs, command, (c) => (c.args as any)?.card?.cid === card.cid && (!label || label.test(c.label)))[0];
+export const proposal = (c: Candidate | undefined, score: number, why: string, kind: string, exact = true): Proposal | null => (c ? fromCandidate(c, score, why, kind, exact) : null);
+
+export function genericPlan(obs: Observation, current: Plan | null): Plan {
+  const keep = (kind: string, goal: string) => (current?.kind === kind ? current : { kind, goal, since: obs.turn });
+  if (obs.side === "corp") {
+    const scoring = obs.servers.some((s) => s.content.some((c) => c.type === "Agenda"));
+    if (scoring) return keep("score", "advance and score the installed agenda");
+    if (obs.credits < 5) return keep("economy", "rebuild credits before committing to a server");
+    return keep("build", "ice the centrals and prepare a scoring remote");
+  }
+  if (!obs.rig.some((c) => isIcebreaker(c)) || obs.credits < 5) return keep("setup", "build economy and the breaker suite");
+  return keep("pressure", "run the most valuable reachable server");
+}
+
+export function iceInstallCost(server: { ices: any[] }) {
+  return server.ices.length;
+}
+
+export function corpProposals(obs: Observation): Proposal[] {
+  const out: Proposal[] = [];
+  const push = (p: Proposal | null) => p && out.push(p);
+  const installed = obs.servers.flatMap((s) => s.content);
+  for (const card of installed) {
+    push(proposal(cardAction(obs, card, "score"), 100, `score ${card.title}`, "score"));
+  }
+  for (const server of obs.servers.filter((s) => s.remote)) {
+    for (const card of server.content) {
+      if (card.type !== "Agenda" || obs.credits < 1) continue;
+      const { have, need } = agendaProgress(card);
+      const finish = have + obs.clicks >= need && obs.credits >= need - have;
+      const score = finish ? 90 : server.ices.length ? 60 + have * 5 : 30;
+      push(proposal(cardAction(obs, card, "advance"), score, finish ? `advance ${card.title}: it scores this turn` : `advance ${card.title} (${have}/${need})`, "advance"));
+    }
+  }
+  const empty = obs.servers.filter((s) => s.remote && s.ices.length > 0 && !s.content.length);
+  const agendas = obs.hand.filter((c) => c.type === "Agenda");
+  if (agendas.length && empty.length) {
+    const agenda = [...agendas].sort((a, b) => agendaProgress(a).need - agendaProgress(b).need)[0];
+    const target = [...empty].sort((a, b) => b.ices.length - a.ices.length)[0];
+    push(proposal(playOf(obs, agenda, target.label), obs.credits >= 2 ? 70 : 40, `install ${agenda.title} behind ${target.ices.length} ice in ${target.label}`, "install-agenda"));
+  }
+  for (const card of obs.hand) {
+    if (card.type !== "Operation") continue;
+    const gain = gainOf(obs.info(card).text);
+    const cost = playCostOf(card);
+    if (gain > cost && cost <= obs.credits) push(proposal(playOf(obs, card), obs.credits < 8 ? 65 + (gain - cost) : 45, `play ${card.title}: +${gain - cost} net`, "economy"));
+  }
+  const openRemotes = obs.servers.filter((s) => s.remote && !s.content.length);
+  for (const card of obs.hand) {
+    if (card.type !== "Asset" || !isEconomy(obs.info(card).text) || isTrap(obs.info(card).text)) continue;
+    const target = (!agendas.length ? openRemotes.find((s) => s.ices.length > 0)?.label : undefined) ?? openRemotes.find((s) => !s.ices.length)?.label ?? (obs.servers.filter((s) => s.remote).length < 3 ? "New remote" : undefined);
+    if (target) push(proposal(playOf(obs, card, target), obs.credits < 6 ? 55 : 35, `install ${card.title} in ${target}`, "install-economy"));
+  }
+  for (const server of obs.servers.filter((s) => s.remote)) {
+    for (const card of server.content) {
+      if (card.rezzed || card.type !== "Asset") continue;
+      const text = obs.info(card).text;
+      if (isTrap(text) || !isEconomy(text) || rezCostOf(card) > obs.credits) continue;
+      push(proposal(cardAction(obs, card, "rez"), 58, `rez ${card.title}`, "rez-economy"));
+    }
+  }
+  const ice = obs.hand.filter((c) => c.type === "ICE").sort((a, b) => strengthOf(b) - strengthOf(a));
+  if (ice.length) {
+    const hq = obs.servers.find((s) => s.key === "hq")!;
+    const rd = obs.servers.find((s) => s.key === "rd")!;
+    const targets: { server: { label: string; ices: any[] }; score: number; why: string }[] = [];
+    if (!hq.ices.length) targets.push({ server: hq, score: 50, why: "HQ is open" });
+    if (!rd.ices.length) targets.push({ server: rd, score: 50, why: "R&D is open" });
+    if (agendas.length && !empty.length) targets.push({ server: { label: "New remote", ices: [] }, score: 52, why: "an agenda in hand needs a protected remote" });
+    for (const s of obs.servers.filter((x) => x.remote && x.content.length && x.ices.length < 2)) targets.push({ server: s, score: 45, why: `${s.label} holds something worth protecting` });
+    if (obs.credits >= 6) {
+      for (const s of [rd, hq].sort((a, b) => a.ices.length - b.ices.length)) if (s.ices.length < 3) targets.push({ server: s, score: 40 - s.ices.length * 3, why: `deepen ${s.label}` });
+    }
+    for (const t of targets) {
+      const card = ice.find((c) => rezCostOf(c) <= obs.credits + 3) ?? ice[0];
+      if (iceInstallCost(t.server) > obs.credits) continue;
+      push(proposal(playOf(obs, card, t.server.label), t.score - (obs.credits < rezCostOf(card) ? 8 : 0), `install ${card.title} on ${t.server.label}: ${t.why}`, "install-ice"));
+    }
+  }
+  if (agendas.length && obs.hand.length > 5) push(proposal(playOf(obs, agendas[0], "New remote"), 25, `install ${agendas[0].title} naked to avoid discarding it`, "install-agenda"));
+  const trap = obs.hand.find((c) => c.type === "Asset" && isTrap(obs.info(c).text));
+  if (trap && openRemotes.length < 2 && obs.credits >= 3) push(proposal(playOf(obs, trap, "New remote"), 38, `install ${trap.title} as a bait`, "install-trap"));
+  if (tagged(obs.view) && obs.credits >= 4) push(proposal(byCommand(obs, "trash-resource")[0], 45, "trash a resource while the Runner is tagged", "trash-resource"));
+  const wantCredits = obs.hand.some((c) => c.type === "Operation" && gainOf(obs.info(c).text) > playCostOf(c) && playCostOf(c) > obs.credits);
+  const deckLeft = Number(obs.me["deck-count"] ?? 0);
+  if (obs.hand.length < 4 && deckLeft > 8) push(proposal(byCommand(obs, "draw")[0], 35, "draw: the hand is thin", "draw"));
+  push(proposal(byCommand(obs, "credit")[0], 30 + (wantCredits ? 10 : 0) + (obs.credits < 3 ? 4 : 0), wantCredits ? "take a credit towards an economy operation in hand" : "take a credit", "credit"));
+  if (deckLeft > 8) push(proposal(byCommand(obs, "draw")[0], 28, "draw a card", "draw"));
+  return out;
+}
+
+export function serverValue(obs: Observation, server: Observation["servers"][number]): number {
+  if (server.key === "rd") return 3;
+  if (server.key === "hq") return 2 + Number(obs.opp["hand-count"] ?? 0) / 5;
+  if (server.key === "archives") return (obs.opp.discard ?? []).some((c: any) => !c.seen && !c.title) ? 1.5 : 0;
+  if (!server.content.length) return 0;
+  const adv = Math.max(0, ...server.content.map((c: any) => agendaProgress(c).have));
+  const unknown = server.content.some((c: any) => (!c.title || c.type === "Agenda") && (agendaProgress(c).have > 0 || !obs.memory.duds.has(c.cid)));
+  return unknown ? 5 + adv * 3 : server.content.some((c: any) => c.rezzed) ? 2.5 : 0.5;
+}
+
+export function runProposals(obs: Observation, limit = 2): Proposal[] {
+  const out: Proposal[] = [];
+  if (obs.memory.runsThisTurn >= limit || obs.hand.length < 2) return out;
+  for (const server of obs.servers) {
+    const value = serverValue(obs, server);
+    if (value <= 0) continue;
+    const est = estimateRun(obs, server);
+    if (est.blocked || est.credits > obs.credits) continue;
+    if (est.damage >= obs.hand.length) continue;
+    const adv = Math.max(0, ...server.content.map((c: any) => agendaProgress(c).have));
+    if (adv > 1 && obs.hand.length < 1 + adv) continue;
+    const run = byCommand(obs, "run", (c) => (c.args as any)?.server === server.label)[0];
+    if (!run) continue;
+    const score = 40 + (value - est.credits * 0.3) * 4;
+    out.push(fromCandidate(run, score, `run ${server.label}: value ${value.toFixed(1)}, ${est.exact ? "costs" : "about"} ${est.credits}`, "run", est.exact));
+  }
+  return out;
+}
+
+export function runnerProposals(obs: Observation): Proposal[] {
+  const out: Proposal[] = [];
+  const push = (p: Proposal | null) => p && out.push(p);
+  if ((obs.me.tag?.base ?? 0) > 0 && obs.credits >= 2) push(proposal(byCommand(obs, "remove-tag")[0], 70, "remove a tag", "remove-tag"));
+  for (const card of obs.hand) {
+    const info = obs.info(card);
+    const cost = playCostOf(card);
+    if (card.type === "Event") {
+      const gain = gainOf(info.text);
+      if (gain > cost && cost <= obs.credits) push(proposal(playOf(obs, card), obs.credits < 8 ? 65 + (gain - cost) : 45, `play ${card.title}: +${gain - cost} net`, "economy"));
+    } else if (card.type === "Resource" && isEconomy(info.text) && obs.credits >= cost + 1) push(proposal(playOf(obs, card), 55, `install ${card.title} for economy`, "install-economy"));
+  }
+  const covered = coverage(obs);
+  const seenIce = new Set<IceType>();
+  for (const s of obs.servers) for (const ice of s.ices) if (ice.rezzed) iceTypes(ice).forEach((t) => seenIce.add(t));
+  for (const card of obs.hand) {
+    if (!isIcebreaker(card) || playCostOf(card) > obs.credits) continue;
+    const subs = subtypes(card);
+    const ai = subs.includes("AI");
+    const adds = ai ? ICE_TYPES.filter((t) => !covered.has(t)) : (["Fracter", "Decoder", "Killer"] as const).flatMap((b, i) => (subs.includes(b) && !covered.has(ICE_TYPES[i]) ? [ICE_TYPES[i]] : []));
+    if (!adds.length) continue;
+    const urgent = adds.some((t) => seenIce.has(t));
+    push(proposal(playOf(obs, card), urgent ? 62 : 48, `install ${card.title}: covers ${adds.join(", ")}${urgent ? " (ice seen)" : ""}`, "install-breaker"));
+  }
+  out.push(...runProposals(obs, obs.credits >= 8 ? 3 : 2));
+  for (const card of obs.rig) {
+    for (const c of byCommand(obs, "ability", (x) => (x.args as any)?.card?.cid === card.cid && /\[click\]/i.test(x.label))) {
+      const take = c.label.match(/take (\d+)\s*\[credit/i);
+      const place = c.label.match(/place (\d+)\s*\[credit/i);
+      if (take) push(proposal(c, 56, `${card.title}: take ${take[1]} credits`, "click-economy"));
+      else if (place && Number(card.counter?.credit ?? 0) < 3) push(proposal(c, 22, `${card.title}: place ${place[1]} credits for later`, "click-economy"));
+    }
+  }
+  for (const card of obs.hand) {
+    if (card.type === "Event" || isIcebreaker(card) || obs.credits < playCostOf(card) + 2) continue;
+    push(proposal(playOf(obs, card), 30 + (card.type === "Hardware" ? 5 : 0), `install ${card.title}`, "install"));
+  }
+  for (const card of obs.hand) {
+    if (card.type !== "Event" || subtypes(card).includes("Run") || gainOf(obs.info(card).text) || obs.credits < playCostOf(card) + 2) continue;
+    push(proposal(playOf(obs, card), 29, `play ${card.title}`, "play"));
+  }
+  const wantCredits = obs.hand.some((c) => gainOf(obs.info(c).text) > playCostOf(c) && playCostOf(c) > obs.credits);
+  if (obs.hand.length <= 2 && (obs.me["deck-count"] ?? 0) > 0) push(proposal(byCommand(obs, "draw")[0], 36, "draw: the hand is nearly empty", "draw"));
+  else if (obs.hand.length < 4 && obs.credits >= 4 && (obs.me["deck-count"] ?? 0) > 0) push(proposal(byCommand(obs, "draw")[0], 33, "draw: the hand is thin", "draw"));
+  push(proposal(byCommand(obs, "credit")[0], 30 + (wantCredits ? 10 : 0) + (obs.credits < 3 ? 4 : 0), wantCredits ? "take a credit towards an economy card in hand" : "take a credit", "credit"));
+  push(proposal(byCommand(obs, "draw")[0], 28, "draw a card", "draw"));
+  return out;
+}
+
+export function corpFreeProposals(obs: Observation): Proposal[] {
+  const out: Proposal[] = [];
+  for (const card of obs.servers.flatMap((s) => s.content)) out.push(...[proposal(cardAction(obs, card, "score"), 100, `score ${card.title}`, "score")].filter((p): p is Proposal => !!p));
+  for (const server of obs.servers.filter((s) => s.remote)) {
+    for (const card of server.content) {
+      if (card.rezzed || card.type !== "Asset") continue;
+      const text = obs.info(card).text;
+      if (isTrap(text) || !isEconomy(text) || rezCostOf(card) > obs.credits) continue;
+      const c = cardAction(obs, card, "rez");
+      if (c) out.push(fromCandidate(c, 58, `rez ${card.title} before ending the turn`, "rez-economy"));
+    }
+  }
+  return out;
+}
+
+export { cardRef, installedThisTurn, labelCost };
