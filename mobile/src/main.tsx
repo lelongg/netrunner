@@ -612,7 +612,10 @@ setMood("menu");
 startEngineWorker();
 render(
   new URLSearchParams(location.search).has("fxgl") ? (
-    <FxGlLab />
+    <>
+      <FxGlLab />
+      <UpdateBanner />
+    </>
   ) : new URLSearchParams(location.search).has("animations") ? (
     <>
       <FxLab />
