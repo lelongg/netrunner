@@ -85,9 +85,29 @@ const CODES: Record<string, string> = {
   "Beta Build": "36019",
   Scrounge: "35004",
   Chromatophores: "35030",
+  Pennyshaver: "30014",
+  Mayfly: "30032",
+  Lethe: "36051",
+  Idiosyncresis: "35061",
+  Stowaway: "36024",
+  "Malapert Data Vault": "30066",
+  "Vulture Fund": "36063",
+  Synchrocyclotron: "36027",
+  "Scatter Field": "35042",
+  Cultivate: "36043",
+  VRcation: "30021",
+  Cookbook: "30009",
+  "Nico Campaign": "30037",
+  "Mercia B4LL4RD": "35045",
+  Lionsmane: "36041",
+  Empiricist: "35052",
+  "Mitra Aman": "35056",
+  Hantu: "35008",
+  "Magistrate Revontulet": "36048",
+  Vicsek: "36042",
 };
 
-const ICE = new Set(["Ping", "Flyswatter", "Event Horizon", "Pharos", "Sleipnir", "Tocsin", "Semak-samun", "Bumi 1.0", "Biawak", "Funhouse", "Bran 1.0", "Doomscroll", "Whitespace", "Syailendra", "Flywheel", "Kessleroid"]);
+const ICE = new Set(["Ping", "Flyswatter", "Event Horizon", "Pharos", "Sleipnir", "Tocsin", "Semak-samun", "Bumi 1.0", "Biawak", "Funhouse", "Bran 1.0", "Doomscroll", "Whitespace", "Syailendra", "Flywheel", "Kessleroid", "Lethe", "Scatter Field", "Lionsmane", "Empiricist", "Vicsek"]);
 const KINDS: Kind[] = ["play", "install", "rez", "use"];
 const KIND_LABEL: Record<Kind, string> = { play: "Play", install: "Install", rez: "Rez", use: "Effect" };
 const SPEEDS = [1, 0.5, 0.25];

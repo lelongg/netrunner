@@ -945,4 +945,5 @@ export const warm = () => stage();
 export * from "./more";
 export * from "./third";
 export * from "./fourth";
+export * from "./fifth";
 import { glowSprite, strikeFx } from "./more";

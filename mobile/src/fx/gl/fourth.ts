@@ -550,7 +550,7 @@ export async function chromatophoresEffect(rect: DOMRect, code: string, ready?: 
 
 export async function whitespace(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, card, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const core = at(0.3, 0.7);
+  const core = at(0.36, 0.76);
   const wave = new ShockwaveFilter({ center: { x: 0, y: 0 }, amplitude: unit * 0.02, wavelength: unit * 0.35, speed: unit * 0.9, brightness: 1, radius: unit * 0.7, time: 0 });
   card.filters = [wave];
   const shards = new Emitter(fx);
@@ -576,7 +576,7 @@ export async function whitespace(rect: DOMRect, code: string, ready?: Ready, boa
 
 export async function whitespaceFire(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, card, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const core = at(0.3, 0.7);
+  const core = at(0.36, 0.76);
   const shards = new Emitter(fx);
   const wave = new ShockwaveFilter({ center: { x: 0, y: 0 }, amplitude: unit * 0.05, wavelength: unit * 0.4, speed: unit * 1.8, brightness: 1.05, radius: unit * 0.9, time: 0 });
   card.filters = [wave];
@@ -784,7 +784,7 @@ export async function kessleroidFire(rect: DOMRect, code: string, ready?: Ready,
   await done();
 }
 
-export const whitespacePose = pose(WHITE, [0.3, 0.7]);
+export const whitespacePose = pose(WHITE, [0.36, 0.76]);
 export const syailendraPose = pose(0x9be8ff, [0.24, 0.62]);
 export const flywheelPose = pose(0xff7ac8, [0.42, 0.78]);
 export const kessleroidPose = pose(RED, [0.55, 0.74]);
