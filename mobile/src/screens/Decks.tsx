@@ -14,6 +14,7 @@ import { Cta, Picker, Ticker, ask, tell } from "../ui";
 import { motionOff, settings } from "../settings";
 import { DeckBrowser } from "./DeckBrowser";
 import { uiSound } from "../uisound";
+import { Swipe } from "../swipe";
 
 const SIDE_NAME: Record<Side, "Corp" | "Runner"> = { corp: "Corp", runner: "Runner" };
 
@@ -148,25 +149,27 @@ export function Decks({ db, matchups, onClose, initialSide, initialDeck }: { db:
             <span>Import</span>
           </button>
         </div>
-        {mine.length === 0 && <p class="hint decks-empty">No {SIDE_NAME[side]} deck yet. Start from an identity, a precon or a NetrunnerDB list.</p>}
-        <ul class="deck-library">
-          {mine.map((w) => (
-            <DeckRow
-              key={w.id}
-              db={db}
-              stored={w}
-              onOpen={() => setEditing(w)}
-              star={{
-                on: defaultId === w.id,
-                onToggle: () => {
-                  const next = defaultId === w.id ? undefined : w.id;
-                  setDefaultDeckId(side, next);
-                  setDefaultId(next);
-                },
-              }}
-            />
-          ))}
-        </ul>
+        <Swipe index={side === "corp" ? 0 : 1} count={2} onIndex={(i) => setSide(i === 0 ? "corp" : "runner")}>
+          {mine.length === 0 && <p class="hint decks-empty">No {SIDE_NAME[side]} deck yet. Start from an identity, a precon or a NetrunnerDB list.</p>}
+          <ul class="deck-library">
+            {mine.map((w) => (
+              <DeckRow
+                key={w.id}
+                db={db}
+                stored={w}
+                onOpen={() => setEditing(w)}
+                star={{
+                  on: defaultId === w.id,
+                  onToggle: () => {
+                    const next = defaultId === w.id ? undefined : w.id;
+                    setDefaultDeckId(side, next);
+                    setDefaultId(next);
+                  },
+                }}
+              />
+            ))}
+          </ul>
+        </Swipe>
       </div>
       {browsing && (
         <BrowseSheet
@@ -553,6 +556,7 @@ function DeckEditor({ db, initial, deck0, onClose, onOpen, readOnly }: { db?: Ca
   const [pinned, setPinned] = useState(() => !!initial.id && defaultDeckId(initial.side) === initial.id);
   const [cover, setCover] = useState(initial.cover);
   const [tab, setTab] = useState<Tab>(() => (initial.cards.length || readOnly ? "deck" : "cards"));
+  const tabList: Tab[] = readOnly ? ["deck", "stats"] : ["deck", "cards", "stats"];
   const [detail, setDetail] = useState<{ card: Card; list: Card[] } | null>(null);
   const open = (card: Card, list: Card[] = [card]) => setDetail({ card, list });
   const [menu, setMenu] = useState(false);
@@ -721,16 +725,18 @@ function DeckEditor({ db, initial, deck0, onClose, onOpen, readOnly }: { db?: Ca
         </section>
 
         <div class="tabs editor-tabs" role="tablist">
-          {((readOnly ? ["deck", "stats"] : ["deck", "cards", "stats"]) as Tab[]).map((t) => (
+          {tabList.map((t) => (
             <button role="tab" aria-selected={tab === t} class={tab === t ? "on" : ""} onClick={() => setTab(t)}>
               {t === "deck" ? `Deck · ${a.size}` : t === "cards" ? "Add cards" : "Stats"}
             </button>
           ))}
         </div>
 
-        {tab === "deck" && <DeckList deck={deck} format={format} onQty={readOnly ? undefined : setQty} onOpen={open} onBrowse={() => setTab("cards")} />}
-        {tab === "cards" && db && <CardBrowser db={db} deck={deck} format={format} qtyOf={qtyOf} onQty={setQty} onOpen={open} />}
-        {tab === "stats" && <DeckStats deck={deck} onOpen={open} />}
+        <Swipe index={tabList.indexOf(tab)} count={tabList.length} onIndex={(i) => setTab(tabList[i])}>
+          {tab === "deck" && <DeckList deck={deck} format={format} onQty={readOnly ? undefined : setQty} onOpen={open} onBrowse={() => setTab("cards")} />}
+          {tab === "cards" && db && <CardBrowser db={db} deck={deck} format={format} qtyOf={qtyOf} onQty={setQty} onOpen={open} />}
+          {tab === "stats" && <DeckStats deck={deck} onOpen={open} />}
+        </Swipe>
       </div>
       {detail && (
         <CardSheet

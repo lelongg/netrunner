@@ -6,6 +6,7 @@ import { Icon, type IconName } from "../icons";
 import { notifying, pushSupported, setNotify } from "../net/push";
 import { tell } from "../ui";
 import { play } from "../sound";
+import { Swipe } from "../swipe";
 
 function Toggle({ label, on, onChange }: { label: string; on: boolean; onChange: (on: boolean) => void }) {
   return (
@@ -111,7 +112,15 @@ export function MenuDrawer({ title, tabs, tab, onTab, onClose, children }: { tit
             </div>
           </header>
         )}
-        <div class="menu-body">{children}</div>
+        <div class="menu-body">
+          {tabs && tab && onTab ? (
+            <Swipe index={tabs.indexOf(tab)} count={tabs.length} onIndex={(i) => onTab(tabs[i])}>
+              {children}
+            </Swipe>
+          ) : (
+            children
+          )}
+        </div>
       </nav>
     </>
   );

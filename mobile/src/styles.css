@@ -9002,3 +9002,15 @@ button.player-chip {
 .arena-play.seeking {
   --cyan: #22d3ee;
 }
+
+.swipe {
+  flex: 1 0 auto;
+  touch-action: pan-y;
+  display: flex;
+  flex-direction: column;
+  gap: inherit;
+}
+
+.screen.decks {
+  min-height: calc(100dvh - 23px - env(safe-area-inset-top));
+}
