@@ -15,7 +15,7 @@ export function corpRun(obs: Observation, reserve = 0): Proposal | null {
   const ice = obs.currentIce;
   const fire = byCommand(obs, "unbroken-subroutines")[0];
   if (fire) return fromCandidate(fire, 90, "fire the unbroken subroutines", "fire");
-  const rez = byCommand(obs, "rez")[0];
+  const rez = ice ? byCommand(obs, "rez", (c) => (c.args as any)?.card?.cid === ice.cid)[0] : undefined;
   if (rez && ice && !ice.rezzed) {
     const cost = rezCostOf(ice);
     const server = runServer(obs);

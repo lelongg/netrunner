@@ -79,6 +79,7 @@ export class HeuristicBot {
 
   applied(move: Move) {
     this.confirmed = true;
+    if (move.command === "toast") return;
     const key = `${move.command}:${move.say ?? ""}:${JSON.stringify(move.args ?? null)}`;
     if (key !== this.last.key || this.pending.signature !== this.last.signature) this.last = { key, signature: this.pending.key === key ? this.pending.signature : "", count: 0 };
   }
@@ -360,7 +361,7 @@ export class HeuristicBot {
     }
     if (view.runner?.tag?.["is-tagged"] || (view.runner?.tag?.total ?? 0) > 0) {
       const trash = basicCommands(view, "corp").find((c) => c.command === "trash-resource" && c.enabled !== false);
-      if (trash && me.credit >= 4) {
+      if (trash && me.credit >= 4 && (view.runner?.rig?.resource ?? []).length) {
         const move = this.allowed({ command: "trash-resource" });
         if (move) return move;
       }

@@ -88,7 +88,7 @@ export function corpProposals(obs: Observation): Proposal[] {
   if (agendas.length && obs.hand.length > 5) push(proposal(playOf(obs, agendas[0], "New remote"), 25, `install ${agendas[0].title} naked to avoid discarding it`, "install-agenda"));
   const trap = obs.hand.find((c) => c.type === "Asset" && isTrap(obs.info(c).text));
   if (trap && openRemotes.length < 2 && obs.credits >= 3) push(proposal(playOf(obs, trap, "New remote"), 38, `install ${trap.title} as a bait`, "install-trap"));
-  if (tagged(obs.view) && obs.credits >= 4) push(proposal(byCommand(obs, "trash-resource")[0], 45, "trash a resource while the Runner is tagged", "trash-resource"));
+  if (tagged(obs.view) && obs.credits >= 4 && (obs.view.runner?.rig?.resource ?? []).length) push(proposal(byCommand(obs, "trash-resource")[0], 45, "trash a resource while the Runner is tagged", "trash-resource"));
   const wantCredits = obs.hand.some((c) => c.type === "Operation" && gainOf(obs.info(c).text) > playCostOf(c) && playCostOf(c) > obs.credits);
   const deckLeft = Number(obs.me["deck-count"] ?? 0);
   if (obs.hand.length < 4 && deckLeft > 8) push(proposal(byCommand(obs, "draw")[0], 35, "draw: the hand is thin", "draw"));

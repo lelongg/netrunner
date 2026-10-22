@@ -182,7 +182,7 @@ function prompt(obs: Observation, plan: Plan): Proposal | null {
 
 function run(obs: Observation, plan: Plan): Proposal | null {
   const ice = obs.currentIce;
-  const rez = byCommand(obs, "rez")[0];
+  const rez = ice ? byCommand(obs, "rez", (c) => (c.args as any)?.card?.cid === ice.cid)[0] : undefined;
   if (rez && ice && !ice.rezzed) {
     const server = obs.servers.find((s) => s.key === obs.run?.server?.[0]);
     const cost = rezCostOf(ice);

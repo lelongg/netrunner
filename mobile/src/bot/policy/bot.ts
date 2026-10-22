@@ -105,6 +105,7 @@ export class PolicyBot {
 
   applied(move: Move) {
     this.confirmed = true;
+    if (move.command === "toast") return;
     const key = moveKey(move);
     if (key !== this.last.key || this.pending.signature !== this.last.signature) this.last = { key, signature: this.pending.key === key ? this.pending.signature : "", count: 0 };
   }
