@@ -2853,7 +2853,7 @@
   color: #ff6a5f;
 }
 
-.fx-layer > :not(.fx-border, .fx-finale, .fx-flash, .fx-glitch, .fx-showdown, .fx-shutdown, .fx-split, .fx-vignette, .fx-vr) {
+.fx-layer > :not(.fx-gl, .fx-border, .fx-finale, .fx-flash, .fx-glitch, .fx-showdown, .fx-shutdown, .fx-split, .fx-vignette, .fx-vr) {
   translate: calc(var(--tx, 0) * 16px) calc(var(--ty, 0) * 12px);
 }
 

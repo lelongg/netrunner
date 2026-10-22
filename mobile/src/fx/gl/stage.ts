@@ -1,17 +1,22 @@
 import "pixi.js/unsafe-eval";
 import { Application, Assets, Container, Filter, GlProgram, Graphics, Sprite, Texture, type Ticker, defaultFilterVert } from "pixi.js";
 import { AdvancedBloomFilter } from "pixi-filters";
+import { layer as fxLayer } from "../core";
 
 let app: Application | null = null;
 let booting: Promise<Application> | null = null;
 
 export async function stage(): Promise<Application> {
-  if (app) return app;
+  if (app) {
+    const host = fxLayer();
+    if (app.canvas.parentElement !== host) host.prepend(app.canvas);
+    return app;
+  }
   booting ??= (async () => {
     const a = new Application();
     await a.init({ backgroundAlpha: 0, antialias: true, resolution: Math.min(devicePixelRatio || 1, 2), autoDensity: true, resizeTo: window, preference: "webgl" });
     a.canvas.className = "fx-gl";
-    document.body.appendChild(a.canvas);
+    fxLayer().prepend(a.canvas);
     if ((window as any).__fxManual) {
       a.ticker.stop();
       (window as any).__fxFrame = () => a.ticker.update(a.ticker.lastTime + 1000 / 30);

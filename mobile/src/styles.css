@@ -9016,10 +9016,8 @@ button.player-chip {
 }
 
 .fx-gl {
-  position: fixed;
   inset: 0;
-  z-index: 51;
-  pointer-events: none;
+  z-index: 4;
 }
 
 .fxgl-stage {

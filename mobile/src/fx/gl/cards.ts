@@ -18,6 +18,7 @@ export interface Board {
   hand?: DOMRect | null;
   others: DOMRect[];
   radius?: number;
+  track?: () => DOMRect | null;
 }
 
 const made = new Map<string, Texture>();
@@ -99,6 +100,15 @@ async function scene(rect: DOMRect, code: string, ready?: Ready, board?: Board) 
   const bx = card.scale.x;
   const by = card.scale.y;
   const fx = layer(root);
+  const mid = (r: DOMRect) => [r.left + r.width / 2, r.top + r.height / 2];
+  const [x0, y0] = mid(rect);
+  const follow = () => {
+    const r = board?.track?.();
+    if (!r || !r.width) return;
+    const [x, y] = mid(r);
+    root.position.set(x - x0, y - y0);
+  };
+  app.ticker.add(follow, undefined, 1);
   ready?.();
   return {
     app,
@@ -106,7 +116,10 @@ async function scene(rect: DOMRect, code: string, ready?: Ready, board?: Board) 
     card,
     fx,
     zoom: (f: number) => card.scale.set(bx * f, by * f),
-    done: () => root.destroy({ children: true }),
+    done: () => {
+      app.ticker.remove(follow);
+      root.destroy({ children: true });
+    },
     cx: rect.left + rect.width / 2,
     cy: rect.top + rect.height / 2,
     unit: Math.min(rect.width, rect.height),
@@ -296,7 +309,7 @@ export async function sureGamble(rect: DOMRect, code: string, ready?: Ready, boa
 
 export async function overclock(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, card, fx, zoom, done, unit } = await scene(rect, code, ready, board);
-  const eye: [number, number] = [rect.left + rect.width * 0.5, rect.top + rect.height * 0.2];
+  const eye: [number, number] = [rect.left + rect.width * 0.49, rect.top + rect.height * 0.25];
   const glitch = new GlitchFilter({ slices: 10, offset: 0, fillMode: 2, red: { x: 0, y: 0 }, blue: { x: 0, y: 0 } });
   card.filters = [glitch];
   const heat = shimmer(root, card, rect, unit * 0.03);
@@ -335,7 +348,7 @@ export async function ritual(rect: DOMRect, code: string, ready?: Ready, board?:
   const at = (x: number, y: number): [number, number] => [rect.left + rect.width * x, rect.top + rect.height * y];
   const rays = new GodrayFilter({ angle: -28, gain: 0.45, lacunarity: 2.6, parallel: true, time: 0, alpha: 0 });
   card.filters = [rays];
-  const holo = at(0.29, 0.5);
+  const holo = at(0.28, 0.4);
   const halo = new Sprite(glowTexture());
   halo.anchor.set(0.5);
   halo.blendMode = "add";
@@ -353,7 +366,7 @@ export async function ritual(rect: DOMRect, code: string, ready?: Ready, board?:
     halo.alpha = 0.55 * k * (0.75 + 0.25 * Math.sin(t * 23));
     if (Math.random() < 0.5 && t < 2) motes.add(sparkTexture(), rect.left + Math.random() * rect.width * 0.7, rect.top + Math.random() * rect.height * 0.5, { vx: 6 + Math.random() * 10, vy: -4 + Math.random() * 8, life: 1.2, tint: 0xfff1cf, scale: (0.1 + Math.random() * 0.12) * (unit / 180), alpha: 0.8 });
     if (Math.random() < 0.3 && t < 1.9) {
-      const [sx, sy] = at(0.43 + Math.random() * 0.06, 0.53);
+      const [sx, sy] = at(0.78 + Math.random() * 0.03, 0.29);
       steam.add(glowTexture(), sx, sy, { vx: (Math.random() - 0.5) * 6, vy: -18 - Math.random() * 10, life: 1.4, tint: 0xffffff, scale: (unit / 128) * 0.12, grow: 0.12, alpha: 0.35, blend: "normal" });
     }
     for (const s of steam.list) s.s.x += Math.sin(s.age * 3 + s.s.y * 0.05) * 0.25;
@@ -366,7 +379,7 @@ export async function ritual(rect: DOMRect, code: string, ready?: Ready, board?:
 
 export async function dzmzInstall(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, fx, done, unit } = await scene(rect, code, ready, board);
-  const c: [number, number] = [rect.left + rect.width * 0.74, rect.top + rect.height * 0.33];
+  const c: [number, number] = [rect.left + rect.width * 0.7, rect.top + rect.height * 0.3];
   const R = unit * 0.16;
   const atoms: [number, number, number][] = [[0, 0, 0], [1, 0, 0], [-0.5, 0.86, 0], [-0.5, -0.86, 0], [0, 0, 1], [0, 0, -1], [1.6, 0.8, 0.4], [-1.2, 1.6, -0.3]];
   const bonds = [[0, 1], [0, 2], [0, 3], [0, 4], [0, 5], [1, 6], [2, 7]];
@@ -406,7 +419,7 @@ export async function dzmzInstall(rect: DOMRect, code: string, ready?: Ready, bo
 
 export async function fermenter(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, card, fx, done, unit } = await scene(rect, code, ready, board);
-  const sphere: [number, number] = [rect.left + rect.width * 0.5, rect.top + rect.height * 0.25];
+  const sphere: [number, number] = [rect.left + rect.width * 0.48, rect.top + rect.height * 0.3];
   const heat = shimmer(root, card, rect, unit * 0.03);
   const glow = new Sprite(glowTexture());
   glow.anchor.set(0.5);
@@ -438,7 +451,7 @@ export async function fermenter(rect: DOMRect, code: string, ready?: Ready, boar
 export async function carmen(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, fx, done, unit } = await scene(rect, code, ready, board);
   const at = (x: number, y: number): [number, number] => [rect.left + rect.width * x, rect.top + rect.height * y];
-  const her = at(0.5, 0.3);
+  const her = at(0.67, 0.16);
   const ribbons = new Graphics();
   ribbons.blendMode = "add";
   fx.addChild(ribbons);
@@ -453,8 +466,8 @@ export async function carmen(rect: DOMRect, code: string, ready?: Ready, board?:
       for (let i = 0; i <= 28; i++) {
         const u = i / 28;
         const a = phase + u * Math.PI * 1.6 + t * (1.8 + r * 0.3);
-        const rad = unit * (0.12 + u * 0.32);
-        pts.push([her[0] + Math.cos(a) * rad, her[1] + u * unit * 0.45 + Math.sin(a) * rad * 0.35]);
+        const rad = unit * (0.08 + u * 0.16);
+        pts.push([her[0] + Math.cos(a) * rad, her[1] + u * unit * 0.5 + Math.sin(a) * rad * 0.35]);
       }
       for (const [w, a] of [
         [unit * 0.05, 0.18],
@@ -475,7 +488,7 @@ export async function carmen(rect: DOMRect, code: string, ready?: Ready, board?:
 export async function predictivePlanogram(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, fx, done, unit } = await scene(rect, code, ready, board);
   const at = (x: number, y: number): [number, number] => [rect.left + rect.width * x, rect.top + rect.height * y];
-  const prey = at(0.6, 0.16);
+  const prey = at(0.58, 0.19);
   const grid = new Graphics();
   grid.blendMode = "add";
   const reticle = new Graphics();
@@ -657,7 +670,7 @@ export async function pingRez(rect: DOMRect, code: string, ready?: Ready, board?
 export async function creativeCommission(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, card, fx, done, unit } = await scene(rect, code, ready, board);
   const at = (x: number, y: number): [number, number] => [rect.left + rect.width * x, rect.top + rect.height * y];
-  const [dx, dy] = at(0.31, 0.31);
+  const [dx, dy] = at(0.25, 0.3);
   const R = rect.width * 0.27;
   const [sx, sy] = at(0.49, 0.27);
   const SYM = 6;
@@ -806,7 +819,11 @@ export async function jailbreak(rect: DOMRect, code: string, ready?: Ready, boar
 }
 
 export async function pinholeThreading(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, fx, done, cx, cy, unit } = await scene(rect, code, ready, board);
+  const { app, fx, done, unit } = await scene(rect, code, ready, board);
+  const [hx, hy] = [rect.left + rect.width * 0.38, rect.top + rect.height * 0.27];
+  const x0 = rect.left - unit * 0.6;
+  const len = rect.width + unit * 1.2;
+  const uh = (hx - x0) / len;
   const thread = new Graphics();
   fx.addChild(thread);
   const hole = new Sprite(glowTexture());
@@ -815,7 +832,7 @@ export async function pinholeThreading(rect: DOMRect, code: string, ready?: Read
   hole.tint = CYAN;
   fx.addChild(hole);
   const sparks = new Emitter(fx);
-  const path = (u: number): [number, number] => [rect.left - unit * 0.6 + (rect.width + unit * 1.2) * u, cy + Math.sin(u * Math.PI * 3) * rect.height * 0.28 * Math.sqrt(Math.max(0, 1 - Math.abs(u - 0.5) * 2))];
+  const path = (u: number): [number, number] => [x0 + len * u, hy + Math.sin((u - uh) * Math.PI * 3) * rect.height * 0.2 * Math.sqrt(Math.max(0, 1 - Math.abs(u - 0.5) * 2))];
   await run(app, (t, dt) => {
     const k = ease.inOut(span(t, 0.15, 1.1));
     thread.clear();
@@ -836,8 +853,8 @@ export async function pinholeThreading(rect: DOMRect, code: string, ready?: Read
     const head = path(k);
     if (k > 0 && k < 1) sparks.add(sparkTexture(), head[0], head[1], { life: 0.35, tint: CYAN, scale: 0.4 * (unit / 180), grow: -1 });
     sparks.step(dt);
-    hole.position.set(cx, cy);
-    const pk = Math.max(0, 1 - Math.abs(k - 0.5) * 8);
+    hole.position.set(hx, hy);
+    const pk = Math.max(0, 1 - Math.abs(k - uh) * 8);
     hole.scale.set((0.3 + pk * 1.4) * (unit / 180));
     hole.alpha = (0.4 + pk * 0.6) * (1 - span(t, 1.2, 1.5));
     return t < 1.75;
@@ -849,7 +866,7 @@ export async function mutualFavor(rect: DOMRect, code: string, ready?: Ready, bo
   const { app, root, card, fx, done, cx, cy, unit } = await scene(rect, code, ready, board);
   const bx = card.scale.x;
   const by = card.scale.y;
-  const focus: [number, number] = [rect.left + rect.width * 0.56, rect.top + rect.height * 0.42];
+  const focus: [number, number] = [rect.left + rect.width * 0.55, rect.top + rect.height * 0.34];
   const frame = new Graphics().roundRect(rect.left, rect.top, rect.width, rect.height, 10).fill(0xffffff);
   const shot = new Container();
   root.addChildAt(shot, 0);
@@ -857,7 +874,7 @@ export async function mutualFavor(rect: DOMRect, code: string, ready?: Ready, bo
   card.filters = [blur];
   const sharp = new Sprite(card.texture);
   sharp.anchor.set(0.5);
-  sharp.filters = [focusFilter([0.56, 0.42], 0.12, 0.3, rect.width / rect.height)];
+  sharp.filters = [focusFilter([0.55, 0.34], 0.12, 0.3, rect.width / rect.height)];
   shot.addChild(card, sharp);
   shot.mask = frame;
   root.addChild(frame);
@@ -992,7 +1009,7 @@ export async function echelon(rect: DOMRect, code: string, ready?: Ready, board?
     [0.87, 0.23],
     [0.85, 0.38],
   ].map(([x, y], i) => ({ p: at(x, y), on: 0.15 + i * 0.13, lit: false }));
-  const [ex, ey] = at(0.3, 0.21);
+  const [ex, ey] = at(0.27, 0.22);
   const twist = new TwistFilter({ radius: rect.width * 0.22, angle: 0, offset: { x: 0, y: 0 }, padding: unit * 0.2 });
   card.filters = [twist];
   const eye = new Sprite(glowTexture());
