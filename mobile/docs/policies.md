@@ -153,7 +153,35 @@ Measured with `scripts/policy-eval.mjs` on the `test` split (seeds never used wh
 the policies), 30 games per line, beginner decks unless stated. Policies at version 0.1.0.
 Intervals are 95% binomial.
 
-_Results table pending: the test-split runs are in progress._
+| Corp | Runner | Decks | Corp wins | Runner wins | Unfinished | Avg turns | Game ends |
+|---|---|---|---|---|---|---|---|
+| heuristic | heuristic | beginner | 19 (0.63 ±0.17) | 11 (0.37 ±0.17) | 0 | 14.3 | 28 agenda, 2 decked |
+| **policy** | heuristic | beginner | 23 (0.77 ±0.15) | 7 (0.23 ±0.15) | 0 | 14.0 | 25 agenda, 5 flatline |
+| heuristic | **policy** | beginner | 13 (0.43 ±0.18) | 17 (0.57 ±0.18) | 0 | 13.4 | 26 agenda, 2 decked, 2 flatline |
+| **policy** | **policy** | beginner | 25 (0.83 ±0.13) | 5 (0.17 ±0.13) | 0 | 11.9 | 22 agenda, 8 flatline |
+| heuristic | heuristic | intermediate | 23 (0.77 ±0.15) | 7 (0.23 ±0.15) | 0 | 15.0 | 30 agenda |
+| **policy** | **policy** | intermediate | 24 (0.80 ±0.14) | 6 (0.20 ±0.14) | 0 | 15.3 | 29 agenda, 1 flatline |
+
+Reading the table against the heuristic reference on the beginner decks:
+
+- The Runner policy wins 17/30 against the heuristic Corp where the heuristic Runner wins
+  11/30: a gain of about 0.20 in win rate, larger than the interval.
+- The Corp policy wins 23/30 against the heuristic Runner where the heuristic Corp wins
+  19/30: a gain of about 0.13, within the interval, so not established yet.
+- Policy against policy, the Corp dominates (25/30) and games are shorter; the Runner policy
+  is the weaker of the two, and it loses 8 games to net damage (flatline) against a Corp
+  that rezzes Karunā, Diviner and Tithe and advances Urtica Cipher.
+
+Across the 180 games: no engine error, no blocked game, no unfinished game, no unhandled
+prompt. The Runner policy had 8 refused moves in total (all the same case: paying a trash
+cost from credits hosted on Overclock after the run event has been spent; the fallback pays
+from the credit pool). Decision time averages 0.5 ms (maximum 22 ms) on the development
+engine build.
+
+Situations flagged on the test split, for the next loop: `idle-turn` (Runner clicking for
+credits with 10 or more credits: 25 in the heuristic-Corp games), `plan-churn` (the plan
+switching three times in a turn, mostly `contest`/`setup` as the grip size changes), and
+the final boards of every loss.
 
 Known limits:
 
@@ -166,5 +194,8 @@ Known limits:
 - Break costs are parsed from card text: breakers with unusual wording are estimated.
 - Only the System Gateway starter decks have a policy. Other decks use the generic policy,
   whose quality is close to the heuristic bot.
-- The heuristic bot can loop on an unaffordable rez; since `applied()` the loop is caught
-  and the move banned, but it remains the weaker Corp against a rich Runner.
+- Two loops found during this work were in moves the engine refuses silently (trashing a
+  resource when the Runner has none, rezzing an asset instead of the approached ice). The
+  stall guard only catches a refused move when the same move is applied twice in the same
+  state; a refusal that changes the state (a toast, a log line) can escape it, so unfinished
+  games in the summary deserve a replay.
