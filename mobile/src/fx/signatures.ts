@@ -4910,7 +4910,7 @@ export function useSignature(title: string | undefined, r: DOMRect | null, code?
 export const hasUseEffect = (title: string | undefined) => hasGl("use", plain(title));
 
 export function installSignature(title: string | undefined, r: DOMRect, code?: string, el?: HTMLElement | null, owner?: string) {
-  return glEffect("install", plain(title), r, code, el, owner) ?? void INSTALL[plain(title)]?.(r);
+  return glEffect("install", plain(title), r, code, el, owner) ?? (INSTALL[plain(title)] ? (INSTALL[plain(title)](r), new Promise<void>((res) => setTimeout(res, 900))) : undefined);
 }
 
 export const PLAY: Record<string, (r: DOMRect) => void> = {

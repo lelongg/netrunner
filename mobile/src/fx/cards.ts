@@ -288,21 +288,21 @@ async function showcase(m: Move, kind: Kind, me: Side) {
   const sy = src.height / big.height;
   const tone: Tone = kind === "score" ? "gold" : kind === "steal" ? "red" : sideTone(info?.owner);
   const mine = (m.to?.holder ?? m.from?.holder ?? info?.owner) === me;
-  const hold = kind === "play" ? (mine ? 0.35 : 0.9) : 0.9;
+  const hold = kind === "play" || kind === "install" ? (mine ? 0.35 : 0.9) : 0.9;
   ghost.style.transformOrigin = "0 0";
   const glow = node(`fx-glow tone-${tone}`, ghost);
   glow.style.opacity = "0";
   const arrive = animate(ghost, { x: [src.left - big.left, 0], y: [src.top - big.top, 0], scaleX: [sx, 1], scaleY: [sy, 1], rotate: [mine ? 0 : -12, 0], opacity: [0.4, 1] }, { type: "spring", visualDuration: 0.42, bounce: 0.28 });
   await Promise.race([arrive.finished, new Promise((r) => setTimeout(r, 300))]);
   const center = mid(big);
-  const special = kind === "play" ? signature(info?.title, big, info?.code, ghost, info?.owner) : undefined;
+  const special = kind === "play" ? signature(info?.title, big, info?.code, ghost, info?.owner) : kind === "install" ? (installSignature(info?.title, big, info?.code, ghost, info?.owner) ?? undefined) : undefined;
   if (kind === "score" || kind === "steal") setTimeout(() => scoreSignature(info?.title, big), 1400);
   if (kind === "score" && info?.title === "Orbital Superiority") {
     const runner = rectOf(anchor("runner-panel"));
     setTimeout(() => orbitalStrike(visible(runner) ? mid(runner) : [innerWidth / 2, 90]), 1750);
   }
   if (special) await special;
-  else if (kind === "play") {
+  else if (kind === "play" || kind === "install") {
     ring(center, tone, big.width * 1.6);
     burst(center, tone, 14, big.width * 0.8, { size: 5, gravity: 0 });
     buzz(25);
@@ -346,7 +346,7 @@ async function showcase(m: Move, kind: Kind, me: Side) {
   const anim = animate(ghost, { x: [0, dest.left - big.left], y: [0, dest.top - big.top], scaleX: [1.04, dest.width / big.width], scaleY: [1.04, dest.height / big.height], rotate: [0, 6, 0], opacity: [1, 1, kind === "play" && !destEl ? 0 : 1] }, { duration: 0.42, ease: [0.5, 0, 0.3, 1] });
   await anim.finished;
   ghost.remove();
-  if (kind === "play") {
+  if (kind === "play" || kind === "install") {
     show(destEl);
     if (visible(rectOf(destEl))) punch(destEl, 1.1);
   } else land(destEl, info, true);
@@ -363,7 +363,7 @@ export function play(plan: Plan, me: Side, lines: string[] = []) {
   for (const m of plan.moves) {
     const kind = kindOf(m, me, lines);
     const info = m.to ?? m.from;
-    if (kind === "play" || kind === "score" || kind === "steal") {
+    if (kind === "play" || kind === "score" || kind === "steal" || (kind === "install" && head(m.to?.zone) === "rig" && info?.owner === "runner" && info.code && !info.facedown)) {
       queue(() => showcase(m, kind, me));
       continue;
     }
