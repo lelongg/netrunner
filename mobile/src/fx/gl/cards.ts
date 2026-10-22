@@ -768,57 +768,97 @@ export async function pinholeThreading(rect: DOMRect, code: string, ready?: Read
   done();
 }
 
-export async function mutualFavor(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, fx, done, cx, cy } = await scene(rect, code, ready);
-  const fan = new Container();
-  root.addChild(fan);
-  const n = 9;
-  const pick = 6;
-  const cards = Array.from({ length: n }, () => {
-    const s = new Sprite(backTexture("runner"));
-    s.anchor.set(0.5, 1);
-    s.width = rect.width * 0.34;
-    s.height = rect.height * 0.34;
-    fan.addChild(s);
-    return s;
-  });
-  const halo = new Sprite(glowTexture());
-  halo.anchor.set(0.5);
-  halo.blendMode = "add";
-  halo.tint = GOLD;
-  halo.alpha = 0;
-  fx.addChild(halo);
+export async function mutualFavor(rect: DOMRect, code: string, ready?: Ready) {
+  const { app, root, card, fx, zoom, done, unit } = await scene(rect, code, ready);
+  const at = (x: number, y: number): [number, number] => [rect.left + rect.width * x, rect.top + rect.height * y];
+  const him = at(0.42, 0.3);
+  const her = at(0.72, 0.3);
+  const box = at(0.55, 0.44);
+  const dim = new Graphics().roundRect(rect.left, rect.top, rect.width, rect.height, 10).fill({ color: 0x05060a, alpha: 0.5 });
+  dim.alpha = 0;
+  const spot = new Sprite(glowTexture());
+  spot.anchor.set(0.5);
+  spot.blendMode = "add";
+  spot.tint = 0xffc27a;
+  spot.alpha = 0;
+  root.addChild(dim, spot, fx);
+  const glow = new GlowFilter({ color: GOLD, distance: 16, outerStrength: 0, quality: 0.3 });
+  card.filters = [glow];
+  const ribbons = new Graphics();
+  ribbons.blendMode = "add";
+  fx.addChild(ribbons);
+  const frame = new Graphics();
+  fx.addChild(frame);
+  const bond = new Graphics();
+  bond.blendMode = "add";
+  fx.addChild(bond);
   const sparks = new Emitter(fx);
-  root.addChild(fx);
-  const hand = board?.hand ? pt(board.hand) : ([cx, innerHeight + 80] as [number, number]);
+  const path = (from: [number, number], u: number, phase: number): [number, number] => {
+    const x = from[0] + (box[0] - from[0]) * u;
+    const y = from[1] + (box[1] - from[1]) * u + Math.sin(u * Math.PI) * unit * 0.12;
+    const nx = -(box[1] - from[1]);
+    const ny = box[0] - from[0];
+    const len = Math.hypot(nx, ny) || 1;
+    const w = Math.sin(u * Math.PI * 3 + phase) * unit * 0.035 * Math.sin(u * Math.PI);
+    return [x + (nx / len) * w, y + (ny / len) * w];
+  };
+  let met = false;
   await run(app, (t, dt) => {
-    const k = ease.out(span(t, 0, 0.45)) * (1 - ease.inOut(span(t, 1.1, 1.5)));
-    let px = cx;
-    let py = cy;
-    cards.forEach((c, i) => {
-      const spread = (i - (n - 1) / 2) / ((n - 1) / 2);
-      c.rotation = spread * 0.75 * k;
-      const x = cx + spread * rect.width * 0.18 * k;
-      const y = cy + rect.height * 0.42 - (i === pick ? rect.height * 0.2 * span(t, 0.55, 0.85) : 0);
-      if (i === pick) {
-        const go = ease.inOut(span(t, 1.05, 1.55));
-        c.position.set(x + (hand[0] - x) * go, y + (hand[1] - y) * go);
-        c.tint = t > 0.55 ? 0xffe9a8 : WHITE;
-        c.alpha = 1 - span(t, 1.5, 1.6);
-        px = c.x;
-        py = c.y - c.height / 2;
-      } else {
-        c.position.set(x, y);
-        c.alpha = span(t, 0, 0.15) * (1 - span(t, 1.2, 1.45));
+    const light = span(t, 0, 0.3) * (1 - span(t, 1.5, 1.9));
+    dim.alpha = light;
+    spot.position.set(box[0], box[1]);
+    spot.scale.set((unit / 128) * (0.9 + 0.2 * span(t, 0.9, 1.2)));
+    spot.alpha = light * 0.3;
+    zoom(1 + 0.03 * ease.out(span(t, 0, 0.4)) - 0.03 * span(t, 1.6, 1.95));
+    ribbons.clear();
+    const k = ease.inOut(span(t, 0.15, 0.9));
+    const fade = 1 - span(t, 1.1, 1.5);
+    for (const [from, color, phase] of [
+      [him, CYAN, 0],
+      [her, 0xff5fd2, Math.PI],
+    ] as const) {
+      for (const [w, a] of [
+        [unit * 0.05, 0.22],
+        [unit * 0.02, 0.6],
+        [unit * 0.008, 1],
+      ] as const) {
+        const p0 = path(from, 0, phase);
+        ribbons.moveTo(p0[0], p0[1]);
+        for (let i = 1; i <= Math.ceil(24 * k); i++) {
+          const p = path(from, Math.min(k, i / 24), phase);
+          ribbons.lineTo(p[0], p[1]);
+        }
+        ribbons.stroke({ width: w, color: a === 1 ? WHITE : color, alpha: a * fade, cap: "round", join: "round" });
       }
-    });
-    const ck = span(t, 0.55, 0.85);
-    halo.position.set(px, py);
-    halo.scale.set(1.5 * ck);
-    halo.alpha = ck * (1 - span(t, 1.3, 1.6));
-    if (t > 0.6 && t < 1.55 && Math.random() < 0.6) sparks.add(sparkTexture(), px + (Math.random() - 0.5) * 50, py + (Math.random() - 0.5) * 50, { life: 0.5, tint: GOLD, scale: 0.4, grow: -0.6 });
+      if (k > 0 && k < 1) {
+        const h = path(from, k, phase);
+        sparks.add(sparkTexture(), h[0], h[1], { life: 0.35, tint: color, scale: 0.45 * (unit / 180), grow: -1 });
+      }
+    }
+    if (k >= 1 && !met) {
+      met = true;
+      burst(sparks, box[0], box[1], 16, GOLD, unit * 1.3, { life: 0.6, scale: 0.35 * (unit / 180) });
+      navigator.vibrate?.([15, 30, 15]);
+    }
+    const fk = span(t, 0.9, 1.6);
+    frame.clear();
+    if (fk > 0 && fk < 1) frame.roundRect(box[0] - unit * 0.17, box[1] - unit * 0.09, unit * 0.34, unit * 0.18, 6).stroke({ width: 2 + 3 * (1 - fk), color: GOLD, alpha: 1 - fk });
+    glow.outerStrength = 1.4 * Math.sin(Math.PI * span(t, 0.9, 1.7));
+    bond.clear();
+    const bk = span(t, 1, 1.85);
+    if (bk > 0 && bk < 1) {
+      const a = Math.sin(Math.PI * bk);
+      const mid: [number, number] = [(him[0] + her[0]) / 2, Math.min(him[1], her[1]) - unit * 0.22];
+      for (const [w, c, al] of [
+        [unit * 0.04, 0xffc27a, 0.3],
+        [unit * 0.012, WHITE, 0.9],
+      ] as const) {
+        bond.moveTo(him[0], him[1]).quadraticCurveTo(mid[0], mid[1], her[0], her[1]);
+        bond.stroke({ width: w, color: c, alpha: al * a, cap: "round" });
+      }
+    }
     sparks.step(dt);
-    return t < 1.7;
+    return t < 1.95 || sparks.list.length > 0;
   });
   done();
 }
