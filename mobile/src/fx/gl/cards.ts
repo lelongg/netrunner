@@ -1123,3 +1123,5 @@ export async function flyswatter(rect: DOMRect, code: string, ready?: Ready, boa
   });
   done();
 }
+
+export const warm = () => stage();

@@ -85,7 +85,7 @@ export function glEffect(kind: Kind, title: string | undefined, at: DOMRect, cod
 
 export function warmGl() {
   if (motionOff() || !glOk()) return;
-  const go = () => import("./stage").then((m) => m.stage()).catch(() => (ok = false));
+  const go = () => import("./cards").then((m) => m.warm()).catch(() => (ok = false));
   if ("requestIdleCallback" in window) requestIdleCallback(go, { timeout: 4000 });
   else setTimeout(go, 1500);
 }
