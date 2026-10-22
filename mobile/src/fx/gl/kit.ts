@@ -1,5 +1,5 @@
 import { ColorMatrixFilter, Container, DisplacementFilter, type Filter, Graphics, Sprite, Texture } from "pixi.js";
-import { Emitter, cardSprite, ease, layer, span, sparkTexture, stage } from "./stage";
+import { Emitter, cardSprite, ease, layer, run, span, sparkTexture, stage } from "./stage";
 
 export const GOLD = 0xf6c945;
 export const CYAN = 0x22d3ee;
@@ -19,6 +19,7 @@ export interface Board {
   radius?: number;
   track?: () => DOMRect | null;
   dim?: boolean;
+  strike?: DOMRect | null;
   advanced?: DOMRect[];
   gone?: DOMRect[];
   host?: DOMRect | null;
@@ -123,23 +124,46 @@ export async function scene(rect: DOMRect, code: string, ready?: Ready, board?: 
   const fx = layer(root);
   const mid = (r: DOMRect) => [r.left + r.width / 2, r.top + r.height / 2];
   const [x0, y0] = mid(rect);
+  const hit = board?.strike;
+  const [hx, hy] = hit ? mid(hit) : [x0, y0];
+  const grow = hit ? Math.min(3, Math.max(1, (Math.min(hit.width, hit.height) * 1.5) / Math.min(rect.width, rect.height))) : 1;
+  let reach = 0;
+  root.pivot.set(x0, y0);
   const follow = () => {
     const r = board?.track?.();
-    if (!r || !r.width) return;
-    const [x, y] = mid(r);
-    root.position.set(x - x0, y - y0);
+    const [x, y] = r && r.width ? mid(r) : [x0, y0];
+    const k = ease.inOut(reach);
+    const len = Math.hypot(x - hx, y - hy) || 1;
+    const gap = hit ? Math.min(rect.width, rect.height) * grow * 0.75 + Math.min(hit.width, hit.height) * 0.45 : 0;
+    const tx = hx + ((x - hx) / len) * gap;
+    const ty = hy + ((y - hy) / len) * gap;
+    root.position.set(x + (tx - x) * k, y + (ty - y) * k);
+    root.scale.set(1 + (grow - 1) * k);
   };
   app.ticker.add(follow, undefined, 1);
+  const world = layer(app.stage);
+  const glide = (to: number) => {
+    const from = reach;
+    return run(app, (t) => {
+      reach = from + (to - from) * span(t, 0, 0.28);
+      return t < 0.28;
+    });
+  };
   ready?.();
+  if (hit) await glide(1);
   return {
     app,
     root,
     card,
     fx,
+    world,
+    strike: hit ? ([hx, hy] as [number, number]) : null,
     zoom: (f: number) => card.scale.set(bx * f, by * f),
-    done: () => {
+    done: async () => {
+      if (hit) await glide(0);
       app.ticker.remove(follow);
       root.destroy({ children: true });
+      world.destroy({ children: true });
     },
     cx: rect.left + rect.width / 2,
     cy: rect.top + rect.height / 2,

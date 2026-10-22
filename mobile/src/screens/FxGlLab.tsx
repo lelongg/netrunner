@@ -67,7 +67,7 @@ export function FxGlLab() {
       const table = demo.kind === "play" ? PLAY : demo.kind === "install" ? INSTALL : demo.kind === "rez" ? REZ : {};
       table[demo.title]?.(rect);
       await new Promise((r) => setTimeout(r, 2400));
-    } else await glEffect(demo.kind, demo.title, rect, demo.code, img.current, "runner");
+    } else await glEffect(demo.kind, demo.title, rect, demo.code, img.current, "runner", aimed && demo.kind === "use" ? (dummy.current?.querySelector(".tile")?.getBoundingClientRect() ?? null) : null);
     setBusy(false);
   };
   return (
@@ -76,7 +76,7 @@ export function FxGlLab() {
         <h1>FX LAB · GL</h1>
       </header>
       <div class="fxgl-stage">
-        <img ref={img} data-cid="lab-self" class={`${ICE.has(demo.title) ? "ice" : ""} ${ICE.has(demo.title) && demo.kind === "install" ? "unrezzed" : ""}`} src={`https://card-images.netrunnerdb.com/v2/large/${demo.code}.jpg`} alt={demo.title} crossOrigin="anonymous" />
+        <img ref={img} data-cid="lab-self" class={`${ICE.has(demo.title) ? "ice" : ""} ${ICE.has(demo.title) && demo.kind === "install" ? "unrezzed" : ""} ${aimed && demo.kind === "use" && !ICE.has(demo.title) ? "mini" : ""}`} src={`https://card-images.netrunnerdb.com/v2/large/${demo.code}.jpg`} alt={demo.title} crossOrigin="anonymous" />
       </div>
       {aimed && (
         <div class="fxgl-aim" ref={dummy}>

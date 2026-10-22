@@ -4,7 +4,7 @@ import { currentIce } from "../game/actions";
 import { serverName } from "../game/text";
 import { type Plan, accessStage, collect, moveKinds, play, prepare } from "./cards";
 import { setAim } from "./gl/aim";
-import { cleaver, fireSignature, leech, planogramResult, regolith, rezSignature, snare, transmission, useSignature } from "./signatures";
+import { cleaver, fireSignature, leech, planogramResult, regolith, rezSignature, snare, transmission, useSignature, hasUseEffect } from "./signatures";
 import { cue, play as sound } from "../sound";
 import { type Point, type Tone, anchor, animate, banner, burst, buzz, haptics, coins, done, flash, floater, gate, glitch, layer, lunge, mid, node, place, pointOf, punch, rays, rectOf, reduced, ring, shake, slash, split, stamp, tileEl, vignette, visible, wrapEl, scoreSegment } from "./core";
 
@@ -795,6 +795,18 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
     if (h.kind === "break" && h.ice) {
       if (!pointOf(tileEl(h.ice.cid))) continue;
       const delay = t;
+      if (h.breaker && hasUseEffect(h.breaker.title) && tileEl(h.breaker.cid)) {
+        if (!used.has(h.breaker.cid)) {
+          used.add(h.breaker.cid);
+          setTimeout(() => {
+            const el = tileEl(h.breaker.cid) as HTMLElement | null;
+            const ice = tileEl(h.ice.cid);
+            if (el && ice) useSignature(h.breaker.title, rectOf(el), h.breaker.code, el, "runner", rectOf(ice));
+          }, delay * 1000);
+        }
+        t += 0.45;
+        continue;
+      }
       setTimeout(() => {
         const iceEl = tileEl(h.ice.cid);
         const target = pointOf(iceEl);
@@ -804,7 +816,6 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
         const live = () => pointOf(tileEl(h.ice.cid));
         lunge(breakerEl, live, {
           onHit: () => {
-            effect(h.breaker, 0.4, "runner");
             breakHit(style, live() ?? target, tileEl(h.ice.cid) ?? iceEl, h.power ?? 1);
             if (h.breaker?.title === "Cleaver") cleaver(live() ?? target, tileEl(h.ice.cid) ?? iceEl);
           },

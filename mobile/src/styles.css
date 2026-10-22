@@ -9042,19 +9042,24 @@ button.player-chip {
 }
 
 .fxgl-aim .playfield {
-  right: 12px;
-  top: 300px;
+  left: 20px;
+  top: 90px;
 }
 
-.fxgl-aim .tile,
 .fxgl-aim .fxgl-gone {
   width: 40px;
   height: 56px;
   border: 1px dashed var(--line-2);
 }
 
+.fxgl-aim .tile {
+  width: 96px;
+  height: 68px;
+  border: 1px dashed var(--cyan);
+}
+
 .fxgl-aim .fxgl-gone {
-  left: 12px;
+  left: 300px;
   top: 120px;
 }
 
@@ -9080,6 +9085,11 @@ button.player-chip {
   width: 80px;
   height: 30px;
   border: 1px dashed var(--line-2);
+}
+
+.fxgl-stage img.mini {
+  width: 60px;
+  margin: 260px 0 0 200px;
 }
 
 .fxgl-stage img.unrezzed {

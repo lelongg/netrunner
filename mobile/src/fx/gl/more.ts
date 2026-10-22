@@ -168,7 +168,7 @@ export function pose(color: number, glint: Pt) {
       return t < 1.3 || sparks.list.length > 0;
     });
     card.mask = null;
-    done();
+    await done();
   };
 }
 
@@ -217,7 +217,7 @@ export async function transferOfWealth(rect: DOMRect, code: string, ready?: Read
     }
     return t < 2.15 || trail.list.length > 0;
   });
-  done();
+  await done();
 }
 
 export async function measuredResponse(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
@@ -278,7 +278,7 @@ export async function measuredResponse(rect: DOMRect, code: string, ready?: Read
     return t < 1.9 || smoke.list.length > 0 || debris.list.length > 0;
   });
   card.position.copyFrom(base);
-  done();
+  await done();
 }
 
 export async function keyPerformanceIndicators(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
@@ -354,7 +354,7 @@ export async function keyPerformanceIndicators(rect: DOMRect, code: string, read
     sparks.step(dt);
     return t < (targets.length ? 2.3 : 2) || sparks.list.length > 0;
   });
-  done();
+  await done();
 }
 
 export async function seamlessLaunch(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
@@ -413,7 +413,7 @@ export async function seamlessLaunch(rect: DOMRect, code: string, ready?: Ready,
     motes.step(dt);
     return t < (targets.length ? 2.1 : 1.9) || motes.list.length > 0;
   });
-  done();
+  await done();
 }
 
 export async function hanseiReview(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
@@ -456,7 +456,7 @@ export async function hanseiReview(rect: DOMRect, code: string, ready?: Ready, b
     }
     return (t < 2.1 && fade > 0) || petals.list.length > 0;
   });
-  done();
+  await done();
 }
 
 export async function wildcatStrike(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
@@ -488,7 +488,7 @@ export async function wildcatStrike(rect: DOMRect, code: string, ready?: Ready, 
     return t < 2.1 || smoke.list.length > 0;
   });
   card.tint = WHITE;
-  done();
+  await done();
 }
 
 export async function dailyCasts(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
@@ -536,7 +536,7 @@ export async function dailyCasts(rect: DOMRect, code: string, ready?: Ready, boa
     chats.step(dt);
     return t < 2.1 || hearts.list.length > 0;
   });
-  done();
+  await done();
 }
 
 export async function teleworkContract(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
@@ -578,7 +578,7 @@ export async function teleworkContract(rect: DOMRect, code: string, ready?: Read
     return t < 2.1 || dust.list.length > 0;
   });
   card.position.copyFrom(base);
-  done();
+  await done();
 }
 
 export async function touchstone(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
@@ -617,7 +617,7 @@ export async function touchstone(rect: DOMRect, code: string, ready?: Ready, boa
     frames.step(dt);
     return t < 2 || motes.list.length > 0;
   });
-  done();
+  await done();
 }
 
 export async function humanoidResources(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
@@ -650,7 +650,7 @@ export async function humanoidResources(rect: DOMRect, code: string, ready?: Rea
     });
     return t < 2.1;
   });
-  done();
+  await done();
 }
 
 export async function nihiloAgent(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
@@ -696,7 +696,7 @@ export async function nihiloAgent(rect: DOMRect, code: string, ready?: Ready, bo
     sparks.step(dt);
     return t < 1.6 || shards.list.length > 0;
   });
-  done();
+  await done();
 }
 
 export async function botulusPose(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
@@ -735,7 +735,7 @@ export async function botulusPose(rect: DOMRect, code: string, ready?: Ready, bo
     spores.step(dt);
     return t < 1.75 || spores.list.length > 0;
   });
-  done();
+  await done();
 }
 
 export async function botulus(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
@@ -775,7 +775,7 @@ export async function botulus(rect: DOMRect, code: string, ready?: Ready, board?
     spores.step(dt);
     return t < 1.1 || spores.list.length > 0;
   });
-  done();
+  await done();
 }
 
 function sphereSpots(n: number) {
@@ -831,11 +831,12 @@ export async function unityPose(rect: DOMRect, code: string, ready?: Ready, boar
     sparks.step(dt);
     return t < 1.9 || sparks.list.length > 0;
   });
-  done();
+  await done();
 }
 
 export async function unity(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
+  const sc = await scene(rect, code, ready, board);
+  const { app, root, fx, done, unit, at } = sc;
   const c = at(0.6, 0.32);
   const R = unit * 0.2;
   const spots = sphereSpots(20);
@@ -846,6 +847,7 @@ export async function unity(rect: DOMRect, code: string, ready?: Ready, board?: 
   const core = glowSprite(fx, glowTexture(), WHITE);
   core.position.set(...c);
   root.addChild(fx);
+  const impact = strikeFx(sc, "cubes", ORANGE, at(0.6, 0.32));
   await run(app, (t) => {
     const out = Math.sin(Math.PI * span(t, 0, 0.8));
     spots.forEach(([x, y, z], i) => {
@@ -862,7 +864,8 @@ export async function unity(rect: DOMRect, code: string, ready?: Ready, board?: 
     core.scale.set((unit / 128) * (0.3 + 0.4 * t));
     return t < 1;
   });
-  done();
+  await impact;
+  await done();
 }
 
 export async function conduitPose(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
@@ -897,7 +900,7 @@ export async function conduitPose(rect: DOMRect, code: string, ready?: Ready, bo
     sparks.step(dt);
     return t < 1.5 || sparks.list.length > 0;
   });
-  done();
+  await done();
 }
 
 export async function conduit(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
@@ -922,7 +925,7 @@ export async function conduit(rect: DOMRect, code: string, ready?: Ready, board?
     drops.step(dt);
     return t < 1 || drops.list.length > 0;
   });
-  done();
+  await done();
 }
 
 export async function gourmandPose(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
@@ -963,7 +966,7 @@ export async function gourmandPose(rect: DOMRect, code: string, ready?: Ready, b
     eyes.scale.set((unit / 128) * 0.14);
     return t < 1.6;
   });
-  done();
+  await done();
 }
 
 export async function gourmand(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
@@ -1000,7 +1003,7 @@ export async function gourmand(rect: DOMRect, code: string, ready?: Ready, board
     return t < 0.9 || crumbs.list.length > 0;
   });
   card.position.copyFrom(base);
-  done();
+  await done();
 }
 
 export async function eventHorizon(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
@@ -1037,7 +1040,7 @@ export async function eventHorizon(rect: DOMRect, code: string, ready?: Ready, b
     fall.step(dt);
     return t < 2.1;
   });
-  done();
+  await done();
 }
 
 export async function eventHorizonFire(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
@@ -1073,7 +1076,7 @@ export async function eventHorizonFire(rect: DOMRect, code: string, ready?: Read
     return t < 1 || fall.list.length > 0;
   });
   card.tint = WHITE;
-  done();
+  await done();
 }
 
 export async function pharos(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
@@ -1106,7 +1109,7 @@ export async function pharos(rect: DOMRect, code: string, ready?: Ready, board?:
     for (const w of [0.05, 0.1, 0.16]) beam.poly([...lamp, lamp[0] + Math.cos(a - w) * len, lamp[1] + Math.sin(a - w) * len, lamp[0] + Math.cos(a + w) * len, lamp[1] + Math.sin(a + w) * len]).fill({ color: 0xfff1c0, alpha: 0.1 * on });
     return t < 2.2;
   });
-  done();
+  await done();
 }
 
 export async function pharosFire(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
@@ -1135,7 +1138,7 @@ export async function pharosFire(rect: DOMRect, code: string, ready?: Ready, boa
     beam.poly([...lamp, lamp[0] + Math.cos(a - 0.08) * len, lamp[1] + Math.sin(a - 0.08) * len, lamp[0] + Math.cos(a + 0.08) * len, lamp[1] + Math.sin(a + 0.08) * len]).fill({ color: 0xfff1c0, alpha: 0.18 * k });
     return t < 1;
   });
-  done();
+  await done();
 }
 
 export async function sleipnir(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
@@ -1170,7 +1173,7 @@ export async function sleipnir(rect: DOMRect, code: string, ready?: Ready, board
     trail.step(dt);
     return t < 1.8 || trail.list.length > 0;
   });
-  done();
+  await done();
 }
 
 export async function sleipnirFire(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
@@ -1195,7 +1198,7 @@ export async function sleipnirFire(rect: DOMRect, code: string, ready?: Ready, b
     });
     return t < 0.95;
   });
-  done();
+  await done();
 }
 
 export async function tocsin(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
@@ -1225,7 +1228,7 @@ export async function tocsin(rect: DOMRect, code: string, ready?: Ready, board?:
     wave.time = (t - 0.2) % 0.55;
     return t < 2;
   });
-  done();
+  await done();
 }
 
 export async function tocsinFire(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
@@ -1245,7 +1248,7 @@ export async function tocsinFire(rect: DOMRect, code: string, ready?: Ready, boa
     return t < 1.1;
   });
   card.tint = WHITE;
-  done();
+  await done();
 }
 
 export async function semakSamun(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
@@ -1275,7 +1278,7 @@ export async function semakSamun(rect: DOMRect, code: string, ready?: Ready, boa
     return t < 2.05;
   });
   card.tint = WHITE;
-  done();
+  await done();
 }
 
 export async function semakFire(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
@@ -1322,7 +1325,7 @@ export async function semakFire(rect: DOMRect, code: string, ready?: Ready, boar
     hits.step(dt);
     return t < (grip ? 1.2 : 1) || hits.list.length > 0;
   });
-  done();
+  await done();
 }
 
 export async function pingFire(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
@@ -1344,7 +1347,7 @@ export async function pingFire(rect: DOMRect, code: string, ready?: Ready, board
     core.scale.set((unit / 128) * (0.2 + 0.3 * t));
     return t < 0.95;
   });
-  done();
+  await done();
 }
 
 export async function flyswatterFire(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
@@ -1375,7 +1378,7 @@ export async function flyswatterFire(rect: DOMRect, code: string, ready?: Ready,
     sparks.step(dt);
     return t < 0.95 || sparks.list.length > 0;
   });
-  done();
+  await done();
 }
 
 export const echelonPose = pose(VIOLET, [0.85, 0.38]);
@@ -1389,3 +1392,60 @@ export const pharosPose = pose(0xfff1c0, [0.08, 0.77]);
 export const sleipnirPose = pose(0xb68bff, [0.45, 0.72]);
 export const tocsinPose = pose(0x7dffc4, [0.73, 0.74]);
 export const semakPose = pose(0xd6ff4a, [0.33, 0.7]);
+
+type Strike = { app: import("pixi.js").Application; root: import("pixi.js").Container; world: import("pixi.js").Container; strike: Pt | null; unit: number; at: (u: number, v: number) => Pt };
+
+export function strikeFx(sc: Strike, style: "ribbons" | "bolts" | "splash" | "cubes", color: number, from: Pt): Promise<void> {
+  const { app, root, world, strike, unit } = sc;
+  if (!strike) return Promise.resolve();
+  const g = new Graphics();
+  g.blendMode = "add";
+  world.addChild(g);
+  const bits = new Emitter(world);
+  const R = unit * 0.9;
+  let landed = false;
+  return run(app, (t, dt) => {
+    g.clear();
+    const src = root.toGlobal({ x: from[0], y: from[1] });
+    const k = span(t, 0.05, 0.45);
+    const fade = 1 - span(t, 0.7, 1.1);
+    if (style === "ribbons") {
+      for (let i = 0; i < 3; i++) {
+        const a0 = i * 2.1 + t * 3;
+        const sweep = Math.PI * 1.4 * ease.out(span(t, 0.05 + i * 0.08, 0.45 + i * 0.08));
+        if (sweep <= 0) continue;
+        for (const [w, al, c] of [
+          [unit * 0.06, 0.25, color],
+          [unit * 0.016, 0.9, WHITE],
+        ] as const) {
+          g.moveTo(strike[0] + Math.cos(a0) * R * 0.7, strike[1] + Math.sin(a0) * R * 0.3);
+          for (let s = 1; s <= 16; s++) {
+            const a = a0 + (sweep * s) / 16;
+            g.lineTo(strike[0] + Math.cos(a) * R * 0.7, strike[1] + Math.sin(a) * R * 0.3 + (s - 8) * unit * 0.01);
+          }
+          g.stroke({ width: w, color: c, alpha: al * fade, cap: "round", join: "round" });
+        }
+      }
+    } else if (style === "bolts") {
+      if (t < 0.7 && Math.floor(t * 20) % 2 === 0) for (let i = 0; i < 2; i++) lightning(g, src.x, src.y, strike[0] + rnd(-0.2, 0.2) * R, strike[1] + rnd(-0.2, 0.2) * R, unit * 0.4, color, unit * 0.012);
+    } else if (style === "splash") {
+      const w = ease.out(k);
+      if (k > 0 && k < 1) {
+        g.moveTo(strike[0] - R, strike[1] + R * 0.3);
+        g.quadraticCurveTo(strike[0] - R * 0.2, strike[1] - R * (0.9 * w), strike[0] + R * (w * 1.2 - 0.2), strike[1] + R * 0.2);
+        g.stroke({ width: unit * 0.05, color, alpha: 0.6 * (1 - k) });
+      }
+    } else if (style === "cubes" && t < 0.35 && Math.random() < 0.9) {
+      bits.add(cubeTexture(), src.x, src.y, { vx: (strike[0] - src.x) * 3.2 + rnd(-40, 40), vy: (strike[1] - src.y) * 3.2 + rnd(-40, 40), life: 0.3, spin: 6, tint: Math.random() < 0.5 ? 0xbfe9ff : 0xffd3a8, scale: (unit / 180) * 0.45 });
+    }
+    if (!landed && t > 0.4) {
+      landed = true;
+      burst(bits, strike[0], strike[1], 26, color, unit * 2, { life: 0.55, scale: 0.4, gravity: style === "splash" ? unit * 3 : 0 });
+      navigator.vibrate?.(20);
+    }
+    const r = span(t, 0.4, 0.9);
+    if (r > 0 && r < 1) g.circle(strike[0], strike[1], R * (0.3 + 0.9 * ease.out(r))).stroke({ width: unit * 0.02 * (1 - r) + 1, color, alpha: 1 - r });
+    bits.step(dt);
+    return t < 1.1 || bits.list.length > 0;
+  }).then(() => g.destroy());
+}

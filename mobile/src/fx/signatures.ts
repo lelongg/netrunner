@@ -1,5 +1,5 @@
 import { type Point, anchor, animate, burst, buzz, coins, done, flash, floater, node, pointOf, punch, rays, reduced, ring, shake, slash, vignette } from "./core";
-import { glEffect } from "./gl";
+import { glEffect, hasGl } from "./gl";
 
 const SVG = "http://www.w3.org/2000/svg";
 
@@ -4974,9 +4974,11 @@ export const INSTALL: Record<string, (r: DOMRect) => void> = {
   "Word on the Street": wordOnTheStreet,
 };
 
-export function useSignature(title: string | undefined, r: DOMRect | null, code?: string, el?: HTMLElement | null, owner?: string) {
-  if (r) glEffect("use", plain(title), r, code, el, owner);
+export function useSignature(title: string | undefined, r: DOMRect | null, code?: string, el?: HTMLElement | null, owner?: string, strike?: DOMRect | null) {
+  if (r) glEffect("use", plain(title), r, code, el, owner, strike);
 }
+
+export const hasUseEffect = (title: string | undefined) => hasGl("use", plain(title));
 
 export function installSignature(title: string | undefined, r: DOMRect, code?: string, el?: HTMLElement | null, owner?: string) {
   return glEffect("install", plain(title), r, code, el, owner) ?? void INSTALL[plain(title)]?.(r);

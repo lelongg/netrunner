@@ -97,7 +97,7 @@ const rect = (sel: string) => {
   return r && r.width > 0 ? r : null;
 };
 
-function boardFor(owner: string | undefined, self: Element | null | undefined): Board {
+function boardFor(owner: string | undefined, self: Element | null | undefined, strike?: DOMRect | null): Board {
   const others = [...document.querySelectorAll(".playfield .tile[data-cid]")].filter((el) => el !== self && !self?.contains(el)).map((el) => el.getBoundingClientRect()).filter((r) => r.width > 0 && r.bottom > 0 && r.top < innerHeight);
   const radius = self ? parseFloat(getComputedStyle(self).borderTopLeftRadius) || 0 : 0;
   const a = aim();
@@ -118,13 +118,18 @@ function boardFor(owner: string | undefined, self: Element | null | undefined): 
     grip: a.gripLost > 0 ? rect('[data-anchor="runner-hand"]') : null,
     access: rect(".fx-showdown .fx-showcase"),
     runner: rect('[data-anchor="runner-panel"]'),
+    strike,
   };
 }
 
-export function glEffect(kind: Kind, title: string | undefined, at: DOMRect, code: string | undefined, hide?: HTMLElement | null, owner?: string): Promise<void> | null {
+export function hasGl(kind: Kind, title: string | undefined) {
+  return !!title && !!FX[kind][title] && !motionOff() && glOk();
+}
+
+export function glEffect(kind: Kind, title: string | undefined, at: DOMRect, code: string | undefined, hide?: HTMLElement | null, owner?: string, strike?: DOMRect | null): Promise<void> | null {
   const name = title ? FX[kind][title] : undefined;
   if (!name || !code || motionOff() || !glOk()) return null;
-  const board = boardFor(owner, hide);
+  const board = boardFor(owner, hide, strike);
   let restore = () => {};
   const ready = () => {
     if (!hide) return;

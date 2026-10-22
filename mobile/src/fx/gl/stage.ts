@@ -72,6 +72,9 @@ export const sparkTexture = () =>
   });
 
 export function filterPoint(target: Container, x: number, y: number) {
+  const g = target.parent ? target.parent.toGlobal({ x, y }) : { x, y };
+  x = g.x;
+  y = g.y;
   const b = target.getBounds();
   const pad = Math.max(0, ...(target.filters ?? []).map((f) => f.padding));
   return { x: x - b.x + pad, y: y - b.y + pad };

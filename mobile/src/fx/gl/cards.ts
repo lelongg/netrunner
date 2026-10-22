@@ -80,7 +80,7 @@ export async function sureGamble(rect: DOMRect, code: string, ready?: Ready, boa
     for (const r of reels) r.strip.alpha = panel.alpha;
     return t < 2.4 || coins.list.length > 0 || sparks.list.length > 0;
   });
-  done();
+  await done();
 }
 
 export async function overclock(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
@@ -116,7 +116,7 @@ export async function overclock(rect: DOMRect, code: string, ready?: Ready, boar
     zoom(1 + 0.02 * beat * on);
     return t < 2.05;
   });
-  done();
+  await done();
 }
 
 export async function ritual(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
@@ -150,7 +150,7 @@ export async function ritual(rect: DOMRect, code: string, ready?: Ready, board?:
     steam.step(dt);
     return t < 2.3;
   });
-  done();
+  await done();
 }
 
 export async function dzmzInstall(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
@@ -190,7 +190,7 @@ export async function dzmzInstall(rect: DOMRect, code: string, ready?: Ready, bo
     motes.step(dt);
     return t < 2.15;
   });
-  done();
+  await done();
 }
 
 export async function fermenter(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
@@ -221,18 +221,19 @@ export async function fermenter(rect: DOMRect, code: string, ready?: Ready, boar
     bubbles.step(dt);
     return t < 2.05 || embers.list.length > 0;
   });
-  done();
+  await done();
 }
 
 export async function carmen(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, fx, done, unit } = await scene(rect, code, ready, board);
-  const at = (x: number, y: number): [number, number] => [rect.left + rect.width * x, rect.top + rect.height * y];
+  const sc = await scene(rect, code, ready, board);
+  const { app, root, fx, done, unit, at } = sc;
   const her = at(0.67, 0.16);
   const ribbons = new Graphics();
   ribbons.blendMode = "add";
   fx.addChild(ribbons);
   const petals = new Emitter(fx);
   root.addChild(fx);
+  const impact = strikeFx(sc, "ribbons", CYAN, her);
   await run(app, (t, dt) => {
     const k = Math.sin(Math.PI * span(t, 0, 2.1));
     ribbons.clear();
@@ -258,7 +259,8 @@ export async function carmen(rect: DOMRect, code: string, ready?: Ready, board?:
     petals.step(dt);
     return t < 2.15 || petals.list.length > 0;
   });
-  done();
+  await impact;
+  await done();
 }
 
 export async function predictivePlanogram(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
@@ -297,7 +299,7 @@ export async function predictivePlanogram(rect: DOMRect, code: string, ready?: R
     tags.step(dt);
     return t < 2.25;
   });
-  done();
+  await done();
 }
 
 export async function hedgeFund(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
@@ -357,7 +359,7 @@ export async function hedgeFund(rect: DOMRect, code: string, ready?: Ready, boar
     trail.step(dt);
     return t < 2.25 || trail.list.length > 0;
   });
-  done();
+  await done();
 }
 
 export async function spinDoctor(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
@@ -387,7 +389,7 @@ export async function spinDoctor(rect: DOMRect, code: string, ready?: Ready, boa
     ringAt(ring, cx, cy, Math.max(rect.width, rect.height) * 1.2, span(t, 1.15, 1.8), CYAN, 6);
     return t < 1.85 || orbit.list.length > 0;
   });
-  done();
+  await done();
 }
 
 export async function pingRez(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
@@ -440,7 +442,7 @@ export async function pingRez(rect: DOMRect, code: string, ready?: Ready, board?
     card.tint = t < 0.3 ? 0xffd0c8 : WHITE;
     return t < 1.9;
   });
-  done();
+  await done();
 }
 
 export async function creativeCommission(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
@@ -526,7 +528,7 @@ export async function creativeCommission(rect: DOMRect, code: string, ready?: Re
     motes.step(dt);
     return t < 2.7 || motes.list.length > 0;
   });
-  done();
+  await done();
 }
 
 export async function pettyCash(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
@@ -552,7 +554,7 @@ export async function pettyCash(rect: DOMRect, code: string, ready?: Ready, boar
     sparks.step(dt);
     return t < 1.95 || bills.list.length > 0 || sparks.list.length > 0;
   });
-  done();
+  await done();
 }
 
 export async function jailbreak(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
@@ -591,7 +593,7 @@ export async function jailbreak(rect: DOMRect, code: string, ready?: Ready, boar
     shards.step(dt);
     return t < 1.6 || shards.list.length > 0;
   });
-  done();
+  await done();
 }
 
 export async function pinholeThreading(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
@@ -635,7 +637,7 @@ export async function pinholeThreading(rect: DOMRect, code: string, ready?: Read
     hole.alpha = (0.4 + pk * 0.6) * (1 - span(t, 1.2, 1.5));
     return t < 1.75;
   });
-  done();
+  await done();
 }
 
 export async function mutualFavor(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
@@ -699,7 +701,7 @@ export async function mutualFavor(rect: DOMRect, code: string, ready?: Ready, bo
     glints.step(dt);
     return t < 1.85;
   });
-  done();
+  await done();
 }
 
 export async function cleanGetaway(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
@@ -746,11 +748,12 @@ export async function cleanGetaway(rect: DOMRect, code: string, ready?: Ready, b
     return t < 1.85 || lines.length > 0 || sparks.list.length > 0;
   });
   card.x = cx;
-  done();
+  await done();
 }
 
 export async function risingTide(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, card, fx, done, cx, cy, unit } = await scene(rect, code, ready, board);
+  const sc = await scene(rect, code, ready, board);
+  const { app, root, card, fx, done, cx, cy, unit } = sc;
   const water = new Graphics();
   const mask = new Graphics().rect(rect.left, rect.top, rect.width, rect.height).fill(0xffffff);
   water.mask = mask;
@@ -759,6 +762,7 @@ export async function risingTide(rect: DOMRect, code: string, ready?: Ready, boa
   card.filters = [wave];
   const glints = new Emitter(fx);
   root.addChild(fx);
+  const impact = strikeFx(sc, "splash", CYAN, [cx, cy]);
   await run(app, (t, dt) => {
     const level = rect.bottom - rect.height * ease.out(span(t, 0, 0.8)) * 0.9 * (1 - ease.inOut(span(t, 1, 1.5)));
     water.clear();
@@ -771,12 +775,13 @@ export async function risingTide(rect: DOMRect, code: string, ready?: Ready, boa
     wave.center = filterPoint(card, cx, cy);
     return t < 1.6;
   });
-  done();
+  await impact;
+  await done();
 }
 
 export async function echelon(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, card, fx, done, unit } = await scene(rect, code, ready, board);
-  const at = (x: number, y: number): [number, number] => [rect.left + rect.width * x, rect.top + rect.height * y];
+  const sc = await scene(rect, code, ready, board);
+  const { app, root, card, fx, done, unit, at } = sc;
   const sats = [
     [0.07, 0.33],
     [0.35, 0.43],
@@ -809,6 +814,7 @@ export async function echelon(rect: DOMRect, code: string, ready?: Ready, board?
   const sparks = new Emitter(fx);
   root.addChild(fx);
   const lerp = (a: [number, number], b: [number, number], k: number): [number, number] => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
+  const impact = strikeFx(sc, "bolts", VIOLET, sats[5].p);
   await run(app, (t, dt) => {
     const fade = 1 - span(t, 1.9, 2.4);
     const wake = Math.sin(Math.PI * span(t, 0.2, 2.3));
@@ -849,7 +855,8 @@ export async function echelon(rect: DOMRect, code: string, ready?: Ready, board?
     sparks.step(dt);
     return t < 2.4 || sparks.list.length > 0;
   });
-  done();
+  await impact;
+  await done();
 }
 
 export async function docklandsPass(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
@@ -876,7 +883,7 @@ export async function docklandsPass(rect: DOMRect, code: string, ready?: Ready, 
     if (fk > 0 && fk < 1) flash.roundRect(rect.left, rect.top, rect.width, rect.height, 6).stroke({ color: GREEN, width: 3 + 6 * (1 - fk), alpha: 1 - fk });
     return t < 1.55;
   });
-  done();
+  await done();
 }
 
 export async function flyswatter(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
@@ -914,8 +921,9 @@ export async function flyswatter(rect: DOMRect, code: string, ready?: Ready, boa
     bugs.step(dt);
     return t < 1.45;
   });
-  done();
+  await done();
 }
 
 export const warm = () => stage();
 export * from "./more";
+import { strikeFx } from "./more";
