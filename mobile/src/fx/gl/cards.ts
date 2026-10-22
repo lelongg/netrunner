@@ -234,7 +234,9 @@ export async function carmen(rect: DOMRect, code: string, ready?: Ready, board?:
   const petals = new Emitter(fx);
   root.addChild(fx);
   const impact = strikeFx(sc, "ribbons", CYAN, her);
-  await run(app, (t, dt) => {
+  await run(
+    app,
+    (t, dt) => {
     const k = Math.sin(Math.PI * span(t, 0, 2.1));
     ribbons.clear();
     for (let r = 0; r < 3; r++) {
@@ -258,7 +260,9 @@ export async function carmen(rect: DOMRect, code: string, ready?: Ready, board?:
     if (Math.random() < 0.45 && t < 1.8) petals.add(petalTexture(), her[0] + (Math.random() - 0.5) * unit * 0.8, her[1] + (Math.random() - 0.2) * unit * 0.6, { vx: 25 + Math.random() * 25, vy: -12 + Math.random() * 20, spin: (Math.random() - 0.5) * 3, life: 1.2, tint: 0xa8dcff, scale: (0.25 + Math.random() * 0.25) * (unit / 180) });
     petals.step(dt);
     return t < 2.15 || petals.list.length > 0;
-  });
+  },
+    sc.strike ? 2.2 : 1,
+  );
   await impact;
   await done();
 }
@@ -763,7 +767,9 @@ export async function risingTide(rect: DOMRect, code: string, ready?: Ready, boa
   const glints = new Emitter(fx);
   root.addChild(fx);
   const impact = strikeFx(sc, "splash", CYAN, [cx, cy]);
-  await run(app, (t, dt) => {
+  await run(
+    app,
+    (t, dt) => {
     const level = rect.bottom - rect.height * ease.out(span(t, 0, 0.8)) * 0.9 * (1 - ease.inOut(span(t, 1, 1.5)));
     water.clear();
     water.moveTo(rect.left, rect.bottom);
@@ -774,7 +780,9 @@ export async function risingTide(rect: DOMRect, code: string, ready?: Ready, boa
     wave.time = Math.max(0, t - 0.75);
     wave.center = filterPoint(card, cx, cy);
     return t < 1.6;
-  });
+  },
+    sc.strike ? 1.6 : 1,
+  );
   await impact;
   await done();
 }
@@ -815,7 +823,9 @@ export async function echelon(rect: DOMRect, code: string, ready?: Ready, board?
   root.addChild(fx);
   const lerp = (a: [number, number], b: [number, number], k: number): [number, number] => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
   const impact = strikeFx(sc, "bolts", VIOLET, sats[5].p);
-  await run(app, (t, dt) => {
+  await run(
+    app,
+    (t, dt) => {
     const fade = 1 - span(t, 1.9, 2.4);
     const wake = Math.sin(Math.PI * span(t, 0.2, 2.3));
     twist.offset = filterPoint(card, ex, ey);
@@ -854,7 +864,9 @@ export async function echelon(rect: DOMRect, code: string, ready?: Ready, board?
     }
     sparks.step(dt);
     return t < 2.4 || sparks.list.length > 0;
-  });
+  },
+    sc.strike ? 2.2 : 1,
+  );
   await impact;
   await done();
 }

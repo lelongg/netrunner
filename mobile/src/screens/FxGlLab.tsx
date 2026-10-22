@@ -1,7 +1,8 @@
-import { useRef, useState } from "preact/hooks";
+import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { INSTALL, PLAY, REZ } from "../fx/signatures";
-import { FX, glEffect } from "../fx/gl";
+import { FX, type Kind, glEffect } from "../fx/gl";
 import { setAim } from "../fx/gl/aim";
+import { setFxSpeed } from "../fx/gl/stage";
 
 const CODES: Record<string, string> = {
   "Sure Gamble": "30030",
@@ -47,68 +48,182 @@ const CODES: Record<string, string> = {
 };
 
 const ICE = new Set(["Ping", "Flyswatter", "Event Horizon", "Pharos", "Sleipnir", "Tocsin", "Semak-samun"]);
+const KINDS: Kind[] = ["play", "install", "rez", "use"];
+const KIND_LABEL: Record<Kind, string> = { play: "Play", install: "Install", rez: "Rez", use: "Effect" };
+const SPEEDS = [1, 0.5, 0.25];
+const OLD: Partial<Record<Kind, Record<string, (r: DOMRect) => void>>> = { play: PLAY, install: INSTALL, rez: REZ };
 
-const DEMOS = (Object.keys(FX) as (keyof typeof FX)[]).flatMap((kind) => Object.keys(FX[kind]).map((title) => ({ kind, title, code: CODES[title] })));
+const CARDS = Object.keys(CODES)
+  .map((title) => ({ title, code: CODES[title], ice: ICE.has(title), kinds: KINDS.filter((k) => FX[k][title]) }))
+  .filter((c) => c.kinds.length)
+  .sort((a, b) => a.title.localeCompare(b.title));
+
+const art = (code: string) => `https://card-images.netrunnerdb.com/v2/large/${code}.jpg`;
+const thumb = (code: string) => `https://card-images.netrunnerdb.com/v2/small/${code}.jpg`;
+const box = (el: Element | null | undefined) => el?.getBoundingClientRect() ?? null;
 
 export function FxGlLab() {
   const [pick, setPick] = useState(0);
+  const [kind, setKind] = useState<Kind>(CARDS[0].kinds[0]);
+  const [query, setQuery] = useState("");
   const [busy, setBusy] = useState(false);
+  const [loop, setLoop] = useState(false);
+  const [speed, setSpeed] = useState(1);
+  const [tile, setTile] = useState(false);
   const [aimed, setAimed] = useState(false);
-  const dummy = useRef<HTMLDivElement>(null);
   const img = useRef<HTMLImageElement>(null);
-  const demo = DEMOS[pick];
-  const play = async (which: "before" | "after") => {
-    if (busy || !img.current) return;
+  const stage = useRef<HTMLDivElement>(null);
+  const strip = useRef<HTMLDivElement>(null);
+  const run = useRef(0);
+  const pending = useRef(false);
+  const card = CARDS[pick];
+  const shown = useMemo(() => CARDS.map((c, i) => ({ c, i })).filter(({ c }) => c.title.toLowerCase().includes(query.trim().toLowerCase())), [query]);
+
+  const play = async (old = false) => {
+    const el = img.current;
+    if (!el) return;
+    if (busy) {
+      pending.current = true;
+      return;
+    }
+    const id = ++run.current;
     setBusy(true);
-    const rect = img.current.getBoundingClientRect();
-    const gone = dummy.current?.querySelector(".fxgl-gone")?.getBoundingClientRect();
-    setAim(aimed ? { advanced: ["lab-target"], gone: gone ? [gone] : [], hostOf: new Map([["lab-self", "lab-target"]]), corpLost: 3, gripLost: 2 } : { advanced: [], gone: [], hostOf: new Map(), corpLost: 0, gripLost: 0 });
-    if (which === "before") {
-      const table = demo.kind === "play" ? PLAY : demo.kind === "install" ? INSTALL : demo.kind === "rez" ? REZ : {};
-      table[demo.title]?.(rect);
+    const rect = el.getBoundingClientRect();
+    const q = (sel: string) => box(stage.current?.querySelector(sel));
+    setAim(aimed ? { advanced: ["lab-target"], gone: [q(".fxgl-gone")].filter((r): r is DOMRect => !!r), hostOf: new Map([["lab-self", "lab-target"]]), corpLost: 3, gripLost: 2 } : { advanced: [], gone: [], hostOf: new Map(), corpLost: 0, gripLost: 0 });
+    if (old) {
+      OLD[kind]?.[card.title]?.(rect);
       await new Promise((r) => setTimeout(r, 2400));
-    } else await glEffect(demo.kind, demo.title, rect, demo.code, img.current, "runner", aimed && demo.kind === "use" ? (dummy.current?.querySelector(".tile")?.getBoundingClientRect() ?? null) : null);
+    } else await glEffect(kind, card.title, rect, card.code, el, "runner", aimed && kind === "use" ? q(".fxgl-target") : null);
     setBusy(false);
+    if (run.current === id) run.current = 0;
   };
+
+  useEffect(() => setFxSpeed(speed), [speed]);
+  useEffect(() => () => setFxSpeed(1), []);
+
+  useEffect(() => {
+    const t = setTimeout(() => void play(), 450);
+    return () => clearTimeout(t);
+  }, [pick, kind, tile, aimed]);
+
+  useEffect(() => {
+    if (busy) return;
+    if (pending.current) {
+      pending.current = false;
+      const t = setTimeout(() => void play(), 120);
+      return () => clearTimeout(t);
+    }
+    if (!loop) return;
+    const t = setTimeout(() => void play(), 500);
+    return () => clearTimeout(t);
+  }, [loop, busy]);
+
+  useEffect(() => {
+    strip.current?.querySelector(".on")?.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" });
+  }, [pick]);
+
+  const choose = (i: number) => {
+    const next = (i + CARDS.length) % CARDS.length;
+    setPick(next);
+    if (!CARDS[next].kinds.includes(kind)) setKind(CARDS[next].kinds[0]);
+  };
+
+  useEffect(() => {
+    const key = (e: KeyboardEvent) => {
+      if ((e.target as HTMLElement)?.tagName === "INPUT") return;
+      if (e.key === "ArrowRight") choose(pick + 1);
+      else if (e.key === "ArrowLeft") choose(pick - 1);
+      else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        const ks = card.kinds;
+        setKind(ks[(ks.indexOf(kind) + (e.key === "ArrowDown" ? 1 : ks.length - 1)) % ks.length]);
+      } else if (e.key === " ") void play();
+      else return;
+      e.preventDefault();
+    };
+    addEventListener("keydown", key);
+    return () => removeEventListener("keydown", key);
+  });
+
+  const classes = ["fxgl-card", card.ice ? "ice" : "", card.ice && kind === "install" ? "unrezzed" : "", tile ? "tile-size" : ""].join(" ");
+
   return (
     <div class="screen fxgl">
-      <header class="screen-head">
-        <h1>FX LAB · GL</h1>
-      </header>
-      <div class="fxgl-stage">
-        <img ref={img} data-cid="lab-self" class={`${ICE.has(demo.title) ? "ice" : ""} ${ICE.has(demo.title) && demo.kind === "install" ? "unrezzed" : ""} ${aimed && demo.kind === "use" && !ICE.has(demo.title) ? "mini" : ""}`} src={`https://card-images.netrunnerdb.com/v2/large/${demo.code}.jpg`} alt={demo.title} crossOrigin="anonymous" />
-      </div>
-      {aimed && (
-        <div class="fxgl-aim" ref={dummy}>
-          <div class="playfield">
-            <div class="tile" data-cid="lab-target" />
-          </div>
-          <div class="fxgl-gone" />
-          <div data-anchor="runner-hand" class="fxgl-grip" />
-          <div data-anchor="corp-credits" class="fxgl-credits" />
-          <div data-anchor="runner-panel" class="fxgl-panel" />
+      <header class="fxgl-head">
+        <button class="fxgl-nav" onClick={() => choose(pick - 1)} aria-label="Previous card">
+          ‹
+        </button>
+        <div class="fxgl-name">
+          <span class="label">FX lab</span>
+          <strong>{card.title}</strong>
         </div>
-      )}
-      <div class="fxgl-row">
-        <button disabled={busy} onClick={() => play("before")}>
-          Before
+        <button class="fxgl-nav" onClick={() => choose(pick + 1)} aria-label="Next card">
+          ›
         </button>
-        <button class="on" disabled={busy} onClick={() => play("after")}>
-          After
+      </header>
+
+      <div class={`fxgl-stage ${tile ? "small" : ""}`} ref={stage}>
+        <img ref={img} data-cid="lab-self" class={classes} src={art(card.code)} alt={card.title} crossOrigin="anonymous" />
+        {aimed && (
+          <div class="fxgl-aim" aria-hidden="true">
+            <div class="playfield">
+              <div class="tile fxgl-target" data-cid="lab-target">
+                <span>ice</span>
+              </div>
+            </div>
+            <div class="fxgl-gone">
+              <span>trashed</span>
+            </div>
+            <div class="fxgl-credits" data-anchor="corp-credits">
+              <span>corp ¢</span>
+            </div>
+            <div class="fxgl-grip" data-anchor="runner-hand">
+              <span>grip</span>
+            </div>
+            <div class="fxgl-panel" data-anchor="runner-panel">
+              <span>runner</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div class="fxgl-kinds" role="tablist">
+        {card.kinds.map((k) => (
+          <button role="tab" aria-selected={k === kind} class={k === kind ? "on" : ""} onClick={() => setKind(k)}>
+            {KIND_LABEL[k]}
+          </button>
+        ))}
+      </div>
+
+      <div class="fxgl-controls">
+        <button class="fxgl-play" disabled={busy} onClick={() => play()}>
+          {busy ? "Playing…" : "Replay"}
         </button>
-        <button class={aimed ? "on" : ""} disabled={busy} onClick={() => setAimed(!aimed)}>
+        <button class={loop ? "on" : ""} onClick={() => setLoop(!loop)}>
+          Loop
+        </button>
+        <button onClick={() => setSpeed(SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length])}>{speed === 1 ? "1×" : speed === 0.5 ? "½×" : "¼×"}</button>
+        <button class={tile ? "on" : ""} onClick={() => setTile(!tile)}>
+          {tile ? "Tile" : "Big"}
+        </button>
+        <button class={aimed ? "on" : ""} onClick={() => setAimed(!aimed)}>
           Targets
         </button>
+        <button disabled={busy || !OLD[kind]?.[card.title]} onClick={() => play(true)}>
+          Old
+        </button>
       </div>
-      <ul class="fxgl-list">
-        {DEMOS.map((d, i) => (
-          <li>
-            <button class={i === pick ? "on" : ""} disabled={busy} onClick={() => setPick(i)}>
-              {d.title} · {d.kind}
-            </button>
-          </li>
+
+      <input class="fxgl-search" type="search" placeholder={`Search ${CARDS.length} cards`} value={query} onInput={(e) => setQuery((e.target as HTMLInputElement).value)} />
+      <div class="fxgl-strip" ref={strip}>
+        {shown.map(({ c, i }) => (
+          <button class={i === pick ? "on" : ""} onClick={() => choose(i)} aria-label={c.title}>
+            <img src={thumb(c.code)} alt="" loading="lazy" />
+            <span>{c.title}</span>
+            <small>{c.kinds.map((k) => KIND_LABEL[k]).join(" · ")}</small>
+          </button>
         ))}
-      </ul>
+      </div>
     </div>
   );
 }

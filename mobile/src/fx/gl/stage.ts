@@ -115,13 +115,19 @@ export async function cardSprite(parent: Container, code: string, rect: DOMRect,
   return s;
 }
 
+let speed = 1;
+
+export function setFxSpeed(n: number) {
+  speed = n;
+}
+
 export type Tick = (t: number, dt: number) => boolean | void;
 
-export function run(a: Application, tick: Tick) {
+export function run(a: Application, tick: Tick, pace = 1) {
   let t = 0;
   return new Promise<void>((done) => {
     const fn = (ticker: Ticker) => {
-      const dt = (window as any).__fxManual ? 1 / 30 : Math.min(0.05, ticker.deltaMS / 1000);
+      const dt = ((window as any).__fxManual ? 1 / 30 : Math.min(0.05, ticker.deltaMS / 1000)) * pace * speed;
       t += dt;
       if (tick(t, dt) === false) {
         a.ticker.remove(fn);

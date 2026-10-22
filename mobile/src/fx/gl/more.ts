@@ -175,14 +175,14 @@ export function pose(color: number, glint: Pt) {
 export async function transferOfWealth(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
   const src = board?.drained ? pt(board.drained) : at(0.62, 0.24);
-  const bar = { u0: 0.165, u1: 0.31, v: 0.255 };
+  const bar = { u0: 0.17, u1: 0.41, v: 0.315 };
   const g = new Graphics();
   g.blendMode = "add";
   fx.addChild(g);
   const trail = new Emitter(fx);
   const glyphs = Array.from({ length: 22 }, (_, i) => ({ at: 0.15 + i * 0.045, arc: rnd(0.05, 0.16), s: glowSprite(fx, glyphTexture(), 0x9ff7d8) }));
   root.addChild(fx);
-  const home = board?.credits ? Array.from({ length: 4 }, (_, i) => homing(fx, sparkTexture(), at(0.24, 0.255), pt(board.credits!), 1.45 + i * 0.07, GOLD, 0.6, rnd(-80, 80))) : [];
+  const home = board?.credits ? Array.from({ length: 4 }, (_, i) => homing(fx, sparkTexture(), at(0.3, 0.315), pt(board.credits!), 1.45 + i * 0.07, GOLD, 0.6, rnd(-80, 80))) : [];
   let landed = false;
   let flashed = false;
   await run(app, (t, dt) => {
@@ -222,8 +222,8 @@ export async function transferOfWealth(rect: DOMRect, code: string, ready?: Read
 
 export async function measuredResponse(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, card, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const blast = at(0.64, 0.28);
-  const tail = at(0.2, 0.27);
+  const blast = at(0.84, 0.25);
+  const tail = at(0.23, 0.28);
   const wave = new ShockwaveFilter({ center: { x: 0, y: 0 }, amplitude: unit * 0.035, wavelength: unit * 0.3, speed: unit * 1.6, brightness: 1.15, radius: unit * 0.55, time: 0 });
   card.filters = [wave];
   const heat = shimmer(root, card, rect, unit * 0.025);
@@ -284,12 +284,11 @@ export async function measuredResponse(rect: DOMRect, code: string, ready?: Read
 export async function keyPerformanceIndicators(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
   const trend: Pt[] = [
-    [0.6, 0.29],
-    [0.67, 0.25],
-    [0.72, 0.27],
-    [0.79, 0.2],
-    [0.84, 0.22],
-    [0.92, 0.12],
+    [0.68, 0.268],
+    [0.73, 0.25],
+    [0.78, 0.214],
+    [0.83, 0.202],
+    [0.9, 0.178],
   ];
   const holo = new Graphics();
   holo.blendMode = "add";
@@ -299,7 +298,7 @@ export async function keyPerformanceIndicators(rect: DOMRect, code: string, read
   const sparks = new Emitter(fx);
   const tip = glowSprite(fx, sparkTexture(), WHITE);
   const hand = glowSprite(fx, glowTexture(), 0xbfefff);
-  hand.position.set(...at(0.55, 0.21));
+  hand.position.set(...at(0.68, 0.268));
   const targets = (board?.advanced ?? []).map((r) => ({ p: pt(r), hit: false }));
   root.addChild(fx);
   let pinged = false;
@@ -343,7 +342,7 @@ export async function keyPerformanceIndicators(rect: DOMRect, code: string, read
     for (const tg of targets) {
       const k2 = ease.inOut(span(t, 1.3, 1.7));
       if (k2 <= 0) continue;
-      const head = tether(line, at(0.92, 0.12), tg.p, k2, GOLD, unit * 0.01, 1 - span(t, 1.9, 2.3));
+      const head = tether(line, at(0.9, 0.178), tg.p, k2, GOLD, unit * 0.01, 1 - span(t, 1.9, 2.3));
       if (k2 >= 1 && !tg.hit) {
         tg.hit = true;
         burst(sparks, ...head, 18, GOLD, unit * 1.2, { life: 0.5, scale: 0.35 });
@@ -359,8 +358,8 @@ export async function keyPerformanceIndicators(rect: DOMRect, code: string, read
 
 export async function seamlessLaunch(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const face = { u0: 0.4, v0: 0.09, u1: 0.66, v1: 0.31 };
-  const c = at(0.53, 0.19);
+  const face = { u0: 0.36, v0: 0.1, u1: 0.68, v1: 0.27 };
+  const c = at(0.52, 0.18);
   const g = new Graphics();
   g.blendMode = "add";
   fx.addChild(g);
@@ -399,7 +398,10 @@ export async function seamlessLaunch(rect: DOMRect, code: string, ready?: Ready,
       g.moveTo(...at(face.u0 + jitter, v)).lineTo(...at(face.u1 + jitter, v));
     }
     g.stroke({ width: 1, color: 0xe2d2ff, alpha: 0.45 * fade * (1 - 0.5 * span(t, 0.9, 1.5)) });
-    if (boot > 0 && boot < 1) g.moveTo(...at(face.u0 - 0.04, sv)).lineTo(...at(face.u1 + 0.04, sv)).stroke({ width: unit * 0.012, color: WHITE, alpha: 0.9 });
+    if (boot > 0 && boot < 1)
+      g.moveTo(...at(face.u0 - 0.04, sv))
+        .lineTo(...at(face.u1 + 0.04, sv))
+        .stroke({ width: unit * 0.012, color: WHITE, alpha: 0.9 });
     for (let r = 0; r < 2; r++) {
       const k = span(t, 0.75 + r * 0.18, 1.5 + r * 0.18);
       if (k > 0 && k < 1) g.circle(c[0], c[1], unit * (0.08 + 0.45 * ease.out(k))).stroke({ width: unit * 0.012 * (1 - k) + 1, color: VIOLET, alpha: 1 - k });
@@ -428,9 +430,9 @@ export async function hanseiReview(rect: DOMRect, code: string, ready?: Ready, b
   fx.addChild(glass);
   const petals = new Emitter(fx);
   const table = glowSprite(fx, glowTexture(), GREEN);
-  table.position.set(...at(0.5, 0.43));
+  table.position.set(...at(0.68, 0.3));
   root.addChild(fx);
-  const home = board?.credits ? Array.from({ length: 5 }, (_, i) => homing(fx, sparkTexture(), at(0.5, 0.35), pt(board.credits!), 1.3 + i * 0.06, GOLD, 0.6, rnd(-90, 90))) : [];
+  const home = board?.credits ? Array.from({ length: 5 }, (_, i) => homing(fx, sparkTexture(), at(0.77, 0.22), pt(board.credits!), 1.3 + i * 0.06, GOLD, 0.6, rnd(-90, 90))) : [];
   let landed = false;
   await run(app, (t, dt) => {
     const fade = 1 - span(t, 1.7, 2.1);
@@ -448,7 +450,7 @@ export async function hanseiReview(rect: DOMRect, code: string, ready?: Ready, b
     });
     for (const p of petals.list) p.s.x += Math.sin(p.age * 4 + p.s.y * 0.05) * 0.15;
     table.alpha = (0.35 + 0.25 * (Math.random() < 0.15 ? 0 : 1)) * Math.sin(Math.PI * span(t, 0, 1.9));
-    table.scale.set((unit / 128) * 0.35);
+    table.scale.set((unit / 128) * 0.18);
     petals.step(dt);
     if (flyHome(home, t, petals) === home.length && home.length && !landed) {
       landed = true;
@@ -461,7 +463,7 @@ export async function hanseiReview(rect: DOMRect, code: string, ready?: Ready, b
 
 export async function wildcatStrike(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, card, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const flare = at(0.42, 0.24);
+  const flare = at(0.23, 0.255);
   const core = glowSprite(fx, glowTexture(), 0xff3b2f);
   const hot = glowSprite(fx, sparkTexture(), 0xffe0d0);
   const wash = glowSprite(fx, glowTexture(), 0xff2a1a);
@@ -494,20 +496,23 @@ export async function wildcatStrike(rect: DOMRect, code: string, ready?: Ready, 
 export async function dailyCasts(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
   const screens: [number, number, number, number][] = [
-    [0.31, 0.12, 0.43, 0.2],
-    [0.52, 0.11, 0.66, 0.2],
-    [0.66, 0.26, 0.82, 0.35],
-    [0.1, 0.3, 0.22, 0.38],
+    [0.36, 0.083, 0.54, 0.149],
+    [0.34, 0.19, 0.77, 0.29],
+    [0.16, 0.25, 0.34, 0.37],
+    [0.76, 0.33, 0.92, 0.43],
   ];
   const faces: Pt[] = [
-    [0.12, 0.17],
-    [0.26, 0.1],
-    [0.46, 0.09],
-    [0.73, 0.09],
-    [0.88, 0.16],
-    [0.9, 0.3],
-    [0.62, 0.3],
-    [0.18, 0.25],
+    [0.06, 0.14],
+    [0.29, 0.12],
+    [0.59, 0.125],
+    [0.71, 0.14],
+    [0.825, 0.13],
+    [0.9, 0.21],
+    [0.96, 0.28],
+    [0.825, 0.29],
+    [0.26, 0.2],
+    [0.14, 0.2],
+    [0.04, 0.26],
   ];
   const g = new Graphics();
   g.blendMode = "add";
@@ -515,7 +520,7 @@ export async function dailyCasts(rect: DOMRect, code: string, ready?: Ready, boa
   const hearts = new Emitter(fx);
   const chats = new Emitter(fx);
   const live = glowSprite(fx, glowTexture(), RED);
-  live.position.set(...at(0.64, 0.135));
+  live.position.set(...at(0.52, 0.1));
   root.addChild(fx);
   await run(app, (t, dt) => {
     const fade = 1 - span(t, 1.7, 2.1);
@@ -541,10 +546,10 @@ export async function dailyCasts(rect: DOMRect, code: string, ready?: Ready, boa
 
 export async function teleworkContract(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, card, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const bite = at(0.47, 0.4);
+  const bite = at(0.9, 0.38);
   const beacons: Pt[] = [
-    [0.6, 0.15],
-    [0.86, 0.25],
+    [0.68, 0.235],
+    [0.5, 0.28],
   ];
   const lights = beacons.map((b) => {
     const s = glowSprite(fx, glowTexture(), 0xffb020);
@@ -552,7 +557,7 @@ export async function teleworkContract(rect: DOMRect, code: string, ready?: Read
     return s;
   });
   const cockpit = glowSprite(fx, glowTexture(), CYAN);
-  cockpit.position.set(...at(0.74, 0.17));
+  cockpit.position.set(...at(0.82, 0.225));
   const dust = new Emitter(root);
   const rocks = new Emitter(fx);
   const sparks = new Emitter(fx);
@@ -583,38 +588,34 @@ export async function teleworkContract(rect: DOMRect, code: string, ready?: Read
 
 export async function touchstone(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const lens = at(0.36, 0.3);
-  const ring = at(0.47, 0.22);
+  const ring = at(0.56, 0.25);
   const beam = new Graphics();
   beam.blendMode = "add";
   const reel = new Graphics();
   reel.blendMode = "add";
   fx.addChild(beam, reel);
   const motes = new Emitter(fx);
-  const frames = new Emitter(fx);
+  const slides = new Emitter(fx);
   root.addChild(fx);
   await run(app, (t, dt) => {
     const on = span(t, 0.1, 0.4) * (1 - span(t, 1.6, 2));
+    const flick = 0.85 + 0.15 * Math.sin(t * 30);
     beam.clear();
-    const far = [at(0.0, 0.06), at(0.0, 0.3)];
-    beam.poly([...lens, ...far[0], ...far[1]]).fill({ color: 0xc8ffd8, alpha: 0.16 * on * (0.85 + 0.15 * Math.sin(t * 30)) });
+    for (const [w0, w1, al] of [
+      [0.05, 0.13, 0.1],
+      [0.03, 0.08, 0.14],
+    ] as const)
+      beam.poly([...at(0.56 - w0, 0.23), ...at(0.56 + w0, 0.23), ...at(0.58 + w1, 0.02), ...at(0.54 - w1, 0.02)]).fill({ color: 0x9ffff0, alpha: al * on * flick });
     reel.clear();
-    for (let i = 0; i < 8; i++) {
-      const a = t * 2.4 + (i / 8) * Math.PI * 2;
-      const lit = Math.sin(a) > 0.6;
-      reel.circle(ring[0] + Math.cos(a) * unit * 0.12, ring[1] + Math.sin(a) * unit * 0.035, unit * 0.012).fill({ color: lit ? WHITE : GREEN, alpha: on * (lit ? 0.9 : 0.4) });
+    for (let i = 0; i < 10; i++) {
+      const a = t * 2.4 + (i / 10) * Math.PI * 2;
+      const lit = Math.sin(a) > 0.7;
+      reel.circle(ring[0] + Math.cos(a) * unit * 0.15, ring[1] + Math.sin(a) * unit * 0.045, unit * 0.012).fill({ color: lit ? WHITE : GREEN, alpha: on * (lit ? 0.9 : 0.4) });
     }
-    if (on > 0.3 && Math.random() < 0.12) {
-      const k = Math.random();
-      const [x, y] = lerp(lens, at(0.06, rnd(0.1, 0.26)), 0.6 + k * 0.3);
-      frames.add(cubeTexture(), x, y, { vx: -unit * 0.05, life: 0.5, tint: 0xc8ffd8, scale: (unit / 180) * rnd(0.6, 1), alpha: 0.6 });
-    }
-    if (on > 0 && Math.random() < 0.5) {
-      const [x, y] = lerp(lens, at(0.02, rnd(0.08, 0.28)), Math.random());
-      motes.add(glowTexture(), x, y, { vx: rnd(-6, 6), vy: rnd(-6, 6), life: 0.9, tint: WHITE, scale: (unit / 128) * 0.03, alpha: 0.7 });
-    }
+    if (on > 0.3 && Math.random() < 0.1) slides.add(cubeTexture(), ...at(0.56 + rnd(-0.04, 0.04), 0.2), { vy: -unit * rnd(0.25, 0.4), spin: rnd(-1, 1), life: 0.8, tint: 0x9ffff0, scale: (unit / 180) * rnd(0.7, 1), alpha: 0.6 });
+    if (on > 0 && Math.random() < 0.6) motes.add(glowTexture(), ...at(0.56 + rnd(-0.06, 0.06), rnd(0.05, 0.22)), { vx: rnd(-4, 4), vy: -unit * 0.05, life: 0.9, tint: WHITE, scale: (unit / 128) * 0.025, alpha: 0.7 });
     motes.step(dt);
-    frames.step(dt);
+    slides.step(dt);
     return t < 2 || motes.list.length > 0;
   });
   await done();
@@ -623,7 +624,7 @@ export async function touchstone(rect: DOMRect, code: string, ready?: Ready, boa
 export async function humanoidResources(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
   const heads: Pt[] = [];
-  for (let i = 0; i < 10; i++) heads.push([0.47 + i * 0.054, 0.272 + (i % 2) * 0.008]);
+  heads.push([0.17, 0.37], [0.29, 0.36], [0.38, 0.345], [0.43, 0.34], [0.56, 0.32], [0.61, 0.32], [0.68, 0.31], [0.77, 0.3], [0.83, 0.28], [0.9, 0.27]);
   const g = new Graphics();
   g.blendMode = "add";
   fx.addChild(g);
@@ -632,7 +633,7 @@ export async function humanoidResources(rect: DOMRect, code: string, ready?: Rea
     s.position.set(...at(u, v));
     return s;
   });
-  const center = at(0.72, 0.28);
+  const center = at(0.55, 0.33);
   root.addChild(fx);
   await run(app, (t) => {
     const fade = 1 - span(t, 1.7, 2.1);
@@ -642,11 +643,14 @@ export async function humanoidResources(rect: DOMRect, code: string, ready?: Rea
       if (k > 0 && k < 1) g.circle(center[0], center[1], unit * (0.05 + 0.3 * k)).stroke({ width: unit * 0.01 * (1 - k) + 1, color: ORANGE, alpha: (1 - k) * (0.6 + n * 0.1) });
     }
     const sweep = span(t, 0.9, 1.4);
-    if (sweep > 0 && sweep < 1) g.moveTo(...at(0.45 + sweep * 0.55, 0.18)).lineTo(...at(0.45 + sweep * 0.55, 0.4)).stroke({ width: unit * 0.01, color: 0x9be8ff, alpha: 0.8 });
+    if (sweep > 0 && sweep < 1)
+      g.moveTo(...at(0.1 + sweep * 0.85, 0.22))
+        .lineTo(...at(0.1 + sweep * 0.85, 0.44))
+        .stroke({ width: unit * 0.01, color: 0x9be8ff, alpha: 0.8 });
     heads.forEach(([u], i) => {
-      const on = span(t, 0.9 + (u - 0.45) * 0.9, 1.0 + (u - 0.45) * 0.9);
+      const on = span(t, 0.9 + (u - 0.15) * 0.6, 1.0 + (u - 0.15) * 0.6);
       eyes[i].alpha = on * fade * (0.75 + 0.25 * Math.sin(t * 6 + i));
-      eyes[i].scale.set((unit / 120) * 0.22);
+      eyes[i].scale.set((unit / 120) * 0.26 * (1.4 - u * 0.7));
     });
     return t < 2.1;
   });
@@ -655,8 +659,8 @@ export async function humanoidResources(rect: DOMRect, code: string, ready?: Rea
 
 export async function nihiloAgent(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, card, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const hand = at(0.2, 0.17);
-  const eye = at(0.44, 0.12);
+  const hand = at(0.24, 0.11);
+  const eye = at(0.5, 0.175);
   const glitch = new GlitchFilter({ slices: 8, offset: 0, fillMode: 2, red: { x: 0, y: 0 }, blue: { x: 0, y: 0 } });
   card.filters = [glitch];
   const rings = new Graphics();
@@ -701,7 +705,7 @@ export async function nihiloAgent(rect: DOMRect, code: string, ready?: Ready, bo
 
 export async function botulusPose(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, card, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const heart = at(0.41, 0.31);
+  const heart = at(0.44, 0.32);
   const wobble = shimmer(root, card, rect, unit * 0.05);
   const spores = new Emitter(fx);
   const core = glowSprite(fx, glowTexture(), TOXIC);
@@ -740,7 +744,7 @@ export async function botulusPose(rect: DOMRect, code: string, ready?: Ready, bo
 
 export async function botulus(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, card, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const heart = at(0.41, 0.31);
+  const heart = at(0.44, 0.32);
   const split = new RGBSplitFilter({ red: { x: 0, y: 0 }, green: { x: 0, y: 0 }, blue: { x: 0, y: 0 } });
   card.filters = [split];
   const wobble = shimmer(root, card, rect, unit * 0.04);
@@ -790,7 +794,7 @@ function sphereSpots(n: number) {
 export async function unityPose(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
   const c = at(0.6, 0.32);
-  const R = unit * 0.2;
+  const R = unit * 0.24;
   const spots = sphereSpots(26);
   const cubes = spots.map((p) => {
     const s = glowSprite(fx, cubeTexture(), Math.random() < 0.5 ? 0xbfe9ff : 0xffd3a8);
@@ -816,7 +820,7 @@ export async function unityPose(rect: DOMRect, code: string, ready?: Ready, boar
       const dst: Pt = [c[0] + xr * R, c[1] + y * R];
       cb.s.position.set(...lerp(cb.from, dst, k));
       cb.s.rotation = (1 - k) * 6 + spin;
-      cb.s.alpha = Math.min(1, k * 3) * (0.55 + 0.45 * (zr + 1) / 2) * fade;
+      cb.s.alpha = Math.min(1, k * 3) * (0.55 + (0.45 * (zr + 1)) / 2) * fade;
       cb.s.scale.set((unit / 180) * (0.35 + 0.15 * zr));
     }
     const lock = span(t, 1.05, 1.5);
@@ -838,7 +842,7 @@ export async function unity(rect: DOMRect, code: string, ready?: Ready, board?: 
   const sc = await scene(rect, code, ready, board);
   const { app, root, fx, done, unit, at } = sc;
   const c = at(0.6, 0.32);
-  const R = unit * 0.2;
+  const R = unit * 0.24;
   const spots = sphereSpots(20);
   const cubes = spots.map(() => glowSprite(fx, cubeTexture(), Math.random() < 0.5 ? 0xbfe9ff : 0xffd3a8));
   const ring = new Graphics();
@@ -870,7 +874,7 @@ export async function unity(rect: DOMRect, code: string, ready?: Ready, board?: 
 
 export async function conduitPose(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const from = at(0.98, 0.1);
+  const from = at(0.85, 0.17);
   const to = at(0.05, 0.42);
   const cube = at(0.45, 0.27);
   const g = new Graphics();
@@ -892,7 +896,9 @@ export async function conduitPose(rect: DOMRect, code: string, ready?: Ready, bo
       const o: Pt = [(nx / nl) * s.off * unit, (ny / nl) * s.off * unit];
       const a = lerp(from, to, Math.max(0, k - s.len));
       const b = lerp(from, to, k);
-      g.moveTo(a[0] + o[0], a[1] + o[1]).lineTo(b[0] + o[0], b[1] + o[1]).stroke({ width: unit * 0.008, color: 0xe6ff6a, alpha: Math.sin(Math.PI * k) });
+      g.moveTo(a[0] + o[0], a[1] + o[1])
+        .lineTo(b[0] + o[0], b[1] + o[1])
+        .stroke({ width: unit * 0.008, color: 0xe6ff6a, alpha: Math.sin(Math.PI * k) });
     }
     core.alpha = 0.7 * Math.sin(Math.PI * span(t, 0.2, 1.4));
     core.scale.set((unit / 128) * (0.2 + 0.05 * Math.sin(t * 20)));
@@ -930,17 +936,17 @@ export async function conduit(rect: DOMRect, code: string, ready?: Ready, board?
 
 export async function gourmandPose(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const c = at(0.5, 0.3);
+  const c = at(0.47, 0.32);
   const bolts = new Graphics();
   bolts.blendMode = "add";
   fx.addChild(bolts);
-  const knives = [at(0.24, 0.13), at(0.8, 0.13), at(0.38, 0.4)].map((p) => {
+  const knives = [at(0.2, 0.25), at(0.8, 0.26), at(0.83, 0.38)].map((p) => {
     const s = glowSprite(fx, sparkTexture(), WHITE);
     s.position.set(...p);
     return s;
   });
   const eyes = glowSprite(fx, glowTexture(), 0x7dff7a);
-  eyes.position.set(...at(0.5, 0.27));
+  eyes.position.set(...at(0.44, 0.33));
   root.addChild(fx);
   let next = 0;
   await run(app, (t) => {
@@ -971,7 +977,7 @@ export async function gourmandPose(rect: DOMRect, code: string, ready?: Ready, b
 
 export async function gourmand(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, card, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const c = board?.access ? pt(board.access) : at(0.5, 0.33);
+  const c = board?.access ? pt(board.access) : at(0.46, 0.33);
   const span0 = board?.access ? board.access.width / 2 : unit * 0.36;
   const jaws = new Graphics();
   jaws.blendMode = "add";
@@ -1066,7 +1072,10 @@ export async function eventHorizonFire(rect: DOMRect, code: string, ready?: Read
       const [x, y] = lerp(pt(r), hole, k);
       const w = r.width * (1 - k * 0.9);
       const h = r.height * (1 - k * 0.9);
-      ghosts.rect(x - w / 2, y - h / 2, w, h).stroke({ width: 2, color: GOLD, alpha: 1 - span(t, 0.6, 0.8) }).fill({ color: 0xffe7a8, alpha: 0.15 * (1 - k) });
+      ghosts
+        .rect(x - w / 2, y - h / 2, w, h)
+        .stroke({ width: 2, color: GOLD, alpha: 1 - span(t, 0.6, 0.8) })
+        .fill({ color: 0xffe7a8, alpha: 0.15 * (1 - k) });
       if (k < 0.9 && Math.random() < 0.8) fall.add(sparkTexture(), x + rnd(-0.5, 0.5) * w, y + rnd(-0.5, 0.5) * h, { vx: (hole[0] - x) * 1.5, vy: (hole[1] - y) * 1.5, life: 0.4, tint: GOLD, scale: 0.25 * (unit / 180), grow: -0.4 });
     }
     twist.offset = filterPoint(card, ...hole);
@@ -1194,7 +1203,10 @@ export async function sleipnirFire(rect: DOMRect, code: string, ready?: Ready, b
     hues.forEach((h, i) => {
       const u = 0.2 + i * 0.12;
       const v1 = 1 - 0.45 * head * head;
-      streaks.moveTo(...at(u, Math.min(0.98, v1 + 0.25))).lineTo(...at(u, v1)).stroke({ width: unit * 0.025, color: h, alpha: 0.7 * (1 - span(t, 0.5, 0.9)) });
+      streaks
+        .moveTo(...at(u, Math.min(0.98, v1 + 0.25)))
+        .lineTo(...at(u, v1))
+        .stroke({ width: unit * 0.025, color: h, alpha: 0.7 * (1 - span(t, 0.5, 0.9)) });
     });
     return t < 0.95;
   });
@@ -1306,7 +1318,10 @@ export async function semakFire(rect: DOMRect, code: string, ready?: Ready, boar
       if (k <= 0) continue;
       const a = 1 - span(t, 0.5, 0.9);
       const tip = lerp(l.from, l.to, ease.out(k));
-      vines.moveTo(...l.from).quadraticCurveTo(l.from[0] + unit * 0.2, (l.from[1] + tip[1]) / 2, ...tip).stroke({ width: unit * 0.014, color: 0xd6ff4a, alpha: a });
+      vines
+        .moveTo(...l.from)
+        .quadraticCurveTo(l.from[0] + unit * 0.2, (l.from[1] + tip[1]) / 2, ...tip)
+        .stroke({ width: unit * 0.014, color: 0xd6ff4a, alpha: a });
     }
     if (grip) {
       const k = ease.out(span(t, 0.1, 0.45));

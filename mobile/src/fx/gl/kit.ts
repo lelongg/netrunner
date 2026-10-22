@@ -273,4 +273,3 @@ export const petalTexture = () =>
     g.ellipse(24, 12, 22, 7, 0, 0, Math.PI * 2);
     g.fill();
   });
-
