@@ -447,6 +447,7 @@ export interface Hit {
   ice?: any;
   breaker?: any;
   card?: any;
+  corp?: boolean;
   text?: string;
   power?: number;
 }
@@ -475,8 +476,10 @@ function readLog(view: any, from: number, render: (m: unknown) => string, before
     } else if ((m = text.match(/^.+? uses (.+?) to (.+?)\.?$/i)) && !/\brez\b/i.test(m[2])) {
       const ice = iceByTitle(view, m[1], before);
       const own = ice && ice.title === m[1] ? undefined : runnerCard(view, m[1]);
+      const corp = ice || own ? undefined : byTitle(view.corp?.servers, m[1]);
       if (ice && ice.title === m[1]) out.push({ kind: "fire", ice, text: m[2] });
       else if (own) out.push({ kind: "use", card: own, text: m[2] });
+      else if (corp?.rezzed) out.push({ kind: "use", card: corp, text: m[2], corp: true });
     } else if ((m = text.match(/(\d+)?\s*(net|meat|core|brain) damage/i)) && /\b(suffers?|takes?|deals?|does|trashes)\b/i.test(text)) {
       out.push({ kind: "damage", text: m[2], power: /core|brain/i.test(m[2]) ? 1.6 : 1 });
     } else if (/purges? virus counters/i.test(text)) out.push({ kind: "purge" });
@@ -764,13 +767,13 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
     const text = render(e.text);
     if (/\buses Predictive Planogram to (gain|draw)\b/i.test(text)) {
       planogramResult(text);
-    } else if (/\buses Regolith Mining License\b/i.test(text)) {
+    } else if (/\buses Regolith Mining License\b/i.test(text) && !hasUseEffect("Regolith Mining License")) {
       const r = rectOf(tileEl(byTitle(view.corp?.servers, "Regolith Mining License")?.cid));
       if (visible(r)) regolith(r);
     } else if (/\bSnare!/.test(text) && /\b(net damage|tag)/i.test(text)) {
       const r = rectOf(tileEl(byTitle(view.corp?.servers, "Snare!")?.cid));
       snare(visible(r) ? r : null);
-    } else if (/\buses Leech\b/i.test(text)) {
+    } else if (/\buses Leech\b/i.test(text) && !hasUseEffect("Leech")) {
       const from = pointOf(tileEl(currentIce(view)?.cid));
       const to = pointOf(tileEl(runnerCard(view, "Leech")?.cid));
       if (from && to) leech(from, to);
@@ -788,7 +791,7 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
     }, delay * 1000);
   };
   for (const h of hits) {
-    if (h.kind === "use") effect(h.card, t, "runner");
+    if (h.kind === "use") effect(h.card, t, h.corp ? "corp" : "runner");
     if (h.kind === "break" && h.ice) {
       if (!pointOf(tileEl(h.ice.cid))) continue;
       const delay = t;

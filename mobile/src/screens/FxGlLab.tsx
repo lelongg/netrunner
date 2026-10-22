@@ -105,9 +105,29 @@ const CODES: Record<string, string> = {
   Hantu: "35008",
   "Magistrate Revontulet": "36048",
   Vicsek: "36042",
+  Carnivore: "30003",
+  Cleaver: "30006",
+  Leech: "30008",
+  Marjanah: "30016",
+  Tranquilizer: "30017",
+  "Red Team": "30018",
+  Pantograph: "30023",
+  "T400 Memory Diamond": "30031",
+  "Ansel 1.0": "30038",
+  Sprint: "30041",
+  Diviner: "30046",
+  Karuna: "30047",
+  Neurospike: "30049",
+  "Anoetic Void": "30050",
+  "AMAZE Amusements": "30058",
+  Clearinghouse: "30061",
+  Ballista: "30062",
+  "Regolith Mining License": "30071",
+  Palisade: "30072",
+  Tithe: "30073",
 };
 
-const ICE = new Set(["Ping", "Flyswatter", "Event Horizon", "Pharos", "Sleipnir", "Tocsin", "Semak-samun", "Bumi 1.0", "Biawak", "Funhouse", "Bran 1.0", "Doomscroll", "Whitespace", "Syailendra", "Flywheel", "Kessleroid", "Lethe", "Scatter Field", "Lionsmane", "Empiricist", "Vicsek"]);
+const ICE = new Set(["Ping", "Flyswatter", "Event Horizon", "Pharos", "Sleipnir", "Tocsin", "Semak-samun", "Bumi 1.0", "Biawak", "Funhouse", "Bran 1.0", "Doomscroll", "Whitespace", "Syailendra", "Flywheel", "Kessleroid", "Lethe", "Scatter Field", "Lionsmane", "Empiricist", "Vicsek", "Ansel 1.0", "Diviner", "Karuna", "Ballista", "Palisade", "Tithe"]);
 const KINDS: Kind[] = ["play", "install", "rez", "use"];
 const KIND_LABEL: Record<Kind, string> = { play: "Play", install: "Install", rez: "Rez", use: "Effect" };
 const SPEEDS = [1, 0.5, 0.25];
