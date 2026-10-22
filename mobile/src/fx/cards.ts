@@ -259,7 +259,7 @@ async function showcase(m: Move, kind: Kind, me: Side) {
   const info = m.to ?? m.from;
   const destEl = tileEl(m.cid);
   const target = rectOf(destEl);
-  const dest = head(m.to?.zone) === "play-area" ? null : visible(target) ? target : cardShaped(rectOf(zoneAnchor(m.to)));
+  const dest = visible(target) ? target : cardShaped(rectOf(!m.to || head(m.to.zone) === "play-area" ? pile(`${info?.owner}-discard`) : zoneAnchor(m.to)));
   const src = m.src ?? new DOMRect(innerWidth / 2 - 30, innerHeight + 20, 60, 84);
   const staged = accessStage.current;
   if (kind === "steal" && staged && staged.title === info?.title) {
@@ -346,7 +346,7 @@ async function showcase(m: Move, kind: Kind, me: Side) {
     show(destEl);
     return;
   }
-  const anim = animate(ghost, { x: [0, dest.left - big.left], y: [0, dest.top - big.top], scaleX: [1.04, dest.width / big.width], scaleY: [1.04, dest.height / big.height], rotate: [0, 6, 0], opacity: [1, 1, kind === "play" && !destEl ? 0 : 1] }, { duration: 0.42, ease: [0.5, 0, 0.3, 1] });
+  const anim = animate(ghost, { x: [0, dest.left - big.left], y: [0, dest.top - big.top], scaleX: [1.04, dest.width / big.width], scaleY: [1.04, dest.height / big.height], rotate: [0, 6, 0] }, { duration: 0.42, ease: [0.5, 0, 0.3, 1] });
   await anim.finished;
   ghost.remove();
   if (kind === "play" || kind === "install") {

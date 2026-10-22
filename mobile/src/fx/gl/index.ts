@@ -228,12 +228,15 @@ function boardFor(owner: string | undefined, self: Element | null | undefined, s
   };
 }
 
+const plain = (title: string) => title.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+const fxName = (kind: Kind, title: string | undefined) => (title ? (FX[kind][title] ?? FX[kind][plain(title)]) : undefined);
+
 export function hasGl(kind: Kind, title: string | undefined) {
-  return !!title && !!FX[kind][title] && !motionOff() && glOk();
+  return !!fxName(kind, title) && !motionOff() && glOk();
 }
 
 export function glEffect(kind: Kind, title: string | undefined, at: DOMRect, code: string | undefined, hide?: HTMLElement | null, owner?: string, strike?: Element | null): Promise<void> | null {
-  const name = title ? FX[kind][title] : undefined;
+  const name = fxName(kind, title);
   if (!name || !code || motionOff() || !glOk()) return null;
   const board = boardFor(owner, hide, strike);
   let restore = () => {};

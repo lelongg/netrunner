@@ -146,9 +146,12 @@ export async function scene(rect: DOMRect, code: string, ready?: Ready, board?: 
   let reach = 0;
   root.pivot.set(x0, y0);
   let world: Container | null = null;
+  let last: DOMRect | null = null;
   const follow = () => {
-    const r = board?.track?.();
-    const [x, y] = r && r.width ? mid(r) : [x0, y0];
+    const now = board?.track?.();
+    if (now && now.width) last = now;
+    const r = last;
+    const [x, y] = r ? mid(r) : [x0, y0];
     const sr = board?.strikeTrack?.();
     const [nx, ny] = sr && sr.width ? mid(sr) : [hx, hy];
     world?.position.set(nx - hx, ny - hy);
@@ -158,7 +161,7 @@ export async function scene(rect: DOMRect, code: string, ready?: Ready, board?: 
     const tx = nx + ((x - hx) / len) * gap;
     const ty = ny + ((y - hy) / len) * gap;
     root.position.set(x + (tx - x) * k, y + (ty - y) * k);
-    const rs = r && r.width ? r.width / rect.width : 1;
+    const rs = r ? r.width / rect.width : 1;
     root.scale.set(rs * (1 + (grow - 1) * k));
   };
   follow();
