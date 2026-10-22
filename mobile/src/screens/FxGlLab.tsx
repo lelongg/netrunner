@@ -125,9 +125,32 @@ const CODES: Record<string, string> = {
   "Regolith Mining License": "30071",
   Palisade: "30072",
   Tithe: "30073",
+  "Charm Offensive": "35003",
+  Shred: "35005",
+  Bling: "35006",
+  Cacophony: "35010",
+  "Maintenance Access": "35016",
+  Detente: "35018",
+  "Maglectric Rapid (748 Mod)": "35019",
+  "Fransofia Ward": "35021",
+  Illumination: "35025",
+  "GAMEDRAGON™ Pro": "35027",
+  Madani: "35028",
+  '"Knickknack" O\'Brian': "35033",
+  "Side Hustle": "35034",
+  "Otto Campaign": "35040",
+  Nanomanagement: "35043",
+  Mycoweb: "35053",
+  "Peer Review": "35055",
+  "N-Pot": "35064",
+  "IP Enforcement": "35066",
+  "Touch-ups": "35067",
+  Plutus: "35073",
+  Lamplighter: "35080",
+  "Mahkota Langit Grid": "35082",
 };
 
-const ICE = new Set(["Ping", "Flyswatter", "Event Horizon", "Pharos", "Sleipnir", "Tocsin", "Semak-samun", "Bumi 1.0", "Biawak", "Funhouse", "Bran 1.0", "Doomscroll", "Whitespace", "Syailendra", "Flywheel", "Kessleroid", "Lethe", "Scatter Field", "Lionsmane", "Empiricist", "Vicsek", "Ansel 1.0", "Diviner", "Karuna", "Ballista", "Palisade", "Tithe"]);
+const ICE = new Set(["Ping", "Flyswatter", "Event Horizon", "Pharos", "Sleipnir", "Tocsin", "Semak-samun", "Bumi 1.0", "Biawak", "Funhouse", "Bran 1.0", "Doomscroll", "Whitespace", "Syailendra", "Flywheel", "Kessleroid", "Lethe", "Scatter Field", "Lionsmane", "Empiricist", "Vicsek", "Ansel 1.0", "Diviner", "Karuna", "Ballista", "Palisade", "Tithe", "Mycoweb", "N-Pot", "Lamplighter"]);
 const KINDS: Kind[] = ["play", "install", "rez", "use"];
 const KIND_LABEL: Record<Kind, string> = { play: "Play", install: "Install", rez: "Rez", use: "Effect" };
 const SPEEDS = [1, 0.5, 0.25];

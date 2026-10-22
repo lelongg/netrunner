@@ -9,10 +9,10 @@ const NEON = 0xff4fb0;
 const EMBER = 0xff9a4a;
 const ICY = 0xbfe6ff;
 
-const runnerAt = (board?: Board): Pt => (board?.runner ? pt(board.runner) : [innerWidth / 2, innerHeight * 0.88]);
-const jolt = (board?: Board, d = 0.4) => board?.runner && prism(document.querySelector('[data-anchor="runner-panel"]'), d);
+export const runnerAt = (board?: Board): Pt => (board?.runner ? pt(board.runner) : [innerWidth / 2, innerHeight * 0.88]);
+export const jolt = (board?: Board, d = 0.4) => board?.runner && prism(document.querySelector('[data-anchor="runner-panel"]'), d);
 
-const streakTexture = () =>
+export const streakTexture = () =>
   painted("s6-streak", 48, 6, (g) => {
     const grad = g.createLinearGradient(0, 0, 48, 0);
     grad.addColorStop(0, "rgba(255,255,255,0)");
@@ -32,7 +32,7 @@ const dropTexture = () =>
     g.fill();
   });
 
-const triTexture = () =>
+export const triTexture = () =>
   painted("s6-tri", 32, 32, (g) => {
     g.fillStyle = "rgba(255,255,255,0.85)";
     g.beginPath();
@@ -57,7 +57,7 @@ const nuggetTexture = () =>
     g.fill();
   });
 
-function bezier(a: Pt, b: Pt, c: Pt, k: number): Pt {
+export function bezier(a: Pt, b: Pt, c: Pt, k: number): Pt {
   const m = 1 - k;
   return [m * m * a[0] + 2 * m * k * b[0] + k * k * c[0], m * m * a[1] + 2 * m * k * b[1] + k * k * c[1]];
 }
