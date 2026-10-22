@@ -1,5 +1,6 @@
 import { motionOff } from "../../settings";
 import type { Board } from "./kit";
+import { aim } from "./aim";
 
 export type Kind = "play" | "install" | "rez" | "use";
 
@@ -99,7 +100,25 @@ const rect = (sel: string) => {
 function boardFor(owner: string | undefined, self: Element | null | undefined): Board {
   const others = [...document.querySelectorAll(".playfield .tile[data-cid]")].filter((el) => el !== self && !self?.contains(el)).map((el) => el.getBoundingClientRect()).filter((r) => r.width > 0 && r.bottom > 0 && r.top < innerHeight);
   const radius = self ? parseFloat(getComputedStyle(self).borderTopLeftRadius) || 0 : 0;
-  return { credits: owner ? rect(`[data-anchor="${owner}-credits"]`) : null, hand: owner ? rect(`[data-anchor="${owner}-hand"]`) : null, others, radius, dim: !!self?.classList.contains("unrezzed"), track: self ? () => self.getBoundingClientRect() : undefined };
+  const a = aim();
+  const tile = (cid: string) => rect(`.playfield .tile[data-cid="${CSS.escape(cid)}"]`);
+  const cid = (self as HTMLElement | null | undefined)?.dataset?.cid;
+  const host = cid ? a.hostOf.get(cid) : undefined;
+  return {
+    credits: owner ? rect(`[data-anchor="${owner}-credits"]`) : null,
+    hand: owner ? rect(`[data-anchor="${owner}-hand"]`) : null,
+    others,
+    radius,
+    dim: !!self?.classList.contains("unrezzed"),
+    track: self ? () => self.getBoundingClientRect() : undefined,
+    advanced: a.advanced.map(tile).filter((r): r is DOMRect => !!r),
+    gone: a.gone,
+    host: host ? tile(host) : null,
+    drained: a.corpLost > 0 ? rect('[data-anchor="corp-credits"]') : null,
+    grip: a.gripLost > 0 ? rect('[data-anchor="runner-hand"]') : null,
+    access: rect(".fx-showdown .fx-showcase"),
+    runner: rect('[data-anchor="runner-panel"]'),
+  };
 }
 
 export function glEffect(kind: Kind, title: string | undefined, at: DOMRect, code: string | undefined, hide?: HTMLElement | null, owner?: string): Promise<void> | null {

@@ -3,6 +3,7 @@ import type { Side } from "../engine";
 import { currentIce } from "../game/actions";
 import { serverName } from "../game/text";
 import { type Plan, accessStage, collect, moveKinds, play, prepare } from "./cards";
+import { setAim } from "./gl/aim";
 import { cleaver, fireSignature, leech, planogramResult, regolith, rezSignature, snare, transmission, useSignature } from "./signatures";
 import { cue, play as sound } from "../sound";
 import { type Point, type Tone, anchor, animate, banner, burst, buzz, haptics, coins, done, flash, floater, gate, glitch, layer, lunge, mid, node, place, pointOf, punch, rays, rectOf, reduced, ring, shake, slash, split, stamp, tileEl, vignette, visible, wrapEl, scoreSegment } from "./core";
@@ -86,6 +87,42 @@ function snap(view: any): Snap {
     faces: { corp: view.corp?.identity?.face, runner: view.runner?.identity?.face },
     identities: { corp: view.corp?.identity?.cid, runner: view.runner?.identity?.cid },
     log: (view.log ?? []).length,
+  };
+}
+
+function hosts(view: any) {
+  const out = new Map<string, string>();
+  const walk = (x: any, host?: unknown) => {
+    if (!x || typeof x !== "object") return;
+    if (Array.isArray(x)) return x.forEach((c) => walk(c, host));
+    if (x.cid != null && x.zone) {
+      if (host != null) out.set(String(x.cid), String(host));
+      walk(x.hosted, x.cid);
+      return;
+    }
+    for (const [k, v] of Object.entries(x)) if (k !== "abilities" && k !== "subroutines" && k !== "basic-action-card" && k !== "prompt-state") walk(v);
+  };
+  walk(view.corp?.servers);
+  walk(view.runner?.rig);
+  return out;
+}
+
+function diffAim(before: any, after: any, was: Map<unknown, { zone: string; type?: string }>, now: Map<unknown, { zone: string }>) {
+  const a = snap(before);
+  const b = snap(after);
+  const advanced = [...b.adv].filter(([cid, n]) => n > (a.adv.get(cid) ?? 0)).map(([cid]) => String(cid));
+  const gone: DOMRect[] = [];
+  for (const [cid, info] of was) {
+    if (!info.zone.startsWith("rig") || now.get(cid)?.zone.startsWith("rig")) continue;
+    const el = tileEl(cid);
+    if (el) gone.push(el.getBoundingClientRect());
+  }
+  return {
+    advanced,
+    gone,
+    hostOf: hosts(after),
+    corpLost: Math.max(0, a.credits.corp - b.credits.corp),
+    gripLost: Math.max(0, (before.runner?.["hand-count"] ?? before.runner?.hand?.length ?? 0) - (after.runner?.["hand-count"] ?? after.runner?.hand?.length ?? 0)),
   };
 }
 
@@ -1151,6 +1188,7 @@ export function useFx(view: any, me: Side, render: (m: unknown) => string, quiet
 
   if (last.current !== view) {
     const next = collect(view);
+    if (last.current && cards.current) setAim(diffAim(last.current, view, cards.current, next));
     plan.current = cards.current && !document.hidden && !quiet ? prepare(cards.current, next) : null;
     cards.current = next;
     rects.current = new Map();

@@ -80,6 +80,29 @@ const smokeTexture = () =>
 const lerp = (a: Pt, b: Pt, k: number): Pt => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
 const rnd = (a: number, b: number) => a + Math.random() * (b - a);
 
+function tether(g: Graphics, a: Pt, b: Pt, k: number, color: number, width: number, alpha = 1, wobble = 0, t = 0): Pt {
+  const d = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+  const nx = -(b[1] - a[1]) / d;
+  const ny = (b[0] - a[0]) / d;
+  const c: Pt = [(a[0] + b[0]) / 2 + nx * d * 0.18, (a[1] + b[1]) / 2 + ny * d * 0.18];
+  const at = (s: number): Pt => {
+    const u = 1 - s;
+    const w = wobble * Math.sin(s * 14 - t * 9) * Math.sin(Math.PI * s);
+    return [u * u * a[0] + 2 * u * s * c[0] + s * s * b[0] + nx * w, u * u * a[1] + 2 * u * s * c[1] + s * s * b[1] + ny * w];
+  };
+  const n = 28;
+  const end = Math.max(0, Math.min(1, k));
+  for (const [w, al] of [
+    [width * 3.5, 0.25],
+    [width, 1],
+  ] as const) {
+    g.moveTo(...at(0));
+    for (let i = 1; i <= n; i++) g.lineTo(...at((i / n) * end));
+    g.stroke({ width: w, color: al === 1 ? WHITE : color, alpha: al * alpha, cap: "round", join: "round" });
+  }
+  return at(end);
+}
+
 function addFilter(target: Sprite, f: Filter) {
   target.filters = [...((target.filters as Filter[] | undefined) ?? []), f];
 }
@@ -151,7 +174,7 @@ export function pose(color: number, glint: Pt) {
 
 export async function transferOfWealth(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const src = at(0.62, 0.24);
+  const src = board?.drained ? pt(board.drained) : at(0.62, 0.24);
   const bar = { u0: 0.165, u1: 0.31, v: 0.255 };
   const g = new Graphics();
   g.blendMode = "add";
@@ -212,6 +235,8 @@ export async function measuredResponse(rect: DOMRect, code: string, ready?: Read
   const engine = glowSprite(fx, glowTexture(), 0x7fd8ff);
   engine.position.set(...tail);
   root.addChild(fx);
+  const salvo = board?.grip ? Array.from({ length: 6 }, (_, i) => homing(fx, glowTexture(), blast, pt(board.grip!), 0.35 + i * 0.05, ORANGE, (unit / 128) * 0.1, rnd(-1, 1) * unit * 0.6)) : [];
+  let struck = false;
   let boomed = false;
   const base = card.position.clone();
   await run(app, (t, dt) => {
@@ -240,10 +265,17 @@ export async function measuredResponse(rect: DOMRect, code: string, ready?: Read
     card.position.set(base.x + rnd(-1, 1) * quake, base.y + rnd(-1, 1) * quake);
     card.tint = t < 0.5 ? 0xffe0c0 : WHITE;
     heat(t, Math.sin(Math.PI * span(t, 0.1, 1.8)));
+    if (flyHome(salvo, t, debris, ORANGE) === salvo.length && salvo.length && !struck) {
+      struck = true;
+      const [gx, gy] = pt(board!.grip!);
+      burst(debris, gx, gy, 26, ORANGE, unit * 1.6, { life: 0.6, scale: 0.4, gravity: unit });
+      burst(fire, gx, gy, 6, 0xffd27a, unit * 0.4, { life: 0.5, scale: 1.2, tex: glowTexture() });
+      navigator.vibrate?.([30, 20, 60]);
+    }
     fire.step(dt);
     debris.step(dt);
     smoke.step(dt);
-    return t < 1.9 || smoke.list.length > 0;
+    return t < 1.9 || smoke.list.length > 0 || debris.list.length > 0;
   });
   card.position.copyFrom(base);
   done();
@@ -268,10 +300,11 @@ export async function keyPerformanceIndicators(rect: DOMRect, code: string, read
   const tip = glowSprite(fx, sparkTexture(), WHITE);
   const hand = glowSprite(fx, glowTexture(), 0xbfefff);
   hand.position.set(...at(0.55, 0.21));
+  const targets = (board?.advanced ?? []).map((r) => ({ p: pt(r), hit: false }));
   root.addChild(fx);
   let pinged = false;
   await run(app, (t, dt) => {
-    const fade = 1 - span(t, 1.6, 2);
+    const fade = 1 - span(t, targets.length ? 1.9 : 1.6, targets.length ? 2.3 : 2);
     holo.clear();
     const sweep = span(t, 0.05, 0.9);
     if (sweep > 0 && sweep < 1) {
@@ -307,10 +340,19 @@ export async function keyPerformanceIndicators(rect: DOMRect, code: string, read
         burst(sparks, head[0], head[1], 14, GOLD, unit * 1.2, { life: 0.5, scale: 0.35 });
       }
     }
+    for (const tg of targets) {
+      const k2 = ease.inOut(span(t, 1.3, 1.7));
+      if (k2 <= 0) continue;
+      const head = tether(line, at(0.92, 0.12), tg.p, k2, GOLD, unit * 0.01, 1 - span(t, 1.9, 2.3));
+      if (k2 >= 1 && !tg.hit) {
+        tg.hit = true;
+        burst(sparks, ...head, 18, GOLD, unit * 1.2, { life: 0.5, scale: 0.35 });
+      }
+    }
     hand.alpha = 0.6 * Math.sin(Math.PI * span(t, 0.4, 1.2));
     hand.scale.set((unit / 128) * 0.12);
     sparks.step(dt);
-    return t < 2 || sparks.list.length > 0;
+    return t < (targets.length ? 2.3 : 2) || sparks.list.length > 0;
   });
   done();
 }
@@ -327,8 +369,24 @@ export async function seamlessLaunch(rect: DOMRect, code: string, ready?: Ready,
   const motes = new Emitter(fx);
   const eye = glowSprite(fx, sparkTexture(), 0xe8dcff);
   eye.position.set(...at(0.5, 0.17));
+  const links = new Graphics();
+  links.blendMode = "add";
+  fx.addChild(links);
+  const targets = (board?.advanced ?? []).map((r) => ({ p: pt(r), hit: false }));
   root.addChild(fx);
   await run(app, (t, dt) => {
+    links.clear();
+    for (const tg of targets) {
+      const k = ease.inOut(span(t, 0.85, 1.3));
+      if (k <= 0) continue;
+      const head = tether(links, c, tg.p, k, VIOLET, unit * 0.012, 1 - span(t, 1.6, 2.1), unit * 0.02, t);
+      if (k >= 1 && !tg.hit) {
+        tg.hit = true;
+        burst(motes, ...head, 18, VIOLET, unit * 1.2, { life: 0.5, scale: 0.35 });
+      }
+      const r = span(t, 1.3, 1.9);
+      if (r > 0 && r < 1) links.circle(...tg.p, unit * (0.1 + 0.35 * ease.out(r))).stroke({ width: unit * 0.012 * (1 - r) + 1, color: VIOLET, alpha: 1 - r });
+    }
     const fade = 1 - span(t, 1.5, 1.9);
     g.clear();
     const boot = ease.inOut(span(t, 0.05, 0.7));
@@ -353,7 +411,7 @@ export async function seamlessLaunch(rect: DOMRect, code: string, ready?: Ready,
     eye.alpha = blink;
     eye.scale.set((unit / 120) * 0.4 * blink);
     motes.step(dt);
-    return t < 1.9 || motes.list.length > 0;
+    return t < (targets.length ? 2.1 : 1.9) || motes.list.length > 0;
   });
   done();
 }
@@ -648,6 +706,11 @@ export async function botulusPose(rect: DOMRect, code: string, ready?: Ready, bo
   const spores = new Emitter(fx);
   const core = glowSprite(fx, glowTexture(), TOXIC);
   core.position.set(...heart);
+  const vine = new Graphics();
+  vine.blendMode = "add";
+  fx.addChild(vine);
+  const host = board?.host ? pt(board.host) : null;
+  let infected = false;
   root.addChild(fx);
   await run(app, (t, dt) => {
     const k = Math.sin(Math.PI * span(t, 0, 1.7));
@@ -658,6 +721,16 @@ export async function botulusPose(rect: DOMRect, code: string, ready?: Ready, bo
       const a = rnd(0, Math.PI * 2);
       const d = unit * rnd(0.05, 0.3);
       spores.add(glowTexture(), heart[0] + Math.cos(a) * d, heart[1] + Math.sin(a) * d * 0.7, { vx: Math.cos(a) * unit * 0.15, vy: Math.sin(a) * unit * 0.1 - unit * 0.08, drag: 0.8, life: rnd(0.8, 1.3), tint: Math.random() < 0.6 ? TOXIC : ORANGE, scale: (unit / 128) * rnd(0.035, 0.07) });
+    }
+    vine.clear();
+    if (host) {
+      const k = ease.inOut(span(t, 0.25, 0.9));
+      const head = tether(vine, heart, host, k, TOXIC, unit * 0.01, 1 - span(t, 1.2, 1.6), unit * 0.04, t);
+      if (k > 0 && k < 1 && Math.random() < 0.6) spores.add(glowTexture(), ...head, { vx: rnd(-10, 10), vy: rnd(-10, 10), life: 0.6, tint: TOXIC, scale: (unit / 128) * 0.04 });
+      if (k >= 1 && !infected) {
+        infected = true;
+        burst(spores, ...host, 20, TOXIC, unit * 0.9, { life: 0.7, scale: 0.3 });
+      }
     }
     spores.step(dt);
     return t < 1.75 || spores.list.length > 0;
@@ -674,6 +747,11 @@ export async function botulus(rect: DOMRect, code: string, ready?: Ready, board?
   const spores = new Emitter(fx);
   const flash = glowSprite(fx, glowTexture(), TOXIC);
   flash.position.set(...heart);
+  const vine = new Graphics();
+  vine.blendMode = "add";
+  fx.addChild(vine);
+  const host = board?.host ? pt(board.host) : null;
+  let infected = false;
   root.addChild(fx);
   burst(spores, heart[0], heart[1], 30, TOXIC, unit * 1.3, { life: 0.8, scale: 0.3, tex: glowTexture() });
   for (const p of spores.list) p.s.scale.set((unit / 128) * rnd(0.03, 0.06));
@@ -684,6 +762,16 @@ export async function botulus(rect: DOMRect, code: string, ready?: Ready, board?
     split.blue = { x: 3 * k, y: k };
     flash.alpha = Math.max(0, 1 - t / 0.4) * 0.6;
     flash.scale.set((unit / 128) * (0.2 + 0.4 * t));
+    vine.clear();
+    if (host) {
+      const k = ease.inOut(span(t, 0.25, 0.9));
+      const head = tether(vine, heart, host, k, TOXIC, unit * 0.01, 1 - span(t, 1.2, 1.6), unit * 0.04, t);
+      if (k > 0 && k < 1 && Math.random() < 0.6) spores.add(glowTexture(), ...head, { vx: rnd(-10, 10), vy: rnd(-10, 10), life: 0.6, tint: TOXIC, scale: (unit / 128) * 0.04 });
+      if (k >= 1 && !infected) {
+        infected = true;
+        burst(spores, ...host, 20, TOXIC, unit * 0.9, { life: 0.7, scale: 0.3 });
+      }
+    }
     spores.step(dt);
     return t < 1.1 || spores.list.length > 0;
   });
@@ -880,7 +968,8 @@ export async function gourmandPose(rect: DOMRect, code: string, ready?: Ready, b
 
 export async function gourmand(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, card, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const c = at(0.5, 0.33);
+  const c = board?.access ? pt(board.access) : at(0.5, 0.33);
+  const span0 = board?.access ? board.access.width / 2 : unit * 0.36;
   const jaws = new Graphics();
   jaws.blendMode = "add";
   fx.addChild(jaws);
@@ -890,19 +979,19 @@ export async function gourmand(rect: DOMRect, code: string, ready?: Ready, board
   let chomped = false;
   await run(app, (t, dt) => {
     const k = ease.back(span(t, 0, 0.3));
-    const open = unit * 0.3 * (1 - k);
-    const w = unit * 0.36;
+    const open = span0 * 0.8 * (1 - k);
+    const w = span0;
     jaws.clear();
     const a = 1 - span(t, 0.45, 0.8);
     for (const dir of [-1, 1]) {
       const y = c[1] + dir * (open + unit * 0.02);
       jaws.moveTo(c[0] - w, y);
-      for (let i = 0; i <= 8; i++) jaws.lineTo(c[0] - w + (i * 2 * w) / 8, y - dir * (i % 2 ? unit * 0.05 : 0));
-      jaws.stroke({ width: unit * 0.012, color: 0x7dff7a, alpha: a });
+      for (let i = 0; i <= 8; i++) jaws.lineTo(c[0] - w + (i * 2 * w) / 8, y - dir * (i % 2 ? span0 * 0.14 : 0));
+      jaws.stroke({ width: Math.max(2, span0 * 0.03), color: 0x7dff7a, alpha: a });
     }
     if (k >= 0.95 && !chomped) {
       chomped = true;
-      burst(crumbs, c[0], c[1], 22, 0x7dff7a, unit * 1.5, { life: 0.6, scale: 0.35, gravity: unit * 1.5 });
+      burst(crumbs, c[0], c[1], 22, 0x7dff7a, span0 * 4, { life: 0.6, scale: 0.35, gravity: unit * 1.5 });
       navigator.vibrate?.(25);
     }
     const shake = chomped && t < 0.5 ? unit * 0.012 : 0;
@@ -963,7 +1052,20 @@ export async function eventHorizonFire(rect: DOMRect, code: string, ready?: Read
     const d = unit * rnd(0.6, 1.1);
     fall.add(sparkTexture(), hole[0] + Math.cos(a) * d, hole[1] + Math.sin(a) * d, { vx: -Math.cos(a) * d * 2.4, vy: -Math.sin(a) * d * 2.4, life: 0.42, tint: i % 3 ? GOLD : WHITE, scale: 0.3 * (unit / 180) });
   }
+  const ghosts = new Graphics();
+  ghosts.blendMode = "add";
+  fx.addChild(ghosts);
+  const prey = board?.gone ?? [];
   await run(app, (t, dt) => {
+    ghosts.clear();
+    for (const r of prey) {
+      const k = ease.inOut(span(t, 0.05, 0.75));
+      const [x, y] = lerp(pt(r), hole, k);
+      const w = r.width * (1 - k * 0.9);
+      const h = r.height * (1 - k * 0.9);
+      ghosts.rect(x - w / 2, y - h / 2, w, h).stroke({ width: 2, color: GOLD, alpha: 1 - span(t, 0.6, 0.8) }).fill({ color: 0xffe7a8, alpha: 0.15 * (1 - k) });
+      if (k < 0.9 && Math.random() < 0.8) fall.add(sparkTexture(), x + rnd(-0.5, 0.5) * w, y + rnd(-0.5, 0.5) * h, { vx: (hole[0] - x) * 1.5, vy: (hole[1] - y) * 1.5, life: 0.4, tint: GOLD, scale: 0.25 * (unit / 180), grow: -0.4 });
+    }
     twist.offset = filterPoint(card, ...hole);
     twist.angle = -2.4 * Math.sin(Math.PI * span(t, 0, 0.9));
     card.tint = t > 0.35 && t < 0.55 ? 0x888888 : WHITE;
@@ -1028,7 +1130,8 @@ export async function pharosFire(rect: DOMRect, code: string, ready?: Ready, boa
     star.scale.set((unit / 120) * (0.3 + 0.5 * k));
     beam.clear();
     const len = Math.max(innerWidth, innerHeight);
-    const a = Math.atan2(innerHeight - lamp[1], innerWidth / 2 - lamp[0]);
+    const aimAt = board?.runner ? pt(board.runner) : ([innerWidth / 2, innerHeight] as Pt);
+    const a = Math.atan2(aimAt[1] - lamp[1], aimAt[0] - lamp[0]);
     beam.poly([...lamp, lamp[0] + Math.cos(a - 0.08) * len, lamp[1] + Math.sin(a - 0.08) * len, lamp[0] + Math.cos(a + 0.08) * len, lamp[1] + Math.sin(a + 0.08) * len]).fill({ color: 0xfff1c0, alpha: 0.18 * k });
     return t < 1;
   });
@@ -1189,7 +1292,10 @@ export async function semakFire(rect: DOMRect, code: string, ready?: Ready, boar
   });
   root.addChild(fx);
   const lashes = Array.from({ length: 5 }, (_, i) => ({ from: at(rnd(0.1, 0.9), 0.98), to: at(rnd(0.1, 0.9), rnd(0.5, 0.7)), at: i * 0.07 }));
-  await run(app, (t) => {
+  const grip = board?.grip ? pt(board.grip) : null;
+  const hits = new Emitter(fx);
+  let struck = false;
+  await run(app, (t, dt) => {
     glitch.offset = t < 0.4 && Math.random() < 0.5 ? unit * 0.04 : 0;
     vines.clear();
     for (const l of lashes) {
@@ -1199,12 +1305,22 @@ export async function semakFire(rect: DOMRect, code: string, ready?: Ready, boar
       const tip = lerp(l.from, l.to, ease.out(k));
       vines.moveTo(...l.from).quadraticCurveTo(l.from[0] + unit * 0.2, (l.from[1] + tip[1]) / 2, ...tip).stroke({ width: unit * 0.014, color: 0xd6ff4a, alpha: a });
     }
+    if (grip) {
+      const k = ease.out(span(t, 0.1, 0.45));
+      const head = tether(vines, at(0.5, 0.9), grip, k, 0xd6ff4a, unit * 0.012, 1 - span(t, 0.7, 1.1), unit * 0.05, t);
+      if (k >= 1 && !struck) {
+        struck = true;
+        burst(hits, ...head, 22, RED, unit * 1.3, { life: 0.5, scale: 0.4 });
+        navigator.vibrate?.([30, 20, 30]);
+      }
+    }
     const open = Math.sin(Math.PI * span(t, 0, 0.8));
     for (const e of eyes) {
       e.alpha = open;
       e.scale.set((unit / 128) * 0.08, (unit / 128) * 0.035 * open);
     }
-    return t < 1;
+    hits.step(dt);
+    return t < (grip ? 1.2 : 1) || hits.list.length > 0;
   });
   done();
 }

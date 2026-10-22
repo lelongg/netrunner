@@ -19,6 +19,13 @@ export interface Board {
   radius?: number;
   track?: () => DOMRect | null;
   dim?: boolean;
+  advanced?: DOMRect[];
+  gone?: DOMRect[];
+  host?: DOMRect | null;
+  drained?: DOMRect | null;
+  grip?: DOMRect | null;
+  access?: DOMRect | null;
+  runner?: DOMRect | null;
 }
 
 const made = new Map<string, Texture>();

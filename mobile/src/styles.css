@@ -9037,6 +9037,51 @@ button.player-chip {
   rotate: 90deg;
 }
 
+.fxgl-aim > * {
+  position: fixed;
+}
+
+.fxgl-aim .playfield {
+  right: 12px;
+  top: 300px;
+}
+
+.fxgl-aim .tile,
+.fxgl-aim .fxgl-gone {
+  width: 40px;
+  height: 56px;
+  border: 1px dashed var(--line-2);
+}
+
+.fxgl-aim .fxgl-gone {
+  left: 12px;
+  top: 120px;
+}
+
+.fxgl-aim .fxgl-grip {
+  left: 30px;
+  top: 470px;
+  width: 120px;
+  height: 30px;
+  border: 1px dashed var(--line-2);
+}
+
+.fxgl-aim .fxgl-credits {
+  right: 20px;
+  top: 60px;
+  width: 50px;
+  height: 24px;
+  border: 1px dashed var(--line-2);
+}
+
+.fxgl-aim .fxgl-panel {
+  left: 160px;
+  top: 470px;
+  width: 80px;
+  height: 30px;
+  border: 1px dashed var(--line-2);
+}
+
 .fxgl-stage img.unrezzed {
   filter: grayscale(0.85) brightness(0.55);
 }
