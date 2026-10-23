@@ -2,11 +2,11 @@ import { byCommand } from "../observe.ts";
 import { playOf, proposal, serverValue } from "../generic.ts";
 import { choiceLabel, choiceMove, choices, findChoice, promptFrom, selectMove, selectable } from "../prompts.ts";
 import { registerPolicy } from "../registry.ts";
-import { fromCandidate, runnerRun } from "../runs.ts";
+import { fromCandidate, labelCost, runServer, runnerRun } from "../runs.ts";
 import { agendaProgress, coverage, estimateRun, iceThreat, isIcebreaker, playCostOf } from "../tactics.ts";
 const ICE_TYPES = new Set(["Barrier", "Code Gate", "Sentry"]);
 import type { DeckPolicy, Observation, Plan, Proposal, ServerInfo } from "../types.ts";
-import { GATEWAY_RUNNER_BEGINNER, GATEWAY_RUNNER_INTERMEDIATE } from "./gateway.ts";
+import { GATEWAY_CORP_BEGINNER, GATEWAY_CORP_INTERMEDIATE, GATEWAY_RUNNER_BEGINNER, GATEWAY_RUNNER_INTERMEDIATE } from "./gateway.ts";
 
 const ECONOMY = new Set(["Sure Gamble", "Creative Commission", "Telework Contract", "Smartware Distributor", "Red Team", "Wildcat Strike"]);
 const BREAKER_ORDER = ["Cleaver", "Unity", "Carmen"];
@@ -39,23 +39,83 @@ function targets(obs: Observation, extra = 0, includeWorthless = false): Target[
   return out.sort((a, b) => b.value - b.credits * 0.3 - (a.value - a.credits * 0.3));
 }
 
-function requiredHand(obs: Observation, t: Target) {
-  const adv = Math.max(0, ...t.server.content.map((c: any) => agendaProgress(c).have));
-  const trapDamage = t.server.remote && t.server.content.some((c: any) => !c.rezzed && !c.title) ? 2 + Math.min(adv, 2) : 0;
+const TRAPS = ["Urtica Cipher"];
+
+function trapsLeft(obs: Observation): number {
+  const identity = String(obs.opp.identity?.title ?? "");
+  const deck = [GATEWAY_CORP_BEGINNER, GATEWAY_CORP_INTERMEDIATE].find((d) => d.identity === identity);
+  if (!deck) return 1;
+  const total = deck.cards.filter((c) => TRAPS.includes(c.title)).reduce((n, c) => n + c.qty, 0);
+  const known = new Set<string>();
+  for (const s of obs.servers) for (const c of s.content) if (TRAPS.includes(c.title ?? obs.memory.seen.get(c.cid)?.title ?? "")) known.add(c.cid);
+  for (const c of obs.opp.discard ?? []) if (TRAPS.includes(c.title ?? "")) known.add(c.cid);
+  return Math.max(0, total - known.size);
+}
+
+function fullyCovered(obs: Observation, t: Target) {
+  const cov = coverage(obs);
   const unrezzed = t.server.ices.filter((i: any) => !i.rezzed).length;
-  const corpCanRez = Number(obs.opp.credit ?? 0) >= 4;
-  return t.damage + trapDamage + (unrezzed ? (corpCanRez ? 3 : 2) : 0);
+  if (unrezzed === 0) return t.damage === 0;
+  if (cov.size >= 3) return true;
+  return unrezzed === 1 && !!inRig(obs, "Mayfly");
+}
+
+function trapOdds(obs: Observation): number {
+  const traps = trapsLeft(obs);
+  if (traps === 0) return 0;
+  const identity = String(obs.opp.identity?.title ?? "");
+  const deck = [GATEWAY_CORP_BEGINNER, GATEWAY_CORP_INTERMEDIATE].find((d) => d.identity === identity);
+  if (!deck) return 0.5;
+  const isAgenda = (title: string) => obs.info({ title }).type === "Agenda";
+  const total = deck.cards.filter((c) => isAgenda(c.title)).reduce((n, c) => n + c.qty, 0);
+  const gone = (obs.opp.scored ?? []).length + (obs.me.scored ?? []).length + (obs.opp.discard ?? []).filter((c: any) => c.type === "Agenda").length;
+  return traps / (traps + Math.max(1, total - gone));
+}
+
+function accessRisk(obs: Observation, t: Target) {
+  const adv = Math.max(0, ...t.server.content.map((c: any) => agendaProgress(c).have));
+  const hidden = t.server.remote && t.server.content.some((c: any) => !c.rezzed && !c.title && !obs.memory.seen.has(c.cid));
+  if (!hidden) return t.damage;
+  const odds = trapOdds(obs);
+  if (odds === 0 || (adv >= 2 && odds <= 0.2)) return t.damage;
+  return t.damage + 2 + Math.min(adv, 2);
+}
+
+function requiredHand(obs: Observation, t: Target, covered = fullyCovered(obs, t)) {
+  const unrezzed = t.server.ices.filter((i: any) => !i.rezzed).length;
+  const corpCredits = Number(obs.opp.credit ?? 0);
+  const iceDamage = unrezzed && !(covered && obs.credits >= t.credits + 2) ? (corpCredits >= 4 ? 3 : corpCredits >= 1 ? 2 : 0) : 0;
+  return accessRisk(obs, t) + iceDamage;
+}
+
+function readiness(obs: Observation, t: Target): { installs: { title: string; cost: number }[]; draws: number; cost: number } | null {
+  const cov = coverage(obs);
+  const unrezzed = t.server.ices.filter((i: any) => !i.rezzed).length;
+  const memoryLeft = Number(obs.me.memory?.available ?? 4) - Number(obs.me.memory?.used ?? 0);
+  let installs: { title: string; cost: number }[] = [];
+  if (unrezzed > 0 && cov.size < 3) {
+    const mayfly = inHand(obs, "Mayfly");
+    if (mayfly && unrezzed === 1 && memoryLeft >= 1) installs = [{ title: "Mayfly", cost: playCostOf(mayfly) }];
+    else {
+      const byType: Record<string, string> = { Barrier: "Cleaver", "Code Gate": "Unity", Sentry: "Carmen" };
+      const missing = [...ICE_TYPES].filter((type) => !cov.has(type as any));
+      const cards = missing.map((type) => inHand(obs, byType[type]));
+      if (cards.some((c) => !c) || missing.length > memoryLeft) return null;
+      installs = cards.map((c) => ({ title: c!.title, cost: playCostOf(c!) }));
+    }
+  } else if (unrezzed === 0 && t.damage > 0) return null;
+  const draws = Math.max(0, accessRisk(obs, t) + 1 - (obs.hand.length - installs.length));
+  if (draws > 3 || accessRisk(obs, t) >= 5) return null;
+  const cost = installs.reduce((n, c) => n + c.cost, 0) + t.credits;
+  return { installs, draws, cost };
 }
 
 function safeHand(obs: Observation, t: Target) {
   const adv = Math.max(0, ...t.server.content.map((c: any) => agendaProgress(c).have));
-  const trapDamage = t.server.remote && t.server.content.some((c: any) => !c.rezzed && !c.title) ? 2 + Math.min(adv, 2) : 0;
-  const unrezzed = t.server.ices.filter((i: any) => !i.rezzed).length;
   const corpPoints = Number(obs.opp["agenda-point"] ?? 0);
   const need = Number(obs.opp["agenda-point-req"] ?? 7);
   const desperate = t.server.remote && adv >= 2 && corpPoints + 3 >= need;
-  const corpCredits = Number(obs.opp.credit ?? 0);
-  const required = desperate ? 2 : t.damage + trapDamage + (unrezzed ? (corpCredits >= 4 ? 3 : corpCredits >= 1 ? 2 : 0) : 0);
+  const required = desperate ? Math.min(2, requiredHand(obs, t)) : requiredHand(obs, t);
   return obs.hand.length > required;
 }
 
@@ -161,18 +221,34 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
   }
 
   const drawsThisTurn = ((obs.memory.notes.kinds as string[] | undefined) ?? []).filter((k) => k === "draw").length;
+  let planned = false;
   if (plan.kind === "contest") {
     const target = ts.find((t) => t.server.label === plan.detail?.server);
-    if (target) {
+    const plan_ = target ? readiness(obs, target) : null;
+    if (target && plan_ && plan_.cost <= obs.credits && plan_.installs.length + plan_.draws + 1 <= obs.clicks) {
+      planned = true;
+      const label = target.server.label;
+      for (const inst of plan_.installs) {
+        const card = inHand(obs, inst.title)!;
+        push(proposal(playOf(obs, card), 76, `install ${inst.title} to get into ${label} this turn`, "install-breaker"));
+      }
+      if (plan_.draws > 0) {
+        const draw = byCommand(obs, "draw")[0];
+        if (draw) push(proposal(draw, 75, `draw up to survive the access in ${label} (${plan_.draws} more)`, "draw"));
+      }
+      if (!plan_.installs.length && !plan_.draws && safeHand(obs, target)) {
+        for (const p of out) if (p.kind === "run" && p.why.startsWith(`run ${label}`)) {
+          p.score = Math.max(p.score, 78);
+          p.why += "; the rig covers every ice there";
+        }
+      }
+    } else if (target) {
       for (const p of out) if (p.kind === "install-breaker" && target.server.ices.some((i: any) => !i.rezzed)) p.score = Math.max(p.score, 68);
-    }
-  }
-  if (plan.kind === "contest" && drawsThisTurn < 2) {
-    const target = ts.find((t) => t.server.label === plan.detail?.server);
-    if (target && !safeHand(obs, target) && obs.hand.length < 5 && requiredHand(obs, target) <= 5) {
-      const draw = byCommand(obs, "draw")[0];
-      if (draw) push(proposal(draw, 59, `draw up before contesting ${target.server.label}`, "draw"));
-      if (vrcation && obs.credits >= 1) push(proposal(playOf(obs, vrcation), 66, `VRcation to refill the grip before contesting ${target.server.label}`, "draw"));
+      if (drawsThisTurn < 2 && !safeHand(obs, target) && obs.hand.length < 5 && requiredHand(obs, target) <= 5) {
+        const draw = byCommand(obs, "draw")[0];
+        if (draw) push(proposal(draw, 59, `draw up before contesting ${target.server.label}`, "draw"));
+        if (vrcation && obs.credits >= 1) push(proposal(playOf(obs, vrcation), 66, `VRcation to refill the grip before contesting ${target.server.label}`, "draw"));
+      }
     }
   }
   const thin = obs.hand.length <= 1;
@@ -207,7 +283,7 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
     if (draw) push(proposal(draw, safeRun ? 52 : 70, safeRun ? "draw: too few cards to survive net damage" : "draw: nothing is safe to run with this grip", "draw"));
     if (vrcation && obs.credits >= 1) push(proposal(playOf(obs, vrcation), 74, "VRcation: refill the grip", "draw"));
   }
-  for (const p of out) if (p.kind === "install-breaker" && p.why.startsWith("install Mayfly") && plan.kind !== "contest") p.score = 20;
+  for (const p of out) if (p.kind === "install-breaker" && p.why.startsWith("install Mayfly") && plan.kind !== "contest" && !planned) p.score = 20;
   for (const p of out) {
     if (thin && (p.kind === "install" || p.kind === "install-breaker" || p.kind === "install-economy") && obs.clicks <= 2) p.score -= 20;
     if (p.kind === "credit" && (obs.credits < 8 || obs.credits < floor) && cov.size >= 2) p.score += 12;
@@ -278,12 +354,23 @@ function prompt(obs: Observation, plan: Plan): Proposal | null {
   return null;
 }
 
+function restOfRun(obs: Observation) {
+  const server = runServer(obs);
+  const position = Number(obs.run?.position ?? 0);
+  if (!server || position <= 1) return 0;
+  return estimateRun(obs, { ...server, ices: server.ices.slice(0, position - 1) }, 3, 99).credits;
+}
+
 function run(obs: Observation, plan: Plan): Proposal | null {
   const ice = obs.currentIce;
-  const unbroken = (ice?.subroutines ?? []).some((s: any) => !s.broken && !s.fired);
-  if (obs.encounter && ice?.rezzed && ice.title === "Brân 1.0" && unbroken && obs.clicks >= 2 && obs.credits < 4) {
+  const unbrokenSubs = (ice?.subroutines ?? []).filter((s: any) => !s.broken && !s.fired).length;
+  if (obs.encounter && ice?.rezzed && (ice.subtypes ?? []).includes("Bioroid") && unbrokenSubs > 0) {
     const click = byCommand(obs, "runner-ability", (c) => (c.args as any)?.card?.cid === ice.cid)[0];
-    if (click) return fromCandidate(click, 82, "spend a click to break a Brân subroutine instead of credits", "break");
+    const full = byCommand(obs, "dynamic-ability", (c) => /fully break/i.test(c.label)).map((c) => labelCost(c.label)).sort((a, b) => a - b)[0];
+    const rest = restOfRun(obs);
+    const poor = full === undefined || obs.credits - full < rest + 1;
+    if (click && poor && obs.clicks >= unbrokenSubs) return fromCandidate(click, 86, `spend a click on ${ice.title}: paying ${full ?? "to break"} would leave too little for the ${rest} the rest of the run costs`, "break");
+    if (click && obs.clicks >= 2 && obs.credits < 4) return fromCandidate(click, 82, `spend a click to break a ${ice.title} subroutine instead of credits`, "break");
   }
   return runnerRun(obs);
 }

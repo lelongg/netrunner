@@ -69,6 +69,7 @@ export function runnerRun(obs: Observation, maxDamage?: number): Proposal | null
       const limit = maxDamage ?? Math.max(0, hand - 1);
       if (est.damage > limit) return fromCandidate(jack, 70, `jack out: ${est.damage} damage ahead with ${hand} cards in hand`, "jack-out", est.exact);
       if (est.blocked && est.damage > 0) return fromCandidate(jack, 60, "jack out: the next ice cannot be broken and hurts", "jack-out", est.exact);
+      if (est.blocked && ahead.ices.every((i: any) => i.rezzed)) return fromCandidate(jack, 55, `jack out: the ice ahead costs ${est.credits} and ends the run`, "jack-out", est.exact);
     }
   }
   const next = byCommand(obs, "start-next-phase")[0] ?? byCommand(obs, "continue")[0];
