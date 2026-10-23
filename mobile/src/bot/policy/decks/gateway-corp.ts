@@ -88,9 +88,15 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
         const hq = obs.servers.find((s) => s.key === "hq")!;
         const hqSafer = serverSafety(obs, hq).margin > safety.margin + 2 && obs.hand.length < 5 && agendasInHand <= 1;
         const runnerCredits = Number(obs.opp.credit ?? 0);
-        const contestable = target!.ices.length >= 1 && canRezOne && obs.credits >= 3 && !hqSafer && plan.kind !== "economy" && (safety.margin >= -4 || (racing && runnerCredits <= 6 && safety.margin >= -8));
-        p.score = contestable ? Math.min(p.score, racing ? 58 : 48) - (points >= 3 ? 10 : 0) : Math.min(p.score, 15);
-        p.why += ` (the Runner can get in: margin ${safety.margin}${racing ? ", racing" : ""}${canRezOne ? "" : ", no ice can be rezzed"}${hqSafer ? ", HQ is safer" : ""})`;
+        const deep = target!.ices.length >= 2;
+        const margins = deep ? [-4, -8, 6] : [-1, -4, 3];
+        const contestable = target!.ices.length >= 1 && canRezOne && obs.credits >= 3 && !hqSafer && plan.kind !== "economy" && (safety.margin >= margins[0] || (racing && runnerCredits <= margins[2] && safety.margin >= margins[1]));
+        const rich = obs.credits >= Math.max(15, safety.rezCost + 6);
+        const fortress = target!.ices.length >= 3 || (target!.ices.length >= 2 && target!.content.some((c: any) => c.type === "Upgrade"));
+        const desperate = Number(obs.me["deck-count"] ?? 99) < 10 && target!.ices.length >= 1 && canRezOne;
+        const taxRace = !contestable && ((rich && fortress) || desperate);
+        p.score = contestable ? Math.min(p.score, racing ? 58 : 48) - (points >= 3 ? 10 : 0) : taxRace ? Math.min(p.score, 55) - (points >= 3 ? 8 : 0) : Math.min(p.score, 15);
+        p.why += ` (the Runner can get in: margin ${safety.margin}${racing ? ", racing" : ""}${taxRace ? (desperate ? ", R&D is running out" : ", rich enough to make every run expensive") : ""}${canRezOne ? "" : ", no ice can be rezzed"}${hqSafer ? ", HQ is safer" : ""})`;
       } else if (card && target && safety?.safe && obs.clicks < 3 && canScoreNextTurn(obs, card, !!seamless)) p.score = Math.max(p.score, 72);
       if (obs.clicks === 3) p.score = Math.min(p.score, 50);
     }

@@ -251,6 +251,13 @@ function playGame({ seed, matchup, players, maxActions, full }) {
   }
   const lines = v.log.map((e) => render(e.text));
   const count = (re) => lines.filter((l) => re.test(l)).length;
+  const stealsFrom = {};
+  lines.forEach((l, i) => {
+    if (!/ steals /.test(l)) return;
+    const from = lines.slice(Math.max(0, i - 3), i).reverse().map((x) => x.match(/accesses .* from (HQ|R&D|Archives|Server \d+)/)?.[1]).find(Boolean) ?? "?";
+    const key = from.startsWith("Server") ? "remote" : from;
+    stealsFrom[key] = (stealsFrom[key] ?? 0) + 1;
+  });
   const avg = (xs) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
   const max = (xs) => (xs.length ? Math.max(...xs) : 0);
   const botStats = (s) => {
@@ -271,7 +278,7 @@ function playGame({ seed, matchup, players, maxActions, full }) {
     errors,
     stuck,
     points: [v.corp["agenda-point"], v.runner["agenda-point"]],
-    stats: { runs: count(/to make a run on/), steals: count(/ steals /), scored: count(/ scores? /), rezIce: count(/ to rez /i), breaks: count(/to break/), corpCredits: v.corp.credit, runnerCredits: v.runner.credit, rig: (v.runner.rig.program ?? []).map((c) => c.title).join("+") },
+    stats: { runs: count(/to make a run on/), steals: count(/ steals /), stealsFrom, scored: count(/ scores? /), rezIce: count(/ to rez /i), breaks: count(/to break/), corpCredits: v.corp.credit, runnerCredits: v.runner.credit, rig: (v.runner.rig.program ?? []).map((c) => c.title).join("+") },
     bots: { corp: botStats("corp"), runner: botStats("runner") },
     situations,
     log: actions,
