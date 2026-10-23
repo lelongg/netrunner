@@ -40,7 +40,7 @@ export function corpProposals(obs: Observation): Proposal[] {
       push(proposal(cardAction(obs, card, "advance"), score, finish ? `advance ${card.title}: it scores this turn` : `advance ${card.title} (${have}/${need})`, "advance"));
     }
   }
-  const empty = obs.servers.filter((s) => s.remote && s.ices.length > 0 && !s.content.length);
+  const empty = obs.servers.filter((s) => s.remote && s.ices.length > 0 && s.content.every((c: any) => c.type === "Upgrade"));
   const agendas = obs.hand.filter((c) => c.type === "Agenda");
   if (agendas.length && empty.length) {
     const agenda = [...agendas].sort((a, b) => agendaProgress(a).need - agendaProgress(b).need)[0];
@@ -78,7 +78,10 @@ export function corpProposals(obs: Observation): Proposal[] {
     if (!hq.ices.length) targets.push({ server: hq, score: (agendas.length ? 60 : 50) + (recentRuns("HQ") ? 12 : 0), why: agendas.length ? "HQ is open with an agenda in hand" : "HQ is open" });
     if (!rd.ices.length) targets.push({ server: rd, score: 48 + (recentRuns("R&D") ? 14 : 0), why: recentRuns("R&D") ? "R&D is open and the Runner keeps running it" : "R&D is open" });
     if (agendas.length && !empty.length) targets.push({ server: { label: "New remote", ices: [] }, score: hq.ices.length ? 52 : 45, why: "an agenda in hand needs a protected remote" });
-    for (const s of obs.servers.filter((x) => x.remote && x.content.length && x.ices.length < 2)) targets.push({ server: s, score: 45, why: `${s.label} holds something worth protecting` });
+    for (const s of obs.servers.filter((x) => x.remote && x.content.length && x.ices.length < 2)) {
+      const upgradesOnly = s.content.every((c: any) => c.type === "Upgrade");
+      targets.push({ server: s, score: upgradesOnly && agendas.length ? 56 : 45, why: upgradesOnly ? `${s.label} is the scoring remote: deepen it` : `${s.label} holds something worth protecting` });
+    }
     if (obs.credits >= 6) {
       for (const s of [rd, hq].sort((a, b) => a.ices.length - b.ices.length)) if (s.ices.length < 3) targets.push({ server: s, score: 40 - s.ices.length * 3, why: `deepen ${s.label}` });
     }

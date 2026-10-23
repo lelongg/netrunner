@@ -95,6 +95,13 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
     }
   }
 
+  const agendasStuck = obs.hand.some((c) => c.type === "Agenda") && !out.some((p) => p.kind === "install-agenda" && p.score > 20);
+  const idle = !out.some((p) => p.kind !== "credit" && p.kind !== "draw" && p.score > 32);
+  if (agendasStuck && idle && obs.credits >= 6 && Number(obs.me["deck-count"] ?? 0) > 8) {
+    const draw = byCommand(obs, "draw")[0];
+    if (draw) push(proposal(draw, 45, "draw: agendas wait in HQ and nothing in hand builds a remote for them", "draw"));
+  }
+
   const urtica = inHand(obs, "Urtica Cipher");
   const bait = remotes(obs).find((s) => s.ices.length > 0 && !s.content.length);
   if (urtica && obs.credits >= 2 && remotes(obs).length <= 3) push(proposal(playOf(obs, urtica, "New remote"), obs.turn <= 3 ? 50 : 40, `install Urtica Cipher in a new remote as a bait`, "install-trap"));

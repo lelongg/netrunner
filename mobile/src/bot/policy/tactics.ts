@@ -143,6 +143,7 @@ export function estimateRun(obs: Observation, server: ServerInfo, unrezzedCost =
     credits += option.cost.value;
     if (!option.cost.exact) exact = false;
   }
+  for (const c of server.content) if (c.rezzed && c.title === "Manegarm Skunkworks") credits += 5;
   if (unrezzed && coverage(obs).size < 3) etrRisk = true;
   return { server, credits, exact, blocked, unrezzed, damage, etrRisk };
 }
@@ -208,6 +209,7 @@ export function serverSafety(obs: Observation, server: ServerInfo): Safety {
       if (!option.cost.exact) exact = false;
     } else exact = false;
   }
+  for (const c of server.content) if (c.title === "Manegarm Skunkworks" && (c.rezzed || budget >= 2)) runnerCost += 5;
   const safe = server.ices.length > 0 && (blocked || runnerCost > runnerCredits + 2);
   return { blocked, runnerCost, rezCost, exact, safe, margin: blocked ? Infinity : runnerCost - runnerCredits };
 }
