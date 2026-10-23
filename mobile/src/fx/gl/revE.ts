@@ -20,8 +20,37 @@ const bolt = (g: Graphics, a: Pt, b: Pt, width: number, color: number, alpha: nu
     .lineTo(...b)
     .stroke({ width, color, alpha, cap: "round" });
 
-const SLOTS: Pt[] = [];
-for (let r = 0; r < 8; r++) for (let c = 0; c < 4; c++) SLOTS.push([0.445 + 0.067 * c + 0.009 * r, 0.555 + 0.044 * r + 0.008 * c]);
+const SLOTS: Pt[] = [
+  [0.476, 0.529],
+  [0.526, 0.525],
+  [0.463, 0.563],
+  [0.513, 0.564],
+  [0.572, 0.56],
+  [0.647, 0.554],
+  [0.443, 0.607],
+  [0.497, 0.61],
+  [0.559, 0.61],
+  [0.638, 0.613],
+  [0.443, 0.664],
+  [0.497, 0.679],
+  [0.555, 0.691],
+  [0.638, 0.709],
+  [0.463, 0.709],
+  [0.513, 0.727],
+  [0.576, 0.745],
+  [0.655, 0.772],
+  [0.476, 0.775],
+  [0.526, 0.778],
+  [0.584, 0.793],
+  [0.655, 0.825],
+  [0.488, 0.843],
+  [0.538, 0.834],
+  [0.588, 0.87],
+  [0.659, 0.858],
+  [0.526, 0.912],
+  [0.584, 0.918],
+  [0.647, 0.912],
+];
 
 export async function syailendra(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
@@ -29,15 +58,15 @@ export async function syailendra(rect: DOMRect, code: string, ready?: Ready, boa
   g.blendMode = "add";
   fx.addChild(g);
   const tip = glowSprite(fx, glowTexture(), 0xe8fff0);
-  tip.position.set(...at(0.27, 0.61));
+  tip.position.set(...at(0.233, 0.627));
   const pip = glowSprite(fx, sparkTexture(), 0xdff6ff);
-  const ring = (a: number) => at(0.245 + 0.125 * Math.cos(a), 0.76 + 0.225 * Math.sin(a));
+  const ring = (a: number) => at(0.278 + 0.11 * Math.cos(a), 0.75 + 0.235 * Math.sin(a));
   root.addChild(fx);
   await run(app, (t) => {
     g.clear();
     const fade = 1 - span(t, 1.6, 2);
     SLOTS.forEach(([u, v], i) => {
-      const d = 0.15 + (u - 0.44) * 1.6 + (v - 0.55) * 1.2;
+      const d = 0.15 + (u - 0.44) * 1.6 + (v - 0.52) * 1.2;
       const lit = span(t, d, d + 0.2) * fade;
       if (lit <= 0) return;
       const [x, y] = at(u, v);
