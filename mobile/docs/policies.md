@@ -248,20 +248,32 @@ and nothing else should be refused.
 
 ## Core decks: one policy per faction
 
-`policy/decks/core.ts` holds seven core-format decks (System Gateway plus Elevation, 40
-cards, the System Gateway identities), checked legal with the deck rules (`analyze` in
+`policy/decks/core.ts` holds seven decks, one per faction on the System Gateway identities:
+the "SG Only" sample decks Null Signal Games publishes for new players
+([Getting Started: Sample Decklists](https://nullsignal.games/players/getting-started-sample-decklists/)),
+written by System Gateway's lead designer and built from that set alone. Each deck carries
+its NetrunnerDB `source` link. They are legal in the core format (`analyze` in
 `deckrules.ts`) and seeded into the app's saved decks, the agent's `list_decks` and the
 evaluation:
 
-| Deck | Identity | Archetype module |
-|---|---|---|
-| `core-hb` | Haas-Bioroid: Precision Design | `glacier-score`: bioroids, Seamless Launch, Skunkworks, Humanoid Resources |
-| `core-jinteki` | Jinteki: Restoring Humanity | `glacier-score` + punish: Urtica and Byte! as bait, Anoetic Void, Neurospike kills, damage ice rezzed against a thin grip |
-| `core-nbn` | NBN: Reality Plus | `glacier-score` + tags: Public Trail, Retribution, Bigger Picture, resource trashes, Idiosyncresis, AMAZE Amusements |
-| `core-weyland` | Weyland: Built to Last | `glacier-score` + advance: a first advancement on every advanceable ice, Clearinghouse, Key Performance Indicators, Malapert |
-| `core-anarch` | René "Loup" Arcemont | `central-pressure` + viruses: Fermenter, Leech, Botulus, Gourmand, Rent Rioters, Scrounge, Loup trashes |
-| `core-criminal` | Zahya Sadeghi | `central-pressure`: Docklands, Red Team, Mutual Favor, Clean Getaway, Lie Low, Maintenance Access |
-| `core-shaper` | Tāo Salonga | `central-pressure` + lock: Conduit, Devadatta Drone, Illumination, Ritual, Pantograph, DZMZ |
+| Deck | Identity | NSG deck | Archetype module |
+|---|---|---|---|
+| `core-hb` | Haas-Bioroid: Precision Design | Discretion Advised | `glacier-score`: bioroids, Seamless Launch, Skunkworks |
+| `core-jinteki` | Jinteki: Restoring Humanity | Advanced Yomi | `glacier-score` + punish: Urtica as bait, Anoetic Void, Clearinghouse, damage ice rezzed against a thin grip |
+| `core-nbn` | NBN: Reality Plus | Hyper Velocity | `glacier-score` + tags: Public Trail, Orbital Superiority, Neurospike, resource trashes, AMAZE Amusements |
+| `core-weyland` | Weyland: Built to Last | Quick and Dirty | `glacier-score` + advance: a first advancement on every advanceable ice, Public Trail and Retribution, Malapert |
+| `core-anarch` | René "Loup" Arcemont | Party Hard | `central-pressure` + viruses: Fermenter, Leech, Botulus, Cookbook, Carnivore, Loup trashes |
+| `core-criminal` | Zahya Sadeghi | Stolen Goods | `central-pressure`: Docklands, Red Team, Pennyshaver, Mutual Favor, Tread Lightly |
+| `core-shaper` | Tāo Salonga | Planning Ahead | `central-pressure` + lock: Conduit, Pantograph, DZMZ, Tranquilizer, VRcation |
+
+The deck-specific rules of a module only fire for cards the deck holds, so the card lists
+in the modules may name cards from earlier lists without harm.
+
+`eval/decks/` holds further System Gateway-only lists as a test set for `--corp-list` and
+`--runner-list`: the first step of lostgeek's Project CROW campaign (HB and Loup),
+Alecthar's "The Tao of Running", "Gateway Only Built to Last", "NBN: Trojan Cookie", the
+"SGO Zahya Deck", two recent community lists, and the Weyland list a human beat the bot
+with in the app. The nearest-deck matching gives each of them the policy of its faction.
 
 The two Gateway policies export their parts as the `glacier` and `centralPressure`
 archetypes; each core module spreads one of them and overrides `proposals`, `prompt` or

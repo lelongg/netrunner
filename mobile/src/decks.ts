@@ -113,7 +113,7 @@ export function fromWire(w: WireDeck, db: CardDb): Deck {
 export const engineDeck = (d: Deck) => ({ identity: d.identity, cards: d.cards.map(({ qty, card }) => ({ qty, card })) });
 
 const STORE = "nsg.decks";
-const CORE_SEEDED = "nsg.decks.core-seeded";
+const CORE_SEEDED = "nsg.decks.core-seeded-sg-only";
 const MAX_DECKS = 80;
 
 export interface StoredDeck extends WireDeck {
