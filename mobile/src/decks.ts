@@ -1,5 +1,5 @@
 import type { Card, CardDb, Deck, DeckEntry, Matchup, PreconDeck, Side } from "./engine";
-import { CORE_DECKS } from "./bot/policy/decks/core";
+import { CORE_DECKS } from "./bot/policy/decks/core.ts";
 
 const normalize = (s: string) =>
   s
