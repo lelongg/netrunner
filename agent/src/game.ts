@@ -7,6 +7,7 @@ import { basicCommands, promptOf, runCommands } from "../../mobile/src/game/acti
 import { candidateActions } from "../../mobile/src/game/candidates";
 import { cardLine, gameLines, logLines } from "../../mobile/src/game/describe";
 import { type WireDeck, fromPrecon, importNrdb, toWire } from "../../mobile/src/decks";
+import { CORE_DECKS } from "../../mobile/src/bot/policy/decks/core";
 import { relayUrl, storeTicket } from "../../mobile/src/net/relay";
 import { FORMATS, GAME_FORMATS, type FormatKey, type GameFormat, analyze, dealtFormat, deckFormat } from "../../mobile/src/deckrules";
 
@@ -241,20 +242,24 @@ export class Agent {
     const s = this.session;
     const want = side ?? s?.lobby.mySide;
     const lines: string[] = [];
-    for (const m of shuffle(this.engine.precons() as any[])) {
-      for (const sd of ["corp", "runner"] as Side[]) {
-        if (want && sd !== want) continue;
-        const d = m[sd];
-        let legal = "";
-        if (format) {
-          try {
-            legal = analyze(fromPrecon(d, this.db), format).legal ? ` · legal in ${format}` : ` · not legal in ${format}`;
-          } catch {}
-        }
-        lines.push(`- ${d.name} (${m.title}) · ${sd} · identity: ${d.identity}${legal}`);
+    for (const { d, sd, title } of shuffle(this.preconList())) {
+      if (want && sd !== want) continue;
+      let legal = "";
+      if (format) {
+        try {
+          legal = analyze(fromPrecon(d, this.db), format).legal ? ` · legal in ${format}` : ` · not legal in ${format}`;
+        } catch {}
       }
+      lines.push(`- ${d.name} (${title}) · ${sd} · identity: ${d.identity}${legal}`);
     }
     return `Preconstructed decks${want ? ` for the ${want}` : ""}:\n${lines.join("\n")}\n\nchoose_deck also accepts a NetrunnerDB deck or decklist URL; find_decks lists recent community decklists legal in a format.`;
+  }
+
+  private preconList(): { d: { name: string; identity: string; cards: { qty: number; title: string }[] }; sd: Side; title: string }[] {
+    const out: { d: { name: string; identity: string; cards: { qty: number; title: string }[] }; sd: Side; title: string }[] = [];
+    for (const m of this.engine.precons() as any[]) for (const sd of ["corp", "runner"] as Side[]) out.push({ d: m[sd], sd, title: m.title });
+    for (const d of CORE_DECKS) out.push({ d, sd: d.side, title: "Core" });
+    return out;
   }
 
   private async indexedItems(side: Side, format: FormatKey) {
@@ -286,7 +291,7 @@ export class Agent {
         } catch {}
       }
     }
-    const precons = shuffle((this.engine.precons() as any[]).map((m) => ({ ...m[side], name: `${m[side].name} (${m.title})` })));
+    const precons = shuffle(this.preconList().filter((p) => p.sd === side).map(({ d, title }) => ({ ...d, name: `${d.name} (${title})` })));
     const fits = precons.find((d) => {
       const deck = fromPrecon(d, this.db);
       return !key || key === "casual" || analyze(deck, key).legal;
@@ -333,9 +338,9 @@ export class Agent {
     if (/^\s*random\s*$/i.test(nameOrUrl)) return this.randomDeck(side, format);
     if (/netrunnerdb\.com/.test(nameOrUrl)) return toWire(await importNrdb(nameOrUrl, side, this.db));
     const wanted = nameOrUrl.trim().toLowerCase();
-    for (const m of this.engine.precons() as any[]) {
-      const d = m[side];
-      const label = `${d.name} (${m.title})`;
+    for (const { d, sd, title } of this.preconList()) {
+      if (sd !== side) continue;
+      const label = `${d.name} (${title})`;
       if (label.toLowerCase() === wanted || d.name.toLowerCase() === wanted || label.toLowerCase().includes(wanted)) return toWire(fromPrecon({ ...d, name: label }, this.db));
     }
     throw new Error(`No ${side} deck matches "${nameOrUrl}".\n\n${this.decks(side)}`);

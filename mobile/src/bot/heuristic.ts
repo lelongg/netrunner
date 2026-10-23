@@ -229,7 +229,8 @@ export class HeuristicBot {
     const unique = [...new Map(all.map((c) => [c.cid, c])).values()];
     const msg = String(typeof prompt.msg === "string" ? prompt.msg : "");
     let pick: any;
-    if (/discard/i.test(msg)) pick = [...unique].sort((a, b) => this.cardValue(a) - this.cardValue(b))[0];
+    if (/credit providing/i.test(msg)) pick = unique.find((c) => Number(c.counter?.credit ?? 0) > 0);
+    else if (/discard/i.test(msg)) pick = [...unique].sort((a, b) => this.cardValue(a) - this.cardValue(b))[0];
     else {
       const mine = (c: any) => c.side === (this.side === "corp" ? "Corp" : "Runner");
       const hostile = /(trash|derez|expose|damage|destroy|remove)/i.test(msg);

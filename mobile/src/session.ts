@@ -1,5 +1,6 @@
 import type { CardDb, Deck, EngineApi, Side } from "./engine";
 import { type Bot, makeBot } from "./bot/index.ts";
+import { CORE_DECKS } from "./bot/policy/decks/core.ts";
 import { type WireDeck, engineDeck, fromPrecon, fromWire, latest, toWire } from "./decks";
 import { type GameFormat, analyze, dealtFormat, deckFormat, isGameFormat } from "./deckrules";
 import { type GameHost, type LocalEntry, type Op, type Probe, type ProbeResult, type Seat as ViewSeat, makeHost } from "./game/runner";
@@ -613,7 +614,7 @@ export class Session {
   private problemWith(deck: WireDeck, format: GameFormat): string | null {
     if (dealtFormat(format) || format === "casual") return null;
     if (format === "preconstructed") {
-      const precon = (this.engine.precons() as any[]).some((m) => (["corp", "runner"] as Side[]).some((s) => m[s].identity === deck.identity && deck.name.startsWith(m[s].name)));
+      const precon = (this.engine.precons() as any[]).some((m) => (["corp", "runner"] as Side[]).some((s) => m[s].identity === deck.identity && deck.name.startsWith(m[s].name))) || CORE_DECKS.some((d) => d.identity === deck.identity && deck.name.startsWith(d.name));
       return precon ? null : "Only preconstructed decks are allowed in this format";
     }
     try {

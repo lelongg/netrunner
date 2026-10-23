@@ -6,6 +6,7 @@ import { PolicyBot } from "../src/bot/policy/bot.ts";
 import { fingerprint, findPolicy, listPolicies } from "../src/bot/policy/registry.ts";
 import "../src/bot/policy/decks/gateway-corp.ts";
 import "../src/bot/policy/decks/gateway-runner.ts";
+import { CORE_CORP_DECKS, CORE_RUNNER_DECKS, coreDeck } from "../src/bot/policy/decks/core.ts";
 import { basicCommands, cardCommands, promptOf, runCommands } from "../src/game/actions.ts";
 import { gameLines, logLines } from "../src/game/describe.ts";
 
@@ -16,6 +17,9 @@ if (args.help) {
   --corp KIND        heuristic | policy | random (default policy)
   --runner KIND      heuristic | policy | random (default policy)
   --matchup I        preconstructed matchup index: 0 beginner, 1 intermediate (default 0)
+  --corp-deck KEY    core deck for the Corp (core-hb, core-jinteki, core-nbn, core-weyland) instead of the matchup's
+  --runner-deck KEY  core deck for the Runner (core-anarch, core-criminal, core-shaper) instead of the matchup's
+  --grid             play every core Corp deck against every core Runner deck and print the table
   --split NAME       seed set: design | tune | test (default design); seeds never overlap between splits
   --seed N           base seed inside the split (default 1)
   --max-actions N    actions before a game is declared unfinished (default 3000)
@@ -159,8 +163,7 @@ function snapshot(view, side, bot, record, kind, note) {
   };
 }
 
-function playGame({ seed, matchup, players, maxActions, full }) {
-  const m = matchups[matchup];
+function playGame({ seed, matchup, players, maxActions, full, m = matchups[matchup] }) {
   const seedWords = [seed, hash32(`${seed}:a`), hash32(`${seed}:b`), hash32(`${seed}:c`)];
   const rng = sfc32(...seedWords);
   let pickState = seedWords[1] >>> 0;
@@ -240,6 +243,10 @@ function playGame({ seed, matchup, players, maxActions, full }) {
       seeded(rng, () => (move.say ? engine.say(game, side, { username: side }, move.say) : engine.act(game, side, move.command, move.args ?? null)));
     } catch (e) {
       errors++;
+      if (args.verbose) {
+        const p = promptOf(engine.view(game, side), side);
+        console.error(`engine error at action ${n} (${side} ${move.command} ${JSON.stringify(move.say ?? move.args ?? null)}): ${e?.message ?? JSON.stringify(e)} | prompt: ${p ? `${p["prompt-type"]} "${render(p.msg)}" from ${p.card?.title ?? "?"} choices ${JSON.stringify((p.choices ?? []).map((c) => (typeof c.value === "string" ? c.value : c.title ?? c.value)))}` : "none"}`);
+      }
     }
     P[side].bot?.applied?.(move);
     n++;
@@ -292,32 +299,18 @@ const matchup = Number(args.matchup ?? 0);
 const split = String(args.split ?? "design");
 const base = Number(args.seed ?? 1);
 const maxActions = Number(args["max-actions"] ?? 3000);
-const out = args.out ? String(args.out) : null;
-if (out) await mkdir(out, { recursive: true });
+const outRoot = args.out ? String(args.out) : null;
 const splitBase = hash32(`split:${split}`) % 1_000_000;
-const results = [];
-const started = performance.now();
-for (let g = 0; g < games; g++) {
-  const seed = (splitBase * 1000 + base + g) >>> 0;
-  const r = playGame({ seed, matchup, players, maxActions, full: !!args.full });
-  results.push(r);
-  if (args.verbose) console.log(JSON.stringify({ seed: r.seed, winner: r.winner, reason: r.reason, turn: r.turn, points: r.points, stuck: r.stuck, errors: r.errors, situations: r.situations.map((s) => s.kind).join(","), ...r.stats }));
-  if (out) {
-    const { situations, ...rest } = r;
-    await appendFile(join(out, "games.jsonl"), JSON.stringify(rest) + "\n");
-    for (const s of situations) await appendFile(join(out, "situations.jsonl"), JSON.stringify({ seed: r.seed, matchup: r.matchup, players: r.players, split, ...s }) + "\n");
-  }
-}
-const elapsed = (performance.now() - started) / 1000;
-const wins = { corp: 0, runner: 0, none: 0 };
-for (const r of results) wins[r.winner ?? "none"]++;
-const finished = results.filter((r) => r.winner);
-const avg = (xs) => (xs.length ? (xs.reduce((a, b) => a + b, 0) / xs.length).toFixed(1) : "-");
-const reasons = {};
-for (const r of finished) reasons[r.reason] = (reasons[r.reason] ?? 0) + 1;
-const sum = (f) => results.reduce((n, r) => n + (f(r) ?? 0), 0);
-const kinds = {};
-for (const r of results) for (const s of r.situations) kinds[s.kind] = (kinds[s.kind] ?? 0) + 1;
+const pickDeck = (key, side) => {
+  const d = coreDeck(String(key));
+  if (!d || d.side !== side) throw new Error(`Unknown ${side} core deck: ${key}`);
+  return d;
+};
+const matchupOf = (corp, runner) => ({ key: `${corp.key ?? corp.name}+${runner.key ?? runner.name}`, title: `${corp.name} vs ${runner.name}`, corp, runner });
+const pairs = args.grid
+  ? CORE_CORP_DECKS.flatMap((c) => CORE_RUNNER_DECKS.map((r) => matchupOf(c, r)))
+  : [args["corp-deck"] || args["runner-deck"] ? matchupOf(args["corp-deck"] ? pickDeck(args["corp-deck"], "corp") : matchups[matchup].corp, args["runner-deck"] ? pickDeck(args["runner-deck"], "runner") : matchups[matchup].runner) : matchups[matchup]];
+
 const ci = (k, n) => {
   if (!n) return "";
   const p = k / n;
@@ -325,30 +318,80 @@ const ci = (k, n) => {
   const d = (z * Math.sqrt((p * (1 - p)) / n)).toFixed(2);
   return `±${d}`;
 };
-console.log(`matchup ${matchup} (${matchups[matchup].title}) · split ${split} seed ${base} · corp=${players.corp} (${results[0]?.players.corp}) runner=${players.runner} (${results[0]?.players.runner})`);
-console.log(`${games} games in ${elapsed.toFixed(0)}s | corp wins ${wins.corp} (${(wins.corp / games).toFixed(2)} ${ci(wins.corp, games)}), runner wins ${wins.runner} (${(wins.runner / games).toFixed(2)} ${ci(wins.runner, games)}), unfinished ${wins.none} | avg turn ${avg(finished.map((r) => r.turn))}, avg actions ${avg(finished.map((r) => r.actions))} | stuck ${results.filter((r) => r.stuck).length}, engine errors ${sum((r) => r.errors)} | reasons ${JSON.stringify(reasons)}`);
-for (const s of ["corp", "runner"]) {
-  const b = results.map((r) => r.bots[s]);
-  const policy = b.some((x) => x.decisions != null);
-  console.log(`${s}: decision avg ${avg(b.map((x) => x.avgMs))}ms max ${Math.max(...b.map((x) => x.maxMs)).toFixed(1)}ms${policy ? ` | refused ${sum((r) => r.bots[s].refused)}, unhandled ${sum((r) => r.bots[s].unhandled)}` : ""}${results[0]?.fallback[s] ? " | FALLBACK: no deck policy matched, generic policy used" : ""}`);
-}
-console.log(`situations: ${JSON.stringify(kinds)}${out ? ` → ${out}` : ""}`);
-if (out) {
-  const md = [];
-  md.push(`# Situations · matchup ${matchup} · ${players.corp} vs ${players.runner} · split ${split} seed ${base}`, "");
-  md.push(`Each situation shows only what the deciding side could see at that moment. Later revelations are not included.`, "");
-  for (const r of results) {
-    for (const s of r.situations) {
-      md.push(`## ${s.kind} · game seed ${r.seed} · turn ${s.turn} · ${s.side} (${s.policy})`, "", `**Why flagged:** ${s.note}`, "");
-      if (s.plan) md.push(`**Plan:** ${s.plan.kind} — ${s.plan.goal} (since turn ${s.plan.since})`, "");
-      md.push("**Board (as seen by the deciding side):**", "", "```", ...s.board, "```", "");
-      if (s.log.length) md.push("**Recent log:**", "", "```", ...s.log, "```", "");
-      if (s.considered.length) md.push("**Candidates considered:**", "", ...s.considered.map((c) => `- ${c.score} · ${c.kind} · ${c.why}${c.exact === false ? " (estimate)" : ""}`), "");
-      md.push(`**Chosen:** ${s.chosen ? `${s.chosen.kind} · ${s.chosen.why}` : "nothing"}`, "");
-      if (s.unhandled) md.push(`**Unhandled:** ${s.unhandled}`, "");
-      md.push(`Replay: \`--split ${split} --seed ${r.seed - splitBase * 1000} --games 1 --matchup ${matchup} --corp ${players.corp} --runner ${players.runner}\``, "");
+
+async function series(m, out) {
+  if (out) await mkdir(out, { recursive: true });
+  const results = [];
+  const started = performance.now();
+  for (let g = 0; g < games; g++) {
+    const seed = (splitBase * 1000 + base + g) >>> 0;
+    const r = playGame({ seed, matchup, players, maxActions, full: !!args.full, m });
+    results.push(r);
+    if (args.verbose) console.log(JSON.stringify({ seed: r.seed, winner: r.winner, reason: r.reason, turn: r.turn, points: r.points, stuck: r.stuck, errors: r.errors, situations: r.situations.map((s) => s.kind).join(","), ...r.stats }));
+    if (out) {
+      const { situations, ...rest } = r;
+      await appendFile(join(out, "games.jsonl"), JSON.stringify(rest) + "\n");
+      for (const s of situations) await appendFile(join(out, "situations.jsonl"), JSON.stringify({ seed: r.seed, matchup: r.matchup, players: r.players, split, ...s }) + "\n");
     }
   }
-  await writeFile(join(out, "situations.md"), md.join("\n"));
-  await writeFile(join(out, "summary.json"), JSON.stringify({ matchup, players, split, seed: base, games, wins, reasons, stuck: results.filter((r) => r.stuck).length, errors: sum((r) => r.errors), situations: kinds, policies: listPolicies().map((p) => `${p.id}@${p.version}`) }, null, 2));
+  const elapsed = (performance.now() - started) / 1000;
+  const wins = { corp: 0, runner: 0, none: 0 };
+  for (const r of results) wins[r.winner ?? "none"]++;
+  const finished = results.filter((r) => r.winner);
+  const avg = (xs) => (xs.length ? (xs.reduce((a, b) => a + b, 0) / xs.length).toFixed(1) : "-");
+  const reasons = {};
+  for (const r of finished) reasons[r.reason] = (reasons[r.reason] ?? 0) + 1;
+  const sum = (f) => results.reduce((n, r) => n + (f(r) ?? 0), 0);
+  const kinds = {};
+  for (const r of results) for (const s of r.situations) kinds[s.kind] = (kinds[s.kind] ?? 0) + 1;
+  console.log(`${m.title} · split ${split} seed ${base} · corp=${players.corp} (${results[0]?.players.corp}) runner=${players.runner} (${results[0]?.players.runner})`);
+  console.log(`${games} games in ${elapsed.toFixed(0)}s | corp wins ${wins.corp} (${(wins.corp / games).toFixed(2)} ${ci(wins.corp, games)}), runner wins ${wins.runner} (${(wins.runner / games).toFixed(2)} ${ci(wins.runner, games)}), unfinished ${wins.none} | avg turn ${avg(finished.map((r) => r.turn))}, avg actions ${avg(finished.map((r) => r.actions))} | stuck ${results.filter((r) => r.stuck).length}, engine errors ${sum((r) => r.errors)} | reasons ${JSON.stringify(reasons)}`);
+  for (const s of ["corp", "runner"]) {
+    const b = results.map((r) => r.bots[s]);
+    const policy = b.some((x) => x.decisions != null);
+    console.log(`${s}: decision avg ${avg(b.map((x) => x.avgMs))}ms max ${Math.max(...b.map((x) => x.maxMs)).toFixed(1)}ms${policy ? ` | refused ${sum((r) => r.bots[s].refused)}, unhandled ${sum((r) => r.bots[s].unhandled)}` : ""}${results[0]?.fallback[s] ? " | FALLBACK: no deck policy matched, generic policy used" : ""}`);
+  }
+  console.log(`situations: ${JSON.stringify(kinds)}${out ? ` → ${out}` : ""}`);
+  if (out) {
+    const md = [];
+    md.push(`# Situations · ${m.title} · ${players.corp} vs ${players.runner} · split ${split} seed ${base}`, "");
+    md.push(`Each situation shows only what the deciding side could see at that moment. Later revelations are not included.`, "");
+    for (const r of results) {
+      for (const s of r.situations) {
+        md.push(`## ${s.kind} · game seed ${r.seed} · turn ${s.turn} · ${s.side} (${s.policy})`, "", `**Why flagged:** ${s.note}`, "");
+        if (s.plan) md.push(`**Plan:** ${s.plan.kind} — ${s.plan.goal} (since turn ${s.plan.since})`, "");
+        md.push("**Board (as seen by the deciding side):**", "", "```", ...s.board, "```", "");
+        if (s.log.length) md.push("**Recent log:**", "", "```", ...s.log, "```", "");
+        if (s.considered.length) md.push("**Candidates considered:**", "", ...s.considered.map((c) => `- ${c.score} · ${c.kind} · ${c.why}${c.exact === false ? " (estimate)" : ""}`), "");
+        md.push(`**Chosen:** ${s.chosen ? `${s.chosen.kind} · ${s.chosen.why}` : "nothing"}`, "");
+        if (s.unhandled) md.push(`**Unhandled:** ${s.unhandled}`, "");
+        const decks = m.corp.key ? ` --corp-deck ${m.corp.key} --runner-deck ${m.runner.key}` : ` --matchup ${matchup}`;
+        md.push(`Replay: \`--split ${split} --seed ${r.seed - splitBase * 1000} --games 1${decks} --corp ${players.corp} --runner ${players.runner}\``, "");
+      }
+    }
+    await writeFile(join(out, "situations.md"), md.join("\n"));
+    await writeFile(join(out, "summary.json"), JSON.stringify({ matchup: m.key ?? matchup, title: m.title, decks: { corp: m.corp.name, runner: m.runner.name }, players, split, seed: base, games, wins, reasons, stuck: results.filter((r) => r.stuck).length, errors: sum((r) => r.errors), situations: kinds, policies: listPolicies().map((p) => `${p.id}@${p.version}`) }, null, 2));
+  }
+  return { wins, results, errors: sum((r) => r.errors), stuck: results.filter((r) => r.stuck).length };
+}
+
+const table = [];
+for (const m of pairs) {
+  const out = outRoot ? (pairs.length > 1 ? join(outRoot, m.key.replace(/[^a-z0-9-]+/gi, "_")) : outRoot) : null;
+  const r = await series(m, out);
+  table.push({ corpName: m.corp.name, runnerName: m.runner.name, ...r.wins, errors: r.errors, stuck: r.stuck, fallback: r.results[0]?.fallback });
+}
+if (pairs.length > 1) {
+  console.log("");
+  console.log(`| Corp \\ Runner | ${CORE_RUNNER_DECKS.map((r) => r.name.replace(/^Core /, "")).join(" | ")} |`);
+  console.log(`|---|${CORE_RUNNER_DECKS.map(() => "---").join("|")}|`);
+  for (const c of CORE_CORP_DECKS) {
+    const cells = CORE_RUNNER_DECKS.map((r) => {
+      const t = table.find((x) => x.corpName === c.name && x.runnerName === r.name);
+      return t ? `${t.corp} (${(t.corp / games).toFixed(2)} ${ci(t.corp, games)})${t.none ? ` · ${t.none} unfinished` : ""}${t.errors ? ` · ${t.errors} errors` : ""}` : "-";
+    });
+    console.log(`| ${c.name.replace(/^Core /, "")} | ${cells.join(" | ")} |`);
+  }
+  console.log("");
+  console.log("Cells are Corp wins out of " + games + " games.");
 }
