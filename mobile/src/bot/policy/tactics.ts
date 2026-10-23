@@ -162,6 +162,7 @@ export function estimateRun(obs: Observation, server: ServerInfo, unrezzedCost =
     if (threat.encounterTags) {
       tags += threat.encounterTags;
       credits += threat.encounterTags * 2;
+      if (tagPunisher(obs) && !(Number(obs.clicks ?? 0) >= 2 && budget - credits >= 4)) blocked = true;
     }
     if (!option || credits + option.cost.value > budget) {
       if (threat.etr) blocked = true;
@@ -230,7 +231,9 @@ export function serverSafety(obs: Observation, server: ServerInfo): Safety {
     const types = iceTypes(ice);
     const covered = types.length > 0 && types.some((t) => cov.has(t));
     if (!covered) {
-      if (threat.etr) blocked = true;
+      const grip = Number(obs.view.runner?.["hand-count"] ?? obs.view.runner?.hand?.length ?? 5);
+      if (threat.etr || (threat.damage > 0 && threat.damage >= grip)) blocked = true;
+      runnerCost += threat.damage * 2 + threat.creditLoss;
       continue;
     }
     const option = bestBreak(obs, asRezzed);

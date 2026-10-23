@@ -90,7 +90,7 @@ function prompt(obs: Observation, plan: Plan): Proposal | null {
 
 export const coreWeyland: DeckPolicy = registerPolicy({
   id: "core-weyland-advance",
-  version: "0.1.0",
+  version: "0.2.0",
   side: "corp",
   decks: [CORE_WEYLAND],
   ...glacier,
