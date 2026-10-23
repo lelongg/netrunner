@@ -924,38 +924,6 @@ export async function doomscroll(rect: DOMRect, code: string, ready?: Ready, boa
   await done();
 }
 
-export async function doomscrollFire(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const g = new Graphics();
-  g.blendMode = "add";
-  app.stage.addChild(g);
-  const target = board?.runner;
-  root.addChild(fx);
-  const src = at(0.55, 0.85);
-  await run(app, (t) => {
-    g.clear();
-    if (target) {
-      const k = ease.out(span(t, 0.05, 0.4));
-      for (let i = 0; i < 4; i++) {
-        const to: Pt = [target.left + target.width * (0.2 + i * 0.2), target.top + target.height * 0.5];
-        tether(g, [root.toGlobal({ x: src[0], y: src[1] }).x, root.toGlobal({ x: src[0], y: src[1] }).y], to, k, 0xffd84a, unit * 0.01, 1 - span(t, 0.6, 0.9), unit * 0.05, t + i);
-      }
-      if (t > 0.4 && t < 0.42) prism(document.querySelector('[data-anchor="runner-panel"]'), 0.5);
-    } else {
-      const k = span(t, 0, 0.7);
-      for (let i = 0; i < 6; i++) {
-        const v = 0.5 + ((i / 6 + k) % 1) * 0.5;
-        g.moveTo(...at(0.08, v))
-          .lineTo(...at(0.92, v))
-          .stroke({ width: 2, color: 0xffd84a, alpha: 0.6 * (1 - k) });
-      }
-    }
-    return t < 0.95;
-  });
-  g.destroy();
-  await done();
-}
-
 export const buzzsawInstall = buzzsawPose;
 export const bumiPose = pose(RED, [0.46, 0.735]);
 export const biawakPose = pose(ORANGE, [0.4, 0.58]);
