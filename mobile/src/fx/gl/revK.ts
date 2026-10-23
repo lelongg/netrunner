@@ -10,7 +10,7 @@ type Quad = [Pt, Pt, Pt, Pt];
 
 const bi = (q: Quad, s: number, r: number): Pt => lerp(lerp(q[0], q[1], s), lerp(q[3], q[2], s), r);
 
-function copy(card: Sprite) {
+export function copy(card: Sprite) {
   const s = new Sprite(card.texture);
   s.anchor.copyFrom(card.anchor);
   s.rotation = card.rotation;
@@ -19,7 +19,7 @@ function copy(card: Sprite) {
   return s;
 }
 
-function piece(root: Container, card: Sprite, poly: Pt[]) {
+export function piece(root: Container, card: Sprite, poly: Pt[]) {
   const box = new Container();
   const s = copy(card);
   const m = new Graphics().poly(poly.flat()).fill(0xffffff);
@@ -29,12 +29,12 @@ function piece(root: Container, card: Sprite, poly: Pt[]) {
   return box;
 }
 
-function pivot(box: Container, p: Pt) {
+export function pivot(box: Container, p: Pt) {
   box.pivot.set(...p);
   box.position.set(...p);
 }
 
-function clip(root: Container, sprite: Container, poly: Pt[]) {
+export function clip(root: Container, sprite: Container, poly: Pt[]) {
   const m = new Graphics().poly(poly.flat()).fill(0xffffff);
   root.addChild(m);
   sprite.mask = m;
@@ -109,81 +109,6 @@ export async function amazeAmusements(rect: DOMRect, code: string, ready?: Ready
   });
   circuit.destroy();
   gold.destroy();
-  await done();
-}
-
-export async function anoeticVoid(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, card, done, unit, at } = await scene(rect, code, ready, board);
-  const art: Pt[] = [at(0.03, 0.07), at(0.97, 0.07), at(0.97, 0.52), at(0.03, 0.52)];
-  const dark = copy(card);
-  const cm = new ColorMatrixFilter();
-  dark.filters = [cm];
-  root.addChildAt(dark, root.getChildIndex(card) + 1);
-  clip(root, dark, art);
-  const embers = keyed(root, card, [0.55, 0.45, 0], 0.62, 3.5, 0xffb070);
-  clip(root, embers, art);
-  const orbs: [Pt, number][] = [
-    [at(0.463, 0.167), unit * 0.045],
-    [at(0.714, 0.154), unit * 0.07],
-  ];
-  const g = new Graphics();
-  layer(root, false).addChild(g);
-  await run(app, (t) => {
-    const k = ease.inOut(span(t, 0, 0.5)) * (1 - ease.inOut(span(t, 1.3, 1.8)));
-    cm.brightness(1 - 0.62 * k, false);
-    dark.alpha = 1;
-    embers.alpha = 0.55 * k * (0.85 + 0.15 * Math.sin(t * 9));
-    g.clear();
-    orbs.forEach(([c, r], i) => {
-      const on = ease.out(span(t, 0.45 + i * 0.15, 0.8 + i * 0.15)) * (1 - span(t, 1.35, 1.8));
-      if (on <= 0) return;
-      for (let j = 0; j < 3; j++) {
-        const rr = r * (0.8 + j * 0.38);
-        const spin = t * (j % 2 ? -2 : 1.5) + i * 1.7 + j;
-        for (let s = 0; s < 3; s++) {
-          const a = spin + (s * Math.PI * 2) / 3;
-          g.moveTo(c[0] + Math.cos(a) * rr, c[1] + Math.sin(a) * rr).arc(c[0], c[1], rr, a, a + 1.3 - j * 0.25);
-        }
-        g.stroke({ width: 1.5 - j * 0.35, color: j ? 0xff9a50 : 0xffe0a0, alpha: (0.95 - j * 0.25) * on });
-      }
-      for (let ray = 0; ray < 16; ray++) {
-        const a = (ray / 16) * Math.PI * 2 + i * 0.4 + t * 0.35;
-        const len = r * (0.5 + 0.45 * (0.5 + 0.5 * Math.sin(t * 7 + ray * 2.3 + i)));
-        const r0 = r * 1.15;
-        g.moveTo(c[0] + Math.cos(a) * r0, c[1] + Math.sin(a) * r0).lineTo(c[0] + Math.cos(a) * (r0 + len * on), c[1] + Math.sin(a) * (r0 + len * on));
-      }
-      g.stroke({ width: 1, color: 0xffc080, alpha: 0.55 * on });
-      const flare = span(t, 0.5 + i * 0.15, 1.2 + i * 0.15);
-      if (flare > 0 && flare < 1) g.circle(c[0], c[1], r * (1.1 + 1.5 * ease.out(flare))).stroke({ width: 1.3, color: 0xffb070, alpha: 0.75 * (1 - flare) });
-    });
-    const link = span(t, 0.75, 1.05) * (1 - span(t, 1.3, 1.7));
-    if (link > 0) {
-      const [a, ra] = orbs[0];
-      const [b, rb] = orbs[1];
-      const ang = Math.atan2(b[1] - a[1], b[0] - a[0]);
-      const p0: Pt = [a[0] + Math.cos(ang) * ra * 1.2, a[1] + Math.sin(ang) * ra * 1.2];
-      const p1: Pt = [b[0] - Math.cos(ang) * rb * 1.2, b[1] - Math.sin(ang) * rb * 1.2];
-      const reach = ease.out(span(t, 0.75, 1.05));
-      for (const [lift, w, col, al] of [
-        [0.09, 3, 0xff7a3a, 0.35],
-        [0.09, 1.2, 0xffe0b0, 0.9],
-        [0.05, 1, 0xffb070, 0.5],
-      ] as const) {
-        const mid: Pt = [(p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2 - unit * lift];
-        g.moveTo(...p0);
-        for (let q = 1; q <= 24; q++) {
-          const f = (q / 24) * reach;
-          const m = 1 - f;
-          const jit = Math.sin(f * 40 + t * 30) * unit * 0.004;
-          g.lineTo(m * m * p0[0] + 2 * m * f * mid[0] + f * f * p1[0], m * m * p0[1] + 2 * m * f * mid[1] + f * f * p1[1] + jit);
-        }
-        g.stroke({ width: w, color: col, alpha: al * link });
-      }
-    }
-    return t < 1.8;
-  });
-  dark.destroy();
-  embers.destroy();
   await done();
 }
 
@@ -565,11 +490,10 @@ const dash = (g: Graphics, a: Pt, b: Pt, color: number, alpha: number) =>
 
 export async function idiosyncresis(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, card, done, unit, at } = await scene(rect, code, ready, board);
-  const art: Pt[] = [at(0.03, 0.07), at(0.97, 0.07), at(0.97, 0.52), at(0.03, 0.52)];
+  const art: Pt[] = [at(0.03, 0.1), at(0.97, 0.1), at(0.97, 0.52), at(0.03, 0.52)];
   const face = piece(root, card, art);
   const flow = shimmer(root, face, rect, unit * 0.045);
   const split = new RGBSplitFilter({ red: { x: 0, y: 0 }, green: { x: 0, y: 0 }, blue: { x: 0, y: 0 } });
-  face.filters = [...(face.filters ?? []), split];
   const eyesGlow = keyed(root, card, [0.4, 0.4, 0.2], 0.85, 6, 0xfff4b0);
   clip(root, eyesGlow, [at(0.42, 0.18), at(0.6, 0.18), at(0.6, 0.29), at(0.42, 0.29)]);
   const streams: [Pt, Pt, Pt][] = [
@@ -586,8 +510,9 @@ export async function idiosyncresis(rect: DOMRect, code: string, ready?: Ready, 
     const env = Math.sin(Math.PI * span(t, 0, 1.9));
     flow(t, env);
     const jolt = Math.max(...screams.map((b) => Math.max(0, 1 - Math.abs(t - b) / 0.08)));
-    split.red = { x: unit * 0.014 * jolt, y: -unit * 0.004 * jolt };
-    split.blue = { x: -unit * 0.014 * jolt, y: unit * 0.004 * jolt };
+    root.filters = jolt > 0 ? [split] : [];
+    split.red = { x: unit * 0.014 * jolt, y: 0 };
+    split.blue = { x: -unit * 0.014 * jolt, y: 0 };
     eyesGlow.alpha = 0.8 * env;
     g.clear();
     for (const b of bits) {
@@ -605,6 +530,7 @@ export async function idiosyncresis(rect: DOMRect, code: string, ready?: Ready, 
     });
     return t < 1.9;
   });
+  root.filters = [];
   eyesGlow.destroy();
   await done();
 }
