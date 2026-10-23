@@ -23,6 +23,14 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
   const vd = glacier.inHand(obs, "Anoetic Void");
   const scoring = glacier.scoringRemote(obs) ?? glacier.remotes(obs).find((s) => s.ices.length > 0 && !s.content.length);
   if (vd && scoring && !scoring.content.some((c: any) => c.title === "Anoetic Void") && obs.hand.length >= 3) push(proposal(playOf(obs, vd, scoring.label), 58, `Anoetic Void in ${scoring.label}: two credits and two cards end any run`, "install-upgrade"));
+  const installedAgenda = glacier.agendaIn(obs);
+  for (const s of glacier.remotes(obs)) {
+    for (const card of s.content) {
+      if (card.title !== "Urtica Cipher" || !s.ices.length || installedAgenda) continue;
+      const have = agendaProgress(card).have;
+      if (have < 2 && obs.credits >= 3 && obs.hand.some((c) => c.type === "Agenda")) push(proposal(cardAction(obs, card, "advance"), 44, `advance Urtica Cipher (${have}): looks like the agenda the Runner expects, and bites harder`, "bluff"));
+    }
+  }
   for (const p of out) {
     if (p.kind === "advance" && obs.hand.some((c) => c.type === "Agenda") && /Urtica/.test(p.why)) p.score = Math.min(p.score, 30);
     if (p.kind === "install-agenda" && obs.memory.notes.scoredPointsThisTurn) p.score -= 5;
@@ -51,7 +59,7 @@ function run(obs: Observation, plan: Plan): Proposal | null {
 
 export const coreJinteki: DeckPolicy = registerPolicy({
   id: "core-jinteki-punish",
-  version: "0.3.0",
+  version: "0.4.0",
   side: "corp",
   decks: [CORE_JINTEKI],
   ...glacier,

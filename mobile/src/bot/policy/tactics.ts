@@ -243,7 +243,11 @@ export function serverSafety(obs: Observation, server: ServerInfo): Safety {
     } else exact = false;
   }
   for (const c of server.content) if (c.title === "Manegarm Skunkworks" && (c.rezzed || budget >= 2)) runnerCost += 3;
-  if (server.content.some((c: any) => c.title === "Anoetic Void") && obs.credits >= 2 && obs.hand.filter((c: any) => c.type !== "Agenda").length >= 1 && obs.hand.length >= 2) blocked = true;
+  if (server.content.some((c: any) => c.title === "Anoetic Void")) {
+    const activations = Math.min(Math.floor(obs.credits / 2), Math.floor(obs.hand.filter((c: any) => c.type !== "Agenda").length / 2));
+    if (activations >= 2) blocked = true;
+    else if (activations === 1) runnerCost += 6;
+  }
   const expected = runnerCredits + 4;
   const safe = server.ices.length > 0 && (blocked || runnerCost > expected + 2);
   return { blocked, runnerCost, rezCost, exact, safe, margin: blocked ? Infinity : runnerCost - expected };

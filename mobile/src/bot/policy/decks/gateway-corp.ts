@@ -101,7 +101,10 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
         const runnerCredits = Number(obs.opp.credit ?? 0);
         const deep = target!.ices.length >= 2;
         const margins = deep ? [-4, -8, 6] : [-1, -4, 3];
-        const contestable = target!.ices.length >= 1 && canRezOne && obs.credits >= 3 && !hqSafer && plan.kind !== "economy" && (safety.margin >= margins[0] || (racing && runnerCredits <= margins[2] && safety.margin >= margins[1]));
+        const corpPoints = Number(obs.me["agenda-point"] ?? 0);
+        const runnerPoints = Number(obs.opp["agenda-point"] ?? 0);
+        const behind = runnerPoints > corpPoints || (obs.turn >= 8 && corpPoints === 0);
+        const contestable = target!.ices.length >= 1 && canRezOne && obs.credits >= 3 && !hqSafer && plan.kind !== "economy" && (safety.margin >= margins[0] || (racing && runnerCredits <= margins[2] && safety.margin >= margins[1]) || (behind && target!.ices.length >= 2));
         const rich = obs.credits >= Math.max(15, safety.rezCost + 6);
         const fortress = target!.ices.length >= 3 || (target!.ices.length >= 2 && target!.content.some((c: any) => c.type === "Upgrade"));
         const desperate = Number(obs.me["deck-count"] ?? 99) < 10 && target!.ices.length >= 1 && canRezOne;
@@ -110,8 +113,9 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
         const breached = stolenTurn !== undefined && stolenTurn >= changedTurn;
         const holdable = agendasInHand <= 2 && Number(obs.me["deck-count"] ?? 0) >= 10;
         const taxRace = !contestable && ((rich && fortress) || desperate);
-        p.score = breached && holdable && !desperate ? Math.min(p.score, 12) : contestable ? Math.min(p.score, racing ? 58 : 48) - (points >= 3 ? 10 : 0) : taxRace ? Math.min(p.score, 55) - (points >= 3 ? 8 : 0) : Math.min(p.score, 15);
-        p.why += ` (the Runner can get in: margin ${safety.margin}${breached ? ", and stole from there since the ice last changed" : ""}${racing ? ", racing" : ""}${taxRace ? (desperate ? ", R&D is running out" : ", rich enough to make every run expensive") : ""}${canRezOne ? "" : ", no ice can be rezzed"}${hqSafer ? ", HQ is safer" : ""})`;
+        const slow = card ? agendaProgress(card).need >= 5 : false;
+        p.score = breached && holdable && !desperate && !behind ? Math.min(p.score, 12) : contestable ? Math.min(p.score, racing ? 58 : 48) - (points >= 3 ? 10 : 0) - (slow ? 8 : 0) : taxRace ? Math.min(p.score, 55) - (points >= 3 ? 8 : 0) - (slow ? 8 : 0) : Math.min(p.score, 15);
+        p.why += ` (the Runner can get in: margin ${safety.margin}${breached ? ", and stole from there since the ice last changed" : ""}${behind ? ", but sitting loses" : ""}${racing ? ", racing" : ""}${taxRace ? (desperate ? ", R&D is running out" : ", rich enough to make every run expensive") : ""}${canRezOne ? "" : ", no ice can be rezzed"}${hqSafer ? ", HQ is safer" : ""})`;
       } else if (card && target && safety?.safe && obs.clicks < 3 && canScoreNextTurn(obs, card, !!seamless)) p.score = Math.max(p.score, 72);
       if (obs.clicks === 3) p.score = Math.min(p.score, 50);
     }
@@ -150,19 +154,40 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
   const hqServer = obs.servers.find((s) => s.key === "hq")!;
   const agendasHeld = obs.hand.filter((c) => c.type === "Agenda").length;
   const remoteReady = remotes(obs).some((s) => s.ices.length > 0 && s.content.every((c: any) => c.type === "Upgrade"));
-  const hqCap = agendasHeld >= 3 && !remoteReady && obs.hand.some((c) => c.type === "ICE") ? 2 : 3;
+  const rdOpen = obs.servers.find((s) => s.key === "rd")!.ices.length === 0;
+  const hqCap = rdOpen ? 1 : agendasHeld >= 3 && !remoteReady && obs.hand.some((c) => c.type === "ICE") ? 2 : 3;
   if (agendasHeld >= 1 && hqServer.ices.length < hqCap && !serverSafety(obs, hqServer).safe) {
     const ice = obs.hand.filter((c) => c.type === "ICE").sort((a, b) => iceRank(obs, b) - iceRank(obs, a))[0];
     const budget = obs.credits - hqServer.ices.length;
     if (ice && budget >= rezCostOf(ice) + 2) push(proposal(playOf(obs, ice, "HQ"), agendasHeld >= 2 ? 72 : 63, `add ${ice.title} to HQ: ${agendasHeld} agenda${agendasHeld > 1 ? "s" : ""} in hand and the Runner can get in`, "install-ice"));
   }
-  const weak = installed?.server ?? (obs.hand.some((c) => c.type === "Agenda") ? bait : undefined);
-  if (weak && !serverSafety(obs, weak).safe && weak.ices.length < 3) {
-    const ice = obs.hand.filter((c) => c.type === "ICE").sort((a, b) => iceRank(obs, b) - iceRank(obs, a))[0];
+  const endsRun = (c: any) => iceThreat({ ...c, subroutines: c.subroutines ?? [] }, obs.info(c)).etr;
+  const scoringShell = remotes(obs).find((s) => s.ices.length > 0 && s.content.every((c: any) => c.type === "Upgrade"));
+  const weak = installed?.server ?? (obs.hand.some((c) => c.type === "Agenda") ? bait ?? scoringShell : undefined);
+  const porous = weak ? !weak.ices.some((i: any) => endsRun(i)) : false;
+  if (weak && !serverSafety(obs, weak).safe && (weak.ices.length < 3 || (porous && weak.ices.length < 4))) {
+    const ice = obs.hand.filter((c) => c.type === "ICE").sort((a, b) => iceRank(obs, b) + (endsRun(b) ? 5 : 0) - (iceRank(obs, a) + (endsRun(a) ? 5 : 0)))[0];
     const budget = obs.credits - weak.ices.length;
-    if (ice && budget >= rezCostOf(ice) + 2) push(proposal(playOf(obs, ice, weak.label), installed ? 74 : obs.credits >= 12 ? 70 : 64, `add ${ice.title} to ${weak.label}: the Runner can still get in`, "install-ice"));
+    const pointless = porous && weak.ices.length >= 3 && ice && !endsRun(ice);
+    if (ice && !pointless && budget >= rezCostOf(ice) + 2) push(proposal(playOf(obs, ice, weak.label), installed ? 74 : obs.credits >= 12 ? 70 : 64, `add ${ice.title} to ${weak.label}: the Runner can still get in${porous ? " and nothing there ends the run" : ""}`, "install-ice"));
     else if (ice) push(proposal(playOf(obs, ice, weak.label), 30, `add ${ice.title} to ${weak.label} later: not enough credits to rez it`, "install-ice"));
   }
+
+  const runnerGrip = Number(obs.opp["hand-count"] ?? 0);
+  const clearing = inHand(obs, "Clearinghouse");
+  const baitRemote = remotes(obs).find((s) => s.ices.length > 0 && !s.content.length);
+  if (clearing && obs.credits >= 2 && remotes(obs).length <= 3 && agendasHeld === 0 && !installed) push(proposal(playOf(obs, clearing, baitRemote ? baitRemote.label : "New remote"), baitRemote ? 48 : 40, "Clearinghouse: a threat that pays to advance", "install-trap"));
+  for (const s of remotes(obs)) {
+    for (const card of s.content) {
+      if (card.title !== "Clearinghouse") continue;
+      const have = agendaProgress(card).have;
+      if (have === 0 && obs.credits >= 1) push(proposal(cardAction(obs, card, "advance"), 50, "advance Clearinghouse: a threat the Runner has to respect", "advance"));
+      else if (have > 0 && have < runnerGrip && obs.credits >= 2 && !installed) push(proposal(cardAction(obs, card, "advance"), 34 + have * 4, `advance Clearinghouse (${have}) towards the Runner's grip of ${runnerGrip}`, "advance"));
+    }
+  }
+  const ambush = obs.hand.find((c) => c.type === "Asset" && /you can advance this asset/i.test(obs.info(c).text ?? "") && /net damage/i.test(obs.info(c).text ?? ""));
+  const scoringEmpty = scoring ? null : remotes(obs).find((s) => s.ices.length > 0 && !s.content.some((c: any) => c.type !== "Upgrade"));
+  if (ambush && scoringEmpty && obs.credits >= 4 && !installed && agendasHeld === 0) push(proposal(playOf(obs, ambush, scoringEmpty.label), 46, `${ambush.title} in ${scoringEmpty.label}: the next run into the scoring remote hurts`, "install-trap"));
 
   const subsidy = inHand(obs, "Government Subsidy");
   if (subsidy && obs.credits >= 10) push(proposal(playOf(obs, subsidy), 68, "Government Subsidy: +5 net, keeps the scoring budget high", "economy"));
@@ -198,6 +223,15 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
 function prompt(obs: Observation, plan: Plan): Proposal | null {
   const from = promptFrom(obs);
   const text = obs.promptText;
+  if (from === "Clearinghouse" && /trash/i.test(text) && obs.promptType !== "select") {
+    const card = obs.servers.flatMap((s) => s.content).find((c: any) => c.title === "Clearinghouse");
+    const have = card ? agendaProgress(card).have : 0;
+    const grip = Number(obs.opp["hand-count"] ?? 0);
+    const yes = findChoice(obs, /^yes$/i);
+    const no = findChoice(obs, /^no$/i);
+    if (yes && have >= grip && have > 0) return { move: choiceMove(obs, yes), score: 95, why: `Clearinghouse: ${have} meat damage against a grip of ${grip}`, kind: "choice" };
+    if (no) return { move: choiceMove(obs, no), score: 60, why: "Clearinghouse: keep building the threat", kind: "choice" };
+  }
   if (from === "Seamless Launch" && obs.promptType === "select") {
     const cards = selectable(obs).filter((c) => !installedThisTurn(obs, c));
     const agenda = cards.filter((c) => c.type === "Agenda").sort((a, b) => scoringCost(a) - scoringCost(b))[0];
@@ -262,7 +296,7 @@ export const glacier = { mulligan, plan, proposals, prompt, run, scoringCost, ca
 
 export const gatewayCorp: DeckPolicy = registerPolicy({
   id: "gateway-corp-syndicate",
-  version: "0.4.0",
+  version: "0.5.0",
   side: "corp",
   decks: [GATEWAY_CORP_BEGINNER, GATEWAY_CORP_INTERMEDIATE],
   ...glacier,

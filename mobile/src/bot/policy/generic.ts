@@ -1,7 +1,7 @@
 import type { Candidate } from "../../game/candidates.ts";
 import { byCommand } from "./observe.ts";
 import { fromCandidate } from "./runs.ts";
-import { ICE_TYPES, type IceType, agendaProgress, coverage, estimateRun, gainOf, isEconomy, isIcebreaker, isTrap, iceTypes, playCostOf, rezCostOf, strengthOf, subtypes, tagged } from "./tactics.ts";
+import { ICE_TYPES, type IceType, agendaProgress, coverage, estimateRun, gainOf, iceThreat, isEconomy, isIcebreaker, isTrap, iceTypes, playCostOf, rezCostOf, strengthOf, subtypes, tagged } from "./tactics.ts";
 import type { Observation, Plan, Proposal } from "./types.ts";
 
 export const playOf = (obs: Observation, card: any, server?: string): Candidate | undefined => byCommand(obs, "play", (c) => (c.args as any)?.card?.cid === card.cid && (server === undefined || (c.args as any)?.server === server))[0];
@@ -85,8 +85,11 @@ export function corpProposals(obs: Observation): Proposal[] {
     if (obs.credits >= 6) {
       for (const s of [rd, hq].sort((a, b) => a.ices.length - b.ices.length)) if (s.ices.length < 3) targets.push({ server: s, score: 40 - s.ices.length * 3, why: `deepen ${s.label}` });
     }
+    const endsRun = (c: any) => iceThreat({ ...c, subroutines: [] }, obs.info(c)).etr;
+    const forRemote = [...ice].sort((a, b) => (endsRun(b) ? 6 : 0) + strengthOf(b) - ((endsRun(a) ? 6 : 0) + strengthOf(a)));
     for (const t of targets) {
-      const card = ice.find((c) => rezCostOf(c) <= obs.credits + 3) ?? ice[0];
+      const pool = /Server|remote/.test(t.server.label) ? forRemote : ice;
+      const card = pool.find((c) => rezCostOf(c) <= obs.credits + 3) ?? pool[0];
       const installCost = iceInstallCost(t.server);
       if (installCost > obs.credits) continue;
       const left = obs.credits - installCost;

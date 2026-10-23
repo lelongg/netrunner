@@ -95,7 +95,7 @@ function prompt(obs: Observation, plan: Plan): Proposal | null {
 
 export const coreNbn: DeckPolicy = registerPolicy({
   id: "core-nbn-tags",
-  version: "0.2.0",
+  version: "0.3.0",
   side: "corp",
   decks: [CORE_NBN],
   ...glacier,
