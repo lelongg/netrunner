@@ -343,6 +343,11 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
     const draw = byCommand(obs, "draw")[0];
     if (draw) push(proposal(draw, 46, "draw: poor and nothing in hand earns credits", "draw"));
   }
+  const nothingToPlay = !out.some((p) => p.score >= 40 && p.kind !== "credit" && p.kind !== "draw");
+  if (nothingToPlay && obs.credits >= 2 && obs.hand.length <= 5 && drawsThisTurn < 2 && (obs.me["deck-count"] ?? 0) > 0) {
+    const draw = byCommand(obs, "draw")[0];
+    if (draw) push(proposal(draw, 45, "draw: nothing in hand is worth a click, find something", "draw"));
+  }
   const punisher = tagPunisher(obs);
   const myTags = Number(obs.me.tag?.base ?? obs.me.tag?.total ?? 0);
   if (punisher && ranSuccessfullyThisTurn(obs) && obs.credits < 8 && Number(obs.opp.credit ?? 0) >= 4 && obs.clicks <= 2) {
@@ -401,6 +406,13 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
     if (p.kind === "remove-tag" && punisher) p.score = 78;
     if (richNoRig && (p.kind === "click-economy" || p.kind === "credit")) p.score -= 15;
     if (obs.credits >= 20 && (p.kind === "economy" || p.kind === "click-economy" || p.kind === "install-economy" || p.kind === "credit")) p.score -= 18;
+    if (p.kind === "run-event") {
+      const t = ts.find((x) => p.why.includes(` into ${x.server.label}`));
+      if (t && t.server.remote && t.server.ices.some((i: any) => !i.rezzed) && !fullyCovered(obs, t) && Number(obs.opp.credit ?? 0) >= 4 && t.value < 8) {
+        p.score -= 14;
+        p.why += " (an unrezzed ice may be one the rig cannot break)";
+      }
+    }
     if (p.kind === "run") {
       const t = ts.find((x) => p.why.startsWith(`run ${x.server.label}`));
       if (t && !safeHand(obs, t)) p.score -= 40;
@@ -499,7 +511,7 @@ export const centralPressure = { mulligan, plan, proposals, prompt, run, targets
 
 export const gatewayRunner: DeckPolicy = registerPolicy({
   id: "gateway-runner-catalyst",
-  version: "0.4.0",
+  version: "0.5.0",
   side: "runner",
   decks: [GATEWAY_RUNNER_BEGINNER, GATEWAY_RUNNER_INTERMEDIATE],
   ...centralPressure,

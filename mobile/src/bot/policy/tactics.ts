@@ -230,7 +230,9 @@ export function serverSafety(obs: Observation, server: ServerInfo): Safety {
     const types = iceTypes(ice);
     const covered = types.length > 0 && types.some((t) => cov.has(t));
     if (!covered) {
-      if (threat.etr) blocked = true;
+      const grip = Number(obs.view.runner?.["hand-count"] ?? obs.view.runner?.hand?.length ?? 5);
+      if (threat.etr || (threat.damage > 0 && threat.damage >= grip)) blocked = true;
+      runnerCost += threat.damage * 2 + threat.creditLoss;
       continue;
     }
     const option = bestBreak(obs, asRezzed);

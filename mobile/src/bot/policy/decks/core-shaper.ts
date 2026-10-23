@@ -80,7 +80,7 @@ function prompt(obs: Observation, plan: Plan): Proposal | null {
 
 export const coreShaper: DeckPolicy = registerPolicy({
   id: "core-shaper-lock",
-  version: "0.2.0",
+  version: "0.3.0",
   side: "runner",
   decks: [CORE_SHAPER],
   ...centralPressure,

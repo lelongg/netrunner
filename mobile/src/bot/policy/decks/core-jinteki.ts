@@ -51,7 +51,7 @@ function run(obs: Observation, plan: Plan): Proposal | null {
 
 export const coreJinteki: DeckPolicy = registerPolicy({
   id: "core-jinteki-punish",
-  version: "0.2.0",
+  version: "0.3.0",
   side: "corp",
   decks: [CORE_JINTEKI],
   ...glacier,

@@ -68,6 +68,14 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
   const seamless = inHand(obs, "Seamless Launch");
   const installed = agendaIn(obs);
   const scoring = scoringRemote(obs);
+  const iceCount = (obs.memory.notes.iceCount ??= {}) as Record<string, number>;
+  const iceChanged = (obs.memory.notes.iceChanged ??= {}) as Record<string, number>;
+  for (const s of remotes(obs)) {
+    if (iceCount[s.label] !== s.ices.length) {
+      if (iceCount[s.label] !== undefined) iceChanged[s.label] = obs.turn;
+      iceCount[s.label] = s.ices.length;
+    }
+  }
 
   if (installed && seamless && !installedThisTurn(obs, installed.card) && obs.credits >= 1 && scoringCost(installed.card) >= 2) {
     push(proposal(playOf(obs, seamless), 95, `Seamless Launch: two advancements on ${installed.card.title}`, "fast-advance"));
@@ -97,9 +105,13 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
         const rich = obs.credits >= Math.max(15, safety.rezCost + 6);
         const fortress = target!.ices.length >= 3 || (target!.ices.length >= 2 && target!.content.some((c: any) => c.type === "Upgrade"));
         const desperate = Number(obs.me["deck-count"] ?? 99) < 10 && target!.ices.length >= 1 && canRezOne;
+        const stolenTurn = ((obs.memory.notes.stolenFrom ?? {}) as Record<string, number>)[target!.label];
+        const changedTurn = ((obs.memory.notes.iceChanged ?? {}) as Record<string, number>)[target!.label] ?? 0;
+        const breached = stolenTurn !== undefined && stolenTurn >= changedTurn;
+        const holdable = agendasInHand <= 2 && Number(obs.me["deck-count"] ?? 0) >= 10;
         const taxRace = !contestable && ((rich && fortress) || desperate);
-        p.score = contestable ? Math.min(p.score, racing ? 58 : 48) - (points >= 3 ? 10 : 0) : taxRace ? Math.min(p.score, 55) - (points >= 3 ? 8 : 0) : Math.min(p.score, 15);
-        p.why += ` (the Runner can get in: margin ${safety.margin}${racing ? ", racing" : ""}${taxRace ? (desperate ? ", R&D is running out" : ", rich enough to make every run expensive") : ""}${canRezOne ? "" : ", no ice can be rezzed"}${hqSafer ? ", HQ is safer" : ""})`;
+        p.score = breached && holdable && !desperate ? Math.min(p.score, 12) : contestable ? Math.min(p.score, racing ? 58 : 48) - (points >= 3 ? 10 : 0) : taxRace ? Math.min(p.score, 55) - (points >= 3 ? 8 : 0) : Math.min(p.score, 15);
+        p.why += ` (the Runner can get in: margin ${safety.margin}${breached ? ", and stole from there since the ice last changed" : ""}${racing ? ", racing" : ""}${taxRace ? (desperate ? ", R&D is running out" : ", rich enough to make every run expensive") : ""}${canRezOne ? "" : ", no ice can be rezzed"}${hqSafer ? ", HQ is safer" : ""})`;
       } else if (card && target && safety?.safe && obs.clicks < 3 && canScoreNextTurn(obs, card, !!seamless)) p.score = Math.max(p.score, 72);
       if (obs.clicks === 3) p.score = Math.min(p.score, 50);
     }
@@ -250,7 +262,7 @@ export const glacier = { mulligan, plan, proposals, prompt, run, scoringCost, ca
 
 export const gatewayCorp: DeckPolicy = registerPolicy({
   id: "gateway-corp-syndicate",
-  version: "0.3.0",
+  version: "0.4.0",
   side: "corp",
   decks: [GATEWAY_CORP_BEGINNER, GATEWAY_CORP_INTERMEDIATE],
   ...glacier,

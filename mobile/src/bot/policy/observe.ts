@@ -38,9 +38,15 @@ export function updateMemory(memory: Memory, view: any, side: Side) {
     for (const e of lines.slice(start)) {
       const text = String(e?.text?.["raw-text"] ?? "");
       const m = text.match(/to make a run on (HQ|R&D|Archives|Server \d+)/);
-      if (m) (seen[m[1]] ??= []).push(turn);
+      if (m) {
+        (seen[m[1]] ??= []).push(turn);
+        memory.notes.lastRunServer = m[1];
+      }
     }
     memory.notes.logSeen = lines.length;
+    const runnerPoints = Number(view.runner?.["agenda-point"] ?? 0);
+    if (runnerPoints > Number(memory.notes.runnerPoints ?? 0) && memory.notes.lastRunServer) ((memory.notes.stolenFrom ??= {}) as Record<string, number>)[String(memory.notes.lastRunServer)] = turn;
+    memory.notes.runnerPoints = runnerPoints;
   }
   const INSTALLED = new Set(["servers", "rig", "onhost"]);
   walkCards(view[side], "", (card, zone) => {

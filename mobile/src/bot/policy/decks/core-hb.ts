@@ -21,7 +21,7 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
 
 export const coreHb: DeckPolicy = registerPolicy({
   id: "core-hb-glacier",
-  version: "0.2.0",
+  version: "0.3.0",
   side: "corp",
   decks: [CORE_HB],
   ...glacier,

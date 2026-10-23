@@ -88,7 +88,7 @@ function prompt(obs: Observation, plan: Plan): Proposal | null {
 
 export const coreAnarch: DeckPolicy = registerPolicy({
   id: "core-anarch-virus",
-  version: "0.3.0",
+  version: "0.4.0",
   side: "runner",
   decks: [CORE_ANARCH],
   ...centralPressure,
