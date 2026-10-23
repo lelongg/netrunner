@@ -72,7 +72,7 @@ export function ribbon(g: Graphics, pts: Pt[], width: number, color: number, alp
   g.poly([...left, ...right.reverse()].flat()).fill({ color, alpha });
 }
 
-function star(g: Graphics, c: Pt, r: number, color: number, alpha: number, spin: number) {
+export function star(g: Graphics, c: Pt, r: number, color: number, alpha: number, spin: number) {
   const pts: number[] = [];
   for (let i = 0; i < 8; i++) {
     const a = spin + (i * Math.PI) / 4;
