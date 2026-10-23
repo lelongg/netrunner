@@ -9201,6 +9201,106 @@ button.player-chip {
   min-height: 40px;
 }
 
+.fxgl-note {
+  display: grid;
+  gap: 6px;
+}
+
+.fxgl-note textarea {
+  width: 100%;
+  resize: vertical;
+  font: inherit;
+  font-size: 14px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--line-2);
+  background: var(--panel-2);
+  color: var(--text);
+}
+
+.fxgl-rate {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 6px;
+  align-items: center;
+}
+
+.fxgl-stars {
+  display: flex;
+  gap: 2px;
+}
+
+.fxgl-stars button {
+  flex: 1;
+  min-height: 40px;
+  padding: 0;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--line-2);
+  border-color: transparent;
+  background: none;
+}
+
+.fxgl-stars button.on {
+  color: var(--yellow);
+}
+
+.fxgl-status {
+  min-height: 40px;
+  padding: 0 12px;
+}
+
+.fxgl-status.ok.on {
+  border-color: var(--green);
+  color: var(--green);
+}
+
+.fxgl-status.issue.on {
+  border-color: var(--red);
+  color: var(--red);
+}
+
+.fxgl-note-actions {
+  display: grid;
+  grid-template-columns: 3fr 1fr;
+  gap: 6px;
+}
+
+.fxgl-note-actions button {
+  min-height: 40px;
+}
+
+.fxgl-strip button.noted,
+.fxgl-kinds button.noted,
+.fxgl-strip button.ok,
+.fxgl-kinds button.ok,
+.fxgl-strip button.issue,
+.fxgl-kinds button.issue {
+  position: relative;
+}
+
+.fxgl-strip button:is(.noted, .ok, .issue)::after,
+.fxgl-kinds button:is(.noted, .ok, .issue)::after {
+  content: "";
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--yellow);
+}
+
+.fxgl-strip button.ok::after,
+.fxgl-kinds button.ok::after {
+  background: var(--green);
+}
+
+.fxgl-strip button.issue::after,
+.fxgl-kinds button.issue::after {
+  background: var(--red);
+}
+
 .fxgl-strip {
   display: flex;
   gap: 8px;

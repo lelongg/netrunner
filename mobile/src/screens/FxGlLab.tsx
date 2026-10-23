@@ -180,6 +180,28 @@ const CARDS = Object.keys(CODES)
 const art = (code: string) => `https://card-images.netrunnerdb.com/v2/large/${code}.jpg`;
 const thumb = (code: string) => `https://card-images.netrunnerdb.com/v2/small/${code}.jpg`;
 const box = (el: Element | null | undefined) => el?.getBoundingClientRect() ?? null;
+const NOTES = "nsg.fxnotes";
+type Review = { stars?: number; status?: "ok" | "issue"; note?: string };
+type Notes = Record<string, Review>;
+const noteKey = (title: string, kind: Kind) => `${title} · ${KIND_LABEL[kind]}`;
+const reviewed = (r?: Review) => !!r && (!!r.stars || !!r.status || !!r.note?.trim());
+const mark = (r?: Review) => (!reviewed(r) ? "" : r!.status === "issue" ? "issue" : r!.status === "ok" ? "ok" : "noted");
+const line = (k: string, r: Review) => [`- ${k}`, r.status === "ok" ? "OK" : r.status === "issue" ? "ISSUE" : "", r.stars ? `${"★".repeat(r.stars)}${"☆".repeat(5 - r.stars)}` : "", r.note?.trim() ?? ""].filter(Boolean).join(" · ");
+
+function loadNotes(): Notes {
+  try {
+    const raw = JSON.parse(localStorage.getItem(NOTES) ?? "{}") as Record<string, Review | string>;
+    return Object.fromEntries(Object.entries(raw).map(([k, v]) => [k, typeof v === "string" ? { note: v } : v]));
+  } catch {
+    return {};
+  }
+}
+
+function saveNotes(n: Notes) {
+  try {
+    localStorage.setItem(NOTES, JSON.stringify(n));
+  } catch {}
+}
 
 export function FxGlLab() {
   const [pick, setPick] = useState(0);
@@ -190,6 +212,8 @@ export function FxGlLab() {
   const [speed, setSpeed] = useState(1);
   const [tile, setTile] = useState(false);
   const [aimed, setAimed] = useState(false);
+  const [notes, setNotes] = useState<Notes>(loadNotes);
+  const [sent, setSent] = useState("");
   const img = useRef<HTMLImageElement>(null);
   const stage = useRef<HTMLDivElement>(null);
   const strip = useRef<HTMLDivElement>(null);
@@ -264,6 +288,44 @@ export function FxGlLab() {
     return () => removeEventListener("keydown", key);
   });
 
+  const key = noteKey(card.title, kind);
+  const filled = Object.entries(notes).filter(([, v]) => reviewed(v));
+  const review = notes[key] ?? {};
+  const update = (patch: Review) => {
+    const r = { ...review, ...patch };
+    const next = { ...notes, [key]: r };
+    if (!reviewed(r)) delete next[key];
+    setNotes(next);
+    saveNotes(next);
+  };
+  const send = async () => {
+    const total = CARDS.reduce((n, c) => n + c.kinds.length, 0);
+    const text = [`FX lab feedback (${filled.length}/${total} reviewed)`, ...filled.map(([k, v]) => line(k, v))].join("\n");
+    try {
+      if (navigator.share) {
+        await navigator.share({ text });
+        setSent("Shared");
+      } else {
+        await navigator.clipboard.writeText(text);
+        setSent("Copied");
+      }
+    } catch (e) {
+      if ((e as Error)?.name === "AbortError") return;
+      try {
+        await navigator.clipboard.writeText(text);
+        setSent("Copied");
+      } catch {
+        setSent("Copy failed");
+      }
+    }
+    setTimeout(() => setSent(""), 2000);
+  };
+  const clearNotes = () => {
+    if (!confirm(`Delete ${filled.length} reviews?`)) return;
+    setNotes({});
+    saveNotes({});
+  };
+
   const classes = ["fxgl-card", card.ice ? "ice" : "", card.ice && kind === "install" ? "unrezzed" : "", tile ? "tile-size" : ""].join(" ");
 
   return (
@@ -308,7 +370,7 @@ export function FxGlLab() {
 
       <div class="fxgl-kinds" role="tablist">
         {card.kinds.map((k) => (
-          <button role="tab" aria-selected={k === kind} class={k === kind ? "on" : ""} onClick={() => setKind(k)}>
+          <button role="tab" aria-selected={k === kind} class={[k === kind ? "on" : "", mark(notes[noteKey(card.title, k)])].join(" ")} onClick={() => setKind(k)}>
             {KIND_LABEL[k]}
           </button>
         ))}
@@ -333,10 +395,37 @@ export function FxGlLab() {
         </button>
       </div>
 
+      <div class="fxgl-note">
+        <div class="fxgl-rate">
+          <div class="fxgl-stars" role="radiogroup" aria-label="Rating">
+            {[1, 2, 3, 4, 5].map((n) => (
+              <button role="radio" aria-checked={review.stars === n} aria-label={`${n} star${n > 1 ? "s" : ""}`} class={(review.stars ?? 0) >= n ? "on" : ""} onClick={() => update({ stars: review.stars === n ? undefined : n })}>
+                ★
+              </button>
+            ))}
+          </div>
+          <button class={`fxgl-status ok ${review.status === "ok" ? "on" : ""}`} onClick={() => update({ status: review.status === "ok" ? undefined : "ok" })}>
+            OK
+          </button>
+          <button class={`fxgl-status issue ${review.status === "issue" ? "on" : ""}`} onClick={() => update({ status: review.status === "issue" ? undefined : "issue" })}>
+            Issue
+          </button>
+        </div>
+        <textarea rows={2} placeholder={`Feedback on ${key}`} value={review.note ?? ""} onInput={(e) => update({ note: (e.target as HTMLTextAreaElement).value })} />
+        <div class="fxgl-note-actions">
+          <button class="fxgl-play" disabled={!filled.length} onClick={send}>
+            {sent || `Send ${filled.length} review${filled.length === 1 ? "" : "s"}`}
+          </button>
+          <button disabled={!filled.length} onClick={clearNotes}>
+            Clear
+          </button>
+        </div>
+      </div>
+
       <input class="fxgl-search" type="search" placeholder={`Search ${CARDS.length} cards`} value={query} onInput={(e) => setQuery((e.target as HTMLInputElement).value)} />
       <div class="fxgl-strip" ref={strip}>
         {shown.map(({ c, i }) => (
-          <button class={i === pick ? "on" : ""} onClick={() => choose(i)} aria-label={c.title}>
+          <button class={[i === pick ? "on" : "", (c.kinds.map((k) => mark(notes[noteKey(c.title, k)])).find((m) => m === "issue") ?? c.kinds.map((k) => mark(notes[noteKey(c.title, k)])).find(Boolean) ?? "")].join(" ")} onClick={() => choose(i)} aria-label={c.title}>
             <img src={thumb(c.code)} alt="" loading="lazy" />
             <span>{c.title}</span>
             <small>{c.kinds.map((k) => KIND_LABEL[k]).join(" · ")}</small>
