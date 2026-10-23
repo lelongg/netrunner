@@ -162,6 +162,7 @@ export function estimateRun(obs: Observation, server: ServerInfo, unrezzedCost =
     if (threat.encounterTags) {
       tags += threat.encounterTags;
       credits += threat.encounterTags * 2;
+      if (tagPunisher(obs) && !(Number(obs.clicks ?? 0) >= 2 && budget - credits >= 4)) blocked = true;
     }
     if (!option || credits + option.cost.value > budget) {
       if (threat.etr) blocked = true;
