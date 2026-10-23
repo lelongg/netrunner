@@ -181,12 +181,19 @@ const art = (code: string) => `https://card-images.netrunnerdb.com/v2/large/${co
 const thumb = (code: string) => `https://card-images.netrunnerdb.com/v2/small/${code}.jpg`;
 const box = (el: Element | null | undefined) => el?.getBoundingClientRect() ?? null;
 const NOTES = "nsg.fxnotes";
-type Review = { stars?: number; status?: "ok" | "issue"; note?: string };
+type Review = { stars?: number; status?: "ok" | "issue"; note?: string; v?: string };
 type Notes = Record<string, Review>;
 const noteKey = (title: string, kind: Kind) => `${title} · ${KIND_LABEL[kind]}`;
+const nameOf = (key: string) => {
+  const at = key.lastIndexOf(" · ");
+  const kind = KINDS.find((k) => KIND_LABEL[k] === key.slice(at + 3));
+  return kind ? (FX[kind][key.slice(0, at)] ?? "") : "";
+};
 const reviewed = (r?: Review) => !!r && (!!r.stars || !!r.status || !!r.note?.trim());
 const mark = (r?: Review) => (!reviewed(r) ? "" : r!.status === "issue" ? "issue" : r!.status === "ok" ? "ok" : "noted");
-const line = (k: string, r: Review) => [`- ${k}`, r.status === "ok" ? "OK" : r.status === "issue" ? "ISSUE" : "", r.stars ? `${"★".repeat(r.stars)}${"☆".repeat(5 - r.stars)}` : "", r.note?.trim() ?? ""].filter(Boolean).join(" · ");
+const stars = (n?: number) => (n ? `${"★".repeat(n)}${"☆".repeat(5 - n)}` : "");
+const summary = (r: Review) => [r.status === "ok" ? "OK" : r.status === "issue" ? "ISSUE" : "", stars(r.stars), r.note?.trim() ?? ""].filter(Boolean).join(" · ");
+const line = (k: string, r: Review) => [`- ${k}`, r.v ? `v:${r.v}` : "", r.status === "ok" ? "OK" : r.status === "issue" ? "ISSUE" : "", r.stars ? `${"★".repeat(r.stars)}${"☆".repeat(5 - r.stars)}` : "", r.note?.trim() ?? ""].filter(Boolean).join(" · ");
 
 function loadNotes(): Notes {
   try {
@@ -208,6 +215,23 @@ function loadView(): View {
   }
 }
 
+const PASS = "nsg.fxpass";
+type Pass = { n: number; prev: Notes };
+
+function loadPass(): Pass {
+  try {
+    const p = JSON.parse(localStorage.getItem(PASS) ?? "null") as Pass | null;
+    if (p && typeof p.n === "number") return { n: p.n, prev: p.prev ?? {} };
+  } catch {}
+  return { n: 1, prev: {} };
+}
+
+function savePass(p: Pass) {
+  try {
+    localStorage.setItem(PASS, JSON.stringify(p));
+  } catch {}
+}
+
 function saveNotes(n: Notes) {
   try {
     localStorage.setItem(NOTES, JSON.stringify(n));
@@ -225,6 +249,8 @@ export function FxGlLab() {
   const [tile, setTile] = useState(!!saved.tile);
   const [aimed, setAimed] = useState(!!saved.aimed);
   const [notes, setNotes] = useState<Notes>(loadNotes);
+  const [pass, setPass] = useState<Pass>(loadPass);
+  const [versions, setVersions] = useState<Record<string, string>>({});
   const [sent, setSent] = useState("");
   const img = useRef<HTMLImageElement>(null);
   const stage = useRef<HTMLDivElement>(null);
@@ -255,6 +281,19 @@ export function FxGlLab() {
   };
 
   useEffect(() => setFxSpeed(speed), [speed]);
+  useEffect(() => {
+    void Promise.all([import("../fx/gl/versions").then((m) => m.fxVersions()), import("../fx/gl/baseline.json").then((m) => m.default as Record<string, string>)]).then(([cur, base]) => {
+      setVersions(cur);
+      const stamp = (n: Notes) => Object.fromEntries(Object.entries(n).map(([k, r]) => [k, r.v ? r : { ...r, v: base[nameOf(k)] }]));
+      const fixed = stamp(loadNotes());
+      const p = loadPass();
+      const next = { n: p.n, prev: stamp(p.prev) };
+      setNotes(fixed);
+      saveNotes(fixed);
+      setPass(next);
+      savePass(next);
+    });
+  }, []);
   useEffect(() => {
     try {
       localStorage.setItem(VIEW, JSON.stringify({ title: CARDS[pick].title, kind, query, speed, tile, aimed }));
@@ -309,8 +348,17 @@ export function FxGlLab() {
   const key = noteKey(card.title, kind);
   const filled = Object.entries(notes).filter(([, v]) => reviewed(v));
   const review = notes[key] ?? {};
+  const before = pass.prev[key];
+  const versionOf = (k: string) => versions[nameOf(k)];
+  const last = (k: string) => (reviewed(notes[k]) ? notes[k] : pass.prev[k]);
+  const changed = (k: string) => {
+    const r = last(k);
+    const v = versionOf(k);
+    return !!r?.v && !!v && r.v !== v;
+  };
+  const tag = (k: string) => (changed(k) ? "changed" : mark(notes[k]));
   const update = (patch: Review) => {
-    const r = { ...review, ...patch };
+    const r = { ...review, ...patch, v: versionOf(key) };
     const next = { ...notes, [key]: r };
     if (!reviewed(r)) delete next[key];
     setNotes(next);
@@ -318,7 +366,8 @@ export function FxGlLab() {
   };
   const send = async () => {
     const total = CARDS.reduce((n, c) => n + c.kinds.length, 0);
-    const text = [`FX lab feedback (${filled.length}/${total} reviewed)`, ...filled.map(([k, v]) => line(k, v))].join("\n");
+    const stale = CARDS.flatMap((c) => c.kinds.map((k) => noteKey(c.title, k))).filter((k) => !reviewed(notes[k]) && changed(k));
+    const text = [`FX lab review · pass ${pass.n} (${filled.length}/${total} reviewed)`, ...filled.map(([k, v]) => line(k, v)), ...(stale.length ? ["", `Changed since an earlier review, not re-reviewed yet (${stale.length}):`, ...stale.map((k) => `- ${k} · v:${versionOf(k)}`)] : [])].join("\n");
     try {
       if (navigator.share) {
         await navigator.share({ text });
@@ -337,6 +386,14 @@ export function FxGlLab() {
       }
     }
     setTimeout(() => setSent(""), 2000);
+  };
+  const newPass = () => {
+    if (!confirm(`Start review pass ${pass.n + 1}? Pass ${pass.n} reviews stay visible as "previous".`)) return;
+    const next = { n: pass.n + 1, prev: { ...pass.prev, ...Object.fromEntries(filled) } };
+    setPass(next);
+    savePass(next);
+    setNotes({});
+    saveNotes({});
   };
   const clearNotes = () => {
     if (!confirm(`Delete ${filled.length} reviews?`)) return;
@@ -388,7 +445,7 @@ export function FxGlLab() {
 
       <div class="fxgl-kinds" role="tablist">
         {card.kinds.map((k) => (
-          <button role="tab" aria-selected={k === kind} class={[k === kind ? "on" : "", k === kind && busy ? "playing" : "", mark(notes[noteKey(card.title, k)])].join(" ")} onClick={() => (k === kind ? void play() : setKind(k))}>
+          <button role="tab" aria-selected={k === kind} class={[k === kind ? "on" : "", k === kind && busy ? "playing" : "", tag(noteKey(card.title, k))].join(" ")} onClick={() => (k === kind ? void play() : setKind(k))}>
             {KIND_LABEL[k]}
           </button>
         ))}
@@ -426,10 +483,24 @@ export function FxGlLab() {
             Issue
           </button>
         </div>
+        <div class="fxgl-review-meta">
+          <span>Pass {pass.n}</span>
+          {versionOf(key) && <span>v:{versionOf(key)}</span>}
+          {changed(key) && <span class="fxgl-changed">Changed since your {reviewed(review) ? "" : "last "}review</span>}
+        </div>
+        {before && reviewed(before) && !reviewed(review) && (
+          <div class="fxgl-prev">
+            Previously: {summary(before)}
+            {before.v && before.v !== versionOf(key) ? ` (v:${before.v})` : ""}
+          </div>
+        )}
         <textarea rows={2} placeholder={`Feedback on ${key}`} value={review.note ?? ""} onInput={(e) => update({ note: (e.target as HTMLTextAreaElement).value })} />
         <div class="fxgl-note-actions">
           <button class="fxgl-play" disabled={!filled.length} onClick={send}>
             {sent || `Send ${filled.length} review${filled.length === 1 ? "" : "s"}`}
+          </button>
+          <button disabled={!filled.length} onClick={newPass}>
+            New pass
           </button>
           <button disabled={!filled.length} onClick={clearNotes}>
             Clear
@@ -440,7 +511,7 @@ export function FxGlLab() {
       <input class="fxgl-search" type="search" placeholder={`Search ${CARDS.length} cards`} value={query} onInput={(e) => setQuery((e.target as HTMLInputElement).value)} />
       <div class="fxgl-strip" ref={strip}>
         {shown.map(({ c, i }) => (
-          <button class={[i === pick ? "on" : "", (c.kinds.map((k) => mark(notes[noteKey(c.title, k)])).find((m) => m === "issue") ?? c.kinds.map((k) => mark(notes[noteKey(c.title, k)])).find(Boolean) ?? "")].join(" ")} onClick={() => choose(i)} aria-label={c.title}>
+          <button class={[i === pick ? "on" : "", (["changed", "issue"].find((m) => c.kinds.some((k) => tag(noteKey(c.title, k)) === m)) ?? c.kinds.map((k) => tag(noteKey(c.title, k))).find(Boolean) ?? "")].join(" ")} onClick={() => choose(i)} aria-label={c.title}>
             <img src={thumb(c.code)} alt="" loading="lazy" />
             <span>{c.title}</span>
             <small>{c.kinds.map((k) => KIND_LABEL[k]).join(" · ")}</small>
