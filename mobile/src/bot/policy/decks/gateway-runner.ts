@@ -253,7 +253,7 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
   }
   const thin = obs.hand.length <= 1;
   const floor = reserve(obs);
-  const lockedOut = obs.servers.filter((s) => !s.remote).every((s) => s.ices.some((i: any) => i.rezzed && !(i.subtypes ?? []).some((t: string) => ICE_TYPES.has(t) && cov.has(t as any)) && iceThreat(i, obs.info(i)).etr));
+  const lockedOut = obs.servers.filter((s) => !s.remote).every((s) => s.ices.some((i: any) => i.rezzed && !(i.subtypes ?? []).some((t: string) => ICE_TYPES.has(t) && cov.has(t as any)) && iceThreat(i, obs.info(i), obs.credits).etr));
   if (lockedOut && obs.credits >= 8) {
     const draw = byCommand(obs, "draw")[0];
     if (draw && obs.hand.length < 5 && drawsThisTurn < 3) push(proposal(draw, 58, "draw: the centrals are locked behind ice no breaker answers", "draw"));

@@ -29,7 +29,7 @@ export function corpRun(obs: Observation, reserve = 0): Proposal | null {
 export function encounterPlan(obs: Observation): { proposal: Proposal; threat: ReturnType<typeof iceThreat> } | null {
   const ice = obs.currentIce;
   if (!ice?.rezzed || !obs.encounter) return null;
-  const threat = iceThreat(ice, obs.info(ice));
+  const threat = iceThreat(ice, obs.info(ice), obs.credits);
   const live = (ice.subroutines ?? []).some((s: any) => !s.broken && !s.fired);
   if (!live) return null;
   const worth = threat.etr || threat.damage > 0 || threat.creditLoss > 0 || threat.tag;

@@ -220,7 +220,7 @@ function run(obs: Observation, plan: Plan): Proposal | null {
     const cost = rezCostOf(ice);
     const installed = agendaIn(obs);
     const reserve = installed && server?.key !== installed.server.key ? Math.min(scoringCost(installed.card), 3) : 0;
-    const threat = iceThreat(ice, obs.info(ice));
+    const threat = iceThreat(ice, obs.info(ice), Number(obs.opp.credit ?? 0));
     const breakable = runnerBreaks(obs, ice);
     const worth = server && (server.content.length > 0 || server.key === "rd" || (server.key === "hq" && obs.hand.some((c) => c.type === "Agenda")) || (server.key === "archives" && (obs.me.discard ?? []).some((c: any) => c.type === "Agenda")));
     if (cost <= obs.credits - reserve && (worth || (!breakable && threat.etr && cost <= 3))) return fromCandidate(rez, 80, `rez ${ice.title} (${cost}): ${breakable ? "taxes the Runner" : "the Runner cannot break it"}`, "rez");

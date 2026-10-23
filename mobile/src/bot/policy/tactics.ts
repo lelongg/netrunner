@@ -82,14 +82,18 @@ export interface IceThreat {
   exact: boolean;
 }
 
-export function iceThreat(ice: any, info: CardInfo): IceThreat {
+export function iceThreat(ice: any, info: CardInfo, runnerCredits?: number): IceThreat {
   const subs: any[] = ice.subroutines ?? [];
   const labels = subs.filter((s) => !s.broken && !s.fired).map((s) => String(typeof s.label === "string" ? s.label : ""));
   const text = plain(info.text ?? "");
   const source = labels.length ? labels.join("\n") : text;
   const damage = [...source.matchAll(/do (\d+) (?:net|meat|core|brain) damage/gi)].reduce((n, m) => n + Number(m[1]), 0);
-  const loss = [...source.matchAll(/runner loses (\d+)\s*\[credit\]/gi)].reduce((n, m) => n + Number(m[1]), 0);
-  return { etr: /end the run/i.test(source), damage, creditLoss: loss, tag: /\btag\b/i.test(source), exact: labels.length > 0 };
+  const loss = [...source.matchAll(/(?:runner loses|make the runner lose) (\d+)\s*\[credits?\]/gi)].reduce((n, m) => n + Number(m[1]), 0);
+  const segments = source.split(/\n|\.\s+/).map((x) => x.trim());
+  const poor = source.match(/end the run if the runner has (\d+)\s*\[credits?\] or (?:fewer|less)|if the runner has (\d+)\s*\[credits?\] or (?:fewer|less), end the run/i);
+  const unconditional = segments.some((x) => /^end the run\.?$/i.test(x));
+  const etr = unconditional || (!!poor && (runnerCredits === undefined || runnerCredits - loss <= Number(poor[1] ?? poor[2])));
+  return { etr, damage, creditLoss: loss, tag: /\btag\b/i.test(source), exact: labels.length > 0 };
 }
 
 export interface BreakOption {
@@ -132,7 +136,7 @@ export function estimateRun(obs: Observation, server: ServerInfo, unrezzedCost =
       continue;
     }
     const option = bestBreak(obs, ice);
-    const threat = iceThreat(ice, obs.info(ice));
+    const threat = iceThreat(ice, obs.info(ice), budget - credits);
     if (!option || credits + option.cost.value > budget) {
       if (threat.etr) blocked = true;
       damage += threat.damage;
@@ -196,7 +200,7 @@ export function serverSafety(obs: Observation, server: ServerInfo): Safety {
       }
       budget -= cost;
     }
-    const threat = iceThreat(asRezzed, obs.info(ice));
+    const threat = iceThreat(asRezzed, obs.info(ice), runnerCredits + 4 - runnerCost);
     const types = iceTypes(ice);
     const covered = types.length > 0 && types.some((t) => cov.has(t));
     if (!covered) {
