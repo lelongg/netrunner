@@ -90,7 +90,8 @@ function accessRisk(obs: Observation, t: Target) {
 function requiredHand(obs: Observation, t: Target, covered = fullyCovered(obs, t)) {
   const unrezzed = t.server.ices.filter((i: any) => !i.rezzed).length;
   const corpCredits = Number(obs.opp.credit ?? 0);
-  const iceDamage = unrezzed && !(covered && obs.credits >= t.credits + 2) ? (corpCredits >= 4 ? 3 : corpCredits >= 1 ? 2 : 0) : 0;
+  const hurts = ambushDeck(obs) || [...obs.memory.opponentTitles].some((title) => /net damage/i.test(obs.info({ title }).text ?? "") && (obs.info({ title }).type ?? "") === "ICE");
+  const iceDamage = unrezzed && !(covered && obs.credits >= t.credits + 2) ? (hurts ? (corpCredits >= 4 ? 3 : corpCredits >= 1 ? 2 : 0) : corpCredits >= 1 ? 1 : 0) : 0;
   return accessRisk(obs, t) + iceDamage;
 }
 
