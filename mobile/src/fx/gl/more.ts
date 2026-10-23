@@ -633,42 +633,6 @@ export async function touchstone(rect: DOMRect, code: string, ready?: Ready, boa
   await done();
 }
 
-export async function humanoidResources(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const heads: Pt[] = [];
-  heads.push([0.17, 0.37], [0.29, 0.36], [0.38, 0.345], [0.43, 0.34], [0.56, 0.32], [0.61, 0.32], [0.68, 0.31], [0.77, 0.3], [0.83, 0.28], [0.9, 0.27]);
-  const g = new Graphics();
-  g.blendMode = "add";
-  fx.addChild(g);
-  const eyes = heads.map(([u, v]) => {
-    const s = glowSprite(fx, sparkTexture(), 0x9be8ff);
-    s.position.set(...at(u, v));
-    return s;
-  });
-  const center = at(0.55, 0.33);
-  root.addChild(fx);
-  await run(app, (t) => {
-    const fade = 1 - span(t, 1.7, 2.1);
-    g.clear();
-    for (let n = 0; n < 5; n++) {
-      const k = span(t, n * 0.17, n * 0.17 + 0.3);
-      if (k > 0 && k < 1) g.circle(center[0], center[1], unit * (0.05 + 0.3 * k)).stroke({ width: unit * 0.01 * (1 - k) + 1, color: ORANGE, alpha: (1 - k) * (0.6 + n * 0.1) });
-    }
-    const sweep = span(t, 0.9, 1.4);
-    if (sweep > 0 && sweep < 1)
-      g.moveTo(...at(0.1 + sweep * 0.85, 0.22))
-        .lineTo(...at(0.1 + sweep * 0.85, 0.44))
-        .stroke({ width: unit * 0.01, color: 0x9be8ff, alpha: 0.8 });
-    heads.forEach(([u], i) => {
-      const on = span(t, 0.9 + (u - 0.15) * 0.6, 1.0 + (u - 0.15) * 0.6);
-      eyes[i].alpha = on * fade * (0.75 + 0.25 * Math.sin(t * 6 + i));
-      eyes[i].scale.set((unit / 120) * 0.26 * (1.4 - u * 0.7));
-    });
-    return t < 2.1;
-  });
-  await done();
-}
-
 export async function nihiloAgent(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, card, fx, done, unit, at } = await scene(rect, code, ready, board);
   const hand = at(0.24, 0.11);

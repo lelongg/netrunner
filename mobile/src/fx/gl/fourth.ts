@@ -49,34 +49,6 @@ export async function lieLow(rect: DOMRect, code: string, ready?: Ready, board?:
   await done();
 }
 
-export async function phatGioan(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const glass = at(0.27, 0.13);
-  const robe = new Graphics();
-  robe.blendMode = "add";
-  fx.addChild(robe);
-  const bubbles = new Emitter(fx);
-  const clink = glowSprite(fx, sparkTexture(), WHITE);
-  clink.position.set(...glass);
-  root.addChild(fx);
-  await run(app, (t, dt) => {
-    const c = Math.sin(Math.PI * span(t, 0.15, 0.5));
-    clink.alpha = c;
-    clink.rotation = t * 3;
-    clink.scale.set((unit / 120) * 0.45 * c);
-    if (t < 1.6 && Math.random() < 0.6) bubbles.add(glowTexture(), glass[0] + rnd(-1, 1) * unit * 0.02, glass[1] + unit * 0.03, { vx: rnd(-3, 3), vy: -unit * rnd(0.08, 0.18), life: 0.9, tint: 0xfff1c0, scale: (unit / 128) * rnd(0.012, 0.022) });
-    robe.clear();
-    const sweep = span(t, 0.4, 1.4);
-    if (sweep > 0 && sweep < 1) {
-      const u = 0.35 + sweep * 0.5;
-      robe.poly([...at(u - 0.04, 0.2), ...at(u + 0.02, 0.2), ...at(u - 0.06, 0.48), ...at(u - 0.12, 0.48)]).fill({ color: 0xffe6a0, alpha: 0.28 * Math.sin(Math.PI * sweep) });
-    }
-    bubbles.step(dt);
-    return t < 1.8 || bubbles.list.length > 0;
-  });
-  await done();
-}
-
 export async function openMarket(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
   const signs: [Pt, number][] = [
@@ -231,33 +203,6 @@ export async function publicTrail(rect: DOMRect, code: string, ready?: Ready, bo
   await done();
 }
 
-export async function rentRioters(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, card, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const sign = glowSprite(fx, glowTexture(), 0xff6ad0);
-  sign.position.set(...at(0.22, 0.15));
-  const fists = [at(0.08, 0.27), at(0.34, 0.15), at(0.62, 0.12), at(0.86, 0.15)];
-  const flashes = new Emitter(fx);
-  const smoke = new Smoke(root);
-  root.addChild(fx);
-  const base = card.position.clone();
-  await run(app, (t, dt) => {
-    const chant = Math.max(0, Math.sin(t * 9)) * (1 - span(t, 1.5, 1.9));
-    sign.alpha = (0.35 + 0.4 * (Math.random() < 0.85 ? 1 : 0)) * (1 - span(t, 1.6, 2));
-    sign.scale.set((unit / 128) * 0.25);
-    if (chant > 0.95) {
-      const f = fists[Math.floor(Math.random() * fists.length)];
-      flashes.add(glowTexture(), ...f, { life: 0.25, tint: 0xfff0d0, scale: (unit / 128) * 0.08, grow: 0.4 });
-    }
-    if (t < 1.4 && Math.random() < 0.15) smoke.puff(...at(rnd(0.1, 0.9), 0.48), { vx: rnd(-1, 1) * unit * 0.05, vy: -unit * 0.06, life: 1.6, size: unit * 0.18, grow: 2, tint: 0x9a8a9a, alpha: 0.35 });
-    card.position.set(base.x, base.y + chant * unit * 0.006);
-    flashes.step(dt);
-    smoke.step(dt);
-    return t < 2 || smoke.list.length > 0;
-  });
-  card.position.copyFrom(base);
-  await done();
-}
-
 export async function sangKancilPose(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
   const deer = at(0.45, 0.2);
@@ -340,26 +285,6 @@ export async function tailgate(rect: DOMRect, code: string, ready?: Ready, board
   await done();
 }
 
-export async function floodTheMarket(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const petals = new Emitter(fx);
-  const holos = new Emitter(fx);
-  root.addChild(fx);
-  await run(app, (t, dt) => {
-    if (t < 1.4)
-      for (let n = 0; n < 2; n++) {
-        const [x, y] = at(rnd(0, 1), rnd(0.05, 0.15));
-        petals.add(petalTexture(), x, y, { vx: unit * rnd(0.05, 0.25), vy: unit * rnd(0.1, 0.25), spin: rnd(-3, 3), life: rnd(1, 1.5), tint: Math.random() < 0.6 ? 0xffb0d0 : 0xe86aa8, scale: (unit / 180) * rnd(0.25, 0.45), alpha: 0.85, blend: "normal" });
-      }
-    if (t < 1.2 && Math.random() < 0.15) holos.add(cubeTexture(), ...at(rnd(0.15, 0.85), rnd(0.25, 0.45)), { vy: -unit * 0.08, spin: rnd(-1, 1), life: 0.9, tint: Math.random() < 0.5 ? 0x9be8ff : PINK, scale: (unit / 180) * rnd(0.6, 1), alpha: 0.3 });
-    for (const p of petals.list) p.s.x += Math.sin(p.age * 4 + p.s.y * 0.03) * 0.5;
-    petals.step(dt);
-    holos.step(dt);
-    return t < 1.5 || petals.list.length > 0;
-  });
-  await done();
-}
-
 export async function publicAccessPlaza(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
   const lamp = at(0.42, 0.16);
@@ -382,64 +307,6 @@ export async function publicAccessPlaza(rect: DOMRect, code: string, ready?: Rea
     }
     rain.step(dt);
     return t < 2.1 || rain.list.length > 0;
-  });
-  await done();
-}
-
-export async function retribution(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, card, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const swing = at(0.7, 0.22);
-  const hit = at(0.6, 0.38);
-  const shards = new Emitter(fx);
-  const flash = glowSprite(fx, glowTexture(), 0xffd0e8);
-  flash.position.set(...hit);
-  const wave = new ShockwaveFilter({ center: { x: 0, y: 0 }, amplitude: unit * 0.03, wavelength: unit * 0.25, speed: unit * 1.6, brightness: 1.15, radius: unit * 0.5, time: 0 });
-  card.filters = [wave];
-  const arc = new Graphics();
-  arc.blendMode = "add";
-  fx.addChild(arc);
-  root.addChild(fx);
-  let smashed = false;
-  await run(app, (t, dt) => {
-    arc.clear();
-    const k = ease.inOut(span(t, 0.1, 0.35));
-    if (k > 0 && k < 1) {
-      const a0 = -1.2;
-      const a1 = a0 + 1.6 * k;
-      arc.arc(swing[0] - unit * 0.1, swing[1] + unit * 0.12, unit * 0.22, a0, a1).stroke({ width: unit * 0.03, color: 0xff6ad0, alpha: 0.6 });
-    }
-    if (k >= 1 && !smashed) {
-      smashed = true;
-      for (let i = 0; i < 26; i++) shards.add(shardTexture(), ...hit, { vx: rnd(-1, 1) * unit * 1.6, vy: -unit * rnd(0.3, 1.4), gravity: unit * 3.5, spin: rnd(-10, 10), life: rnd(0.6, 1), tint: [0xff6ad0, 0x9be8ff, WHITE][i % 3], scale: (unit / 180) * rnd(0.2, 0.45), blend: "normal" });
-      navigator.vibrate?.([40, 20, 40]);
-    }
-    flash.alpha = Math.max(0, 1 - Math.abs(t - 0.4) / 0.15) * 0.9;
-    flash.scale.set((unit / 128) * 0.4);
-    wave.center = filterPoint(card, ...hit);
-    wave.time = Math.max(0, t - 0.35);
-    shards.step(dt);
-    return t < 1.4 || shards.list.length > 0;
-  });
-  await done();
-}
-
-export async function scrounge(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const device = at(0.62, 0.32);
-  const dust = new Smoke(fx);
-  const sparks = new Emitter(fx);
-  const led = glowSprite(fx, glowTexture(), CYAN);
-  led.position.set(...device);
-  root.addChild(fx);
-  await run(app, (t, dt) => {
-    if (t < 1.5 && Math.random() < 0.3) dust.puff(...at(-0.05, rnd(0.2, 0.48)), { vx: unit * rnd(0.4, 0.7), vy: -unit * 0.02, life: 1.6, size: unit * rnd(0.12, 0.2), grow: 2, tint: 0xd8b88a, alpha: 0.4 });
-    const on = span(t, 0.3, 0.6) * (1 - span(t, 1.5, 1.9));
-    led.alpha = on * (Math.random() < 0.2 ? 0.3 : 0.9);
-    led.scale.set((unit / 128) * 0.12);
-    if (on > 0.5 && Math.random() < 0.3) sparks.add(sparkTexture(), ...device, { vx: rnd(-1, 1) * unit * 0.4, vy: -unit * rnd(0.2, 0.6), gravity: unit * 1.5, life: 0.4, tint: CYAN, scale: 0.2 * (unit / 180) });
-    dust.step(dt);
-    sparks.step(dt);
-    return t < 1.9 || dust.list.length > 0;
   });
   await done();
 }
@@ -557,40 +424,6 @@ export async function whitespaceFire(rect: DOMRect, code: string, ready?: Ready,
   await done();
 }
 
-export async function syailendra(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const tower = at(0.24, 0.62);
-  const g = new Graphics();
-  g.blendMode = "add";
-  fx.addChild(g);
-  const lights = Array.from({ length: 14 }, () => at(rnd(0.45, 0.72), rnd(0.57, 0.92)));
-  const peak = glowSprite(fx, sparkTexture(), WHITE);
-  peak.position.set(...tower);
-  root.addChild(fx);
-  await run(app, (t) => {
-    g.clear();
-    const on = span(t, 0, 0.3) * (1 - span(t, 1.6, 2));
-    lights.forEach((p, i) => {
-      const lit = span(t, 0.2 + i * 0.07, 0.3 + i * 0.07);
-      g.circle(...p, unit * 0.012).fill({ color: 0xbfe6ff, alpha: on * lit });
-    });
-    const k = span(t, 0.2, 1.4);
-    const ring: number[] = [];
-    for (let i = 0; i <= 40; i++) {
-      const a = (i / 40) * Math.PI * 2;
-      ring.push(...at(0.24 + 0.115 * Math.cos(a), 0.76 + 0.19 * Math.sin(a)));
-    }
-    g.poly(ring, false).stroke({ width: 2, color: 0x9be8ff, alpha: on * Math.sin(Math.PI * k) });
-    const ra = t * 2.5;
-    g.circle(...at(0.24 + 0.115 * Math.cos(ra), 0.76 + 0.19 * Math.sin(ra)), unit * 0.02).fill({ color: WHITE, alpha: on * Math.sin(Math.PI * k) });
-    peak.alpha = on;
-    peak.rotation = t;
-    peak.scale.set((unit / 120) * 0.35);
-    return t < 2;
-  });
-  await done();
-}
-
 export async function syailendraFire(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, card, fx, done, unit, at } = await scene(rect, code, ready, board);
   const tower = at(0.24, 0.62);
@@ -674,54 +507,6 @@ export async function flywheelFire(rect: DOMRect, code: string, ready?: Ready, b
     }
     sparks.step(dt);
     return t < 0.8 || sparks.list.length > 0;
-  });
-  await done();
-}
-
-export async function kessleroid(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, card, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const core = at(0.55, 0.74);
-  const glow = glowSprite(fx, glowTexture(), RED);
-  glow.position.set(...core);
-  const heat = shimmer(root, card, rect, unit * 0.02);
-  const debris = Array.from({ length: 18 }, (_, i) => ({ s: glowSprite(fx, cubeTexture(), 0xe6f2ff), a: (i / 18) * Math.PI * 2, r: rnd(0.28, 0.4), w: rnd(0.8, 1.6) * (i % 2 ? 1 : -1) }));
-  root.addChild(fx);
-  await run(app, (t, dt) => {
-    const on = span(t, 0, 0.3) * (1 - span(t, 1.6, 2));
-    heat(t, on);
-    glow.alpha = on * (0.45 + 0.25 * Math.sin(t * 5));
-    glow.scale.set((unit / 128) * 0.4);
-    for (const d of debris) {
-      d.a += d.w * dt;
-      d.s.position.set(core[0] + Math.cos(d.a) * unit * d.r, core[1] + Math.sin(d.a) * unit * d.r * 0.55);
-      d.s.alpha = on * (Math.sin(d.a) > 0 ? 0.9 : 0.4);
-      d.s.rotation = d.a * 2;
-      d.s.scale.set((unit / 180) * 0.55);
-    }
-    return t < 2;
-  });
-  await done();
-}
-
-export async function kessleroidFire(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const core = at(0.55, 0.74);
-  const debris = new Emitter(app.stage);
-  const flash = glowSprite(fx, glowTexture(), RED);
-  flash.position.set(...core);
-  root.addChild(fx);
-  const src = root.toGlobal({ x: core[0], y: core[1] });
-  for (let i = 0; i < 40; i++) {
-    const a = rnd(0, Math.PI * 2);
-    const v = unit * rnd(0.5, 1.4);
-    debris.add(i % 3 ? cubeTexture() : shardTexture(), src.x, src.y, { vx: Math.cos(a) * v, vy: Math.sin(a) * v, drag: 0.8, spin: rnd(-8, 8), life: rnd(0.6, 1), tint: i % 4 ? 0xe6f2ff : RED, scale: (unit / 180) * rnd(0.4, 0.7), blend: i % 3 ? "add" : "normal" });
-  }
-  navigator.vibrate?.([30, 20, 30]);
-  await run(app, (t, dt) => {
-    flash.alpha = Math.max(0, 1 - t / 0.4);
-    flash.scale.set((unit / 128) * (0.4 + t));
-    debris.step(dt);
-    return t < 0.6 || debris.list.length > 0;
   });
   await done();
 }
