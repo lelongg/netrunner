@@ -84,9 +84,10 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
       const racing = Number(obs.me["deck-count"] ?? 0) < 12 || agendasInHand >= 2 || obs.hand.length >= 5;
       const points = Number(card?.agendapoints ?? 0);
       if (safety && !safety.safe) {
-        const contestable = target!.ices.length >= 1 && (safety.margin >= -4 || racing);
-        p.score = contestable ? Math.min(p.score, racing ? 58 : 48) - (points >= 3 ? 10 : 0) : Math.min(p.score, 20);
-        p.why += ` (the Runner can get in: margin ${safety.margin}${racing ? ", racing" : ""})`;
+        const canRezOne = target!.ices.some((i) => i.rezzed || rezCostOf(i) <= obs.credits - 1);
+        const contestable = target!.ices.length >= 1 && canRezOne && (safety.margin >= -4 || racing);
+        p.score = contestable ? Math.min(p.score, racing ? 58 : 48) - (points >= 3 ? 10 : 0) : Math.min(p.score, 15);
+        p.why += ` (the Runner can get in: margin ${safety.margin}${racing ? ", racing" : ""}${canRezOne ? "" : ", no ice can be rezzed"})`;
       } else if (card && obs.clicks < 3 && canScoreNextTurn(obs, card, !!seamless)) p.score = Math.max(p.score, 72);
       if (obs.clicks === 3) p.score = Math.min(p.score, 50);
     }
@@ -118,7 +119,9 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
   const weak = installed?.server ?? (obs.hand.some((c) => c.type === "Agenda") ? bait : undefined);
   if (weak && !serverSafety(obs, weak).safe && weak.ices.length < 3) {
     const ice = obs.hand.filter((c) => c.type === "ICE").sort((a, b) => (ICE_RANK[b.title] ?? 0) - (ICE_RANK[a.title] ?? 0))[0];
-    if (ice && weak.ices.length + rezCostOf(ice) <= obs.credits) push(proposal(playOf(obs, ice, weak.label), installed ? 74 : 64, `add ${ice.title} to ${weak.label}: the Runner can still get in`, "install-ice"));
+    const budget = obs.credits - weak.ices.length;
+    if (ice && budget >= rezCostOf(ice) + 2) push(proposal(playOf(obs, ice, weak.label), installed ? 74 : 64, `add ${ice.title} to ${weak.label}: the Runner can still get in`, "install-ice"));
+    else if (ice) push(proposal(playOf(obs, ice, weak.label), 30, `add ${ice.title} to ${weak.label} later: not enough credits to rez it`, "install-ice"));
   }
 
   const subsidy = inHand(obs, "Government Subsidy");
@@ -126,7 +129,18 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
   const planogram = inHand(obs, "Predictive Planogram");
   if (planogram) push(proposal(playOf(obs, planogram), obs.hand.length <= 2 ? 50 : obs.credits < 4 ? 47 : 33, "Predictive Planogram", "economy"));
 
+  const agendaExposed = obs.hand.some((c) => c.type === "Agenda") || !!installed;
+  const reserve = agendaExposed ? Math.min(3, ...obs.servers.filter((s) => s.key === "hq" || s.key === installed?.server.key).flatMap((s) => s.ices.filter((i) => !i.rezzed).map((i) => rezCostOf(i)))) : 0;
   for (const p of out) {
+    if (p.kind === "install-ice" && reserve > 0 && Number.isFinite(reserve)) {
+      const card = obs.hand.find((c) => c.type === "ICE" && p.why.startsWith(`install ${c.title}`));
+      const target = obs.servers.find((s) => p.why.includes(`on ${s.label}`));
+      const left = obs.credits - (target ? target.ices.length : 0);
+      if (card && left < reserve) {
+        p.score -= 25;
+        p.why += ` (would leave ${left}, below the ${reserve} needed to rez)`;
+      }
+    }
     if (p.kind === "install-ice") {
       const card = obs.hand.find((c) => c.type === "ICE" && p.why.startsWith(`install ${c.title}`));
       if (card && card.title === "Palisade" && /Server|remote/.test(p.why)) p.score += 4;
@@ -199,7 +213,7 @@ function run(obs: Observation, plan: Plan): Proposal | null {
 
 export const gatewayCorp: DeckPolicy = registerPolicy({
   id: "gateway-corp-syndicate",
-  version: "0.1.0",
+  version: "0.2.0",
   side: "corp",
   decks: [GATEWAY_CORP_BEGINNER, GATEWAY_CORP_INTERMEDIATE],
   mulligan,

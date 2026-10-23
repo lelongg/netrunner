@@ -117,14 +117,14 @@ export interface RunEstimate {
   etrRisk: boolean;
 }
 
-export function estimateRun(obs: Observation, server: ServerInfo, unrezzedCost = 3): RunEstimate {
+export function estimateRun(obs: Observation, server: ServerInfo, unrezzedCost = 3, budget = Number(obs.view.runner?.credit ?? 0)): RunEstimate {
   let credits = 0;
   let exact = true;
   let blocked = false;
   let unrezzed = 0;
   let damage = 0;
   let etrRisk = false;
-  for (const ice of server.ices) {
+  for (const ice of [...server.ices].reverse()) {
     if (!ice.rezzed) {
       unrezzed++;
       credits += unrezzedCost;
@@ -133,7 +133,7 @@ export function estimateRun(obs: Observation, server: ServerInfo, unrezzedCost =
     }
     const option = bestBreak(obs, ice);
     const threat = iceThreat(ice, obs.info(ice));
-    if (!option) {
+    if (!option || credits + option.cost.value > budget) {
       if (threat.etr) blocked = true;
       damage += threat.damage;
       credits += threat.creditLoss;
@@ -183,9 +183,18 @@ export function serverSafety(obs: Observation, server: ServerInfo): Safety {
   let blocked = false;
   let exact = true;
   const runnerCredits = Number(obs.view.runner?.credit ?? 0);
-  for (const ice of server.ices) {
+  let budget = obs.credits;
+  for (const ice of [...server.ices].reverse()) {
     const asRezzed = ice.rezzed ? ice : { ...ice, subroutines: ice.subroutines ?? [], rezzed: true };
-    if (!ice.rezzed) rezCost += rezCostOf(ice);
+    if (!ice.rezzed) {
+      const cost = rezCostOf(ice);
+      rezCost += cost;
+      if (cost > budget) {
+        exact = false;
+        continue;
+      }
+      budget -= cost;
+    }
     const threat = iceThreat(asRezzed, obs.info(ice));
     const types = iceTypes(ice);
     const covered = types.length > 0 && types.some((t) => cov.has(t));
@@ -199,7 +208,6 @@ export function serverSafety(obs: Observation, server: ServerInfo): Safety {
       if (!option.cost.exact) exact = false;
     } else exact = false;
   }
-  const affordable = rezCost <= obs.credits;
-  const safe = server.ices.length > 0 && affordable && (blocked || runnerCost > runnerCredits + 2);
-  return { blocked: blocked && affordable, runnerCost, rezCost, exact, safe, margin: blocked && affordable ? Infinity : runnerCost - runnerCredits };
+  const safe = server.ices.length > 0 && (blocked || runnerCost > runnerCredits + 2);
+  return { blocked, runnerCost, rezCost, exact, safe, margin: blocked ? Infinity : runnerCost - runnerCredits };
 }

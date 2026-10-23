@@ -90,9 +90,9 @@ export class PolicyBot {
     if (note) this.unhandled++;
     if (!chosen && note && this.rescue) chosen = this.rescueMove(obs);
     if (chosen?.move.command === "run") {
-      this.memory.runsThisTurn++;
       const server = obs.servers.find((s) => s.label === (chosen!.move.args as any)?.server);
       this.pendingRun = { server: server?.label ?? "", cids: (server?.content ?? []).filter((c: any) => !c.rezzed && !c["advance-counter"]).map((c: any) => c.cid), points: obs.me["agenda-point"] ?? 0, breached: false, turn: obs.turn };
+      this.memory.runsThisTurn++;
     }
     const ms = (typeof performance !== "undefined" ? performance.now() : Date.now()) - started;
     if (this.record) {
@@ -175,6 +175,12 @@ export class PolicyBot {
   }
 
   private trackRun(view: any) {
+    if (!this.pendingRun && view.run && this.side === "runner") {
+      const key = view.run.server?.[0];
+      const label = key === "hq" ? "HQ" : key === "rd" ? "R&D" : key === "archives" ? "Archives" : key?.startsWith("remote") ? `Server ${key.slice(6)}` : String(key);
+      this.pendingRun = { server: label, cids: [], points: view[this.side]?.["agenda-point"] ?? 0, breached: false, turn: Number(view.turn ?? 0) };
+      this.memory.runsThisTurn++;
+    }
     const pending = this.pendingRun;
     if (!pending) return;
     if (view.run) {

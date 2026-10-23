@@ -81,8 +81,11 @@ export function corpProposals(obs: Observation): Proposal[] {
     }
     for (const t of targets) {
       const card = ice.find((c) => rezCostOf(c) <= obs.credits + 3) ?? ice[0];
-      if (iceInstallCost(t.server) > obs.credits) continue;
-      push(proposal(playOf(obs, card, t.server.label), t.score - (obs.credits < rezCostOf(card) ? 8 : 0), `install ${card.title} on ${t.server.label}: ${t.why}`, "install-ice"));
+      const installCost = iceInstallCost(t.server);
+      if (installCost > obs.credits) continue;
+      const left = obs.credits - installCost;
+      const penalty = (left < rezCostOf(card) ? 8 : 0) + (left < 3 ? 10 : 0);
+      push(proposal(playOf(obs, card, t.server.label), t.score - penalty, `install ${card.title} on ${t.server.label}: ${t.why}`, "install-ice"));
     }
   }
   if (agendas.length && obs.hand.length > 5) push(proposal(playOf(obs, agendas[0], "New remote"), 25, `install ${agendas[0].title} naked to avoid discarding it`, "install-agenda"));
@@ -91,8 +94,9 @@ export function corpProposals(obs: Observation): Proposal[] {
   if (tagged(obs.view) && obs.credits >= 4 && (obs.view.runner?.rig?.resource ?? []).length) push(proposal(byCommand(obs, "trash-resource")[0], 45, "trash a resource while the Runner is tagged", "trash-resource"));
   const wantCredits = obs.hand.some((c) => c.type === "Operation" && gainOf(obs.info(c).text) > playCostOf(c) && playCostOf(c) > obs.credits);
   const deckLeft = Number(obs.me["deck-count"] ?? 0);
-  if (obs.hand.length < 4 && deckLeft > 8) push(proposal(byCommand(obs, "draw")[0], 35, "draw: the hand is thin", "draw"));
-  push(proposal(byCommand(obs, "credit")[0], 30 + (wantCredits ? 10 : 0) + (obs.credits < 3 ? 4 : 0), wantCredits ? "take a credit towards an economy operation in hand" : "take a credit", "credit"));
+  const broke = obs.credits < 3 && obs.servers.some((s) => s.ices.some((i) => !i.rezzed && rezCostOf(i) > obs.credits));
+  if (obs.hand.length < 4 && deckLeft > 8) push(proposal(byCommand(obs, "draw")[0], broke ? 29 : 35, "draw: the hand is thin", "draw"));
+  push(proposal(byCommand(obs, "credit")[0], 30 + (wantCredits ? 10 : 0) + (obs.credits < 3 ? 4 : 0) + (broke ? 8 : 0), broke ? "take a credit: unrezzed ice cannot be rezzed" : wantCredits ? "take a credit towards an economy operation in hand" : "take a credit", "credit"));
   if (deckLeft > 8) push(proposal(byCommand(obs, "draw")[0], 28, "draw a card", "draw"));
   return out;
 }
@@ -122,8 +126,8 @@ export function runProposals(obs: Observation, limit = 2): Proposal[] {
     if (adv > 1 && obs.hand.length < 1 + adv) continue;
     const run = byCommand(obs, "run", (c) => (c.args as any)?.server === server.label)[0];
     if (!run) continue;
-    const score = 40 + (value - est.credits * 0.3) * 4;
-    out.push(fromCandidate(run, score, `run ${server.label}: value ${value.toFixed(1)}, ${est.exact ? "costs" : "about"} ${est.credits}`, "run", est.exact));
+    const score = 40 + (value - est.credits * 0.3 - est.damage * 1.5) * 4;
+    out.push(fromCandidate(run, score, `run ${server.label}: value ${value.toFixed(1)}, ${est.exact ? "costs" : "about"} ${est.credits}${est.damage ? `, ${est.damage} damage` : ""}`, "run", est.exact));
   }
   return out;
 }
