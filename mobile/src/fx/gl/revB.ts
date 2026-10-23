@@ -79,44 +79,6 @@ export async function fransofiaWard(rect: DOMRect, code: string, ready?: Ready, 
   await done();
 }
 
-export async function gamedragonPose(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const g = new Graphics();
-  g.blendMode = "add";
-  fx.addChild(g);
-  const screen: [number, number][] = [
-    [0.43, 0.14],
-    [0.72, 0.13],
-    [0.75, 0.35],
-    [0.46, 0.37],
-  ];
-  const inside = glowSprite(fx, glowTexture(), 0x4fa8ff);
-  inside.position.set(...at(0.42, 0.39));
-  const motes = new Emitter(fx);
-  root.addChild(fx);
-  await run(app, (t, dt) => {
-    g.clear();
-    const fade = 1 - span(t, 1.5, 1.9);
-    const boot = span(t, 0.05, 0.5);
-    const [a, b, c, d] = screen;
-    const v = ease.out(boot);
-    const lp: [number, number] = [a[0] + (d[0] - a[0]) * v, a[1] + (d[1] - a[1]) * v];
-    const rp: [number, number] = [b[0] + (c[0] - b[0]) * v, b[1] + (c[1] - b[1]) * v];
-    if (boot > 0) g.poly(quadPts(at, [a, b, rp, lp])).fill({ color: 0x6ab8ff, alpha: 0.12 * fade });
-    if (boot > 0 && boot < 1)
-      g.moveTo(...at(...lp))
-        .lineTo(...at(...rp))
-        .stroke({ width: 1.4, color: 0xd8ecff, alpha: 0.8 });
-    const hum = 0.5 + 0.5 * Math.sin(t * 7);
-    inside.alpha = (0.18 + 0.1 * hum) * span(t, 0, 0.4) * fade;
-    inside.scale.set((unit / 128) * 0.35, (unit / 128) * 0.18);
-    if (t < 1.4 && Math.random() < 0.35) motes.add(sparkTexture(), ...at(rnd(0.3, 0.6), rnd(0.37, 0.41)), { vy: -unit * rnd(0.08, 0.18), vx: rnd(-1, 1) * unit * 0.04, life: 0.8, tint: Math.random() < 0.7 ? 0x6ab8ff : 0xffd870, scale: (unit / 180) * 0.16, alpha: 0.7 });
-    motes.step(dt);
-    return t < 1.9 || motes.list.length > 0;
-  });
-  await done();
-}
-
 export async function illumination(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
   const tip = at(0.44, 0.13);

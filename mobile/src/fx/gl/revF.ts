@@ -100,60 +100,6 @@ export async function flyswatterFire(rect: DOMRect, code: string, ready?: Ready,
   await done();
 }
 
-export async function gourmand(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, world, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const eyes = [at(0.33, 0.325), at(0.43, 0.325)].map((p) => {
-    const s = glowSprite(fx, glowTexture(), 0x7dff7a);
-    s.position.set(...p);
-    return s;
-  });
-  const mouth = at(0.38, 0.355);
-  const knife: [Pt, Pt] = [at(0.7, 0.24), at(0.83, 0.32)];
-  const g = new Graphics();
-  g.blendMode = "add";
-  fx.addChild(g);
-  const crumbs = Array.from({ length: 16 }, (_, i) => ({ s: glowSprite(world, sparkTexture(), i % 3 ? 0xb8ff6a : 0xfff0a0), d: 0.35 + i * 0.03, off: rnd(-1, 1) }));
-  const from: Pt = board?.access ? pt(board.access) : [0, 0];
-  const bolts: [Pt, Pt][] = [
-    [at(0.08, 0.13), at(0.2, 0.3)],
-    [at(0.88, 0.1), at(0.95, 0.35)],
-    [at(0.6, 0.12), at(0.72, 0.2)],
-  ];
-  root.addChild(fx);
-  await run(app, (t) => {
-    g.clear();
-    const fade = 1 - span(t, 1.3, 1.7);
-    const glare = span(t, 0, 0.2) * fade;
-    for (const e of eyes) {
-      e.alpha = 0.7 * glare;
-      e.scale.set((unit / 128) * 0.07);
-    }
-    if (t < 1.2 && Math.floor(t * 14) % 3 === 0) {
-      const [a, b] = bolts[Math.floor(rnd(0, bolts.length))];
-      lightning(g, a[0], a[1], b[0], b[1], unit * 0.08, 0xc8ff5a, unit * 0.004);
-    }
-    const s = span(t, 0.15, 0.4);
-    if (s > 0 && s < 1) {
-      const p = lerp(knife[0], knife[1], ease.out(s));
-      g.moveTo(...knife[0])
-        .lineTo(...p)
-        .stroke({ width: 2, color: WHITE, alpha: 0.85 * (1 - s) });
-    }
-    const src: Pt = board?.access ? [from[0], from[1]] : [mouth[0] + unit * 0.6, mouth[1] - unit * 0.4];
-    const dst = root.toGlobal({ x: mouth[0], y: mouth[1] });
-    for (const c of crumbs) {
-      const k = span(t, c.d, c.d + 0.55);
-      const ctrl: Pt = [(src[0] + dst.x) / 2 + c.off * unit * 0.3, Math.min(src[1], dst.y) - unit * 0.3];
-      const start: Pt = board?.access ? [src[0] + c.off * unit * 0.15, src[1]] : [src[0] + c.off * unit * 0.2, src[1] + c.off * unit * 0.2];
-      c.s.position.set(...bezier(start, ctrl, [dst.x, dst.y], ease.inOut(k)));
-      c.s.alpha = k > 0 && k < 1 ? 0.9 : 0;
-      c.s.scale.set((unit / 120) * 0.22 * (1 - 0.6 * k));
-    }
-    return t < 1.7;
-  });
-  await done();
-}
-
 export async function hedgeFund(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
   const pit = at(0.5, 0.3);

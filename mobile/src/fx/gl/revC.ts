@@ -62,52 +62,6 @@ const PALMS: [number, number][] = [
   [0.38, 0.845],
 ];
 
-export async function karuna(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, card, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const glow = new GlowFilter({ color: AMBER, distance: 10, outerStrength: 0, quality: 0.3 });
-  card.filters = [glow];
-  const g = new Graphics();
-  g.blendMode = "add";
-  fx.addChild(g);
-  const fire = new Fire(fx, undefined, unit * 0.5);
-  const lights = MUDRAS.map(([u, v]) => {
-    const s = glowSprite(fx, glowTexture(), 0xffc070);
-    s.position.set(...at(u, v));
-    return s;
-  });
-  const face = glowSprite(fx, glowTexture(), 0xff7a3a);
-  face.position.set(...at(0.2, 0.7));
-  root.addChild(fx);
-  await run(app, (t, dt) => {
-    g.clear();
-    const fade = 1 - span(t, 1.5, 1.9);
-    MUDRAS.forEach(([u, v], i) => {
-      const c = at(u, v);
-      const on = span(t, 0.15 + i * 0.2, 0.45 + i * 0.2) * fade;
-      lights[i].alpha = 0.75 * on;
-      lights[i].scale.set((unit / 128) * 0.2);
-      for (let r = 0; r < 3; r++) {
-        const k = (t * 0.7 + r / 3 + i * 0.15) % 1;
-        if (on <= 0) continue;
-        g.circle(c[0], c[1], unit * (0.04 + 0.28 * k)).stroke({ width: 2.2 * (1 - k) + 0.8, color: 0xffc070, alpha: 0.85 * (1 - k) * on });
-      }
-    });
-    if (t < 1.4)
-      for (const [u, v] of PALMS)
-        if (Math.random() < 0.9) {
-          const p = at(u - rnd(0.02, 0.17), v + rnd(-0.03, 0.03));
-          fire.emit(p[0], p[1], { vx: rnd(-1, 1) * unit * 0.05, vy: -unit * rnd(0.05, 0.15), size: unit * rnd(0.07, 0.11), life: rnd(0.45, 0.7) });
-        }
-    face.alpha = 0.45 * Math.sin(Math.PI * span(t, 0.4, 1.8));
-    face.scale.set((unit / 128) * 0.3);
-    glow.outerStrength = 2.2 * Math.sin(Math.PI * span(t, 0.1, 1.8));
-    fire.step(dt);
-    return t < 1.9 || fire.list.length > 0;
-  });
-  card.filters = [];
-  await done();
-}
-
 export async function karunaFire(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, world, fx, done, unit, at } = await scene(rect, code, ready, board);
   const g = new Graphics();
@@ -269,71 +223,6 @@ export async function marjanahPose(rect: DOMRect, code: string, ready?: Ready, b
     petals.step(dt);
     return t < 1.9 || petals.list.length > 0;
   });
-  await done();
-}
-
-export async function marjanah(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const sc = await scene(rect, code, ready, board);
-  const { app, root, world, fx, done, unit, at } = sc;
-  const mouth = at(0.2, 0.42);
-  const maneTip = at(0.82, 0.16);
-  const g = new Graphics();
-  g.blendMode = "add";
-  world.addChild(g);
-  const local = new Graphics();
-  local.blendMode = "add";
-  fx.addChild(local);
-  const petals = new Emitter(world);
-  root.addChild(fx);
-  let hit = false;
-  await run(
-    app,
-    (t, dt) => {
-      g.clear();
-      local.clear();
-      const src = root.toGlobal({ x: mouth[0], y: mouth[1] });
-      const to = sc.strike ?? ([src.x - unit * 0.5, src.y - unit * 0.5] as Pt);
-      const dir = Math.atan2(to[1] - src.y, to[0] - src.x);
-      for (let i = 0; i < 3; i++) {
-        const k = span(t, i * 0.08, i * 0.08 + 0.45);
-        if (k <= 0 || k >= 1) continue;
-        const R = unit * (0.1 + 0.5 * ease.out(k));
-        local
-          .moveTo(mouth[0] + Math.cos(dir - 0.5) * R, mouth[1] + Math.sin(dir - 0.5) * R)
-          .arc(mouth[0], mouth[1], R, dir - 0.5, dir + 0.5)
-          .stroke({ width: 2 * (1 - k) + 0.6, color: 0xbfeaff, alpha: 0.7 * (1 - k) });
-      }
-      if (t < 0.4 && Math.random() < 0.8) {
-        const tip = root.toGlobal({ x: maneTip[0], y: maneTip[1] });
-        petals.add(petalTexture(), tip.x + rnd(-1, 1) * unit * 0.1, tip.y + rnd(-1, 1) * unit * 0.05, { vx: (to[0] - tip.x) * rnd(1.5, 2.5), vy: (to[1] - tip.y) * rnd(1.5, 2.5), drag: 1.2, spin: rnd(-6, 6), life: 0.6, tint: Math.random() < 0.5 ? MANE : 0xffb0c8, scale: (unit / 180) * rnd(0.35, 0.55), alpha: 0.9 });
-      }
-      const s = span(t, 0.4, 0.75);
-      if (s > 0 && s < 1) {
-        const L = unit * 0.55;
-        const a = dir + Math.PI / 2 + 0.5;
-        for (let n = -1; n <= 1; n++) {
-          const off: Pt = [Math.cos(a - Math.PI / 2) * n * unit * 0.09, Math.sin(a - Math.PI / 2) * n * unit * 0.09];
-          const p0: Pt = [to[0] + off[0] - Math.cos(a) * L * 0.5, to[1] + off[1] - Math.sin(a) * L * 0.5];
-          const p1 = lerp(p0, [to[0] + off[0] + Math.cos(a) * L * 0.5, to[1] + off[1] + Math.sin(a) * L * 0.5], ease.out(s));
-          g.moveTo(...p0)
-            .lineTo(...p1)
-            .stroke({ width: unit * 0.04 * (1 - s) + 1, color: MANE, alpha: 0.5 * (1 - s) });
-          g.moveTo(...p0)
-            .lineTo(...p1)
-            .stroke({ width: 1.6, color: 0xffe0ec, alpha: 0.95 * (1 - s) });
-        }
-      }
-      if (!hit && t > 0.45) {
-        hit = true;
-        for (let n = 0; n < 18; n++) petals.add(petalTexture(), ...to, { vx: rnd(-1, 1) * unit * 1.6, vy: rnd(-1, 1) * unit * 1.6, drag: 2, spin: rnd(-8, 8), life: 0.6, tint: n % 2 ? MANE : 0xffd0e0, scale: (unit / 180) * rnd(0.3, 0.5), alpha: 0.9 });
-        navigator.vibrate?.(20);
-      }
-      petals.step(dt);
-      return t < 1 || petals.list.length > 0;
-    },
-    sc.strike ? 1.1 : 1,
-  );
-  g.destroy();
   await done();
 }
 

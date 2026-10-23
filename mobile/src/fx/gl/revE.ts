@@ -151,43 +151,6 @@ export async function kessleroidFire(rect: DOMRect, code: string, ready?: Ready,
   await done();
 }
 
-export async function phatGioan(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const glass = at(0.215, 0.1);
-  const clink = glowSprite(fx, sparkTexture(), 0xfff4d8);
-  clink.position.set(...glass);
-  const bubbles = new Emitter(fx);
-  const g = new Graphics();
-  g.blendMode = "add";
-  fx.addChild(g);
-  const threads = Array.from({ length: 5 }, (_, i) => ({ v: 0.27 + i * 0.045, ph: rnd(0, 6), d: i * 0.12 }));
-  root.addChild(fx);
-  await run(app, (t, dt) => {
-    g.clear();
-    const c = Math.sin(Math.PI * span(t, 0.1, 0.45));
-    clink.alpha = 0.85 * c;
-    clink.rotation = t * 3;
-    clink.scale.set((unit / 120) * 0.3 * c);
-    if (t < 1.5 && Math.random() < 0.5) bubbles.add(glowTexture(), glass[0] + rnd(-1, 1) * unit * 0.012, glass[1] + unit * 0.02, { vx: rnd(-3, 3), vy: -unit * rnd(0.08, 0.16), life: 0.8, tint: 0xfff1c0, scale: (unit / 128) * rnd(0.01, 0.018), alpha: 0.8 });
-    const fade = 1 - span(t, 1.5, 1.9);
-    for (const th of threads) {
-      const k = span(t, 0.3 + th.d, 1.1 + th.d);
-      if (k <= 0) continue;
-      const head = 0.38 + 0.3 * ease.inOut(k);
-      const tail = Math.max(0.38, head - 0.14);
-      const pts: number[] = [];
-      for (let i = 0; i <= 14; i++) {
-        const u = tail + ((head - tail) * i) / 14;
-        pts.push(...at(u, th.v + 0.012 * Math.sin(u * 40 + th.ph + t * 4) + (u - 0.38) * 0.12));
-      }
-      g.poly(pts, false).stroke({ width: 1.8, color: 0xffd27a, alpha: 0.8 * fade * (1 - span(k, 0.85, 1)) });
-    }
-    bubbles.step(dt);
-    return t < 1.9 || bubbles.list.length > 0;
-  });
-  await done();
-}
-
 export async function retribution(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, card, fx, done, unit, at } = await scene(rect, code, ready, board);
   const grip = at(0.68, 0.17);
