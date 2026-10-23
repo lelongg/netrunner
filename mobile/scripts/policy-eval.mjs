@@ -416,7 +416,7 @@ const table = [];
 for (const m of pairs) {
   const out = outRoot ? (pairs.length > 1 ? join(outRoot, m.key.replace(/[^a-z0-9-]+/gi, "_")) : outRoot) : null;
   const r = await series(m, out);
-  table.push({ corpName: m.corp.name, runnerName: m.runner.name, ...r.wins, errors: r.errors, stuck: r.stuck, fallback: r.results[0]?.fallback });
+  table.push({ corpKey: m.corp.key ?? m.corp.name, runnerKey: m.runner.key ?? m.runner.name, ...r.wins, errors: r.errors, stuck: r.stuck, fallback: r.results[0]?.fallback });
 }
 if (pairs.length > 1) {
   console.log("");
@@ -424,7 +424,7 @@ if (pairs.length > 1) {
   console.log(`|---|${CORE_RUNNER_DECKS.map(() => "---").join("|")}|`);
   for (const c of CORE_CORP_DECKS) {
     const cells = CORE_RUNNER_DECKS.map((r) => {
-      const t = table.find((x) => x.corpName === c.name && x.runnerName === r.name);
+      const t = table.find((x) => x.corpKey === c.key && x.runnerKey === r.key);
       return t ? `${t.corp} (${(t.corp / games).toFixed(2)} ${ci(t.corp, games)})${t.none ? ` · ${t.none} unfinished` : ""}${t.errors ? ` · ${t.errors} errors` : ""}` : "-";
     });
     console.log(`| ${c.name.replace(/ \(SG Only\)$/, "")} | ${cells.join(" | ")} |`);

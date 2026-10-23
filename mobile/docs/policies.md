@@ -424,6 +424,32 @@ Anarch policy on the tune split (20 games); before this loop it was winning most
 The grid above against the reference is the figure to improve. The heuristic bot stays in
 the table below only as the floor.
 
+### On the SG Only decks
+
+The catalogue then moved to NSG's SG Only sample decks (the reference still plays the
+earlier lists, so these cells compare deck and policy together). Design split, 10 games
+per cell, Corp wins, after the first fixes the new lists called for (the Corp holds agendas
+out of a remote the Runner stole from, damage ice is priced in server safety, the Runner
+draws instead of clicking credits with nothing to play, and skips a Funhouse it would not
+take the tag on):
+
+| Corp \ Runner | Party Hard | Stolen Goods | Planning Ahead |
+|---|---|---|---|
+| Discretion Advised, vs reference Runners | 7 | 3 | 3 |
+| Advanced Yomi, vs reference Runners | 3 | 1 | 2 |
+| Hyper Velocity, vs reference Runners | 2 | 5 | 3 |
+| Quick and Dirty, vs reference Runners | 6 | 7 | 5 |
+| reference Haas-Bioroid, vs the new Runners | 3 | 6 | 4 |
+| reference Jinteki, vs the new Runners | 1 | 2 | 1 |
+| reference NBN, vs the new Runners | 5 | 6 | 8 |
+| reference Weyland, vs the new Runners | 5 | 7 | 5 |
+
+The Runner policies on the SG Only lists win 67 of 120 against the reference Corps; the Corp
+policies on the SG Only lists win 47 of 120 against the reference Runners, with Advanced
+Yomi (Jinteki) at 6 of 30. The SG Only Corp lists have no Seamless Launch and lean on
+Clearinghouse and Urtica Cipher as threats the Corp policies barely use yet; that is the
+next loop. Policy against policy on the new lists: Corp 70 of 120.
+
 Every Corp deck beats the heuristic Runner and every Runner deck beats the heuristic Corp
 by more than the interval, which is what the shared archetypes bought; the Haas-Bioroid
 line is the lowest because the heuristic Zahya trashes its unprotected campaigns. Against
