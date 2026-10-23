@@ -130,4 +130,5 @@ export interface DecisionRecord {
   unhandled?: string;
   ms: number;
   signature: string;
+  prompt?: string;
 }

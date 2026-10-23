@@ -6,7 +6,6 @@ import { fromCandidate, labelCost, runServer, runnerRun } from "../runs.ts";
 import { agendaProgress, coverage, estimateRun, iceThreat, isIcebreaker, playCostOf } from "../tactics.ts";
 const ICE_TYPES = new Set(["Barrier", "Code Gate", "Sentry"]);
 import type { DeckPolicy, Observation, Plan, Proposal, ServerInfo } from "../types.ts";
-import { CORE_CRIMINAL } from "./core.ts";
 import { GATEWAY_CORP_BEGINNER, GATEWAY_CORP_INTERMEDIATE, GATEWAY_RUNNER_BEGINNER, GATEWAY_RUNNER_INTERMEDIATE } from "./gateway.ts";
 
 const isEconomyCard = (obs: Observation, c: any) => obs.profile.economy.has(c.title);
@@ -76,9 +75,12 @@ function trapOdds(obs: Observation): number {
   return traps / (traps + Math.max(1, total - gone));
 }
 
+const ambushDeck = (obs: Observation) => /jinteki/i.test(String(obs.opp.identity?.faction ?? obs.opp.identity?.title ?? "")) || [...obs.memory.opponentTitles].some((t) => /^(Byte!|Snare!|Urtica Cipher)$/.test(t));
+
 function accessRisk(obs: Observation, t: Target) {
   const adv = Math.max(0, ...t.server.content.map((c: any) => agendaProgress(c).have));
   const hidden = t.server.remote && t.server.content.some((c: any) => !c.rezzed && !c.title && !obs.memory.seen.has(c.cid));
+  if (!t.server.remote && ambushDeck(obs) && Number(obs.opp.credit ?? 0) >= 4) return t.damage + 3;
   if (!hidden) return t.damage;
   const odds = trapOdds(obs);
   if (odds === 0 || (adv >= 2 && odds <= 0.2)) return t.damage;
@@ -413,15 +415,13 @@ function run(obs: Observation, plan: Plan): Proposal | null {
   return runnerRun(obs);
 }
 
+export const centralPressure = { mulligan, plan, proposals, prompt, run, targets, safeHand, requiredHand, accessRisk, readiness, reserve, bestServerChoice, runScore, inHand, inRig, ranSuccessfullyThisTurn, lastClick, isEconomyCard, seenIceTypes, restOfRun };
+
 export const gatewayRunner: DeckPolicy = registerPolicy({
   id: "gateway-runner-catalyst",
   version: "0.3.0",
   side: "runner",
-  decks: [GATEWAY_RUNNER_BEGINNER, GATEWAY_RUNNER_INTERMEDIATE, CORE_CRIMINAL],
-  mulligan,
-  plan,
-  proposals,
-  prompt,
-  run,
+  decks: [GATEWAY_RUNNER_BEGINNER, GATEWAY_RUNNER_INTERMEDIATE],
+  ...centralPressure,
 });
 

@@ -4,6 +4,7 @@ import { serverName } from "../../game/describe.ts";
 import { corpFreeProposals, corpProposals, genericPlan, runnerProposals } from "./generic.ts";
 import { emptyMemory, noteRun, observe, updateMemory } from "./observe.ts";
 import { type AnyDeck, deckList, fingerprint } from "./registry.ts";
+import { cardPrompt } from "./cards.ts";
 import { genericPrompt, mulliganProposal } from "./prompts.ts";
 import { breakSubChoice, corpRun, runnerRun } from "./runs.ts";
 import { isEconomy, isIcebreaker } from "./tactics.ts";
@@ -80,8 +81,10 @@ export class PolicyBot {
     if (this.memory.notes.kindsTurn !== turnKey) {
       this.memory.notes.kindsTurn = turnKey;
       this.memory.notes.kinds = [];
+      this.memory.notes.pointsAtTurnStart = Number(view[this.side]?.["agenda-point"] ?? 0);
     }
     this.trackRun(view);
+    this.memory.notes.scoredPointsThisTurn = Math.max(0, Number(view[this.side]?.["agenda-point"] ?? 0) - Number(this.memory.notes.pointsAtTurnStart ?? 0));
     const obs = observe(view, this.side, this.memory, this.lookup, this.render, this.random, this.deck);
     const { stage, proposals, unhandled } = this.consider(obs);
     const signature = this.signature(obs);
@@ -107,7 +110,7 @@ export class PolicyBot {
     this.pendingKind = chosen && stage === "click" ? { key: moveKey(chosen.move), kind: chosen.kind } : null;
     const ms = (typeof performance !== "undefined" ? performance.now() : Date.now()) - started;
     if (this.record) {
-      this.records.push({ n: this.n, turn: obs.turn, side: this.side, active: obs.active, stage, plan: this.plan, chosen, considered: ranked.slice(0, 6), refused: refused || undefined, unhandled: note, ms, signature });
+      this.records.push({ n: this.n, turn: obs.turn, side: this.side, active: obs.active, stage, plan: this.plan, chosen, considered: ranked.slice(0, 6), refused: refused || undefined, unhandled: note, ms, signature, prompt: obs.prompt ? `${obs.prompt.card?.title ?? "?"} [${obs.promptType}]: ${obs.promptText}` : undefined });
       if (this.records.length > this.maxRecords) this.records.shift();
     }
     this.n++;
@@ -173,7 +176,7 @@ export class PolicyBot {
       return p ? [p] : [];
     }
     const deck = this.policy?.prompt?.(obs, this.currentPlan(obs));
-    const out = [deck, breakSubChoice(obs), ...genericPrompt(obs, this.plan)].filter((p): p is Proposal => !!p);
+    const out = [deck, breakSubChoice(obs), ...cardPrompt(obs), ...genericPrompt(obs, this.plan)].filter((p): p is Proposal => !!p);
     out.forEach((p, i) => (p.score -= i * 0.001));
     return out;
   }

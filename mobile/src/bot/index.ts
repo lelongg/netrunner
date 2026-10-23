@@ -2,8 +2,7 @@ import type { Side } from "../engine.ts";
 import { HeuristicBot, type Lookup, type Move } from "./heuristic.ts";
 import { PolicyBot, type BotOptions } from "./policy/bot.ts";
 import { type AnyDeck, findPolicy } from "./policy/registry.ts";
-import "./policy/decks/gateway-corp.ts";
-import "./policy/decks/gateway-runner.ts";
+import "./policy/decks/index.ts";
 
 export interface Bot {
   readonly side: Side;

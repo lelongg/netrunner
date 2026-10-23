@@ -5,7 +5,6 @@ import { registerPolicy } from "../registry.ts";
 import { corpRun, fromCandidate } from "../runs.ts";
 import { agendaProgress, coverage, iceThreat, rezCostOf, serverSafety } from "../tactics.ts";
 import type { DeckPolicy, Observation, Plan, Proposal } from "../types.ts";
-import { CORE_HB } from "./core.ts";
 import { GATEWAY_CORP_BEGINNER, GATEWAY_CORP_INTERMEDIATE } from "./gateway.ts";
 
 const isEconomyCard = (obs: Observation, c: any) => obs.profile.economy.has(c.title);
@@ -108,7 +107,7 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
 
   const agendasStuck = obs.hand.some((c) => c.type === "Agenda") && !out.some((p) => p.kind === "install-agenda" && p.score > 20);
   const idle = !out.some((p) => p.kind !== "credit" && p.kind !== "draw" && p.score > 32);
-  if (agendasStuck && idle && obs.credits >= 6 && (obs.hand.length <= 4 || obs.credits >= 10) && Number(obs.me["deck-count"] ?? 0) > 8) {
+  if (agendasStuck && idle && obs.credits >= 6 && (obs.hand.length <= 4 || (obs.credits >= 10 && obs.hand.length <= 6)) && Number(obs.me["deck-count"] ?? 0) > 8) {
     const draw = byCommand(obs, "draw")[0];
     if (draw) push(proposal(draw, obs.hand.length <= 4 ? 45 : 40, "draw: agendas wait in HQ and nothing in hand builds a remote for them", "draw"));
   }
@@ -245,15 +244,13 @@ function run(obs: Observation, plan: Plan): Proposal | null {
   return corpRun(obs);
 }
 
+export const glacier = { mulligan, plan, proposals, prompt, run, scoringCost, canScoreNextTurn, remotes, scoringRemote, agendaIn, inHand, runnerBreaks, isEconomyCard, iceRank };
+
 export const gatewayCorp: DeckPolicy = registerPolicy({
   id: "gateway-corp-syndicate",
   version: "0.3.0",
   side: "corp",
-  decks: [GATEWAY_CORP_BEGINNER, GATEWAY_CORP_INTERMEDIATE, CORE_HB],
-  mulligan,
-  plan,
-  proposals,
-  prompt,
-  run,
+  decks: [GATEWAY_CORP_BEGINNER, GATEWAY_CORP_INTERMEDIATE],
+  ...glacier,
 });
 

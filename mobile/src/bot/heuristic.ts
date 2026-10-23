@@ -59,11 +59,19 @@ export class HeuristicBot {
     const move = this.pick(view);
     if (!move) return null;
     const key = `${move.command}:${move.say ?? ""}:${JSON.stringify(move.args ?? null)}`;
-    const signature = this.signature(view);
+    const signature = this.signature(view, move.command !== "score");
     if (key === this.last.key && signature === this.last.signature) {
       if (++this.last.count >= 2) {
         this.banned.add(key);
         this.last = { key: "", signature: "", count: 0 };
+        if (this.depth < 3) {
+          this.depth++;
+          try {
+            return this.decide(view) ?? this.fallback(view);
+          } finally {
+            this.depth--;
+          }
+        }
         return this.fallback(view);
       }
     } else if (!this.confirmed) this.last = { key, signature, count: 0 };
@@ -76,6 +84,8 @@ export class HeuristicBot {
     }
     return move;
   }
+
+  private depth = 0;
 
   applied(move: Move) {
     this.confirmed = true;
@@ -95,9 +105,9 @@ export class HeuristicBot {
     this.pendingRun = null;
   }
 
-  private signature(view: any) {
+  private signature(view: any, withLog = true) {
     const me = view[this.side] ?? {};
-    return JSON.stringify([me.click, me.credit, me.hand?.length, promptOf(view, this.side)?.eid, view.run?.phase, view.run?.position, view.run?.["no-action"], view.encounters?.["no-action"], (view.log ?? []).length]);
+    return JSON.stringify([me.click, me.credit, me.hand?.length, promptOf(view, this.side)?.eid, view.run?.phase, view.run?.position, view.run?.["no-action"], view.encounters?.["no-action"], withLog ? (view.log ?? []).length : 0]);
   }
 
   private allowed(move: Move | null | undefined): Move | null {
