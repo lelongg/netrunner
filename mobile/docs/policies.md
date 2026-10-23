@@ -321,6 +321,37 @@ prompt; 10 refused moves in total, all on the Runner side (a run or ability the 
 declined, retried once by the stall guard). Decision time averages 0.3 ms (maximum about
 65 ms) on the development engine build.
 
+### Core decks
+
+Test split, 20 games per line, against the heuristic bot playing the core deck of the
+other side (Haas-Bioroid for the Runner lines, Zahya for the Corp lines). The heuristic
+bots against each other on those two decks: Corp 10, Runner 10.
+
+| Deck | Policy | Wins against the heuristic opponent |
+|---|---|---|
+| core-hb | `core-hb-glacier` | 14 (0.70 ±0.20) |
+| core-jinteki | `core-jinteki-punish` | 18 (0.90 ±0.13) |
+| core-nbn | `core-nbn-tags` | 20 (1.00) |
+| core-weyland | `core-weyland-advance` | 17 (0.85 ±0.16) |
+| core-anarch | `core-anarch-virus` | 16 (0.80 ±0.18) |
+| core-criminal | `core-criminal-central-pressure` | 16 (0.80 ±0.18) |
+| core-shaper | `core-shaper-lock` | 17 (0.85 ±0.16) |
+
+Policy against policy on the test split (`--grid`, 20 games per cell, Corp wins):
+
+| Corp \\ Runner | Anarch: Loup | Criminal: Zahya | Shaper: Tāo |
+|---|---|---|---|
+| Haas-Bioroid: Precision Design | 12 (0.60 ±0.21) | 8 (0.40 ±0.21) | 12 (0.60 ±0.21) |
+| Jinteki: Restoring Humanity | 16 (0.80 ±0.18) | 9 (0.45 ±0.22) | 11 (0.55 ±0.22) |
+| NBN: Reality Plus | 13 (0.65 ±0.21) | 10 (0.50 ±0.22) | 13 (0.65 ±0.21) |
+| Weyland: Built to Last | 12 (0.60 ±0.21) | 15 (0.75 ±0.19) | 11 (0.55 ±0.22) |
+
+Every Corp deck beats the heuristic Runner and every Runner deck beats the heuristic Corp
+by more than the interval, which is what the shared archetypes bought; the Haas-Bioroid
+line is the lowest because the heuristic Zahya trashes its unprotected campaigns. Against
+each other the Corp decks are ahead: the Runner archetype still waits for a safe window
+too long against a Corp that scores behind two ice and an upgrade.
+
 Known limits:
 
 - The sample is small: 30 games give intervals of about ±0.17, so differences below that are
