@@ -598,41 +598,6 @@ export async function teleworkContract(rect: DOMRect, code: string, ready?: Read
   await done();
 }
 
-export async function touchstone(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const ring = at(0.56, 0.25);
-  const beam = new Graphics();
-  beam.blendMode = "add";
-  const reel = new Graphics();
-  reel.blendMode = "add";
-  fx.addChild(beam, reel);
-  const motes = new Emitter(fx);
-  const slides = new Emitter(fx);
-  root.addChild(fx);
-  await run(app, (t, dt) => {
-    const on = span(t, 0.1, 0.4) * (1 - span(t, 1.6, 2));
-    const flick = 0.85 + 0.15 * Math.sin(t * 30);
-    beam.clear();
-    for (const [w0, w1, al] of [
-      [0.05, 0.13, 0.1],
-      [0.03, 0.08, 0.14],
-    ] as const)
-      beam.poly([...at(0.56 - w0, 0.23), ...at(0.56 + w0, 0.23), ...at(0.58 + w1, 0.02), ...at(0.54 - w1, 0.02)]).fill({ color: 0x9ffff0, alpha: al * on * flick });
-    reel.clear();
-    for (let i = 0; i < 10; i++) {
-      const a = t * 2.4 + (i / 10) * Math.PI * 2;
-      const lit = Math.sin(a) > 0.7;
-      reel.circle(ring[0] + Math.cos(a) * unit * 0.15, ring[1] + Math.sin(a) * unit * 0.045, unit * 0.012).fill({ color: lit ? WHITE : GREEN, alpha: on * (lit ? 0.9 : 0.4) });
-    }
-    if (on > 0.3 && Math.random() < 0.1) slides.add(cubeTexture(), ...at(0.56 + rnd(-0.04, 0.04), 0.2), { vy: -unit * rnd(0.25, 0.4), spin: rnd(-1, 1), life: 0.8, tint: 0x9ffff0, scale: (unit / 180) * rnd(0.7, 1), alpha: 0.6 });
-    if (on > 0 && Math.random() < 0.6) motes.add(glowTexture(), ...at(0.56 + rnd(-0.06, 0.06), rnd(0.05, 0.22)), { vx: rnd(-4, 4), vy: -unit * 0.05, life: 0.9, tint: WHITE, scale: (unit / 128) * 0.025, alpha: 0.7 });
-    motes.step(dt);
-    slides.step(dt);
-    return t < 2 || motes.list.length > 0;
-  });
-  await done();
-}
-
 export async function humanoidResources(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
   const heads: Pt[] = [];

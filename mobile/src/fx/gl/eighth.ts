@@ -27,38 +27,6 @@ function arcFrom(g: Graphics, c: Pt, rx: number, ry: number, a0: number, a1: num
   return g;
 }
 
-export async function tomorrowsHeadline(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const g = new Graphics();
-  g.blendMode = "add";
-  fx.addChild(g);
-  const rows = Array.from({ length: 8 }, (_, i) => ({ v: 0.09 + i * 0.045, speed: rnd(0.15, 0.35) * (i % 2 ? 1 : -1), off: rnd(0, 1) }));
-  const flash = at(0.76, 0.18);
-  root.addChild(fx);
-  await run(app, (t) => {
-    g.clear();
-    const fade = span(t, 0, 0.3) * (1 - span(t, 1.4, 1.8));
-    for (const r of rows) {
-      for (let k = 0; k < 3; k++) {
-        const u = 0.05 + ((((r.off + k / 3 + t * r.speed) % 1) + 1) % 1) * 0.85;
-        g.moveTo(...at(u, r.v))
-          .lineTo(...at(Math.min(0.95, u + 0.12), r.v))
-          .stroke({ width: unit * 0.008, color: 0xd8f0ff, alpha: 0.55 * fade });
-      }
-    }
-    const k = Math.sin(Math.PI * span(t, 0.6, 1.3));
-    if (k > 0) {
-      const w = unit * 0.13;
-      const h = unit * 0.07;
-      g.rect(flash[0] - w / 2, flash[1] - h / 2, w, h)
-        .fill({ color: 0xff3a3a, alpha: 0.35 * k })
-        .stroke({ width: 1.5, color: 0xffd0d0, alpha: 0.9 * k });
-    }
-    return t < 1.8;
-  });
-  await done();
-}
-
 export async function sendAMessage(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
   const ghost = at(0.5, 0.17);

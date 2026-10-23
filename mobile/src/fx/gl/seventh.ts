@@ -227,37 +227,6 @@ export async function ipEnforcement(rect: DOMRect, code: string, ready?: Ready, 
   await done();
 }
 
-export async function touchUps(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const g = new Graphics();
-  g.blendMode = "add";
-  fx.addChild(g);
-  const cols = 9;
-  const rows = 4;
-  const pick = { c: 4, r: 1 };
-  root.addChild(fx);
-  await run(app, (t) => {
-    g.clear();
-    const fade = 1 - span(t, 1.3, 1.7);
-    const sweep = span(t, 0, 0.8) * (cols + 2);
-    for (let c = 0; c < cols; c++)
-      for (let r = 0; r < rows; r++) {
-        const lit = Math.max(0, 1 - Math.abs(sweep - c - r * 0.3));
-        const chosen = c === pick.c && r === pick.r && t > 0.85;
-        if (!lit && !chosen) continue;
-        const u0 = 0.06 + (c * 0.88) / cols;
-        const v0 = 0.07 + (r * 0.36) / rows;
-        const p0 = at(u0 + 0.008, v0 + 0.008);
-        const p1 = at(u0 + 0.88 / cols - 0.008, v0 + 0.36 / rows - 0.008);
-        const x = Math.min(p0[0], p1[0]);
-        const y = Math.min(p0[1], p1[1]);
-        g.rect(x, y, Math.abs(p1[0] - p0[0]), Math.abs(p1[1] - p0[1])).stroke({ width: chosen ? 2 : 1, color: chosen ? 0xffd27a : 0x7ae8ff, alpha: (chosen ? 0.95 * (0.7 + 0.3 * Math.sin(t * 12)) : 0.7 * lit) * fade });
-      }
-    return t < 1.7;
-  });
-  await done();
-}
-
 export async function mycoweb(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
   const seed: [number, number] = [0.6, 0.72];

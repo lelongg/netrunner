@@ -183,46 +183,6 @@ export async function anthillExcavation(rect: DOMRect, code: string, ready?: Rea
   await done();
 }
 
-export async function tungstenTailor(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const eye = at(0.85, 0.167);
-  const butt = at(0.22, 0.315);
-  const g = new Graphics();
-  g.blendMode = "add";
-  fx.addChild(g);
-  const glint = glowSprite(fx, sparkTexture(), WHITE);
-  const stitchesFrom = at(0.12, 0.44);
-  const stitchesTo = at(0.62, 0.44);
-  root.addChild(fx);
-  await run(app, (t) => {
-    g.clear();
-    const run1 = span(t, 0.05, 0.5);
-    const [gx, gy] = lerp(butt, eye, run1);
-    glint.position.set(gx, gy);
-    glint.alpha = Math.sin(Math.PI * run1);
-    glint.rotation = t * 4;
-    glint.scale.set((unit / 120) * 0.35);
-    const k = span(t, 0.5, 1.4);
-    const fade = 1 - span(t, 1.6, 2);
-    const n = 7;
-    const shown = n * k;
-    const pts: Pt[] = [eye];
-    for (let i = 0; i <= shown; i++) {
-      const [x, y] = lerp(stitchesFrom, stitchesTo, i / n);
-      pts.push([x, y + (i % 2 ? -1 : 1) * unit * 0.04]);
-    }
-    if (pts.length > 1) {
-      g.moveTo(...pts[0]);
-      g.quadraticCurveTo(eye[0] - unit * 0.1, eye[1] + unit * 0.25, ...pts[1]);
-      for (const p of pts.slice(2)) g.lineTo(...p);
-      g.stroke({ width: unit * 0.012, color: 0xff5a4a, alpha: 0.9 * fade, join: "round", cap: "round" });
-      for (const p of pts.slice(1)) g.circle(...p, unit * 0.008).fill({ color: WHITE, alpha: 0.8 * fade });
-    }
-    return t < 2;
-  });
-  await done();
-}
-
 export async function byte(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, card, fx, done, unit, at, zoom } = await scene(rect, code, ready, board);
   const maw = at(0.6, 0.28);
@@ -304,55 +264,6 @@ export async function biggerPicture(rect: DOMRect, code: string, ready?: Ready, 
     for (const i of lit) net.circle(...at(...nodes[i]), unit * 0.012).fill({ color: WHITE, alpha: fade });
     pings.step(dt);
     return t < 1.9 || pings.list.length > 0;
-  });
-  await done();
-}
-
-export async function topDownSolutions(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const heads: Pt[] = [
-    [0.07, 0.24],
-    [0.18, 0.23],
-    [0.31, 0.25],
-    [0.46, 0.235],
-    [0.55, 0.24],
-    [0.64, 0.245],
-    [0.73, 0.25],
-    [0.85, 0.24],
-  ];
-  const eyes = heads.map((h) => {
-    const s = glowSprite(fx, glowTexture(), 0x9dff5a);
-    s.position.set(...at(...h));
-    return s;
-  });
-  const beams = new Graphics();
-  beams.blendMode = "add";
-  fx.addChild(beams);
-  const motes = new Emitter(fx);
-  root.addChild(fx);
-  await run(app, (t, dt) => {
-    const fade = 1 - span(t, 1.5, 1.9);
-    beams.clear();
-    heads.forEach(([u, v], i) => {
-      const on = span(t, 0.1 + i * 0.07, 0.2 + i * 0.07);
-      eyes[i].alpha = on * fade * 0.9;
-      eyes[i].scale.set((unit / 128) * 0.06);
-      const k = ease.out(span(t, 0.6 + i * 0.04, 1.0 + i * 0.04));
-      if (k <= 0) return;
-      const [x, y] = at(u, v - 0.04);
-      const [x2, y2] = at(u, v - 0.04 - 0.1 * k);
-      beams
-        .moveTo(x, y)
-        .lineTo(x2, y2)
-        .stroke({ width: unit * 0.02, color: 0x9dff5a, alpha: 0.25 * fade });
-      beams
-        .moveTo(x, y)
-        .lineTo(x2, y2)
-        .stroke({ width: unit * 0.005, color: WHITE, alpha: 0.8 * fade });
-      if (k < 1 && Math.random() < 0.3) motes.add(sparkTexture(), x2, y2, { vy: -unit * 0.3, life: 0.4, tint: 0x9dff5a, scale: 0.2 * (unit / 180), grow: -0.4 });
-    });
-    motes.step(dt);
-    return t < 1.9 || motes.list.length > 0;
   });
   await done();
 }
@@ -479,47 +390,6 @@ export async function manegarmSkunkworks(rect: DOMRect, code: string, ready?: Re
     synapses.step(dt);
     return t < 2 || synapses.list.length > 0;
   });
-  await done();
-}
-
-export async function treadLightly(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, card, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const eye = at(0.43, 0.31);
-  const cone = new Graphics();
-  cone.blendMode = "add";
-  fx.addChild(cone);
-  const steps = new Emitter(fx);
-  const red = glowSprite(fx, glowTexture(), RED);
-  red.position.set(...eye);
-  root.addChild(fx);
-  const path: Pt[] = [
-    [0.1, 0.5],
-    [0.17, 0.47],
-    [0.24, 0.5],
-    [0.31, 0.47],
-    [0.38, 0.5],
-    [0.45, 0.47],
-  ];
-  const placed = path.map(() => false);
-  await run(app, (t, dt) => {
-    card.tint = t < 1.7 ? 0xc8d4ff : WHITE;
-    path.forEach((p, i) => {
-      if (placed[i] || t < 0.15 + i * 0.18) return;
-      placed[i] = true;
-      steps.add(footTexture(), ...at(...p), { life: 0.9, tint: CYAN, scale: (unit / 180) * 0.35, alpha: 0.8 });
-    });
-    const sweep = Math.sin(t * 2.2) * 0.5;
-    cone.clear();
-    const on = span(t, 0.1, 0.4) * (1 - span(t, 1.5, 1.9));
-    const a = Math.PI * 0.62 + sweep;
-    const len = unit * 0.7;
-    cone.poly([...eye, eye[0] + Math.cos(a - 0.18) * len, eye[1] + Math.sin(a - 0.18) * len, eye[0] + Math.cos(a + 0.18) * len, eye[1] + Math.sin(a + 0.18) * len]).fill({ color: RED, alpha: 0.12 * on });
-    red.alpha = on * (0.6 + 0.4 * Math.sin(t * 12));
-    red.scale.set((unit / 128) * 0.06);
-    steps.step(dt);
-    return t < 1.9 || steps.list.length > 0;
-  });
-  card.tint = WHITE;
   await done();
 }
 

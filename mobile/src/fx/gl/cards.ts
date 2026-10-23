@@ -923,3 +923,4 @@ export * from "./revised";
 export * from "./revA";
 export * from "./revB";
 export * from "./revC";
+export * from "./revG";
