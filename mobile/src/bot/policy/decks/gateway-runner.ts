@@ -3,7 +3,7 @@ import { playOf, proposal, serverValue } from "../generic.ts";
 import { choiceLabel, choiceMove, choices, findChoice, promptFrom, selectMove, selectable } from "../prompts.ts";
 import { registerPolicy } from "../registry.ts";
 import { fromCandidate, labelCost, runServer, runnerRun } from "../runs.ts";
-import { agendaProgress, coverage, estimateRun, iceThreat, isIcebreaker, playCostOf } from "../tactics.ts";
+import { agendaProgress, breakerProfile, coverage, estimateRun, iceThreat, isIcebreaker, playCostOf, tagPunisher } from "../tactics.ts";
 const ICE_TYPES = new Set(["Barrier", "Code Gate", "Sentry"]);
 import type { DeckList, DeckPolicy, Observation, Plan, Proposal, ServerInfo } from "../types.ts";
 import { CORE_CORP_DECKS } from "./core.ts";
@@ -28,17 +28,30 @@ interface Target {
   credits: number;
   exact: boolean;
   damage: number;
+  tags: number;
+  viaMayfly?: boolean;
 }
 
 function targets(obs: Observation, extra = 0, includeWorthless = false): Target[] {
   const out: Target[] = [];
+  const mayfly = inHand(obs, "Mayfly");
+  const mayflyCost = mayfly ? playCostOf(mayfly) : 0;
+  const mayflyProfile = mayfly && Number(obs.me.memory?.available ?? 4) - Number(obs.me.memory?.used ?? 0) >= 1 ? breakerProfile(mayfly, obs.info(mayfly)) : null;
   for (const server of obs.servers) {
     const value = serverValue(obs, server);
     if (value <= 0 && !includeWorthless) continue;
     const corpCredits = Number(obs.opp.credit ?? 0);
-    const est = estimateRun(obs, server, corpCredits < 1 ? 0 : corpCredits < 3 ? 1 : 3, obs.credits + extra);
-    if (est.blocked) continue;
-    out.push({ server, value, credits: est.credits, exact: est.exact, damage: est.damage });
+    const unrezzedCost = corpCredits < 1 ? 0 : corpCredits < 3 ? 1 : 3;
+    const est = estimateRun(obs, server, unrezzedCost, obs.credits + extra);
+    if (!est.blocked) {
+      out.push({ server, value, credits: est.credits, exact: est.exact, damage: est.damage, tags: est.tags });
+      continue;
+    }
+    const worthMayfly = server.remote ? server.content.some((c: any) => c.type === "Agenda" || agendaProgress(c).have > 0 || (!c.rezzed && !c.title)) : value >= 4;
+    if (!mayflyProfile || !worthMayfly || mayflyCost > obs.credits + extra) continue;
+    const viaMayfly = estimateRun(obs, server, unrezzedCost, obs.credits + extra - mayflyCost, [mayflyProfile]);
+    if (viaMayfly.blocked) continue;
+    out.push({ server, value, credits: viaMayfly.credits + mayflyCost, exact: viaMayfly.exact, damage: viaMayfly.damage, tags: viaMayfly.tags, viaMayfly: true });
   }
   return out.sort((a, b) => b.value - b.credits * 0.3 - (a.value - a.credits * 0.3));
 }
@@ -116,7 +129,11 @@ function readiness(obs: Observation, t: Target): { installs: { title: string; co
   const unrezzed = t.server.ices.filter((i: any) => !i.rezzed).length;
   const memoryLeft = Number(obs.me.memory?.available ?? 4) - Number(obs.me.memory?.used ?? 0);
   let installs: { title: string; cost: number }[] = [];
-  if (unrezzed > 0 && cov.size < 3) {
+  const mayflyInHand = inHand(obs, "Mayfly");
+  if (t.viaMayfly) {
+    if (!mayflyInHand || memoryLeft < 1) return null;
+    installs = [{ title: "Mayfly", cost: playCostOf(mayflyInHand) }];
+  } else if (unrezzed > 0 && cov.size < 3) {
     const mayfly = inHand(obs, "Mayfly");
     if (mayfly && unrezzed === 1 && memoryLeft >= 1) installs = [{ title: "Mayfly", cost: playCostOf(mayfly) }];
     else {
@@ -128,7 +145,7 @@ function readiness(obs: Observation, t: Target): { installs: { title: string; co
   } else if (unrezzed === 0 && t.damage > 0) return null;
   const draws = Math.max(0, accessRisk(obs, t) + 1 - (obs.hand.length - installs.length));
   if (draws > 3 || accessRisk(obs, t) >= 5) return null;
-  const cost = installs.reduce((n, c) => n + c.cost, 0) + t.credits;
+  const cost = installs.reduce((n, c) => n + c.cost, 0) + (t.viaMayfly ? t.credits - installs[0].cost : t.credits);
   return { installs, draws, cost };
 }
 
@@ -219,7 +236,6 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
     push(proposal(playOf(obs, card), score, `install ${title}${blocking ? ": rezzed ice of its type is in the way" : seen ? ": its ice type is on the board" : ""}${discounted ? " at a discount" : ""}`, "install-breaker"));
   }
   const mayfly = inHand(obs, "Mayfly");
-  if (mayfly && cov.size < 3 && obs.credits >= 6 && plan.kind === "contest" && memoryLeft >= 2) push(proposal(playOf(obs, mayfly), 60, "Mayfly for one decisive run into the remote", "install-breaker"));
 
   const favor = inHand(obs, "Mutual Favor");
   if (favor && obs.credits >= 0) {
@@ -293,7 +309,7 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
         }
       }
     } else if (target) {
-      for (const p of out) if (p.kind === "install-breaker" && target.server.ices.some((i: any) => !i.rezzed)) p.score = Math.max(p.score, 68);
+      for (const p of out) if (p.kind === "install-breaker" && !p.why.startsWith("install Mayfly") && target.server.ices.some((i: any) => !i.rezzed)) p.score = Math.max(p.score, 68);
       if (drawsThisTurn < 2 && !safeHand(obs, target) && obs.hand.length < 5 && requiredHand(obs, target) <= 5) {
         const draw = byCommand(obs, "draw")[0];
         if (draw) push(proposal(draw, 59, `draw up before contesting ${target.server.label}`, "draw"));
@@ -305,18 +321,37 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
     const draw = byCommand(obs, "draw")[0];
     if (draw) push(proposal(draw, 48, "draw: rich but the rig is missing breakers", "draw"));
   }
-  if (obs.credits >= 20 && drawsThisTurn < 3 && (obs.me["deck-count"] ?? 0) > 0) {
+  const guarding = new Set<string>();
+  for (const s of obs.servers) {
+    if (s.remote && !s.content.length) continue;
+    for (const i of s.ices) {
+      if (!i.rezzed || (i.hosted ?? []).some((h: any) => h.side === "Runner")) continue;
+      for (const t of i.subtypes ?? []) if (ICE_TYPES.has(t) && !cov.has(t as any)) guarding.add(t);
+    }
+  }
+  const missingInDeck = [...guarding].filter((t) => obs.profile.breakers[t as "Barrier"].some((title) => !obs.hand.some((c) => c.title === title) && !inRig(obs, title)));
+  if (missingInDeck.length && obs.credits >= 6 && obs.hand.length <= 4 && drawsThisTurn < 2 && (obs.me["deck-count"] ?? 0) > 0 && !obs.hand.some((c) => isIcebreaker(c) && (obs.profile.breakers[missingInDeck[0] as "Barrier"] ?? []).includes(c.title))) {
     const draw = byCommand(obs, "draw")[0];
-    if (draw) push(proposal(draw, 44, "draw: credits are not the problem", "draw"));
+    if (draw) push(proposal(draw, 50, `draw: nothing in the rig breaks the ${missingInDeck.join("/")} ice that guards what matters`, "draw"));
+  }
+  const richNoRig = cov.size < 2 && obs.credits >= 12 && !obs.hand.some((c) => isIcebreaker(c) && c.title !== "Mayfly" && playCostOf(c) <= obs.credits);
+  if ((obs.credits >= 20 || richNoRig) && drawsThisTurn < 3 && obs.hand.length <= 5 && (obs.me["deck-count"] ?? 0) > 0) {
+    const draw = byCommand(obs, "draw")[0];
+    if (draw) push(proposal(draw, richNoRig ? 60 : 44, richNoRig ? "draw: rich with no rig, the breakers are the bottleneck" : "draw: credits are not the problem", "draw"));
   }
   if (obs.credits <= 3 && obs.hand.length <= 3 && drawsThisTurn < 2 && !obs.hand.some((c) => isEconomyCard(obs, c) && playCostOf(c) <= obs.credits) && (obs.me["deck-count"] ?? 0) > 0) {
     const draw = byCommand(obs, "draw")[0];
     if (draw) push(proposal(draw, 46, "draw: poor and nothing in hand earns credits", "draw"));
   }
-  const tagPunisher = /nbn|weyland/i.test(String(obs.opp.identity?.faction ?? "")) || [...obs.memory.opponentTitles].some((t) => /^(Public Trail|Retribution|Bigger Picture)$/.test(t));
-  if (tagPunisher && ranSuccessfullyThisTurn(obs) && obs.credits < 8 && Number(obs.opp.credit ?? 0) >= 4 && obs.clicks <= 2) {
+  const punisher = tagPunisher(obs);
+  const myTags = Number(obs.me.tag?.base ?? obs.me.tag?.total ?? 0);
+  if (punisher && ranSuccessfullyThisTurn(obs) && obs.credits < 8 && Number(obs.opp.credit ?? 0) >= 4 && obs.clicks <= 2) {
     const credit = byCommand(obs, "credit")[0];
     if (credit) push(proposal(credit, 57, "take a credit: eight credits make Public Trail a tax instead of a tag", "credit"));
+  }
+  if (punisher && myTags > 0 && obs.credits < 2 && obs.hand.length < 5 && drawsThisTurn < 3 && (obs.me["deck-count"] ?? 0) > 0) {
+    const draw = byCommand(obs, "draw")[0];
+    if (draw) push(proposal(draw, 76, "draw: tagged with no credits to clear it, so the grip must absorb meat damage", "draw"));
   }
   const thin = obs.hand.length <= 1;
   const floor = reserve(obs);
@@ -355,7 +390,7 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
     if (draw) push(proposal(draw, safeRun ? 52 : 70, safeRun ? "draw: too few cards to survive net damage" : "draw: nothing is safe to run with this grip", "draw"));
     if (vrcation && obs.credits >= 1) push(proposal(playOf(obs, vrcation), 74, "VRcation: refill the grip", "draw"));
   }
-  for (const p of out) if (p.kind === "install-breaker" && p.why.startsWith("install Mayfly") && plan.kind !== "contest" && !planned) p.score = 20;
+  for (const p of out) if (p.kind === "install-breaker" && p.why.startsWith("install Mayfly") && !planned) p.score = 20;
   for (const p of out) {
     if (thin && (p.kind === "install" || p.kind === "install-breaker" || p.kind === "install-economy") && obs.clicks <= 2) p.score -= 20;
     if (p.kind === "credit" && (obs.credits < 8 || (floorNear && obs.credits < floor)) && cov.size >= 2) p.score += 12;
@@ -363,9 +398,16 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
       const t = ts.find((x) => p.why.includes(x.server.label));
       if (t && t.credits > 0 && obs.credits - t.credits < 3 && t.value < 5 && plan.kind !== "closing") p.score -= 22;
     }
+    if (p.kind === "remove-tag" && punisher) p.score = 78;
+    if (richNoRig && (p.kind === "click-economy" || p.kind === "credit")) p.score -= 15;
+    if (obs.credits >= 20 && (p.kind === "economy" || p.kind === "click-economy" || p.kind === "install-economy" || p.kind === "credit")) p.score -= 18;
     if (p.kind === "run") {
       const t = ts.find((x) => p.why.startsWith(`run ${x.server.label}`));
       if (t && !safeHand(obs, t)) p.score -= 40;
+      if (t && t.tags > 0 && punisher && !(obs.clicks >= 2 && obs.credits - t.credits >= 2) && !(plan.kind === "contest" && plan.detail?.server === t.server.label)) {
+        p.score -= 30;
+        p.why += " (a tag the Corp would punish before it can be cleared)";
+      }
       if (t && t.server.ices.some((i: any) => !i.rezzed) && !fullyCovered(obs, t) && Number(obs.opp.credit ?? 0) >= 4 && t.value < 8) {
         p.score -= 12;
         p.why += " (an unrezzed ice may be one the rig cannot break)";
@@ -457,7 +499,7 @@ export const centralPressure = { mulligan, plan, proposals, prompt, run, targets
 
 export const gatewayRunner: DeckPolicy = registerPolicy({
   id: "gateway-runner-catalyst",
-  version: "0.3.0",
+  version: "0.4.0",
   side: "runner",
   decks: [GATEWAY_RUNNER_BEGINNER, GATEWAY_RUNNER_INTERMEDIATE],
   ...centralPressure,

@@ -1,5 +1,5 @@
 import { cardWorth, choiceLabel, choiceMove, choices, findChoice, promptFrom, selectMove, selectable } from "./prompts.ts";
-import { agendaProgress, iceThreat, strengthOf } from "./tactics.ts";
+import { agendaProgress, iceThreat, strengthOf, tagPunisher } from "./tactics.ts";
 import type { Observation, Proposal } from "./types.ts";
 
 const yes = (obs: Observation, score: number, why: string): Proposal | null => {
@@ -145,8 +145,11 @@ export function cardPrompt(obs: Observation): Proposal[] {
     const worth = server ? server.content.some((c: any) => c.type === "Agenda" || (!c.rezzed && !c.title)) || ((server.key === "rd" || server.key === "hq") && obs.credits >= 4) : false;
     const tags = Number(obs.me.tag?.base ?? 0);
     const nbn = /nbn/i.test(String(obs.opp.identity?.faction ?? obs.opp.identity?.title ?? ""));
-    if (worth && obs.credits >= 2 && (tags === 0 || !nbn)) push(pickChoice(obs, /tag/i, 65, "Funhouse: take the tag, remove it later"));
-    push(pickChoice(obs, /end the run/i, 55, "Funhouse: not worth a tag"));
+    const scoring = server ? server.content.some((c: any) => c.type === "Agenda" || agendaProgress(c).have > 0) : false;
+    const clearable = obs.clicks >= 1 && obs.credits >= 6;
+    const safe = !tagPunisher(obs) || clearable || (scoring && obs.hand.length >= 5);
+    if (worth && safe && obs.credits >= 2 && (tags === 0 || !nbn)) push(pickChoice(obs, /tag/i, 65, "Funhouse: take the tag, remove it later"));
+    push(pickChoice(obs, /end the run/i, 55, tagPunisher(obs) && !safe ? "Funhouse: a tag here gets punished before it can be cleared" : "Funhouse: not worth a tag"));
     return out;
   }
   if (from === "Public Trail" && /choose one/i.test(msg)) {

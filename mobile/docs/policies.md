@@ -121,16 +121,40 @@ the last points sit behind an ice type no breaker answers.
 ```sh
 cd mobile
 npm run engine && npm run cards           # once
-node --experimental-strip-types scripts/policy-eval.mjs --games 20 --corp policy --runner heuristic --out /tmp/eval
+node --experimental-strip-types scripts/policy-eval.mjs --grid --games 20 --corp ref --runner policy --split test
+node --experimental-strip-types scripts/policy-eval.mjs --games 20 --corp policy --runner-list my-runner.txt --out /tmp/eval
 node --experimental-strip-types scripts/policy-eval.mjs --help
 ```
 
 Games are seeded: `--split` picks one of three disjoint seed sets (`design` for reading
 situations and changing policies, `tune` for adjusting scores, `test` for the final
 comparison) and `--seed` an offset inside it, so a result can be replayed exactly. Players are
-`policy`, `heuristic` or `random`; `--matchup` picks the preconstructed matchup (0 beginner,
-1 intermediate). The summary gives wins per side with a 95% interval, unfinished and blocked
-games, engine errors, refused moves, unhandled prompts and decision times.
+`policy` (the working tree), `ref` (the frozen reference, below), `heuristic` or `random`;
+`--matchup` picks the preconstructed matchup (0 beginner, 1 intermediate), `--corp-deck` and
+`--runner-deck` a core deck, `--grid` every core Corp deck against every core Runner deck,
+`--corp-list` and `--runner-list` a decklist text file (a human's own deck, for instance).
+The summary gives wins per side with a 95% interval, unfinished and blocked games, engine
+errors, refused moves, unhandled prompts and decision times.
+
+### Opponents, from weakest to strongest
+
+The heuristic bot is a floor, not a bar: it is stateless and reads no card text, so a
+policy that merely beats it has shown little. Progress is measured against opponents that
+actually push back:
+
+1. **The frozen reference** (`ref`). `scripts/policy-reference.json` pins a commit; `ref`
+   plays the policies of that commit from a detached worktree under `.policy-ref/`, created
+   on first use. A new version of a policy has to beat the previous reference on the `test`
+   split, in both seats, before the reference moves forward to it. Freezing is a one-line
+   change of the pinned commit, made only after the comparison, so the bar only rises.
+2. **The other policies** (`--grid`). Every Corp policy against every Runner policy on the
+   core decks. This is where the policies are developed: a weakness in one is a win for the
+   other, so the grid keeps both sides honest.
+3. **Human decks and replays** (`--corp-list`, `--runner-list`, the app's replays). The
+   objective is to beat a human, so the lists a human beat the bot with become test
+   opponents, played by the policy of the matching faction when one exists and by the
+   generic policy otherwise.
+4. **The heuristic bot**, kept as a sanity check that nothing regressed into nonsense.
 
 With `--out`, the run writes:
 
@@ -214,7 +238,9 @@ credits, a full hand and a three-ice remote clicking for credits until it decked
    split; keep the change only if the flagged situations are gone and the win rate did not
    drop.
 4. Bump the policy `version`.
-5. Run the `test` split against the heuristic bot in both seats before claiming progress.
+5. Run the `test` split against the frozen reference in both seats (`--corp ref` for the
+   Runner policies, `--runner ref` for the Corp policies) before claiming progress, then
+   move the reference forward to the new commit.
 
 A single loss or a single disagreement with the model is not evidence of a bug: the model's
 suggestion is a hypothesis that the games must confirm. Changes that fix exactly one replay

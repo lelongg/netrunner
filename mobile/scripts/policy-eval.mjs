@@ -7,7 +7,9 @@ import { fingerprint, findPolicy, listPolicies } from "../src/bot/policy/registr
 import "../src/bot/policy/decks/index.ts";
 import { CORE_CORP_DECKS, CORE_RUNNER_DECKS, coreDeck } from "../src/bot/policy/decks/core.ts";
 import { parseDecklist } from "../src/decks.ts";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { basicCommands, cardCommands, promptOf, runCommands } from "../src/game/actions.ts";
 import { gameLines, logLines } from "../src/game/describe.ts";
 
@@ -15,8 +17,9 @@ const args = parseArgs(process.argv.slice(2));
 if (args.help) {
   console.log(`Usage: node --experimental-strip-types scripts/policy-eval.mjs [options]
   --games N          games to play (default 10)
-  --corp KIND        heuristic | policy | random (default policy)
-  --runner KIND      heuristic | policy | random (default policy)
+  --corp KIND        policy | ref | heuristic | random (default policy)
+  --runner KIND      policy | ref | heuristic | random (default policy)
+  --ref COMMIT       the frozen policy checkout that "ref" plays (default: scripts/policy-reference.json)
   --matchup I        preconstructed matchup index: 0 beginner, 1 intermediate (default 0)
   --corp-deck KEY    core deck for the Corp (core-hb, core-jinteki, core-nbn, core-weyland) instead of the matchup's
   --runner-deck KEY  core deck for the Runner (core-anarch, core-criminal, core-shaper) instead of the matchup's
@@ -40,10 +43,30 @@ engine.loadDictionary("en", (await read("../public/i18n/en/messages.ftl")) + (aw
 engine.setLanguage("en");
 const matchups = engine.precons();
 const lookup = (title) => byTitle.get(title);
+const here = fileURLToPath(new URL(".", import.meta.url));
+const reference = JSON.parse(readFileSync(join(here, "policy-reference.json"), "utf8"));
+const refCommit = String(args.ref ?? reference.commit);
+const ref = ["corp", "runner"].some((s) => args[s] === "ref") ? await loadReference(refCommit) : null;
+
+async function loadReference(commit) {
+  const git = (...a) => execFileSync("git", a, { cwd: here, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
+  const sha = git("rev-parse", "--verify", `${commit}^{commit}`);
+  const dir = join(here, "..", ".policy-ref", sha.slice(0, 12));
+  if (!existsSync(join(dir, "mobile", "src", "bot", "policy", "bot.ts"))) {
+    if (existsSync(dir)) git("worktree", "remove", "--force", dir);
+    git("worktree", "add", "--detach", dir, sha);
+  }
+  const policy = join(dir, "mobile", "src", "bot", "policy");
+  const { PolicyBot } = await import(join(policy, "bot.ts"));
+  const { findPolicy, listPolicies } = await import(join(policy, "registry.ts"));
+  await import(join(policy, "decks", "index.ts"));
+  const { coreDeck } = await import(join(policy, "decks", "core.ts"));
+  return { sha, dir, PolicyBot, findPolicy, listPolicies, coreDeck };
+}
 const cardDb = { all: cards, byTitle, byCode: new Map(cards.map((c) => [c.code, c])) };
 const listDeck = (file, side) => {
   const deck = parseDecklist(readFileSync(file, "utf8"), side, cardDb, file);
-  return { key: `list:${file}`, name: deck.name, identity: deck.identity.title, cards: deck.cards.map((e) => ({ qty: e.qty, title: e.card.title })) };
+  return { key: `list:${file}`, name: `${deck.identity.title} (${file.replace(/^.*\//, "")})`, identity: deck.identity.title, cards: deck.cards.map((e) => ({ qty: e.qty, title: e.card.title })) };
 };
 
 const render = (m) => {
@@ -147,9 +170,11 @@ function randomMove(view, side, pick) {
 function makePlayer(kind, side, precon, random) {
   if (kind === "random") return { kind, id: "random", decide: null };
   if (kind === "heuristic") return { kind, id: "heuristic", bot: new HeuristicBot(side, lookup, random) };
-  const match = findPolicy(side, { identity: precon.identity, cards: precon.cards });
-  const bot = new PolicyBot(side, match?.policy ?? null, lookup, { random, render, record: true, rescue: false, deck: { identity: precon.identity, cards: precon.cards } });
-  return { kind, id: bot.policyId, bot, fallback: !match };
+  const tree = kind === "ref" ? ref : { PolicyBot, findPolicy };
+  const match = tree.findPolicy(side, { identity: precon.identity, cards: precon.cards });
+  const bot = new tree.PolicyBot(side, match?.policy ?? null, lookup, { random, render, record: true, rescue: false, deck: { identity: precon.identity, cards: precon.cards } });
+  const id = `${kind === "ref" ? `ref@${ref.sha.slice(0, 7)}:` : ""}${bot.policyId}${match && !match.exact ? " (nearest deck)" : ""}`;
+  return { kind, id, bot, fallback: !match };
 }
 
 const INTERESTING_KINDS = new Set(["refused", "unhandled", "stuck", "idle-turn", "plan-churn", "loss"]);
@@ -278,7 +303,7 @@ function playGame({ seed, matchup, players, maxActions, full, m = matchups[match
   const max = (xs) => (xs.length ? Math.max(...xs) : 0);
   const botStats = (s) => {
     const b = P[s].bot;
-    return b instanceof PolicyBot ? { refused: b.refused, unhandled: b.unhandled, decisions: b.records.length, avgMs: Number(avg(decisionMs[s]).toFixed(3)), maxMs: Number(max(decisionMs[s]).toFixed(2)) } : { avgMs: Number(avg(decisionMs[s]).toFixed(3)), maxMs: Number(max(decisionMs[s]).toFixed(2)) };
+    return b && "records" in b ? { refused: b.refused, unhandled: b.unhandled, decisions: b.records.length, avgMs: Number(avg(decisionMs[s]).toFixed(3)), maxMs: Number(max(decisionMs[s]).toFixed(2)) } : { avgMs: Number(avg(decisionMs[s]).toFixed(3)), maxMs: Number(max(decisionMs[s]).toFixed(2)) };
   };
   return {
     seed,
@@ -316,7 +341,8 @@ const pickDeck = (key, side) => {
   return d;
 };
 const chosen = (side) => (args[`${side}-list`] ? listDeck(String(args[`${side}-list`]), side) : args[`${side}-deck`] ? pickDeck(args[`${side}-deck`], side) : null);
-const matchupOf = (corp, runner) => ({ key: `${corp.key ?? corp.name}+${runner.key ?? runner.name}`, title: `${corp.name} vs ${runner.name}`, corp, runner });
+const asPlayed = (deck, side) => (players[side] === "ref" && deck.key ? (ref.coreDeck(deck.key) ?? deck) : deck);
+const matchupOf = (corp, runner) => ({ key: `${corp.key ?? corp.name}+${runner.key ?? runner.name}`, title: `${corp.name} vs ${runner.name}`, corp: asPlayed(corp, "corp"), runner: asPlayed(runner, "runner") });
 const pairs = args.grid
   ? CORE_CORP_DECKS.flatMap((c) => CORE_RUNNER_DECKS.map((r) => matchupOf(c, r)))
   : [chosen("corp") || chosen("runner") ? matchupOf(chosen("corp") ?? matchups[matchup].corp, chosen("runner") ?? matchups[matchup].runner) : matchups[matchup]];
@@ -385,6 +411,7 @@ async function series(m, out) {
   return { wins, results, errors: sum((r) => r.errors), stuck: results.filter((r) => r.stuck).length };
 }
 
+if (ref) console.log(`reference policies: commit ${ref.sha.slice(0, 12)} · ${ref.listPolicies().map((p) => `${p.id}@${p.version}`).join(", ")}`);
 const table = [];
 for (const m of pairs) {
   const out = outRoot ? (pairs.length > 1 ? join(outRoot, m.key.replace(/[^a-z0-9-]+/gi, "_")) : outRoot) : null;
@@ -403,5 +430,5 @@ if (pairs.length > 1) {
     console.log(`| ${c.name.replace(/^Core /, "")} | ${cells.join(" | ")} |`);
   }
   console.log("");
-  console.log("Cells are Corp wins out of " + games + " games.");
+  console.log(`Cells are Corp wins out of ${games} games · corp=${players.corp} runner=${players.runner}.`);
 }

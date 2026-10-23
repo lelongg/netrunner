@@ -79,6 +79,7 @@ export interface IceThreat {
   damage: number;
   creditLoss: number;
   tag: boolean;
+  encounterTags: number;
   exact: boolean;
 }
 
@@ -87,14 +88,20 @@ export function iceThreat(ice: any, info: CardInfo, runnerCredits?: number, runn
   const labels = subs.filter((s) => !s.broken && !s.fired).map((s) => String(typeof s.label === "string" ? s.label : ""));
   const text = plain(info.text ?? "");
   const source = labels.length ? labels.join("\n") : text;
-  const unless = source.match(/end the run unless the runner suffers (\d+) (?:net|meat) damage/i);
+  const unless = source.match(/end the run unless the runner (?:pays )?(?:suffers?|takes?) (\d+) (?:net|meat) damage/i);
   const damage = [...source.matchAll(/do (\d+) (?:net|meat|core|brain) damage/gi)].reduce((n, m) => n + Number(m[1]), 0) + (unless && (runnerGrip === undefined || runnerGrip > Number(unless[1])) ? Number(unless[1]) : 0);
   const loss = [...source.matchAll(/(?:runner loses|make the runner lose) (\d+)\s*\[credits?\]/gi)].reduce((n, m) => n + Number(m[1]), 0);
   const segments = source.split(/\n|\.\s+/).map((x) => x.trim());
   const poor = source.match(/end the run if the runner has (\d+)\s*\[credits?\] or (?:fewer|less)|if the runner has (\d+)\s*\[credits?\] or (?:fewer|less), end the run/i);
-  const unconditional = segments.some((x) => /^end the run\.?$/i.test(x));
+  const unconditional = segments.some((x) => /^end the run\.?$/i.test(x) || (/^end the run unless/i.test(x) && !unless && !poor));
   const etr = unconditional || (!!poor && (runnerCredits === undefined || runnerCredits - loss <= Number(poor[1] ?? poor[2]))) || (!!unless && runnerGrip !== undefined && runnerGrip <= Number(unless[1]));
-  return { etr, damage, creditLoss: loss, tag: /\btag\b/i.test(source), exact: labels.length > 0 };
+  const encounterTags = Number(text.match(/when the runner encounters this ice, end the run unless the runner takes (\d+) tag/i)?.[1] ?? 0);
+  return { etr, damage, creditLoss: loss, tag: /\btag\b/i.test(source), encounterTags, exact: labels.length > 0 };
+}
+
+export function tagPunisher(obs: Observation): boolean {
+  if (/nbn|weyland/i.test(String(obs.opp.identity?.faction ?? ""))) return true;
+  return [...obs.memory.opponentTitles].some((t) => /^(Public Trail|Retribution|Bigger Picture|Orbital Superiority)$/.test(t) || /if the runner is tagged, do \d+ meat damage/i.test(obs.info({ title: t }).text ?? ""));
 }
 
 export interface BreakOption {
@@ -112,11 +119,11 @@ export function hostedBreaker(obs: Observation, ice: any): any | null {
   return null;
 }
 
-export function bestBreak(obs: Observation, ice: any): BreakOption | null {
+export function bestBreak(obs: Observation, ice: any, extra: BreakerProfile[] = []): BreakOption | null {
   const hosted = hostedBreaker(obs, ice);
   if (hosted) return { profile: { card: hosted, breaks: "AI", strength: 99, breakCost: 0, subsPerBreak: 1, pumpCost: 0, pumpStrength: 0, exact: true }, cost: { value: 0, exact: true } };
   let best: BreakOption | null = null;
-  for (const profile of rigProfiles(obs)) {
+  for (const profile of [...rigProfiles(obs), ...extra]) {
     if (!canBreak(profile, ice)) continue;
     const cost = breakCost(profile, ice);
     if (!best || cost.value < best.cost.value) best = { profile, cost };
@@ -131,15 +138,17 @@ export interface RunEstimate {
   blocked: boolean;
   unrezzed: number;
   damage: number;
+  tags: number;
   etrRisk: boolean;
 }
 
-export function estimateRun(obs: Observation, server: ServerInfo, unrezzedCost = 3, budget = Number(obs.view.runner?.credit ?? 0)): RunEstimate {
+export function estimateRun(obs: Observation, server: ServerInfo, unrezzedCost = 3, budget = Number(obs.view.runner?.credit ?? 0), extra: BreakerProfile[] = []): RunEstimate {
   let credits = 0;
   let exact = true;
   let blocked = false;
   let unrezzed = 0;
   let damage = 0;
+  let tags = 0;
   let etrRisk = false;
   for (const ice of [...server.ices].reverse()) {
     if (!ice.rezzed) {
@@ -148,8 +157,12 @@ export function estimateRun(obs: Observation, server: ServerInfo, unrezzedCost =
       exact = false;
       continue;
     }
-    const option = bestBreak(obs, ice);
+    const option = bestBreak(obs, ice, extra);
     const threat = iceThreat(ice, obs.info(ice), budget - credits);
+    if (threat.encounterTags) {
+      tags += threat.encounterTags;
+      credits += threat.encounterTags * 2;
+    }
     if (!option || credits + option.cost.value > budget) {
       if (threat.etr) blocked = true;
       damage += threat.damage;
@@ -162,7 +175,7 @@ export function estimateRun(obs: Observation, server: ServerInfo, unrezzedCost =
   }
   for (const c of server.content) if (c.rezzed && c.title === "Manegarm Skunkworks" && Number(obs.clicks ?? 0) < 3) credits += 5;
   if (unrezzed && coverage(obs).size < 3) etrRisk = true;
-  return { server, credits, exact, blocked, unrezzed, damage, etrRisk };
+  return { server, credits, exact, blocked, unrezzed, damage, tags, etrRisk };
 }
 
 export function agendaProgress(card: any) {

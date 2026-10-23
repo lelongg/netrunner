@@ -1,13 +1,28 @@
 import { byCommand } from "../observe.ts";
 import { playOf, proposal } from "../generic.ts";
+import { promptFrom, selectMove, selectable } from "../prompts.ts";
 import { registerPolicy } from "../registry.ts";
-import { coverage, isIcebreaker, playCostOf } from "../tactics.ts";
+import { agendaProgress, coverage, isIcebreaker, playCostOf } from "../tactics.ts";
 import type { DeckPolicy, Observation, Plan, Proposal } from "../types.ts";
 import { CORE_ANARCH } from "./core.ts";
 import { centralPressure } from "./gateway-runner.ts";
 
 const memoryLeft = (obs: Observation) => Number(obs.me.memory?.available ?? 4) - Number(obs.me.memory?.used ?? 0);
 const counters = (c: any) => Number(c?.counter?.virus ?? 0);
+
+function hostWorth(obs: Observation, ice: any): number {
+  if (!ice?.rezzed || (ice.hosted ?? []).some((h: any) => h.title === "Botulus")) return 0;
+  const cov = coverage(obs);
+  if ((ice.subtypes ?? []).some((t: string) => cov.has(t as any))) return 0;
+  const server = obs.servers.find((s) => s.ices.some((i: any) => i.cid === ice.cid));
+  if (!server) return 0;
+  const threat = server.remote ? (server.content.some((c: any) => c.type === "Agenda" || agendaProgress(c).have > 0 || (!c.rezzed && !c.title)) ? 10 : server.content.length === 0 ? 6 : 2) : server.key === "rd" ? 7 : server.key === "hq" ? 5 : 1;
+  return threat + (ice.subroutines ?? []).length * 2;
+}
+
+function bestHost(obs: Observation, candidates: any[]): any | null {
+  return candidates.map((ice) => ({ ice, worth: hostWorth(obs, ice) })).filter((x) => x.worth > 0).sort((a, b) => b.worth - a.worth)[0]?.ice ?? null;
+}
 
 function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
   const out = centralPressure.proposals(obs, plan, base);
@@ -35,8 +50,11 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
     if (card.title === "Leech" && mu >= 1 && !rigTitles.has("Leech") && cov.size >= 1) push(proposal(playOf(obs, card), 46, "Leech: successful central runs weaken the ice", "install"));
     if (card.title === "Gourmand" && mu >= 1 && !rigTitles.has("Gourmand") && obs.credits >= 2) push(proposal(playOf(obs, card), 44, "Gourmand: trash an asset for free on access", "install"));
     if (card.title === "Botulus" && mu >= 1) {
-      const wall = obs.servers.filter((s) => !s.remote).flatMap((s) => s.ices).find((i: any) => i.rezzed && !(i.subtypes ?? []).some((t: string) => cov.has(t as any)));
-      if (wall) push(proposal(playOf(obs, card), 58, `Botulus on ${wall.title}: a counter a turn breaks it`, "install-breaker"));
+      const wall = bestHost(obs, obs.servers.flatMap((s) => s.ices));
+      if (wall) {
+        obs.memory.notes.botulusHost = wall.cid;
+        push(proposal(playOf(obs, card), 58, `Botulus on ${wall.title}: a counter a turn breaks it`, "install-breaker"));
+      }
     }
     if (card.title === "Scrounge" && obs.clicks >= 2) {
       const lost = (obs.me.discard ?? []).filter((c: any) => isIcebreaker(c) && !rigTitles.has(c.title));
@@ -54,6 +72,11 @@ function prompt(obs: Observation, plan: Plan): Proposal | null {
   const deck = centralPressure.prompt(obs, plan);
   if (deck) return deck;
   const text = obs.promptText;
+  if (promptFrom(obs) === "Botulus" && obs.promptType === "select") {
+    const options = [...selectable(obs)];
+    const host = options.find((c: any) => c.cid === obs.memory.notes.botulusHost) ?? bestHost(obs, options) ?? options[0];
+    if (host) return { move: selectMove(obs, host), score: 80, why: `Botulus: host it on ${host.title}`, kind: "select" };
+  }
   if (/^you accessed/i.test(text) && obs.promptType !== "select") {
     const trash = (Array.isArray(obs.prompt.choices) ? obs.prompt.choices : []).find((c: any) => /pay \d+ \[credits?\] to trash/i.test(String(c.value ?? "")));
     const cost = Number(String(trash?.value ?? "").match(/pay (\d+)/i)?.[1] ?? 99);
@@ -65,7 +88,7 @@ function prompt(obs: Observation, plan: Plan): Proposal | null {
 
 export const coreAnarch: DeckPolicy = registerPolicy({
   id: "core-anarch-virus",
-  version: "0.2.0",
+  version: "0.3.0",
   side: "runner",
   decks: [CORE_ANARCH],
   ...centralPressure,

@@ -5,7 +5,7 @@ import { centralPressure } from "./gateway-runner.ts";
 
 export const coreCriminal: DeckPolicy = registerPolicy({
   id: "core-criminal-central-pressure",
-  version: "0.1.0",
+  version: "0.2.0",
   side: "runner",
   decks: [CORE_CRIMINAL],
   ...centralPressure,
