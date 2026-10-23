@@ -106,61 +106,6 @@ function artRect(at: At, v0 = 0.08, v1 = 0.53) {
   return g;
 }
 
-export async function hedgeFund(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, card, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const { layer, s } = keyed(root, card, lum(2.2, -1.25, 0xf2c05a), at);
-  const pool = new Sprite(soft("rvI-soft"));
-  pool.anchor.set(0.5);
-  const heart = at(0.5, 0.27);
-  pool.position.set(...heart);
-  layer.addChild(pool);
-  s.mask = pool;
-  const trails = new Graphics();
-  fx.addChild(trails);
-  const ends: Pt[] = [at(0.47, 0.3), at(0.2, 0.32), at(0.8, 0.29), at(0.62, 0.22), at(0.36, 0.24), at(0.9, 0.36)];
-  const starts: Pt[] = [at(-0.1, 0.14), at(1.1, 0.12), at(-0.1, 0.44), at(1.1, 0.44), at(0.22, -0.08), at(0.8, -0.08)];
-  const coins = starts.map((from, i) => {
-    const c = new Sprite(coinTexture());
-    c.anchor.set(0.5);
-    c.alpha = 0;
-    fx.addChild(c);
-    const to = ends[i];
-    const mid = lerp(from, to, 0.5);
-    const bend: Pt = [mid[0] + (to[1] - from[1]) * 0.3, mid[1] - Math.abs(to[0] - from[0]) * 0.15];
-    return { c, from, to, bend, d: 0.15 + i * 0.09 };
-  });
-  root.addChild(fx);
-  await run(app, (t) => {
-    const grow = ease.out(span(t, 0.35, 1.25));
-    pool.width = pool.height = unit * (0.15 + 1.5 * grow);
-    layer.alpha = 0.75 * span(t, 0.35, 0.6) * (1 - span(t, 1.25, 1.65));
-    trails.clear();
-    for (const m of coins) {
-      const k = span(t, m.d, m.d + 0.6);
-      if (k <= 0 || k >= 1) {
-        m.c.alpha = 0;
-        continue;
-      }
-      const e = ease.inOut(k);
-      const n = 12;
-      for (let j = 0; j < n; j++) {
-        const a = bezier(m.from, m.bend, m.to, Math.max(0, e - (0.3 * j) / n));
-        const b = bezier(m.from, m.bend, m.to, Math.max(0, e - (0.3 * (j + 1)) / n));
-        trails
-          .moveTo(...a)
-          .lineTo(...b)
-          .stroke({ width: unit * 0.012 * (1 - j / n), color: 0xe2b24c, alpha: 0.6 * (1 - j / n) * (1 - span(k, 0.85, 1)) });
-      }
-      m.c.position.set(...bezier(m.from, m.bend, m.to, e));
-      m.c.alpha = 1 - span(k, 0.85, 1);
-      const sc = (unit / 64) * 0.12 * (1 - 0.5 * span(k, 0.75, 1));
-      m.c.scale.set(sc * Math.cos(t * 8 + m.d * 9), sc);
-    }
-    return t < 1.65;
-  });
-  await done();
-}
-
 const MADANI_EYE: Pt = [0.553, 0.262];
 
 export async function madaniPose(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
