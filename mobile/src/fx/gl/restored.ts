@@ -1,6 +1,6 @@
 import { Graphics } from "pixi.js";
-import { Emitter, ease, layer, run, span, sparkTexture } from "./stage";
-import { type Board, type Ready, burst, scene } from "./kit";
+import { Emitter, ease, glowTexture, layer, run, span, sparkTexture } from "./stage";
+import { type Board, GREEN, RED, type Ready, burst, scene } from "./kit";
 import { type Pt, glowSprite, prism, rnd, tether } from "./more";
 import { sealTexture } from "./third";
 
@@ -64,5 +64,36 @@ export async function doomscrollFire(rect: DOMRect, code: string, ready?: Ready,
     return t < 0.95;
   });
   g.destroy();
+  await done();
+}
+
+export async function docklandsPass(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
+  const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
+  const gate = new Graphics();
+  gate.blendMode = "add";
+  fx.addChild(gate);
+  const pass = glowSprite(fx, glowTexture(), GREEN);
+  pass.position.set(...at(0.52, 0.42));
+  const sparks = new Emitter(fx);
+  root.addChild(fx);
+  let granted = false;
+  await run(app, (t, dt) => {
+    gate.clear();
+    const k = ease.inOut(span(t, 0.05, 0.75));
+    const v = 0.08 + 0.46 * k;
+    const a = k > 0 && k < 1 ? 1 : 0;
+    gate.poly([...at(0.04, v - 0.004), ...at(0.96, v - 0.004), ...at(0.96, v + 0.004), ...at(0.04, v + 0.004)]).fill({ color: RED, alpha: a });
+    gate.poly([...at(0.04, v - 0.03), ...at(0.96, v - 0.03), ...at(0.96, v + 0.03), ...at(0.04, v + 0.03)]).fill({ color: RED, alpha: 0.12 * a });
+    const g = span(t, 0.75, 1.5);
+    if (g > 0 && !granted) {
+      granted = true;
+      burst(sparks, ...at(0.52, 0.42), 16, GREEN, unit * 0.9, { life: 0.5, scale: 0.3 });
+    }
+    pass.alpha = Math.sin(Math.PI * g);
+    pass.scale.set((unit / 128) * 0.25);
+    if (g > 0 && g < 1) gate.poly([...at(0.04, 0.08), ...at(0.96, 0.08), ...at(0.96, 0.54), ...at(0.04, 0.54)]).stroke({ color: GREEN, width: 2 + 4 * (1 - g), alpha: 1 - g });
+    sparks.step(dt);
+    return t < 1.55 || sparks.list.length > 0;
+  });
   await done();
 }
