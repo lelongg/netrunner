@@ -316,51 +316,6 @@ export async function topDownSolutions(rect: DOMRect, code: string, ready?: Read
   await done();
 }
 
-export async function touchUps(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const hand = at(0.545, 0.245);
-  const faces: { p: Pt; d: number }[] = [];
-  for (let r = 0; r < 7; r++)
-    for (let c = 0; c < 17; c++) {
-      const u = 0.06 + c * 0.052 + (r % 2) * 0.026;
-      const v = 0.135 + r * 0.05;
-      if (u > 0.62 && v > 0.16) continue;
-      if (Math.abs(u - 0.33) < 0.07 && v > 0.15) continue;
-      faces.push({ p: at(u, v), d: Math.hypot(u - 0.545, (v - 0.245) * 1.3) });
-    }
-  const spots = faces.map(() => glowSprite(fx, glowTexture(), 0xffe8c8));
-  const pick = at(0.47, 0.185);
-  const chosen = faces.reduce((best, f) => (Math.hypot(f.p[0] - pick[0], f.p[1] - pick[1]) < Math.hypot(best.p[0] - pick[0], best.p[1] - pick[1]) ? f : best), faces[0]);
-  const sparkle = new Emitter(fx);
-  const g = new Graphics();
-  g.blendMode = "add";
-  fx.addChild(g);
-  root.addChild(fx);
-  await run(app, (t, dt) => {
-    g.clear();
-    const fade = 1 - span(t, 1.5, 1.9);
-    const front = span(t, 0.1, 0.9) * 0.6;
-    faces.forEach((f, i) => {
-      const k = Math.max(0, 1 - Math.abs(f.d - front) * 7);
-      spots[i].position.set(...f.p);
-      spots[i].alpha = (f === chosen ? Math.max(0.45 * k, 0.35 * span(t, 0.9, 1.1)) : 0.55 * k) * fade;
-      spots[i].scale.set((unit / 128) * (f === chosen ? 0.075 : 0.07));
-    });
-    const brush = span(t, 0.9, 1.5);
-    if (brush > 0 && brush < 1) {
-      const a = brush * Math.PI * 2;
-      const r = unit * 0.045;
-      const p: Pt = [chosen.p[0] + Math.cos(a) * r, chosen.p[1] + Math.sin(a) * r * 1.2];
-      sparkle.add(sparkTexture(), ...p, { life: 0.5, tint: Math.random() < 0.5 ? 0xffe8c8 : 0xffc8e0, scale: (unit / 180) * 0.25, grow: -0.4 });
-    }
-    const flick = Math.sin(Math.PI * span(t, 0, 0.35));
-    g.circle(...hand, unit * 0.014).fill({ color: 0xfff4e0, alpha: 0.7 * flick });
-    sparkle.step(dt);
-    return t < 1.9 || sparkle.list.length > 0;
-  });
-  await done();
-}
-
 export async function treadLightly(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, card, fx, done, unit, at } = await scene(rect, code, ready, board);
   const eye = at(0.6, 0.185);

@@ -280,30 +280,3 @@ export async function plutus(rect: DOMRect, code: string, ready?: Ready, board?:
   await done();
 }
 
-export async function sideHustlePose(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const thruster = at(0.41, 0.44);
-  const plume = new Emitter(fx);
-  const streaks = new Emitter(fx);
-  const core = at(0.42, 0.24);
-  const glow = glowSprite(fx, glowTexture(), 0x4fc8ff);
-  glow.position.set(...thruster);
-  root.addChild(fx);
-  await run(app, (t, dt) => {
-    const on = span(t, 0, 0.25) * (1 - span(t, 1.3, 1.6));
-    glow.alpha = 0.35 * on * (0.8 + 0.2 * Math.sin(t * 30));
-    glow.scale.set((unit / 128) * 0.16, (unit / 128) * 0.1);
-    if (t < 1.3) for (let n = 0; n < 2; n++) plume.add(sparkTexture(), thruster[0] + rnd(-1, 1) * unit * 0.05, thruster[1], { vx: rnd(-1, 1) * unit * 0.1, vy: unit * rnd(0.25, 0.45), life: 0.3, tint: Math.random() < 0.6 ? 0x4fc8ff : 0xb0ecff, scale: (unit / 180) * rnd(0.2, 0.3), alpha: 0.75 });
-    if (t < 1.2 && Math.random() < 0.5) {
-      const a = rnd(0, Math.PI * 2);
-      const r = unit * rnd(0.22, 0.3);
-      streaks.add(streakTexture(), core[0] + Math.cos(a) * r, core[1] + Math.sin(a) * r * 0.8, { vx: Math.cos(a) * unit * 1.6, vy: Math.sin(a) * unit * 1.3, life: 0.22, tint: 0xd8f0ff, scale: (unit / 180) * rnd(0.4, 0.7), alpha: 0.4 });
-    }
-    for (const p of streaks.list) p.s.rotation = Math.atan2(p.vy, p.vx);
-    plume.step(dt);
-    streaks.step(dt);
-    return t < 1.6 || plume.list.length > 0 || streaks.list.length > 0;
-  });
-  await done();
-}
-

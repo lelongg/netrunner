@@ -814,3 +814,4 @@ export * from "./revF";
 export * from "./restored";
 export * from "./revJ";
 export * from "./revI";
+export * from "./revL";

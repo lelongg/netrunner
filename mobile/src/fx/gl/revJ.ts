@@ -22,7 +22,7 @@ void main() {
   finalColor = vec4(uTint * k * c.a, 0.0);
 }`;
 
-function keyed(root: Container, card: Sprite, weights: [number, number, number], threshold: number, gain: number, tint: number) {
+export function keyed(root: Container, card: Sprite, weights: [number, number, number], threshold: number, gain: number, tint: number) {
   const s = new Sprite(card.texture);
   s.anchor.copyFrom(card.anchor);
   s.rotation = card.rotation;
@@ -48,14 +48,14 @@ function keyed(root: Container, card: Sprite, weights: [number, number, number],
   return s;
 }
 
-function band(g: Graphics, at: At, k: number, width: number, slant: number, box: [number, number, number, number]) {
+export function band(g: Graphics, at: At, k: number, width: number, slant: number, box: [number, number, number, number]) {
   const [u0, v0, u1, v1] = box;
   const c = u0 - width - slant + (u1 - u0 + 2 * (width + slant)) * k;
   const clamp = (u: number) => Math.min(u1, Math.max(u0, u));
   return g.poly([...at(clamp(c - width - slant), v0), ...at(clamp(c + width - slant), v0), ...at(clamp(c + width + slant), v1), ...at(clamp(c - width + slant), v1)]).fill(0xffffff);
 }
 
-function ribbon(g: Graphics, pts: Pt[], width: number, color: number, alpha: number) {
+export function ribbon(g: Graphics, pts: Pt[], width: number, color: number, alpha: number) {
   if (pts.length < 3) return;
   const left: Pt[] = [];
   const right: Pt[] = [];

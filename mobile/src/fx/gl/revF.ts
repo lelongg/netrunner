@@ -165,52 +165,6 @@ export async function measuredResponse(rect: DOMRect, code: string, ready?: Read
   await done();
 }
 
-export async function risingTide(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const sc = await scene(rect, code, ready, board);
-  const { app, root, fx, done, unit, at } = sc;
-  const waves: [Pt, Pt, Pt, number][] = [
-    [at(-0.02, 0.48), at(0.35, 0.3), at(0.72, 0.47), 0],
-    [at(0.05, 0.42), at(0.3, 0.2), at(0.55, 0.36), 0.12],
-    [at(1.02, 0.42), at(0.78, 0.22), at(0.6, 0.14), 0.06],
-    [at(0.98, 0.5), at(0.8, 0.36), at(0.62, 0.3), 0.18],
-  ];
-  const g = new Graphics();
-  g.blendMode = "add";
-  fx.addChild(g);
-  const foam = new Emitter(fx);
-  root.addChild(fx);
-  const impact = strikeFx(sc, "splash", 0x6ad8ff, at(0.5, 0.2));
-  await run(
-    app,
-    (t, dt) => {
-      g.clear();
-      const fade = 1 - span(t, 0.9, 1.3);
-      for (const [a, b, c, d] of waves) {
-        const k = ease.out(span(t, d, d + 0.55));
-        if (k <= 0) continue;
-        const tail = Math.max(0, k - 0.5);
-        for (const [w, col, al] of [
-          [unit * 0.07, 0x3aa8ff, 0.35],
-          [unit * 0.015, 0xe0f8ff, 0.9],
-        ] as const) {
-          g.moveTo(...bezier(a, b, c, tail));
-          for (let i = 1; i <= 18; i++) g.lineTo(...bezier(a, b, c, tail + ((k - tail) * i) / 18));
-          g.stroke({ width: w, color: col, alpha: al * fade, cap: "round" });
-        }
-        if (k < 1) {
-          const p = bezier(a, b, c, k);
-          foam.add(glowTexture(), ...p, { vx: rnd(-1, 1) * unit * 0.3, vy: -unit * rnd(0.2, 0.6), gravity: unit * 1.8, life: 0.55, tint: 0xbfeeff, scale: (unit / 128) * rnd(0.015, 0.035) });
-        }
-      }
-      foam.step(dt);
-      return t < 1.3 || foam.list.length > 0;
-    },
-    sc.strike ? 1.4 : 1,
-  );
-  await impact;
-  await done();
-}
-
 export async function sangKancilPose(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, fx, done, unit, at, sideways } = await scene(rect, code, ready, board);
   const launch = at(0.47, 0.47);
