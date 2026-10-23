@@ -28,6 +28,17 @@ export function updateMemory(memory: Memory, view: any, side: Side) {
   }
   const opp = otherSide(side);
   const oppName = opp === "corp" ? "Corp" : "Runner";
+  if (side === "corp") {
+    const seen = (memory.notes.runsSeen ??= {}) as Record<string, number[]>;
+    const lines: any[] = view.log ?? [];
+    const start = Number(memory.notes.logSeen ?? 0);
+    for (const e of lines.slice(start)) {
+      const text = String(e?.text?.["raw-text"] ?? "");
+      const m = text.match(/to make a run on (HQ|R&D|Archives|Server \d+)/);
+      if (m) (seen[m[1]] ??= []).push(turn);
+    }
+    memory.notes.logSeen = lines.length;
+  }
   const INSTALLED = new Set(["servers", "rig", "onhost"]);
   walkCards(view[side], "", (card, zone) => {
     if (!memory.firstSeen.has(card.cid)) memory.firstSeen.set(card.cid, turn);

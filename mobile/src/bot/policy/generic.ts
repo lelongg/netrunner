@@ -74,8 +74,9 @@ export function corpProposals(obs: Observation): Proposal[] {
     const hq = obs.servers.find((s) => s.key === "hq")!;
     const rd = obs.servers.find((s) => s.key === "rd")!;
     const targets: { server: { label: string; ices: any[] }; score: number; why: string }[] = [];
-    if (!hq.ices.length) targets.push({ server: hq, score: agendas.length ? 60 : 50, why: agendas.length ? "HQ is open with an agenda in hand" : "HQ is open" });
-    if (!rd.ices.length) targets.push({ server: rd, score: 48, why: "R&D is open" });
+    const recentRuns = (label: string) => obs.memory.notes.runsSeen && (obs.memory.notes.runsSeen as Record<string, number[]>)[label]?.filter((t) => t >= obs.turn - 2).length;
+    if (!hq.ices.length) targets.push({ server: hq, score: (agendas.length ? 60 : 50) + (recentRuns("HQ") ? 12 : 0), why: agendas.length ? "HQ is open with an agenda in hand" : "HQ is open" });
+    if (!rd.ices.length) targets.push({ server: rd, score: 48 + (recentRuns("R&D") ? 14 : 0), why: recentRuns("R&D") ? "R&D is open and the Runner keeps running it" : "R&D is open" });
     if (agendas.length && !empty.length) targets.push({ server: { label: "New remote", ices: [] }, score: hq.ices.length ? 52 : 45, why: "an agenda in hand needs a protected remote" });
     for (const s of obs.servers.filter((x) => x.remote && x.content.length && x.ices.length < 2)) targets.push({ server: s, score: 45, why: `${s.label} holds something worth protecting` });
     if (obs.credits >= 6) {
