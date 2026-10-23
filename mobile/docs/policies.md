@@ -123,6 +123,44 @@ With `--out`, the run writes:
 The situations only contain what was observable at decision time. To diagnose with the full
 replay, use the action log and the seed, and keep the two apart in the analysis.
 
+## Playing against the bot from a terminal
+
+`scripts/play-vs-bot.mjs` lets a person or a language model play a whole game against a bot
+without the app: it replays the game from its seed and action log, lets the bot play, and
+stops at each decision of the other seat, showing only that seat's view.
+
+```sh
+node --experimental-strip-types scripts/play-vs-bot.mjs --new --side runner --seed 303 --state /tmp/g.json
+node --experimental-strip-types scripts/play-vs-bot.mjs --state /tmp/g.json --act 7
+node --experimental-strip-types scripts/play-vs-bot.mjs --state /tmp/g.json --records 40   # the bot's recent decisions
+node --experimental-strip-types scripts/play-vs-bot.mjs --state /tmp/g.json --log 20
+```
+
+Trivial steps of the human seat (start of turn, passing through unrezzed ice, single-choice
+prompts) are taken automatically; encounters with live subroutines, accesses, mulligans and
+clicks are not. Action numbers change after every action, so read the list before acting.
+`--records` replays the bot's decisions and prints `DECISION DRIFT` when the current code
+would decide differently from what was logged, which is the quickest way to see what a
+policy change does to an old game.
+
+Three games were played this way by a model against the 0.1.0 policies (the model reading
+only its own seat's view):
+
+- As Runner against the Corp policy: the Corp spent its last credits on ice for an empty
+  remote, could not rez when HQ was run, lost Send a Message, then installed an agenda it
+  could not defend. The model led 5 to 2 at turn 12.
+- As Corp against the Runner policy: the Runner ran into a rezzed Karunā without a killer,
+  installed programs with its last credits leaving an empty grip, and did not use Red Team on
+  an open Archives. The model won 9 to 2.
+- As Runner against the 0.2.0 Corp policy, after the fixes below: the Corp baited with Urtica
+  Cipher twice, kept its agendas in a safe HQ, scored Send a Message and a Hub, and stood at
+  4 to 4 on turn 16 with the better position (the model's stack nearly empty).
+
+The fixes those games produced are general rules, not patches for a replay: rez-aware server
+safety and a credit reserve before ice installs for the Corp; break costs above the credit
+pool counted as unbroken, no run events into damage ice, Red Team on open centrals, breakers
+installed before the ice they answer, and a refilled grip for the Runner.
+
 ## Improvement loop
 
 1. Play on the `design` split with `--out` and read `situations.md`.
@@ -150,33 +188,33 @@ and nothing else should be refused.
 ## Results
 
 Measured with `scripts/policy-eval.mjs` on the `test` split (seeds never used while writing
-the policies), 30 games per line, beginner decks unless stated. Policies at version 0.1.0.
+the policies), 30 games per line, beginner decks unless stated. Policies at version 0.2.0.
 Intervals are 95% binomial.
 
 | Corp | Runner | Decks | Corp wins | Runner wins | Unfinished | Avg turns | Game ends |
 |---|---|---|---|---|---|---|---|
 | heuristic | heuristic | beginner | 19 (0.63 ±0.17) | 11 (0.37 ±0.17) | 0 | 14.3 | 28 agenda, 2 decked |
-| **policy** | heuristic | beginner | 23 (0.77 ±0.15) | 7 (0.23 ±0.15) | 0 | 14.0 | 25 agenda, 5 flatline |
-| heuristic | **policy** | beginner | 13 (0.43 ±0.18) | 17 (0.57 ±0.18) | 0 | 13.4 | 26 agenda, 2 decked, 2 flatline |
-| **policy** | **policy** | beginner | 25 (0.83 ±0.13) | 5 (0.17 ±0.13) | 0 | 11.9 | 22 agenda, 8 flatline |
+| **policy** | heuristic | beginner | 22 (0.73 ±0.16) | 8 (0.27 ±0.16) | 0 | 14.5 | 21 agenda, 7 flatline, 2 decked |
+| heuristic | **policy** | beginner | 13 (0.43 ±0.18) | 17 (0.57 ±0.18) | 0 | 13.5 | 30 agenda |
+| **policy** | **policy** | beginner | 21 (0.70 ±0.16) | 9 (0.30 ±0.16) | 0 | 13.9 | 18 agenda, 10 flatline, 2 decked |
 | heuristic | heuristic | intermediate | 23 (0.77 ±0.15) | 7 (0.23 ±0.15) | 0 | 15.0 | 30 agenda |
-| **policy** | **policy** | intermediate | 24 (0.80 ±0.14) | 6 (0.20 ±0.14) | 0 | 15.3 | 29 agenda, 1 flatline |
+| **policy** | **policy** | intermediate | 24 (0.80 ±0.14) | 6 (0.20 ±0.14) | 0 | 15.4 | 28 agenda, 2 flatline |
 
 Reading the table against the heuristic reference on the beginner decks:
 
 - The Runner policy wins 17/30 against the heuristic Corp where the heuristic Runner wins
   11/30: a gain of about 0.20 in win rate, larger than the interval.
-- The Corp policy wins 23/30 against the heuristic Runner where the heuristic Corp wins
-  19/30: a gain of about 0.13, within the interval, so not established yet.
-- Policy against policy, the Corp dominates (25/30) and games are shorter; the Runner policy
-  is the weaker of the two, and it loses 8 games to net damage (flatline) against a Corp
-  that rezzes Karunā, Diviner and Tithe and advances Urtica Cipher.
+- The Corp policy wins 22/30 against the heuristic Runner where the heuristic Corp wins
+  19/30: a gain within the interval, so not established. Version 0.1.0 measured 23/30 and an
+  intermediate build 25/30; the last change (keeping agendas in HQ when HQ is safer than the
+  remote) costs a little against the heuristic Runner, which never pressures HQ, and was kept
+  because it stops the giveaway that a stronger Runner exploited in the games above.
+- Policy against policy, the Corp wins 21/30 and ten games end by flatline: the Runner
+  policy still runs into net damage too often against a Corp that rezzes Karunā, Diviner
+  and Tithe and advances Urtica Cipher.
 
 Across the 180 games: no engine error, no blocked game, no unfinished game, no unhandled
-prompt. The Runner policy had 8 refused moves in total (all the same case: paying a trash
-cost from credits hosted on Overclock after the run event has been spent; the fallback pays
-from the credit pool). Decision time averages 0.5 ms (maximum 22 ms) on the development
-engine build.
+prompt. Decision time averages 0.5 ms (maximum about 50 ms) on the development engine build.
 
 Situations flagged on the test split, for the next loop: `idle-turn` (Runner clicking for
 credits with 10 or more credits: 25 in the heuristic-Corp games), `plan-churn` (the plan

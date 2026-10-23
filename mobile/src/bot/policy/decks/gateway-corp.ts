@@ -85,9 +85,11 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
       const points = Number(card?.agendapoints ?? 0);
       if (safety && !safety.safe) {
         const canRezOne = target!.ices.some((i) => i.rezzed || rezCostOf(i) <= obs.credits - 1);
-        const contestable = target!.ices.length >= 1 && canRezOne && (safety.margin >= -4 || racing);
+        const hq = obs.servers.find((s) => s.key === "hq")!;
+        const hqSafer = serverSafety(obs, hq).margin > safety.margin + 2 && obs.hand.length < 5;
+        const contestable = target!.ices.length >= 1 && canRezOne && obs.credits >= 3 && !hqSafer && (safety.margin >= -4 || (racing && safety.margin >= -8));
         p.score = contestable ? Math.min(p.score, racing ? 58 : 48) - (points >= 3 ? 10 : 0) : Math.min(p.score, 15);
-        p.why += ` (the Runner can get in: margin ${safety.margin}${racing ? ", racing" : ""}${canRezOne ? "" : ", no ice can be rezzed"})`;
+        p.why += ` (the Runner can get in: margin ${safety.margin}${racing ? ", racing" : ""}${canRezOne ? "" : ", no ice can be rezzed"}${hqSafer ? ", HQ is safer" : ""})`;
       } else if (card && obs.clicks < 3 && canScoreNextTurn(obs, card, !!seamless)) p.score = Math.max(p.score, 72);
       if (obs.clicks === 3) p.score = Math.min(p.score, 50);
     }
