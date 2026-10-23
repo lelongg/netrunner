@@ -60,8 +60,8 @@ export async function syailendra(rect: DOMRect, code: string, ready?: Ready, boa
   const tip = glowSprite(fx, glowTexture(), 0xe8fff0);
   tip.position.set(...at(0.233, 0.627));
   const pip = glowSprite(fx, sparkTexture(), 0xdff6ff);
-  const ring = (a: number) => at(0.295 + 0.075 * Math.cos(a), 0.71 + 0.145 * Math.sin(a));
-  const shown = (a: number) => Math.cos(a) < 0.55;
+  const ring = (a: number) => at(0.276 + 0.056 * Math.cos(a), 0.669 + 0.176 * Math.sin(a));
+  const shown = (a: number) => !(Math.cos(a) < 0 && Math.sin(a) > -0.5 && Math.sin(a) < 0.05);
   root.addChild(fx);
   await run(app, (t) => {
     g.clear();
