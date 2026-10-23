@@ -2,7 +2,10 @@ import type { Side } from "../../engine.ts";
 import { currentIce, promptOf } from "../../game/actions.ts";
 import { type Candidate, candidateActions } from "../../game/candidates.ts";
 import { otherSide, remoteKeys, serverName } from "../../game/describe.ts";
-import type { CardInfo, Lookup, Memory, Observation, RunRecord, ServerInfo } from "./types.ts";
+import { profileOf } from "./profile.ts";
+import type { CardInfo, DeckList, Lookup, Memory, Observation, RunRecord, ServerInfo } from "./types.ts";
+
+const EMPTY_DECK: DeckList = { identity: "", cards: [] };
 
 export function emptyMemory(): Memory {
   return { seen: new Map(), firstSeen: new Map(), installedAt: new Map(), opponentTitles: new Set(), duds: new Set(), runs: [], runsThisTurn: 0, turnKey: "", notes: {} };
@@ -74,7 +77,7 @@ export function rigOf(view: any): any[] {
   return [...(rig.program ?? []), ...(rig.hardware ?? []), ...(rig.resource ?? [])];
 }
 
-export function observe(view: any, side: Side, memory: Memory, lookup: Lookup, render: (msg: unknown) => string, random: () => number): Observation {
+export function observe(view: any, side: Side, memory: Memory, lookup: Lookup, render: (msg: unknown) => string, random: () => number, deck: DeckList | null = null): Observation {
   const me = view[side] ?? {};
   const prompt = promptOf(view, side);
   const promptType = prompt?.["prompt-type"] ?? null;
@@ -107,6 +110,8 @@ export function observe(view: any, side: Side, memory: Memory, lookup: Lookup, r
     candidates: candidateActions(view, side, render),
     memory,
     info,
+    deck,
+    profile: profileOf(deck ?? EMPTY_DECK, lookup),
     render,
     random,
   };

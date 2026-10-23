@@ -5,10 +5,14 @@ import { registerPolicy } from "../registry.ts";
 import { corpRun, fromCandidate } from "../runs.ts";
 import { agendaProgress, coverage, iceThreat, rezCostOf, serverSafety } from "../tactics.ts";
 import type { DeckPolicy, Observation, Plan, Proposal } from "../types.ts";
+import { CORE_HB } from "./core.ts";
 import { GATEWAY_CORP_BEGINNER, GATEWAY_CORP_INTERMEDIATE } from "./gateway.ts";
 
-const ECONOMY = new Set(["Hedge Fund", "Government Subsidy", "Nico Campaign", "Regolith Mining License", "Predictive Planogram"]);
-const ICE_RANK: Record<string, number> = { "Brân 1.0": 5, Palisade: 4, Karunā: 4, Funhouse: 3, Diviner: 3, Whitespace: 2, Tithe: 1 };
+const isEconomyCard = (obs: Observation, c: any) => obs.profile.economy.has(c.title);
+const iceRank = (obs: Observation, c: any) => {
+  const threat = iceThreat({ ...c, subroutines: [] }, obs.info(c));
+  return Number((obs.info(c) as any).strength ?? 0) + rezCostOf(c) * 0.5 + (threat.etr ? 2 : 0) + threat.damage;
+};
 
 const remotes = (obs: Observation) => obs.servers.filter((s) => s.remote);
 const scoringRemote = (obs: Observation) => remotes(obs).find((s) => s.content.some((c) => c.type === "Agenda"));
@@ -42,7 +46,7 @@ function plan(obs: Observation, current: Plan | null): Plan {
   const safeRemote = remotes(obs).find((s) => s.ices.length > 0 && !s.content.length && serverSafety(obs, s).safe);
   const agendas = obs.hand.filter((c) => c.type === "Agenda");
   if (runnerPoints >= need - 2 && obs.servers.some((s) => !s.remote && !s.ices.length)) return keep("defend", "the Runner is close to winning: close the open centrals first");
-  if (obs.credits < 5 && !obs.hand.some((c) => ECONOMY.has(c.title) && Number(c.cost ?? 0) <= obs.credits)) return keep("economy", "poor and without a cheap economy card: install assets and click for credits");
+  if (obs.credits < 5 && !obs.hand.some((c) => isEconomyCard(obs, c) && Number(c.cost ?? 0) <= obs.credits)) return keep("economy", "poor and without a cheap economy card: install assets and click for credits");
   if (agendas.length && safeRemote && obs.credits >= 3) return keep("window", `install ${agendas[0].title} in ${safeRemote.label}: the Runner cannot get in cheaply`);
   if (agendas.length && protectedRemote) return keep("fortify", `${protectedRemote.label} is not safe enough for ${agendas[0].title}: add ice or credits`);
   if (!protectedRemote) return keep("fortify", "build an iced remote and ice the centrals");
@@ -51,7 +55,7 @@ function plan(obs: Observation, current: Plan | null): Plan {
 
 function mulligan(obs: Observation) {
   const ice = obs.hand.filter((c) => c.type === "ICE").length;
-  const econ = obs.hand.filter((c) => ECONOMY.has(c.title)).length;
+  const econ = obs.hand.filter((c) => isEconomyCard(obs, c)).length;
   const agendas = obs.hand.filter((c) => c.type === "Agenda").length;
   if (ice === 0) return { keep: false, why: "no ice: every server would be open" };
   if (agendas >= 3) return { keep: false, why: "three agendas in hand is too many to protect" };
@@ -135,13 +139,13 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
   const hqServer = obs.servers.find((s) => s.key === "hq")!;
   const agendasHeld = obs.hand.filter((c) => c.type === "Agenda").length;
   if (agendasHeld >= 1 && hqServer.ices.length < 3 && !serverSafety(obs, hqServer).safe) {
-    const ice = obs.hand.filter((c) => c.type === "ICE").sort((a, b) => (ICE_RANK[b.title] ?? 0) - (ICE_RANK[a.title] ?? 0))[0];
+    const ice = obs.hand.filter((c) => c.type === "ICE").sort((a, b) => iceRank(obs, b) - iceRank(obs, a))[0];
     const budget = obs.credits - hqServer.ices.length;
     if (ice && budget >= rezCostOf(ice) + 2) push(proposal(playOf(obs, ice, "HQ"), agendasHeld >= 2 ? 72 : 63, `add ${ice.title} to HQ: ${agendasHeld} agenda${agendasHeld > 1 ? "s" : ""} in hand and the Runner can get in`, "install-ice"));
   }
   const weak = installed?.server ?? (obs.hand.some((c) => c.type === "Agenda") ? bait : undefined);
   if (weak && !serverSafety(obs, weak).safe && weak.ices.length < 3) {
-    const ice = obs.hand.filter((c) => c.type === "ICE").sort((a, b) => (ICE_RANK[b.title] ?? 0) - (ICE_RANK[a.title] ?? 0))[0];
+    const ice = obs.hand.filter((c) => c.type === "ICE").sort((a, b) => iceRank(obs, b) - iceRank(obs, a))[0];
     const budget = obs.credits - weak.ices.length;
     if (ice && budget >= rezCostOf(ice) + 2) push(proposal(playOf(obs, ice, weak.label), installed ? 74 : obs.credits >= 12 ? 70 : 64, `add ${ice.title} to ${weak.label}: the Runner can still get in`, "install-ice"));
     else if (ice) push(proposal(playOf(obs, ice, weak.label), 30, `add ${ice.title} to ${weak.label} later: not enough credits to rez it`, "install-ice"));
@@ -197,7 +201,7 @@ function prompt(obs: Observation, plan: Plan): Proposal | null {
     if (ice) return { move: selectMove(obs, ice), score: 80, why: `rez ${ice.title} for free`, kind: "select" };
   }
   if (from === "Brân 1.0" && obs.promptType === "select") {
-    const ice = selectable(obs).filter((c) => c.type === "ICE").sort((a, b) => (ICE_RANK[b.title] ?? 0) - (ICE_RANK[a.title] ?? 0))[0];
+    const ice = selectable(obs).filter((c) => c.type === "ICE").sort((a, b) => iceRank(obs, b) - iceRank(obs, a))[0];
     if (ice) return { move: selectMove(obs, ice), score: 80, why: `install ${ice.title} for free behind Brân`, kind: "select" };
     const done = choices(obs).find((c) => c.value === "Done");
     if (done) return { move: choiceMove(obs, done), score: 70, why: "no ice to install", kind: "choice" };
@@ -211,7 +215,7 @@ function prompt(obs: Observation, plan: Plan): Proposal | null {
   }
   if (/discard down/i.test(text) && obs.promptType === "select") {
     const cards = selectable(obs);
-    const order = (c: any) => (c.type === "Agenda" ? 5 : c.type === "ICE" ? 3 : ECONOMY.has(c.title) ? 2 : c.type === "Operation" ? 1 : 2);
+    const order = (c: any) => (c.type === "Agenda" ? 5 : c.type === "ICE" ? 3 : isEconomyCard(obs, c) ? 2 : c.type === "Operation" ? 1 : 2);
     const pick = [...cards].sort((a, b) => order(a) - order(b))[0];
     if (pick) return { move: selectMove(obs, pick), score: 60, why: `discard ${pick.title}`, kind: "select" };
   }
@@ -245,7 +249,7 @@ export const gatewayCorp: DeckPolicy = registerPolicy({
   id: "gateway-corp-syndicate",
   version: "0.3.0",
   side: "corp",
-  decks: [GATEWAY_CORP_BEGINNER, GATEWAY_CORP_INTERMEDIATE],
+  decks: [GATEWAY_CORP_BEGINNER, GATEWAY_CORP_INTERMEDIATE, CORE_HB],
   mulligan,
   plan,
   proposals,

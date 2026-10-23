@@ -3,10 +3,11 @@ import { basicCommands, promptOf, runCommands } from "../../game/actions.ts";
 import { serverName } from "../../game/describe.ts";
 import { corpFreeProposals, corpProposals, genericPlan, runnerProposals } from "./generic.ts";
 import { emptyMemory, noteRun, observe, updateMemory } from "./observe.ts";
+import { type AnyDeck, deckList, fingerprint } from "./registry.ts";
 import { genericPrompt, mulliganProposal } from "./prompts.ts";
 import { breakSubChoice, corpRun, runnerRun } from "./runs.ts";
 import { isEconomy, isIcebreaker } from "./tactics.ts";
-import type { DecisionRecord, DeckPolicy, Lookup, Memory, Move, Observation, Plan, Proposal } from "./types.ts";
+import type { DecisionRecord, DeckList, DeckPolicy, Lookup, Memory, Move, Observation, Plan, Proposal } from "./types.ts";
 
 const FREE_KINDS = new Set(["score", "rez-economy", "rez", "end"]);
 const TURN_COMMANDS = new Set(["start-turn", "end-phase-12", "phase-12-pass-priority", "end-post-discard", "post-discard-pass-priority"]);
@@ -17,6 +18,7 @@ export interface BotOptions {
   record?: boolean;
   maxRecords?: number;
   rescue?: boolean;
+  deck?: AnyDeck;
 }
 
 const moveKey = (m: Move) => `${m.command}:${m.say ?? ""}:${JSON.stringify(m.args ?? null)}`;
@@ -43,6 +45,7 @@ export class PolicyBot {
   private record: boolean;
   private maxRecords: number;
   private rescue: boolean;
+  private deck: DeckList | null;
 
   constructor(side: Side, policy: DeckPolicy | null, lookup: Lookup, options: BotOptions = {}) {
     this.side = side;
@@ -53,6 +56,12 @@ export class PolicyBot {
     this.record = options.record ?? false;
     this.maxRecords = options.maxRecords ?? 5000;
     this.rescue = options.rescue ?? false;
+    this.deck = options.deck ? this.ownDeck(deckList(options.deck)) : null;
+  }
+
+  private ownDeck(list: DeckList): DeckList {
+    const fp = fingerprint(list);
+    return this.policy?.decks.find((d) => fingerprint(d) === fp) ?? list;
   }
 
   get policyId() {
@@ -73,7 +82,7 @@ export class PolicyBot {
       this.memory.notes.kinds = [];
     }
     this.trackRun(view);
-    const obs = observe(view, this.side, this.memory, this.lookup, this.render, this.random);
+    const obs = observe(view, this.side, this.memory, this.lookup, this.render, this.random, this.deck);
     const { stage, proposals, unhandled } = this.consider(obs);
     const signature = this.signature(obs);
     const ranked = proposals.filter((p) => !this.banned.has(moveKey(p.move))).sort((a, b) => b.score - a.score);
@@ -212,6 +221,6 @@ export class PolicyBot {
   }
 
   private signature(obs: Observation) {
-    return JSON.stringify([obs.clicks, obs.credits, obs.hand.length, promptOf(obs.view, this.side)?.eid, obs.run?.phase, obs.run?.position, obs.run?.["no-action"], obs.encounter?.["no-action"], (obs.view.log ?? []).length]);
+    return JSON.stringify([obs.clicks, obs.credits, obs.hand.length, promptOf(obs.view, this.side)?.eid, obs.promptText, obs.run?.phase, obs.run?.position, obs.run?.["no-action"], obs.encounter?.["no-action"], (obs.view.log ?? []).length]);
   }
 }

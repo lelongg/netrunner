@@ -139,7 +139,7 @@ function makePlayer(kind, side, precon, random) {
   if (kind === "random") return { kind, id: "random", decide: null };
   if (kind === "heuristic") return { kind, id: "heuristic", bot: new HeuristicBot(side, lookup, random) };
   const match = findPolicy(side, { identity: precon.identity, cards: precon.cards });
-  const bot = new PolicyBot(side, match?.policy ?? null, lookup, { random, render, record: true, rescue: false });
+  const bot = new PolicyBot(side, match?.policy ?? null, lookup, { random, render, record: true, rescue: false, deck: { identity: precon.identity, cards: precon.cards } });
   return { kind, id: bot.policyId, bot, fallback: !match };
 }
 

@@ -1,6 +1,7 @@
 import type { Side } from "../../engine.ts";
 import type { Candidate } from "../../game/candidates.ts";
 import type { CardInfo, Lookup } from "../heuristic.ts";
+import type { DeckProfile } from "./profile.ts";
 
 export type { CardInfo, Lookup };
 
@@ -75,6 +76,8 @@ export interface Observation {
   view: any;
   side: Side;
   me: any;
+  deck: DeckList | null;
+  profile: DeckProfile;
   opp: any;
   turn: number;
   active: Side;

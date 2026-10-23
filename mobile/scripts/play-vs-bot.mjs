@@ -102,7 +102,7 @@ const botRandom = () => {
 };
 const precon = m[botSide];
 const match = state.bot === "heuristic" ? null : findPolicy(botSide, { identity: precon.identity, cards: precon.cards });
-const bot = state.bot === "heuristic" ? new HeuristicBot(botSide, lookup, botRandom) : new PolicyBot(botSide, match?.policy ?? null, lookup, { random: botRandom, render, record: true, rescue: true });
+const bot = state.bot === "heuristic" ? new HeuristicBot(botSide, lookup, botRandom) : new PolicyBot(botSide, match?.policy ?? null, lookup, { random: botRandom, render, record: true, rescue: true, deck: { identity: precon.identity, cards: precon.cards } });
 
 const aligned = (side, a) => {
   const eid = a?.eid;
