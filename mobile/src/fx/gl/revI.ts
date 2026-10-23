@@ -211,7 +211,7 @@ export async function madani(rect: DOMRect, code: string, ready?: Ready, board?:
   await done();
 }
 
-const RIM = { c: [0.5, 0.455] as Pt, rx: 0.235, ry: 0.024, tilt: -0.045 };
+const RIM = { c: [0.455, 0.471] as Pt, rx: 0.233, ry: 0.02, tilt: -0.01 };
 
 export async function maintenanceAccess(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, card, fx, done, unit, at } = await scene(rect, code, ready, board);
@@ -239,6 +239,7 @@ export async function maintenanceAccess(rect: DOMRect, code: string, ready?: Rea
     const y = Math.sin(a) * H;
     return [c[0] + x * Math.cos(RIM.tilt) - y * Math.sin(RIM.tilt), c[1] + x * Math.sin(RIM.tilt) + y * Math.cos(RIM.tilt)];
   };
+  const hidden = (a: number) => Math.sin(a) < 0 && Math.cos(a) > -0.4 && Math.cos(a) < 0.74;
   await run(app, (t) => {
     rim.clear();
     const k = ease.inOut(span(t, 0.05, 0.75));
@@ -249,6 +250,7 @@ export async function maintenanceAccess(rect: DOMRect, code: string, ready?: Rea
       for (let j = 0; j < n; j++) {
         const a0 = head - (dir * 1.4 * j) / n;
         const a1 = head - (dir * 1.4 * (j + 1)) / n;
+        if (hidden(a0) || hidden(a1)) continue;
         rim
           .moveTo(...P(a0))
           .lineTo(...P(a1))
@@ -256,9 +258,13 @@ export async function maintenanceAccess(rect: DOMRect, code: string, ready?: Rea
       }
     }
     if (k >= 1) {
-      const pts: number[] = [];
-      for (let i = 0; i <= 48; i++) pts.push(...P((i / 48) * Math.PI * 2));
-      rim.poly(pts, false).stroke({ width: 1.2, color: 0x7af7dc, alpha: 0.5 * fade });
+      for (let i = 0; i < 48; i++) {
+        const a0 = (i / 48) * Math.PI * 2;
+        const a1 = ((i + 1) / 48) * Math.PI * 2;
+        if (hidden(a0) || hidden(a1)) continue;
+        rim.moveTo(...P(a0)).lineTo(...P(a1));
+      }
+      rim.stroke({ width: 1.2, color: 0x7af7dc, alpha: 0.5 * fade });
     }
     pool.position.set(c[0], c[1] - rect.height * 0.04);
     pool.width = rect.width * (0.3 + 0.35 * ease.out(span(t, 0.3, 1)));
@@ -343,7 +349,7 @@ export async function leechPose(rect: DOMRect, code: string, ready?: Ready, boar
   await done();
 }
 
-const LANTERN: Pt = [0.35, 0.68];
+const LANTERN: Pt = [0.4, 0.645];
 
 export async function lamplighterFire(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, card, world, fx, done, unit, at } = await scene(rect, code, ready, board);

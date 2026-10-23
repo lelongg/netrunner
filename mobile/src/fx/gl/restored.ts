@@ -1,7 +1,7 @@
 import { Graphics } from "pixi.js";
 import { Emitter, ease, glowTexture, layer, run, span, sparkTexture } from "./stage";
-import { type Board, GREEN, RED, type Ready, burst, scene } from "./kit";
-import { type Pt, glowSprite, prism, rnd, tether } from "./more";
+import { type Board, GREEN, RED, type Ready, Smoke, burst, scene } from "./kit";
+import { type Pt, glowSprite, lerp, prism, rnd, tether } from "./more";
 import { sealTexture } from "./third";
 
 export async function governmentSubsidy(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
@@ -94,6 +94,45 @@ export async function docklandsPass(rect: DOMRect, code: string, ready?: Ready, 
     if (g > 0 && g < 1) gate.poly([...at(0.04, 0.08), ...at(0.96, 0.08), ...at(0.96, 0.54), ...at(0.04, 0.54)]).stroke({ color: GREEN, width: 2 + 4 * (1 - g), alpha: 1 - g });
     sparks.step(dt);
     return t < 1.55 || sparks.list.length > 0;
+  });
+  await done();
+}
+
+export async function scrounge(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
+  const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
+  const device = at(0.765, 0.305);
+  const dust = new Smoke(fx);
+  const g = new Graphics();
+  g.blendMode = "add";
+  fx.addChild(g);
+  const led = glowSprite(fx, glowTexture(), 0x6ae8ff);
+  led.position.set(...device);
+  const finds = [at(0.778, 0.428), at(0.885, 0.355), at(0.656, 0.465)].map((p, i) => ({ p, s: glowSprite(fx, sparkTexture(), 0xbff4ff), d: 0.6 + i * 0.2 }));
+  const motes = new Emitter(fx);
+  root.addChild(fx);
+  await run(app, (t, dt) => {
+    g.clear();
+    if (t < 1.5 && Math.random() < 0.25) dust.puff(...at(-0.05, rnd(0.25, 0.48)), { vx: unit * rnd(0.3, 0.55), vy: -unit * 0.02, life: 1.6, size: unit * rnd(0.12, 0.2), grow: 2, tint: 0xe2c9a0, alpha: 0.25 });
+    const on = span(t, 0.2, 0.4) * (1 - span(t, 1.5, 1.9));
+    led.alpha = 0.6 * on;
+    led.scale.set((unit / 128) * 0.1);
+    const sweep = Math.sin(t * 2.4) * 0.12;
+    const far = at(0.78 + sweep, 0.44);
+    g.poly([...device, far[0] - unit * 0.12, far[1], far[0] + unit * 0.12, far[1]]).fill({ color: 0x6ae8ff, alpha: 0.1 * on });
+    g.moveTo(...device)
+      .lineTo(...far)
+      .stroke({ width: 1, color: 0xbff4ff, alpha: 0.5 * on, cap: "round" });
+    for (const f of finds) {
+      const k = span(t, f.d, f.d + 0.6);
+      f.s.position.set(...lerp(f.p, device, ease.inOut(span(k, 0.4, 1))));
+      f.s.alpha = k > 0 && k < 1 ? 0.9 * on : 0;
+      f.s.rotation = t * 3;
+      f.s.scale.set((unit / 120) * 0.22);
+      if (k > 0.4 && k < 1 && Math.random() < 0.5) motes.add(sparkTexture(), f.s.x, f.s.y, { life: 0.3, tint: 0x6ae8ff, scale: (unit / 180) * 0.15, grow: -0.4 });
+    }
+    dust.step(dt);
+    motes.step(dt);
+    return t < 1.9 || dust.list.length > 0;
   });
   await done();
 }
