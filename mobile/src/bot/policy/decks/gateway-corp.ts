@@ -243,7 +243,7 @@ function run(obs: Observation, plan: Plan): Proposal | null {
 
 export const gatewayCorp: DeckPolicy = registerPolicy({
   id: "gateway-corp-syndicate",
-  version: "0.2.0",
+  version: "0.3.0",
   side: "corp",
   decks: [GATEWAY_CORP_BEGINNER, GATEWAY_CORP_INTERMEDIATE],
   mulligan,

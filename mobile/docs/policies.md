@@ -57,12 +57,15 @@ hang, and it is always counted as unhandled.
 
 - `breakerProfile` / `breakCost`: what a breaker breaks and what it costs against an ice,
   parsed from card text (exact when the text matches the usual patterns, estimated otherwise).
-- `iceThreat`: end-the-run, damage, credit loss and tags from the subroutines.
+- `iceThreat`: end-the-run, damage, credit loss and tags from the subroutines. It reads both
+  the card text and the engine's subroutine labels; an end-the-run that depends on the
+  Runner's credits (Whitespace) counts only when the Runner would be poor enough.
 - `estimateRun`: the Runner's cost, blockers and damage for a server, with unrezzed ice counted
-  as an estimate.
+  as an estimate and a rezzed Manegarm Skunkworks as five credits when two clicks cannot be
+  spared.
 - `serverSafety`: the Corp's view of the same question, using the Runner's visible rig and
-  credits and our own unrezzed ice. `safe` means the Runner cannot get in for their current
-  credits plus a small margin.
+  credits and our own unrezzed ice. The Runner is credited with a turn of income before a
+  remote counts as `safe`, and Skunkworks is worth three credits of tax.
 - `coverage`: the ice types the rig can break.
 
 `policy/generic.ts` turns these into proposals for either side (score, advance, install,
@@ -79,19 +82,39 @@ Both target the System Gateway starter decks and also match the intermediate ver
 remote the Runner cannot get into cheaply and score it the next turn with Seamless Launch
 plus advances; `serverSafety` decides whether a remote is such a window, and a remote that is
 merely contestable is used only when the Corp is racing (two agendas in hand, a full hand or a
-thin R&D). Deck-specific decisions: Seamless Launch targets, Urtica Cipher as an advanceable
-bait, Manegarm Skunkworks on the scoring remote, Regolith clicks, Superconducting Hub and
-Send a Message prompts, Brân's install subroutine, Predictive Planogram, and rezzing ice that
-the Runner's rig cannot break even when it protects nothing yet.
+thin R&D) against a Runner who is still poor, with a one-ice remote needing a margin close to
+even. Two exceptions keep the Corp from passivity: a rich Corp behind a three-ice remote (or
+two ice and an upgrade) installs and races because every run costs the Runner more than the
+Corp loses by trying, and a Corp whose R&D is nearly empty installs anywhere with ice rather
+than decking itself. A remote whose only content is upgrades is the scoring remote: agendas
+go there and new ice deepens it before any new remote is opened. When agendas are stuck in HQ
+and nothing in hand builds a remote, the Corp draws for ice instead of clicking for credits;
+it never installs an agenda naked for tempo. Deck-specific decisions: Seamless Launch
+targets, Urtica Cipher as an advanceable bait, Manegarm Skunkworks on the scoring remote,
+Regolith clicks, Superconducting Hub and Send a Message prompts, Brân's install subroutine,
+Predictive Planogram, rezzing ice that the Runner's rig cannot break even when it protects
+nothing yet, and leaving a bioroid unrezzed when the Runner has the clicks to walk through
+it and the Corp would be left poor.
 
 **`gateway-runner-catalyst`** (`policy/decks/gateway-runner.ts`). Plans: `setup`, `pressure`,
 `contest`, `closing`. Economy comes first (Sure Gamble, Creative Commission as the last click,
 Telework Contract, Red Team once the rig can break), then Cleaver, Unity and Carmen in the
 order the Corp's ice calls for. Jailbreak, Overclock and Tread Lightly are scored as runs
-with their own economics, and `safeHand` refuses a run whose damage (rezzed ice, unrezzed ice
-assumed to hurt, an advanced facedown card assumed to be Urtica Cipher) could flatline the
-Runner, unless the card could win the game for the Corp. When the plan is `contest` and the
-grip is too small, the policy draws up first.
+with their own economics, and `safeHand` refuses a run whose damage could flatline the
+Runner, unless the card could win the game for the Corp. The trap risk of a facedown remote
+card comes from the opposing deck list (copies of Urtica Cipher minus those already
+identified, against the agendas still unaccounted for): a card advanced twice with low trap
+odds is an agenda to contest, and the ice-damage allowance disappears once the rig covers
+every ice type, or Mayfly covers the single unrezzed piece, with credits to spare. The
+`contest` plan is executed as a whole turn: which breaker or Mayfly to install, how many
+cards to draw and the run itself, only when clicks and credits allow all of it this turn;
+otherwise the Runner prepares for the next one. Accessed cards are remembered while they
+stay installed, every unrezzed card left in a breached remote without a steal is a dud, and
+run bookkeeping happens when the run appears on the board, so deciding never mutates memory.
+During a run a bioroid is clicked through when paying would leave too little for the rest
+of the run or when the clicks are simply cheaper than the credits, and the Runner jacks out
+when the rezzed ice ahead cannot be paid for. In the `closing` plan Mayfly is installed when
+the last points sit behind an ice type no breaker answers.
 
 ## Evaluation
 
@@ -161,6 +184,27 @@ safety and a credit reserve before ice installs for the Corp; break costs above 
 pool counted as unbroken, no run events into damage ice, Red Team on open centrals, breakers
 installed before the ice they answer, and a refilled grip for the Runner.
 
+A second series was played against the 0.2.x policies, which produced the 0.3.0 rules:
+
+- As Corp against the Runner policy (g9): the Runner ran twice into the same accessed Urtica
+  Cipher (it never remembered what it had accessed), refused to contest a double-advanced
+  agenda behind one ice because any facedown card counted as a trap, and paid eight of its
+  nine credits to break Brân 1.0 with more ice behind it. The model won 5 to 1. Replaying the
+  same game with the fixed policy, the Runner clicks through Brân and steals the agenda.
+- As Runner against the Corp policy (g10, g11, g12): the Corp clicked for credits with two
+  agendas in hand and nothing to protect them, opened a one-ice remote next to a remote that
+  already held Tithe and Skunkworks, installed a three-point agenda behind a lone Whitespace
+  against a Runner with an income engine, and spent its last six credits rezzing Brân on HQ
+  against a Runner with three clicks to walk through it. The model won all three.
+- As Corp against the 0.3.0 Runner policy (g13): the Runner took three agendas from a flooded
+  HQ with Jailbreak, waited with economy and draws while the centrals were guarded by net
+  damage, then planned its last turn (install Mayfly, draw twice, run the remote through
+  Whitespace) and won 7 to 0.
+
+Besides these, the tune-split evaluation showed two Corp failure modes that no game against
+the model had reached: agendas fed one by one into a one-ice remote, and a Corp with thirty
+credits, a full hand and a three-ice remote clicking for credits until it decked itself.
+
 ## Improvement loop
 
 1. Play on the `design` split with `--out` and read `situations.md`.
@@ -188,38 +232,58 @@ and nothing else should be refused.
 ## Results
 
 Measured with `scripts/policy-eval.mjs` on the `test` split (seeds never used while writing
-the policies), 30 games per line, beginner decks unless stated. Policies at version 0.2.0.
+the policies), 30 games per line, beginner decks unless stated. Policies at version 0.3.0.
 Intervals are 95% binomial.
 
 | Corp | Runner | Decks | Corp wins | Runner wins | Unfinished | Avg turns | Game ends |
 |---|---|---|---|---|---|---|---|
 | heuristic | heuristic | beginner | 19 (0.63 ±0.17) | 11 (0.37 ±0.17) | 0 | 14.3 | 28 agenda, 2 decked |
-| **policy** | heuristic | beginner | 22 (0.73 ±0.16) | 8 (0.27 ±0.16) | 0 | 14.5 | 21 agenda, 7 flatline, 2 decked |
-| heuristic | **policy** | beginner | 13 (0.43 ±0.18) | 17 (0.57 ±0.18) | 0 | 13.5 | 30 agenda |
-| **policy** | **policy** | beginner | 21 (0.70 ±0.16) | 9 (0.30 ±0.16) | 0 | 13.9 | 18 agenda, 10 flatline, 2 decked |
-| heuristic | heuristic | intermediate | 23 (0.77 ±0.15) | 7 (0.23 ±0.15) | 0 | 15.0 | 30 agenda |
-| **policy** | **policy** | intermediate | 24 (0.80 ±0.14) | 6 (0.20 ±0.14) | 0 | 15.4 | 28 agenda, 2 flatline |
+| **policy** | heuristic | beginner | 27 (0.90 ±0.11) | 3 (0.10 ±0.11) | 0 | 13.8 | 28 agenda, 2 decked |
+| heuristic | **policy** | beginner | 5 (0.17 ±0.13) | 25 (0.83 ±0.13) | 0 | 12.9 | 30 agenda |
+| **policy** | **policy** | beginner | 11 (0.37 ±0.17) | 19 (0.63 ±0.17) | 0 | 13.8 | 29 agenda, 1 decked |
+| **policy** | **policy** | intermediate | 18 (0.60 ±0.18) | 12 (0.40 ±0.18) | 0 | 14.6 | 30 agenda |
+
+The same lines at version 0.2.0 read 22/30 for the Corp policy against the heuristic Runner,
+17/30 for the Runner policy against the heuristic Corp, 21/30 for the Corp policy against
+the Runner policy and 24/30 on the intermediate decks.
 
 Reading the table against the heuristic reference on the beginner decks:
 
-- The Runner policy wins 17/30 against the heuristic Corp where the heuristic Runner wins
-  11/30: a gain of about 0.20 in win rate, larger than the interval.
-- The Corp policy wins 22/30 against the heuristic Runner where the heuristic Corp wins
-  19/30: a gain within the interval, so not established. Version 0.1.0 measured 23/30 and an
-  intermediate build 25/30; the last change (keeping agendas in HQ when HQ is safer than the
-  remote) costs a little against the heuristic Runner, which never pressures HQ, and was kept
-  because it stops the giveaway that a stronger Runner exploited in the games above.
-- Policy against policy, the Corp wins 21/30 and ten games end by flatline: the Runner
-  policy still runs into net damage too often against a Corp that rezzes Karunā, Diviner
-  and Tithe and advances Urtica Cipher.
+- The Runner policy wins 25/30 against the heuristic Corp where the heuristic Runner wins
+  11/30: a gain of about 0.46 in win rate, far outside the interval. At 0.2.0 the gain was
+  0.20; the 0.3.0 rules (trap odds from the deck list, the planned contest turn, clicking
+  through bioroids, remembering accessed cards) account for the rest.
+- The Corp policy wins 27/30 against the heuristic Runner where the heuristic Corp wins
+  19/30: a gain of 0.27, outside the interval for the first time (0.10 at 0.2.0).
+- Policy against policy the Runner now wins 19/30 where it won 9/30 at 0.2.0, and no game
+  ends by flatline: the Runner policy improved more than the Corp policy did. On the
+  intermediate decks, whose Corp side has more agendas and Funhouse, the Corp still wins
+  18/30.
 
-Across the 180 games: no engine error, no blocked game, no unfinished game, no unhandled
-prompt. Decision time averages 0.5 ms (maximum about 50 ms) on the development engine build.
+Progress was measured on the `tune` split (40 games per step) while the rules were written,
+so that the test split above stayed untouched until the end:
 
-Situations flagged on the test split, for the next loop: `idle-turn` (Runner clicking for
-credits with 10 or more credits: 25 in the heuristic-Corp games), `plan-churn` (the plan
-switching three times in a turn, mostly `contest`/`setup` as the grip size changes), and
-the final boards of every loss.
+| Step | Corp policy vs heuristic Runner | Runner policy vs heuristic Corp | Corp policy vs Runner policy |
+|---|---|---|---|
+| 0.2.2 (start of the second loop) | 0.93 | 0.75 | 0.47 |
+| Runner remembers accessed cards | 0.93 | 0.75 | 0.30 |
+| Runner trap odds, contest turn, Brân clicks | – | 0.82 | 0.30 |
+| Corp scoring remote, ice hunting, Skunkworks | 0.95 | – | 0.28 |
+| Corp conditional end-the-run, no naked agendas | 0.88 | – | 0.28 |
+| Corp fortress race, one-ice margin | 0.90 | – | 0.33 |
+| Corp leaves click-through bioroids unrezzed | 0.90 | – | 0.30 |
+| Runner clicks through pricey bioroids, closing Mayfly | – | 0.82 | 0.28 |
+
+The Corp policy's rate against the Runner policy did not recover on the tune split; the
+test split says 0.37. The Corp rules of this loop removed specific giveaways (agendas into a
+one-ice remote, decking with thirty credits, a naked agenda for tempo, Brân rezzed for the
+last credits) without giving the Corp an economy that keeps up with a Runner who trashes
+every unprotected asset and steals from a flooded HQ.
+
+Across the 150 games: no engine error, no blocked game, no unfinished game, no unhandled
+prompt; 10 refused moves in total, all on the Runner side (a run or ability the engine
+declined, retried once by the stall guard). Decision time averages 0.3 ms (maximum about
+65 ms) on the development engine build.
 
 Known limits:
 
@@ -228,7 +292,12 @@ Known limits:
 - The two policies were developed against each other and against the heuristic bot, so they
   may exploit those opponents' weaknesses. Results against humans are not measured.
 - The Runner policy still spends whole turns on credits or draws when it has nothing better
-  (`idle-turn` situations), and it has no model of what the Corp is likely to hold.
+  (`idle-turn` situations). Its only model of the Corp's hidden cards is the opposing deck
+  list, used for trap odds; it assumes the preconstructed deck of the opponent's identity.
+- The Corp policy beats the heuristic Runner and the model lost to the Runner policy, but
+  the model still beats the Corp policy as Runner: a Runner who trashes every unprotected
+  asset, runs HQ when it is flooded and keeps ten credits leaves the Corp without a window.
+  The Corp needs protected economy and faster scoring to close that gap.
 - Break costs are parsed from card text: breakers with unusual wording are estimated.
 - Only the System Gateway starter decks have a policy. Other decks use the generic policy,
   whose quality is close to the heuristic bot.

@@ -259,6 +259,10 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
     if (draw && obs.hand.length < 5 && drawsThisTurn < 3) push(proposal(draw, 58, "draw: the centrals are locked behind ice no breaker answers", "draw"));
     if (mayfly && memoryLeft >= 2 && obs.credits >= 10) push(proposal(playOf(obs, mayfly), 62, "Mayfly: the only way through the ice right now", "install-breaker"));
   }
+  const uncoveredCentral = obs.servers.some((s) => !s.remote && s.ices.some((i: any) => i.rezzed && (i.subtypes ?? []).some((t: string) => ICE_TYPES.has(t)) && !(i.subtypes ?? []).some((t: string) => ICE_TYPES.has(t) && cov.has(t as any))));
+  if (plan.kind === "closing" && mayfly && !inRig(obs, "Mayfly") && memoryLeft >= 1 && uncoveredCentral && obs.credits >= 6) {
+    push(proposal(playOf(obs, mayfly), 64, "Mayfly: the last points sit behind ice no breaker answers", "install-breaker"));
+  }
   const spend = (p: Proposal): number => {
     if (p.kind === "run" || p.kind === "run-event" || p.kind === "click-economy") {
       const t = ts.find((x) => p.why.includes(x.server.label));
@@ -369,7 +373,9 @@ function run(obs: Observation, plan: Plan): Proposal | null {
     const full = byCommand(obs, "dynamic-ability", (c) => /fully break/i.test(c.label)).map((c) => labelCost(c.label)).sort((a, b) => a - b)[0];
     const rest = restOfRun(obs);
     const poor = full === undefined || obs.credits - full < rest + 1;
+    const pricey = full !== undefined && full >= 2 * unbrokenSubs && obs.clicks >= unbrokenSubs;
     if (click && poor && obs.clicks >= unbrokenSubs) return fromCandidate(click, 86, `spend a click on ${ice.title}: paying ${full ?? "to break"} would leave too little for the ${rest} the rest of the run costs`, "break");
+    if (click && pricey) return fromCandidate(click, 84, `spend a click on ${ice.title}: ${unbrokenSubs} clicks are cheaper than ${full} credits`, "break");
     if (click && obs.clicks >= 2 && obs.credits < 4) return fromCandidate(click, 82, `spend a click to break a ${ice.title} subroutine instead of credits`, "break");
   }
   return runnerRun(obs);
@@ -377,7 +383,7 @@ function run(obs: Observation, plan: Plan): Proposal | null {
 
 export const gatewayRunner: DeckPolicy = registerPolicy({
   id: "gateway-runner-catalyst",
-  version: "0.2.0",
+  version: "0.3.0",
   side: "runner",
   decks: [GATEWAY_RUNNER_BEGINNER, GATEWAY_RUNNER_INTERMEDIATE],
   mulligan,
