@@ -32,6 +32,7 @@ export class PolicyBot {
   private banned = new Set<string>();
   private last = { key: "", signature: "", count: 0 };
   private pending = { key: "", signature: "" };
+  private pendingKind: { key: string; kind: string } | null = null;
   private confirmed = false;
   private turnKey = "";
   private pendingRun: { server: string; cids: string[]; points: number; breached: boolean; turn: number } | null = null;
@@ -93,7 +94,7 @@ export class PolicyBot {
     const note = unhandled;
     if (note) this.unhandled++;
     if (!chosen && note && this.rescue) chosen = this.rescueMove(obs);
-    if (chosen && stage === "click") (this.memory.notes.kinds as string[]).push(chosen.kind);
+    this.pendingKind = chosen && stage === "click" ? { key: moveKey(chosen.move), kind: chosen.kind } : null;
     if (chosen?.move.command === "run") {
       const server = obs.servers.find((s) => s.label === (chosen!.move.args as any)?.server);
       this.pendingRun = { server: server?.label ?? "", cids: (server?.content ?? []).filter((c: any) => !c.rezzed && !c["advance-counter"]).map((c: any) => c.cid), points: obs.me["agenda-point"] ?? 0, breached: false, turn: obs.turn };
@@ -112,6 +113,10 @@ export class PolicyBot {
     this.confirmed = true;
     if (move.command === "toast") return;
     const key = moveKey(move);
+    if (this.pendingKind && this.pendingKind.key === key) {
+      (this.memory.notes.kinds as string[] | undefined)?.push(this.pendingKind.kind);
+      this.pendingKind = null;
+    }
     if (key !== this.last.key || this.pending.signature !== this.last.signature) this.last = { key, signature: this.pending.key === key ? this.pending.signature : "", count: 0 };
   }
 

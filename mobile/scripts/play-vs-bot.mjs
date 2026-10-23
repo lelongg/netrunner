@@ -183,10 +183,13 @@ function autoMove() {
   return null;
 }
 
+let cachedMove = { seq: -1, move: null };
 function botMove() {
   const v = view(botSide);
   if (v.winner) return null;
-  return bot.decide(v);
+  if (cachedMove.seq === v.sequence) return cachedMove.move;
+  cachedMove = { seq: v.sequence, move: bot.decide(v) };
+  return cachedMove.move;
 }
 
 function whoseTurn() {

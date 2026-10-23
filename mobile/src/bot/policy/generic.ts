@@ -145,10 +145,11 @@ export function runnerProposals(obs: Observation): Proposal[] {
     } else if (card.type === "Resource" && isEconomy(info.text) && obs.credits >= cost + 1) push(proposal(playOf(obs, card), 55, `install ${card.title} for economy`, "install-economy"));
   }
   const covered = coverage(obs);
+  const memoryLeft = Number(obs.me.memory?.available ?? 4) - Number(obs.me.memory?.used ?? 0);
   const seenIce = new Set<IceType>();
   for (const s of obs.servers) for (const ice of s.ices) if (ice.rezzed) iceTypes(ice).forEach((t) => seenIce.add(t));
   for (const card of obs.hand) {
-    if (!isIcebreaker(card) || playCostOf(card) > obs.credits) continue;
+    if (!isIcebreaker(card) || playCostOf(card) > obs.credits || Number(obs.info(card).memoryunits ?? 1) > memoryLeft) continue;
     const subs = subtypes(card);
     const ai = subs.includes("AI");
     const adds = ai ? ICE_TYPES.filter((t) => !covered.has(t)) : (["Fracter", "Decoder", "Killer"] as const).flatMap((b, i) => (subs.includes(b) && !covered.has(ICE_TYPES[i]) ? [ICE_TYPES[i]] : []));
@@ -167,6 +168,7 @@ export function runnerProposals(obs: Observation): Proposal[] {
   }
   for (const card of obs.hand) {
     if (card.type === "Event" || isIcebreaker(card) || obs.credits < playCostOf(card) + 2) continue;
+    if (card.type === "Program" && Number(obs.info(card).memoryunits ?? 1) > memoryLeft) continue;
     push(proposal(playOf(obs, card), 30 + (card.type === "Hardware" ? 5 : 0), `install ${card.title}`, "install"));
   }
   for (const card of obs.hand) {

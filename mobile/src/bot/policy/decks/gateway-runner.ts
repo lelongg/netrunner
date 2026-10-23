@@ -15,7 +15,7 @@ const inHand = (obs: Observation, title: string) => obs.hand.find((c) => c.title
 const inRig = (obs: Observation, title: string) => obs.rig.find((c) => c.title === title);
 const ranSuccessfullyThisTurn = (obs: Observation) => obs.memory.runs.some((r) => r.turn === obs.turn && r.successful && obs.myTurn);
 const lastClick = (obs: Observation) => obs.clicks === 1;
-const runScore = (t: Target, bonus = 0) => 40 + (t.value + bonus - t.credits * 0.4 - t.damage * 1.5) * 4;
+const runScore = (t: Target, bonus = 0) => 40 + (t.value + bonus - t.credits * 0.4 - t.damage * 1.5 - t.server.ices.filter((i: any) => !i.rezzed).length * 0.8) * 4;
 
 interface Target {
   server: ServerInfo;
@@ -30,7 +30,8 @@ function targets(obs: Observation, extra = 0, includeWorthless = false): Target[
   for (const server of obs.servers) {
     const value = serverValue(obs, server);
     if (value <= 0 && !includeWorthless) continue;
-    const est = estimateRun(obs, server, 3, obs.credits + extra);
+    const corpCredits = Number(obs.opp.credit ?? 0);
+    const est = estimateRun(obs, server, corpCredits < 1 ? 0 : corpCredits < 3 ? 1 : 3, obs.credits + extra);
     if (est.blocked) continue;
     out.push({ server, value, credits: est.credits, exact: est.exact, damage: est.damage });
   }
@@ -42,7 +43,7 @@ function requiredHand(obs: Observation, t: Target) {
   const trapDamage = t.server.remote && t.server.content.some((c: any) => !c.rezzed && !c.title) ? 2 + Math.min(adv, 2) : 0;
   const unrezzed = t.server.ices.filter((i: any) => !i.rezzed).length;
   const corpCanRez = Number(obs.opp.credit ?? 0) >= 4;
-  return t.damage + trapDamage + (unrezzed ? (corpCanRez ? 3 : 2) : 0) + 1;
+  return t.damage + trapDamage + (unrezzed ? (corpCanRez ? 3 : 2) : 0);
 }
 
 function safeHand(obs: Observation, t: Target) {
@@ -52,9 +53,9 @@ function safeHand(obs: Observation, t: Target) {
   const corpPoints = Number(obs.opp["agenda-point"] ?? 0);
   const need = Number(obs.opp["agenda-point-req"] ?? 7);
   const desperate = t.server.remote && adv >= 2 && corpPoints + 3 >= need;
-  const corpCanRez = Number(obs.opp.credit ?? 0) >= 4;
-  const required = desperate ? 2 : t.damage + trapDamage + (unrezzed ? (corpCanRez ? 3 : 2) : 0);
-  return obs.hand.length >= 1 && obs.hand.length > required;
+  const corpCredits = Number(obs.opp.credit ?? 0);
+  const required = desperate ? 2 : t.damage + trapDamage + (unrezzed ? (corpCredits >= 4 ? 3 : corpCredits >= 1 ? 2 : 0) : 0);
+  return obs.hand.length > required;
 }
 
 function plan(obs: Observation, current: Plan | null): Plan {
@@ -78,6 +79,13 @@ function mulligan(obs: Observation) {
   if (econ >= 1 && (breakers >= 1 || runs >= 1)) return { keep: true, why: `${econ} economy, ${breakers} breakers, ${runs} run events` };
   if (econ >= 2) return { keep: true, why: "two economy cards" };
   return { keep: false, why: "no economy to start with" };
+}
+
+function reserve(obs: Observation): number {
+  const iced = obs.servers.filter((s) => s.remote && s.ices.length > 0);
+  if (!iced.length) return 4;
+  const costs = iced.map((s) => estimateRun(obs, s, 3, 99).credits + 1);
+  return Math.min(10, Math.max(4, Math.min(...costs)));
 }
 
 function bestServerChoice(obs: Observation, allowed: (label: string) => boolean, extra = 0, paid = 0): { label: string; why: string } | null {
@@ -105,15 +113,16 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
   const redTeam = inHand(obs, "Red Team");
   if (redTeam && obs.credits >= 7 && cov.size >= 2) push(proposal(playOf(obs, redTeam), 64, "Red Team: paid runs on the centrals", "install-economy"));
   const penny = inHand(obs, "Pennyshaver");
-  if (penny && obs.credits >= 5 && !inRig(obs, "Pennyshaver")) push(proposal(playOf(obs, penny), 50, "Pennyshaver: memory and a credit per successful run", "install"));
+  if (penny && obs.credits >= 8 && !inRig(obs, "Pennyshaver")) push(proposal(playOf(obs, penny), 46, "Pennyshaver: memory and a credit per successful run", "install"));
   const docklands = inHand(obs, "Docklands Pass");
-  if (docklands && obs.credits >= 4) push(proposal(playOf(obs, docklands), 42, "Docklands Pass: a second HQ access", "install"));
+  if (docklands && obs.credits >= 8) push(proposal(playOf(obs, docklands), 38, "Docklands Pass: a second HQ access", "install"));
 
   const rezzedTypes = new Set<string>();
   for (const s of obs.servers) for (const ice of s.ices) if (ice.rezzed) for (const t of ice.subtypes ?? []) rezzedTypes.add(t);
+  const memoryLeft = Number(obs.me.memory?.available ?? 4) - Number(obs.me.memory?.used ?? 0);
   for (const title of BREAKER_ORDER) {
     const card = inHand(obs, title);
-    if (!card || inRig(obs, title)) continue;
+    if (!card || inRig(obs, title) || memoryLeft < 1) continue;
     const cost = playCostOf(card);
     const discounted = title === "Carmen" && ranSuccessfullyThisTurn(obs);
     if (cost > obs.credits) continue;
@@ -121,11 +130,11 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
     const seen = Object.entries(CORP_ICE_TYPES).some(([ice, t]) => obs.memory.opponentTitles.has(ice) && t === type);
     const blocking = rezzedTypes.has(type) && !cov.has(type as any);
     const reserve = obs.credits - cost;
-    const score = (blocking ? 72 : seen ? 66 : 54) + (discounted ? 6 : 0) - (reserve < 2 ? 15 : 0) + (title === "Cleaver" ? 3 : 0);
+    const score = (blocking ? 72 : seen ? 66 : 54) + (discounted ? 6 : 0) - (reserve < 2 ? 20 : reserve < 4 ? 8 : 0) + (title === "Cleaver" ? 3 : 0);
     push(proposal(playOf(obs, card), score, `install ${title}${blocking ? ": rezzed ice of its type is in the way" : seen ? ": its ice type is on the board" : ""}${discounted ? " at a discount" : ""}`, "install-breaker"));
   }
   const mayfly = inHand(obs, "Mayfly");
-  if (mayfly && cov.size < 3 && obs.credits >= 6 && plan.kind === "contest") push(proposal(playOf(obs, mayfly), 60, "Mayfly for one decisive run into the remote", "install-breaker"));
+  if (mayfly && cov.size < 3 && obs.credits >= 6 && plan.kind === "contest" && memoryLeft >= 2) push(proposal(playOf(obs, mayfly), 60, "Mayfly for one decisive run into the remote", "install-breaker"));
 
   const jailbreak = inHand(obs, "Jailbreak");
   if (jailbreak && obs.memory.runsThisTurn < 2) {
@@ -166,16 +175,38 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
     }
   }
   const thin = obs.hand.length <= 1;
-  if (obs.hand.length <= 2 && obs.clicks >= 2 && drawsThisTurn < 2 && (obs.me["deck-count"] ?? 0) > 0) {
-    const draw = byCommand(obs, "draw")[0];
-    if (draw) push(proposal(draw, 52, "draw: too few cards to survive net damage", "draw"));
+  const floor = reserve(obs);
+  const spend = (p: Proposal): number => {
+    if (p.kind === "run" || p.kind === "run-event" || p.kind === "click-economy") {
+      const t = ts.find((x) => p.why.includes(x.server.label));
+      return t ? t.credits : 0;
+    }
+    if (p.kind.startsWith("install")) {
+      const card = obs.hand.find((c) => p.why.includes(c.title));
+      return card ? playCostOf(card) : 0;
+    }
+    return 0;
+  };
+  for (const p of out) {
+    const cost = spend(p);
+    if (cost > 0 && obs.credits - cost < floor && !(plan.kind === "contest" && p.why.includes(String(plan.detail?.server))) && !(plan.kind === "closing" && (p.kind === "run" || p.kind === "run-event")) && !p.why.startsWith("install Cleaver") && !p.why.startsWith("install Unity") && !p.why.startsWith("install Carmen")) {
+      p.score -= 15;
+      p.why += ` (would drop below the ${floor} needed for the remote)`;
+    }
   }
+  if (obs.hand.length <= 2 && drawsThisTurn < 3 && (obs.me["deck-count"] ?? 0) > 0) {
+    const safeRun = ts.some((t) => t.credits <= obs.credits && t.value >= 3 && safeHand(obs, t));
+    const draw = byCommand(obs, "draw")[0];
+    if (draw) push(proposal(draw, safeRun ? 52 : 70, safeRun ? "draw: too few cards to survive net damage" : "draw: nothing is safe to run with this grip", "draw"));
+    if (vrcation && obs.credits >= 1) push(proposal(playOf(obs, vrcation), 74, "VRcation: refill the grip", "draw"));
+  }
+  for (const p of out) if (p.kind === "install-breaker" && p.why.startsWith("install Mayfly") && plan.kind !== "contest") p.score = 20;
   for (const p of out) {
     if (thin && (p.kind === "install" || p.kind === "install-breaker" || p.kind === "install-economy") && obs.clicks <= 2) p.score -= 20;
-    if (p.kind === "credit" && obs.credits < 6 && cov.size >= 2) p.score += 12;
+    if (p.kind === "credit" && obs.credits < 8 && cov.size >= 2) p.score += 12;
     if (p.kind === "run" || p.kind === "run-event") {
       const t = ts.find((x) => p.why.includes(x.server.label));
-      if (t && t.credits >= obs.credits - 1 && t.value < 4) p.score -= 12;
+      if (t && t.credits > 0 && obs.credits - t.credits < 3 && t.value < 5 && plan.kind !== "closing") p.score -= 22;
     }
     if (p.kind === "run") {
       const t = ts.find((x) => p.why.startsWith(`run ${x.server.label}`));
@@ -224,6 +255,12 @@ function prompt(obs: Observation, plan: Plan): Proposal | null {
     if (worth && obs.credits - cost >= 3) return { move: choiceMove(obs, trash), score: 70, why: `trash ${card.title} for ${cost}`, kind: "choice" };
     const no = findChoice(obs, /^no action$/i);
     if (no) return { move: choiceMove(obs, no), score: 60, why: `leave ${card?.title ?? "it"}: not worth ${cost}`, kind: "choice" };
+  }
+  if (/(memory|\[mu\])/i.test(obs.promptText) && obs.promptType === "select") {
+    const cards = selectable(obs).filter((c) => c.type === "Program");
+    const order = (c: any) => (c.title === "Mayfly" ? 0 : isIcebreaker(c) ? 2 : 1);
+    const pick = [...cards].sort((a, b) => order(a) - order(b))[0];
+    if (pick) return { move: selectMove(obs, pick), score: 70, why: `free memory by trashing ${pick.title}`, kind: "select" };
   }
   if (/discard down/i.test(obs.promptText) && obs.promptType === "select") {
     const cards = selectable(obs);
