@@ -220,14 +220,50 @@ A single loss or a single disagreement with the model is not evidence of a bug: 
 suggestion is a hypothesis that the games must confirm. Changes that fix exactly one replay
 and nothing else should be refused.
 
+## Core decks: one policy per faction
+
+`policy/decks/core.ts` holds seven core-format decks (System Gateway plus Elevation, 40
+cards, the System Gateway identities), checked legal with the deck rules (`analyze` in
+`deckrules.ts`) and seeded into the app's saved decks, the agent's `list_decks` and the
+evaluation:
+
+| Deck | Identity | Archetype module |
+|---|---|---|
+| `core-hb` | Haas-Bioroid: Precision Design | `glacier-score`: bioroids, Seamless Launch, Skunkworks, Humanoid Resources |
+| `core-jinteki` | Jinteki: Restoring Humanity | `glacier-score` + punish: Urtica and Byte! as bait, Anoetic Void, Neurospike kills, damage ice rezzed against a thin grip |
+| `core-nbn` | NBN: Reality Plus | `glacier-score` + tags: Public Trail, Retribution, Bigger Picture, resource trashes, Idiosyncresis, AMAZE Amusements |
+| `core-weyland` | Weyland: Built to Last | `glacier-score` + advance: a first advancement on every advanceable ice, Clearinghouse, Key Performance Indicators, Malapert |
+| `core-anarch` | René "Loup" Arcemont | `central-pressure` + viruses: Fermenter, Leech, Botulus, Gourmand, Rent Rioters, Scrounge, Loup trashes |
+| `core-criminal` | Zahya Sadeghi | `central-pressure`: Docklands, Red Team, Mutual Favor, Clean Getaway, Lie Low, Maintenance Access |
+| `core-shaper` | Tāo Salonga | `central-pressure` + lock: Conduit, Devadatta Drone, Illumination, Ritual, Pantograph, DZMZ |
+
+The two Gateway policies export their parts as the `glacier` and `centralPressure`
+archetypes; each core module spreads one of them and overrides `proposals`, `prompt` or
+`run` for its own cards. What the archetypes need from a deck comes from the **deck
+profile** (`policy/profile.ts`), computed from card text: economy events and their net gain,
+click and passive economy, draw, run events, breakers by ice type, consoles, ice by type,
+traps, damage and fast-advance operations, tag sources and tag punishment, agendas. The bot
+receives its deck at construction and the observation carries the matched list and its
+profile, so the archetypes name no cards for these roles. Prompts that belong to a card
+rather than to a deck (Byte!, Funhouse, Karunā, Public Trail, Lie Low, Mutual Favor, the
+Corp's own-card selects that never give up an agenda, ice placement) live in
+`policy/cards.ts` and serve every policy.
+
+The evaluation takes `--corp-deck` and `--runner-deck` keys in place of a matchup, and
+`--grid` plays every core Corp deck against every core Runner deck and prints the table.
+
 ## Adding a policy
 
-1. Add the deck list (identity and card counts) next to `policy/decks/gateway.ts`.
-2. Create `policy/decks/<name>.ts`, build a `DeckPolicy` and call `registerPolicy`. Start from
-   `plan` and `proposals`; add `prompt` and `run` only for the cards whose generic handling
-   is wrong.
-3. Import the file from `src/bot/index.ts` and `scripts/policy-eval.mjs` so it registers.
-4. Run the evaluation: the summary says `FALLBACK` when no fingerprint matched.
+1. Add the deck list (identity and card counts) to `policy/decks/core.ts` or next to
+   `policy/decks/gateway.ts`, and check it with `analyze(deck, format)` from `deckrules`.
+2. Create `policy/decks/<name>.ts`: spread an archetype (`glacier` or `centralPressure`) or
+   build a `DeckPolicy` from scratch, and call `registerPolicy`. Add `proposals`, `prompt`
+   and `run` only for the cards whose generic or archetype handling is wrong; prompts that
+   belong to a card go in `policy/cards.ts`.
+3. Import the file from `policy/decks/index.ts` so it registers everywhere.
+4. Run the evaluation with `--full` on a few games and list the prompts the records carry
+   (`records[].prompt`) to see what the new cards ask; the summary says `FALLBACK` when no
+   fingerprint matched.
 
 ## Results
 

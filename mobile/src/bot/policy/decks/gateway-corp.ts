@@ -137,7 +137,9 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
   if (office && bait && baitSafe && obs.credits >= 3 && !installed && obs.clicks <= 2) push(proposal(playOf(obs, office, bait.label), 71, `Offworld Office in ${bait.label} pays 7 when scored: install late in the turn`, "install-agenda"));
   const hqServer = obs.servers.find((s) => s.key === "hq")!;
   const agendasHeld = obs.hand.filter((c) => c.type === "Agenda").length;
-  if (agendasHeld >= 1 && hqServer.ices.length < 3 && !serverSafety(obs, hqServer).safe) {
+  const remoteReady = remotes(obs).some((s) => s.ices.length > 0 && s.content.every((c: any) => c.type === "Upgrade"));
+  const hqCap = agendasHeld >= 3 && !remoteReady && obs.hand.some((c) => c.type === "ICE") ? 2 : 3;
+  if (agendasHeld >= 1 && hqServer.ices.length < hqCap && !serverSafety(obs, hqServer).safe) {
     const ice = obs.hand.filter((c) => c.type === "ICE").sort((a, b) => iceRank(obs, b) - iceRank(obs, a))[0];
     const budget = obs.credits - hqServer.ices.length;
     if (ice && budget >= rezCostOf(ice) + 2) push(proposal(playOf(obs, ice, "HQ"), agendasHeld >= 2 ? 72 : 63, `add ${ice.title} to HQ: ${agendasHeld} agenda${agendasHeld > 1 ? "s" : ""} in hand and the Runner can get in`, "install-ice"));

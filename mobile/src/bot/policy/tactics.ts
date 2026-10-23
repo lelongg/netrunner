@@ -82,17 +82,18 @@ export interface IceThreat {
   exact: boolean;
 }
 
-export function iceThreat(ice: any, info: CardInfo, runnerCredits?: number): IceThreat {
+export function iceThreat(ice: any, info: CardInfo, runnerCredits?: number, runnerGrip?: number): IceThreat {
   const subs: any[] = ice.subroutines ?? [];
   const labels = subs.filter((s) => !s.broken && !s.fired).map((s) => String(typeof s.label === "string" ? s.label : ""));
   const text = plain(info.text ?? "");
   const source = labels.length ? labels.join("\n") : text;
-  const damage = [...source.matchAll(/do (\d+) (?:net|meat|core|brain) damage/gi)].reduce((n, m) => n + Number(m[1]), 0);
+  const unless = source.match(/end the run unless the runner suffers (\d+) (?:net|meat) damage/i);
+  const damage = [...source.matchAll(/do (\d+) (?:net|meat|core|brain) damage/gi)].reduce((n, m) => n + Number(m[1]), 0) + (unless && (runnerGrip === undefined || runnerGrip > Number(unless[1])) ? Number(unless[1]) : 0);
   const loss = [...source.matchAll(/(?:runner loses|make the runner lose) (\d+)\s*\[credits?\]/gi)].reduce((n, m) => n + Number(m[1]), 0);
   const segments = source.split(/\n|\.\s+/).map((x) => x.trim());
   const poor = source.match(/end the run if the runner has (\d+)\s*\[credits?\] or (?:fewer|less)|if the runner has (\d+)\s*\[credits?\] or (?:fewer|less), end the run/i);
   const unconditional = segments.some((x) => /^end the run\.?$/i.test(x));
-  const etr = unconditional || (!!poor && (runnerCredits === undefined || runnerCredits - loss <= Number(poor[1] ?? poor[2])));
+  const etr = unconditional || (!!poor && (runnerCredits === undefined || runnerCredits - loss <= Number(poor[1] ?? poor[2]))) || (!!unless && runnerGrip !== undefined && runnerGrip <= Number(unless[1]));
   return { etr, damage, creditLoss: loss, tag: /\btag\b/i.test(source), exact: labels.length > 0 };
 }
 
@@ -200,7 +201,7 @@ export function serverSafety(obs: Observation, server: ServerInfo): Safety {
       }
       budget -= cost;
     }
-    const threat = iceThreat(asRezzed, obs.info(ice), runnerCredits + 4 - runnerCost);
+    const threat = iceThreat(asRezzed, obs.info(ice), runnerCredits + 4 - runnerCost, Number(obs.view.runner?.["hand-count"] ?? obs.view.runner?.hand?.length ?? 5));
     const types = iceTypes(ice);
     const covered = types.length > 0 && types.some((t) => cov.has(t));
     if (!covered) {
@@ -214,6 +215,7 @@ export function serverSafety(obs: Observation, server: ServerInfo): Safety {
     } else exact = false;
   }
   for (const c of server.content) if (c.title === "Manegarm Skunkworks" && (c.rezzed || budget >= 2)) runnerCost += 3;
+  if (server.content.some((c: any) => c.title === "Anoetic Void") && obs.credits >= 2 && obs.hand.filter((c: any) => c.type !== "Agenda").length >= 1 && obs.hand.length >= 2) blocked = true;
   const expected = runnerCredits + 4;
   const safe = server.ices.length > 0 && (blocked || runnerCost > expected + 2);
   return { blocked, runnerCost, rezCost, exact, safe, margin: blocked ? Infinity : runnerCost - expected };
