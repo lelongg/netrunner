@@ -24,15 +24,10 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
     if (have === 0) freshAdvance(ice, obs.credits <= 6 ? 50 : 38, `advance ${ice.title}: Built to Last pays two credits back`);
     else if (ice.title === "Pharos" && have < 3 && obs.credits >= 6 && !installed) push(proposal(cardAction(obs, ice, "advance"), 36, `advance Pharos towards strength ten (${have}/3)`, "advance"));
   }
-  const clearing = glacier.inHand(obs, "Clearinghouse");
   const bait = glacier.remotes(obs).find((s) => s.ices.length > 0 && !s.content.length);
-  if (clearing && obs.credits >= 2 && glacier.remotes(obs).length <= 4) push(proposal(playOf(obs, clearing, bait ? bait.label : "New remote"), bait ? 52 : 44, "Clearinghouse: a threat that pays to advance", "install-trap"));
   for (const s of glacier.remotes(obs)) {
     for (const card of s.content) {
-      if (card.title !== "Clearinghouse") continue;
-      const have = advancement(card);
-      if (have === 0) freshAdvance(card, 54, "advance Clearinghouse: two credits back and a threat");
-      else if (have < runnerGrip(obs) && obs.credits >= 2 && !installed) push(proposal(cardAction(obs, card, "advance"), 34 + have * 4, `advance Clearinghouse (${have}) towards the Runner's grip of ${runnerGrip(obs)}`, "advance"));
+      if (card.title === "Clearinghouse") freshAdvance(card, 54, "advance Clearinghouse: two credits back and a threat");
     }
   }
   const kpi = glacier.inHand(obs, "Key Performance Indicators");
@@ -54,14 +49,6 @@ function prompt(obs: Observation, plan: Plan): Proposal | null {
   if (deck) return deck;
   const from = promptFrom(obs);
   const text = obs.promptText;
-  if (from === "Clearinghouse" && /trash/i.test(text) && obs.promptType !== "select") {
-    const card = obs.servers.flatMap((s) => s.content).find((c: any) => c.title === "Clearinghouse");
-    const have = card ? advancement(card) : 0;
-    const yes = findChoice(obs, /^yes$/i);
-    const no = findChoice(obs, /^no$/i);
-    if (yes && have >= runnerGrip(obs) && have > 0) return { move: choiceMove(obs, yes), score: 95, why: `Clearinghouse: ${have} meat damage against a grip of ${runnerGrip(obs)}`, kind: "choice" };
-    if (no) return { move: choiceMove(obs, no), score: 60, why: "Clearinghouse: keep building the threat", kind: "choice" };
-  }
   if (from === "Key Performance Indicators" && obs.promptType !== "select") {
     const order = obs.hand.some((c) => c.type === "ICE") ? [/install/i, /gain 2/i, /advancement/i, /draw/i] : [/gain 2/i, /advancement/i, /draw/i, /install/i];
     for (const re of order) {
@@ -90,7 +77,7 @@ function prompt(obs: Observation, plan: Plan): Proposal | null {
 
 export const coreWeyland: DeckPolicy = registerPolicy({
   id: "core-weyland-advance",
-  version: "0.2.0",
+  version: "0.3.0",
   side: "corp",
   decks: [CORE_WEYLAND],
   ...glacier,
