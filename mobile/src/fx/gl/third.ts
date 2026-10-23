@@ -70,37 +70,6 @@ const stoneTexture = () =>
     g.fill();
   });
 
-export async function governmentSubsidy(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const hand = at(0.38, 0.32);
-  const seal = glowSprite(fx, sealTexture(), GOLD);
-  seal.position.set(...hand);
-  const rings = new Graphics();
-  rings.blendMode = "add";
-  fx.addChild(rings);
-  const motes = new Emitter(fx);
-  root.addChild(fx);
-  let stamped = false;
-  await run(app, (t, dt) => {
-    const drop = ease.inOut(span(t, 0.05, 0.4));
-    seal.alpha = Math.min(1, drop * 2) * (1 - span(t, 1.1, 1.5));
-    seal.scale.set((unit / 96) * (0.9 - 0.45 * drop));
-    seal.rotation = (1 - drop) * 0.6;
-    if (drop >= 1 && !stamped) {
-      stamped = true;
-      burst(motes, ...hand, 22, GOLD, unit * 1.3, { life: 0.6, scale: 0.35 });
-      navigator.vibrate?.(30);
-    }
-    rings.clear();
-    const k = span(t, 0.4, 1);
-    if (k > 0 && k < 1) rings.circle(...hand, unit * (0.18 + 0.2 * ease.out(k))).stroke({ width: unit * 0.02 * (1 - k) + 1, color: GOLD, alpha: 1 - k });
-    if (t > 0.4 && t < 1.2 && Math.random() < 0.4) motes.add(sparkTexture(), ...at(rnd(0.05, 0.95), rnd(0.12, 0.48)), { vy: -unit * 0.1, life: 0.6, tint: 0xfff0b0, scale: 0.18 * (unit / 180), grow: -0.2 });
-    motes.step(dt);
-    return t < 1.7 || motes.list.length > 0;
-  });
-  await done();
-}
-
 export async function verbalPlasticity(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
   const tip = at(0.53, 0.2);

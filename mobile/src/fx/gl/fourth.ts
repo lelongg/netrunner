@@ -258,41 +258,6 @@ export async function rentRioters(rect: DOMRect, code: string, ready?: Ready, bo
   await done();
 }
 
-export async function sangKancilPose(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const deer = at(0.45, 0.2);
-  const g = new Graphics();
-  g.blendMode = "add";
-  fx.addChild(g);
-  const splash = new Emitter(fx);
-  const halo = glowSprite(fx, glowTexture(), GOLD);
-  halo.position.set(...deer);
-  root.addChild(fx);
-  let splashed = false;
-  await run(app, (t, dt) => {
-    g.clear();
-    const k = span(t, 0.1, 0.8);
-    const from = at(0.15, 0.42);
-    const to = at(0.75, 0.42);
-    const peak: Pt = [deer[0], deer[1] - unit * 0.05];
-    const q = (s: number): Pt => [(1 - s) ** 2 * from[0] + 2 * (1 - s) * s * peak[0] + s * s * to[0], (1 - s) ** 2 * from[1] + 2 * (1 - s) * s * peak[1] + s * s * to[1]];
-    if (k > 0) {
-      g.moveTo(...q(Math.max(0, k - 0.35)));
-      for (let i = 1; i <= 16; i++) g.lineTo(...q(Math.max(0, k - 0.35) + (Math.min(k, 0.35) * i) / 16));
-      g.stroke({ width: unit * 0.02, color: GOLD, alpha: 0.85 * (1 - span(t, 0.9, 1.3)), cap: "round" });
-    }
-    if (k >= 1 && !splashed) {
-      splashed = true;
-      for (let i = 0; i < 18; i++) splash.add(glowTexture(), to[0] + rnd(-1, 1) * unit * 0.05, to[1], { vx: rnd(-1, 1) * unit * 0.5, vy: -unit * rnd(0.4, 1), gravity: unit * 2.5, life: 0.7, tint: 0x9be8ff, scale: (unit / 128) * rnd(0.02, 0.04) });
-    }
-    halo.alpha = 0.5 * Math.sin(Math.PI * span(t, 0, 1.5));
-    halo.scale.set((unit / 128) * 0.35);
-    splash.step(dt);
-    return t < 1.5 || splash.list.length > 0;
-  });
-  await done();
-}
-
 export async function sangKancil(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const sc = await scene(rect, code, ready, board);
   const { app, root, fx, done, unit, at } = sc;

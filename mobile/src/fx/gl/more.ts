@@ -231,78 +231,6 @@ function fireball(fire: Fire, x: number, y: number, r: number, n: number) {
   }
 }
 
-export async function measuredResponse(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, card, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const blast = at(0.84, 0.25);
-  const tail = at(0.23, 0.28);
-  const wave = new ShockwaveFilter({ center: { x: 0, y: 0 }, amplitude: unit * 0.03, wavelength: unit * 0.25, speed: unit * 1.8, brightness: 1.1, radius: unit * 0.6, time: 0 });
-  card.filters = [wave];
-  const heat = shimmer(root, card, rect, unit * 0.02);
-  const smoke = new Smoke(fx);
-  const fire = new Fire(fx, undefined, unit * 0.9);
-  const debris = new Emitter(fx);
-  const flash = glowSprite(fx, glowTexture(), 0xfff6e0);
-  flash.position.set(...blast);
-  const ring = new Graphics();
-  ring.blendMode = "add";
-  fx.addChild(ring);
-  const engine = glowSprite(fx, glowTexture(), 0x7fd8ff);
-  engine.position.set(...tail);
-  root.addChild(fx);
-  const salvo = board?.grip ? Array.from({ length: 6 }, (_, i) => homing(fx, glowTexture(), blast, pt(board.grip!), 0.45 + i * 0.05, ORANGE, (unit / 128) * 0.1, rnd(-1, 1) * unit * 0.6)) : [];
-  const pops = [
-    { t: 0.32, at: at(0.72, 0.18) },
-    { t: 0.48, at: at(0.93, 0.33) },
-    { t: 0.62, at: at(0.68, 0.33) },
-  ].map((p) => ({ ...p, done: false }));
-  let struck = false;
-  let boomed = false;
-  const base = card.position.clone();
-  await run(app, (t, dt) => {
-    if (t > 0.1 && !boomed) {
-      boomed = true;
-      fireball(fire, ...blast, unit * 0.12, 26);
-      for (let i = 0; i < 22; i++) {
-        const a = rnd(-Math.PI * 0.95, 0.1);
-        const v = unit * rnd(1, 2.4);
-        debris.add(sparkTexture(), blast[0], blast[1], { vx: Math.cos(a) * v, vy: Math.sin(a) * v, gravity: unit * 2.6, drag: 0.5, life: rnd(0.7, 1.2), tint: i % 3 ? 0xffc070 : WHITE, scale: 0.28 * (unit / 180) });
-      }
-      navigator.vibrate?.([40, 30, 80]);
-    }
-    for (const p of pops)
-      if (!p.done && t > p.t) {
-        p.done = true;
-        fireball(fire, ...p.at, unit * 0.07, 12);
-      }
-    for (const d of debris.list) if (Math.random() < 0.3) fire.emit(d.s.x, d.s.y, { vx: 0, vy: 0, size: unit * 0.025, life: 0.25 });
-    if (t > 0.35 && t < 1.5 && Math.random() < 0.45) smoke.puff(blast[0] + rnd(-1, 1) * unit * 0.18, blast[1] + rnd(-0.6, 0.2) * unit * 0.12, { vx: rnd(-1, 1) * unit * 0.08, vy: -unit * rnd(0.12, 0.25), life: 1.8, size: unit * rnd(0.16, 0.24), grow: 2.2, tint: 0x2a2220, alpha: 0.55 });
-    wave.center = filterPoint(card, ...blast);
-    wave.time = Math.max(0, t - 0.1);
-    flash.alpha = t < 0.1 ? t / 0.1 : Math.max(0, 1 - (t - 0.1) / 0.18);
-    flash.scale.set((unit / 128) * (0.25 + 0.5 * ease.out(span(t, 0.05, 0.3))));
-    ring.clear();
-    const rk = span(t, 0.1, 0.55);
-    if (rk > 0 && rk < 1) ring.circle(...blast, unit * (0.05 + 0.5 * ease.out(rk))).stroke({ width: unit * 0.02 * (1 - rk) + 1, color: 0xffe0b0, alpha: 0.7 * (1 - rk) });
-    engine.alpha = (0.45 + 0.35 * Math.sin(t * 40)) * (1 - span(t, 1.5, 1.9));
-    engine.scale.set((unit / 128) * 0.12);
-    const quake = t > 0.1 && t < 0.6 ? (1 - (t - 0.1) / 0.5) * unit * 0.02 : 0;
-    card.position.set(base.x + rnd(-1, 1) * quake, base.y + rnd(-1, 1) * quake);
-    heat(t, Math.sin(Math.PI * span(t, 0.1, 1.8)));
-    if (flyHome(salvo, t, debris, ORANGE) === salvo.length && salvo.length && !struck) {
-      struck = true;
-      const [gx, gy] = pt(board!.grip!);
-      fireball(fire, gx, gy, unit * 0.08, 14);
-      navigator.vibrate?.([30, 20, 60]);
-    }
-    fire.step(dt);
-    debris.step(dt);
-    smoke.step(dt);
-    return t < 1.9 || smoke.list.length > 0 || fire.list.length > 0;
-  });
-  card.position.copyFrom(base);
-  await done();
-}
-
 export async function keyPerformanceIndicators(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
   const trend: Pt[] = [
@@ -1018,43 +946,6 @@ export async function gourmandPose(rect: DOMRect, code: string, ready?: Ready, b
   await done();
 }
 
-export async function gourmand(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, card, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const c = board?.access ? pt(board.access) : at(0.46, 0.33);
-  const span0 = board?.access ? board.access.width / 2 : unit * 0.36;
-  const jaws = new Graphics();
-  jaws.blendMode = "add";
-  fx.addChild(jaws);
-  const crumbs = new Emitter(fx);
-  root.addChild(fx);
-  const base = card.position.clone();
-  let chomped = false;
-  await run(app, (t, dt) => {
-    const k = ease.back(span(t, 0, 0.3));
-    const open = span0 * 0.8 * (1 - k);
-    const w = span0;
-    jaws.clear();
-    const a = 1 - span(t, 0.45, 0.8);
-    for (const dir of [-1, 1]) {
-      const y = c[1] + dir * (open + unit * 0.02);
-      jaws.moveTo(c[0] - w, y);
-      for (let i = 0; i <= 8; i++) jaws.lineTo(c[0] - w + (i * 2 * w) / 8, y - dir * (i % 2 ? span0 * 0.14 : 0));
-      jaws.stroke({ width: Math.max(2, span0 * 0.03), color: 0x7dff7a, alpha: a });
-    }
-    if (k >= 0.95 && !chomped) {
-      chomped = true;
-      burst(crumbs, c[0], c[1], 22, 0x7dff7a, span0 * 4, { life: 0.6, scale: 0.35, gravity: unit * 1.5 });
-      navigator.vibrate?.(25);
-    }
-    const shake = chomped && t < 0.5 ? unit * 0.012 : 0;
-    card.position.set(base.x + rnd(-1, 1) * shake, base.y + rnd(-1, 1) * shake);
-    crumbs.step(dt);
-    return t < 0.9 || crumbs.list.length > 0;
-  });
-  card.position.copyFrom(base);
-  await done();
-}
-
 export async function eventHorizon(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, card, fx, done, unit, at } = await scene(rect, code, ready, board);
   const hole = at(0.56, 0.76);
@@ -1497,37 +1388,6 @@ export async function pingFire(rect: DOMRect, code: string, ready?: Ready, board
     core.alpha = Math.max(0, 1 - t / 0.6);
     core.scale.set((unit / 128) * (0.2 + 0.3 * t));
     return t < 0.95;
-  });
-  await done();
-}
-
-export async function flyswatterFire(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, card, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const c = at(0.58, 0.78);
-  const mesh = new Graphics();
-  mesh.blendMode = "add";
-  fx.addChild(mesh);
-  const sparks = new Emitter(fx);
-  root.addChild(fx);
-  let snapped = false;
-  await run(app, (t, dt) => {
-    const k = ease.back(span(t, 0, 0.35));
-    const R = unit * (0.7 - 0.4 * k);
-    mesh.clear();
-    const a = 1 - span(t, 0.5, 0.9);
-    for (let i = -3; i <= 3; i++) {
-      mesh.moveTo(c[0] + (i / 3) * R, c[1] - R).lineTo(c[0] + (i / 3) * R, c[1] + R);
-      mesh.moveTo(c[0] - R, c[1] + (i / 3) * R).lineTo(c[0] + R, c[1] + (i / 3) * R);
-    }
-    mesh.stroke({ width: 1.5, color: CYAN, alpha: a });
-    if (k >= 0.95 && !snapped) {
-      snapped = true;
-      burst(sparks, c[0], c[1], 20, 0xbff3ff, unit * 1.2, { life: 0.45, scale: 0.35 });
-      card.tint = 0xd0f4ff;
-    }
-    if (t > 0.5) card.tint = WHITE;
-    sparks.step(dt);
-    return t < 0.95 || sparks.list.length > 0;
   });
   await done();
 }

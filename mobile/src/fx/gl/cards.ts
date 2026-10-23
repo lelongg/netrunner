@@ -314,90 +314,6 @@ export async function predictivePlanogram(rect: DOMRect, code: string, ready?: R
   await done();
 }
 
-export async function hedgeFund(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, fx, done, at } = await scene(rect, code, ready, board);
-  const dim = new Graphics().poly([...at(0.03, 0.08), ...at(0.97, 0.08), ...at(0.97, 0.52), ...at(0.03, 0.52)]).fill({ color: 0x020806, alpha: 0.5 });
-  const grid = new Graphics();
-  for (let i = 1; i < 6; i++) grid.moveTo(...at(0.05, 0.08 + (0.44 * i) / 6)).lineTo(...at(0.95, 0.08 + (0.44 * i) / 6));
-  grid.stroke({ color: GREEN, width: 1, alpha: 0.18 });
-  root.addChild(dim, grid);
-  const pts: [number, number][] = [];
-  let v = 0.47;
-  for (let i = 0; i <= 12; i++) {
-    pts.push(at(0.08 + (0.84 * i) / 12, Math.max(0.12, v)));
-    v -= 0.3 / 12 + (Math.random() - 0.35) * 0.05 * (i % 3 === 2 ? -1.6 : 1);
-  }
-  const line = new Graphics();
-  fx.addChild(line);
-  const head = new Sprite(sparkTexture());
-  head.anchor.set(0.5);
-  head.blendMode = "add";
-  head.tint = GREEN;
-  fx.addChild(head);
-  const trail = new Emitter(fx);
-  root.addChild(fx);
-  const top = pts[pts.length - 1];
-  await run(app, (t, dt) => {
-    dim.alpha = span(t, 0, 0.2) * (1 - span(t, 1.8, 2.2));
-    grid.alpha = dim.alpha;
-    const k = ease.inOut(span(t, 0.15, 1.05));
-    const n = k * (pts.length - 1);
-    const i = Math.floor(n);
-    const f = n - i;
-    const hx = i >= pts.length - 1 ? top[0] : pts[i][0] + (pts[i + 1][0] - pts[i][0]) * f;
-    const hy = i >= pts.length - 1 ? top[1] : pts[i][1] + (pts[i + 1][1] - pts[i][1]) * f;
-    line.clear();
-    const color = t > 1.05 ? GOLD : GREEN;
-    for (const [lw, a] of [
-      [10, 0.15],
-      [5, 0.4],
-      [2.2, 1],
-    ] as const) {
-      line.moveTo(pts[0][0], pts[0][1]);
-      for (let j = 1; j <= i && j < pts.length; j++) line.lineTo(pts[j][0], pts[j][1]);
-      line.lineTo(hx, hy);
-      line.stroke({ width: lw, color: a === 1 ? WHITE : color, alpha: a * (1 - span(t, 1.8, 2.2)), cap: "round", join: "round" });
-    }
-    head.position.set(hx, hy);
-    head.scale.set(0.8 + 0.2 * Math.sin(t * 30));
-    head.alpha = 1 - span(t, 1.2, 1.5);
-    if (t < 1.1 && Math.random() < 0.8) trail.add(sparkTexture(), hx, hy, { vx: (Math.random() - 0.5) * 60, vy: 30 + Math.random() * 60, life: 0.6, tint: GREEN, scale: 0.25 + Math.random() * 0.2, grow: -0.3 });
-    trail.step(dt);
-    return t < 2.25 || trail.list.length > 0;
-  });
-  await done();
-}
-
-export async function spinDoctor(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, card, fx, zoom, done, cx, cy, unit } = await scene(rect, code, ready, board);
-  const twist = new TwistFilter({ radius: Math.hypot(rect.width, rect.height) * 0.6, angle: 0, offset: { x: 0, y: 0 }, padding: unit });
-  const split = new RGBSplitFilter({ red: { x: 0, y: 0 }, green: { x: 0, y: 0 }, blue: { x: 0, y: 0 } });
-  card.filters = [twist, split];
-  const orbit = new Emitter(fx);
-  const ring = new Graphics();
-  fx.addChild(ring);
-  await run(app, (t, dt) => {
-    const p = span(t, 0.05, 1.3);
-    const k = Math.sin(Math.PI * p);
-    twist.angle = 1.6 * k * k * Math.sin(p * Math.PI * 2);
-    twist.offset = filterPoint(card, cx, cy);
-    const s = 4 * Math.max(0, 1 - Math.abs(t - 0.65) * 3);
-    split.red = { x: -s, y: 0 };
-    split.blue = { x: s, y: 0 };
-    zoom(1 - 0.08 * k);
-    for (let n = 0; n < 3 && t < 1.3; n++) {
-      const a = t * 9 + n * ((Math.PI * 2) / 3);
-      const rr = Math.max(rect.width, rect.height) * (0.6 - 0.12 * k);
-      orbit.add(sparkTexture(), cx + Math.cos(a) * rr * 0.8, cy + Math.sin(a) * rr, { life: 0.45, tint: n === 1 ? VIOLET : CYAN, scale: 0.5 * (unit / 180), grow: -1 });
-    }
-    orbit.step(dt);
-    ring.clear();
-    ringAt(ring, cx, cy, Math.max(rect.width, rect.height) * 1.2, span(t, 1.15, 1.8), CYAN, 6);
-    return t < 1.85 || orbit.list.length > 0;
-  });
-  await done();
-}
-
 export async function pingRez(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, card, fx, done, unit, at } = await scene(rect, code, ready, board);
   const [bx, by] = at(0.41, 0.74);
@@ -756,38 +672,6 @@ export async function cleanGetaway(rect: DOMRect, code: string, ready?: Ready, b
   await done();
 }
 
-export async function risingTide(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const sc = await scene(rect, code, ready, board);
-  const { app, root, card, fx, done, cx, cy, unit } = sc;
-  const water = new Graphics();
-  const mask = new Graphics().rect(rect.left, rect.top, rect.width, rect.height).fill(0xffffff);
-  water.mask = mask;
-  root.addChild(mask, water);
-  const wave = new ShockwaveFilter({ center: { x: 0, y: 0 }, amplitude: unit * 0.06, wavelength: unit * 0.4, speed: unit * 2.2, brightness: 1.15, radius: -1, time: 0 });
-  card.filters = [wave];
-  const glints = new Emitter(fx);
-  root.addChild(fx);
-  const impact = strikeFx(sc, "splash", CYAN, [cx, cy]);
-  await run(
-    app,
-    (t, dt) => {
-      const level = rect.bottom - rect.height * ease.out(span(t, 0, 0.8)) * 0.9 * (1 - ease.inOut(span(t, 1, 1.5)));
-      water.clear();
-      water.moveTo(rect.left, rect.bottom);
-      for (let i = 0; i <= 20; i++) water.lineTo(rect.left + (rect.width * i) / 20, level + Math.sin(i * 0.9 + t * 9) * unit * 0.03);
-      water.lineTo(rect.right, rect.bottom).closePath().fill({ color: 0x1673c9, alpha: 0.45 });
-      if (Math.random() < 0.6 && t < 1.3) glints.add(sparkTexture(), rect.left + Math.random() * rect.width, level + Math.random() * (rect.bottom - level), { life: 0.4, tint: 0x9fe7ff, scale: 0.3 * (unit / 180), grow: -0.5 });
-      glints.step(dt);
-      wave.time = Math.max(0, t - 0.75);
-      wave.center = filterPoint(card, cx, cy);
-      return t < 1.6;
-    },
-    sc.strike ? 1.6 : 1,
-  );
-  await impact;
-  await done();
-}
-
 export async function echelon(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const sc = await scene(rect, code, ready, board);
   const { app, root, card, fx, done, unit, at } = sc;
@@ -920,3 +804,4 @@ export * from "./sixth";
 export * from "./seventh";
 export * from "./eighth";
 export * from "./revised";
+export * from "./revF";
