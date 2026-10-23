@@ -20,8 +20,7 @@ function target(e: Event): { el: HTMLElement; code: string } | null {
   const img = t?.closest<HTMLElement>(".card-image[data-code]");
   if (!img || img.closest(".tile, .deck-row-id, .fxgl")) return null;
   if (img.getBoundingClientRect().width < MIN_WIDTH) return null;
-  const host = img.closest("button, a, [role=button]");
-  if (host && !host.classList.contains("card-zoom-trigger")) return null;
+  if (img.closest("button, a, [role=button]")) return null;
   return { el: img, code: img.dataset.code! };
 }
 

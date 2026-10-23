@@ -4,6 +4,7 @@ import { type Peek, useDragPager } from "./swipe";
 import { useBackClose } from "../back";
 import { useHold } from "../hold";
 import { cardImage } from "../engine";
+import { present } from "../fx/present";
 
 interface Props {
   code: string;
@@ -165,30 +166,23 @@ export function useCardPeek(code: string | undefined, alt: string) {
 }
 
 export function ZoomableCardImage(props: Props & { gallery?: GalleryItem[]; galleryStart?: number; onGallery?: (index: number) => void }) {
-  const [zoomed, setZoomed] = useState(false);
-  useBackClose(zoomed, () => setZoomed(false));
-  const { gallery, galleryStart, onGallery, ...image } = props;
-  const start = gallery ? (galleryStart ?? gallery.findIndex((g) => g.code === props.code)) : -1;
-  const items = start >= 0 ? gallery! : [{ code: props.code, alt: props.alt }];
+  const { gallery: _gallery, galleryStart: _start, onGallery: _onGallery, ...image } = props;
   const peek = useCardPeek(props.code, props.alt);
   return (
     <>
-      <button class={`card-zoom-trigger ${props.class ?? ""}`} onClick={() => peek.consumed() || setZoomed(true)} aria-label={`Enlarge ${props.alt}`} {...peek.handlers}>
+      <button
+        class={`card-zoom-trigger ${props.class ?? ""}`}
+        onClick={(e) => {
+          if (peek.consumed()) return;
+          const el = (e.currentTarget as HTMLElement).querySelector<HTMLElement>(".card-image");
+          if (el && props.code) present(el, props.code);
+        }}
+        aria-label={`Animate ${props.alt}`}
+        {...peek.handlers}
+      >
         <CardImage {...image} class="" />
       </button>
       {peek.view}
-      {zoomed &&
-        createPortal(
-          <CardZoom
-            items={items}
-            start={Math.max(0, start)}
-            onClose={(i) => {
-              setZoomed(false);
-              if (start >= 0 && i !== start) onGallery?.(i);
-            }}
-          />,
-          document.body,
-        )}
     </>
   );
 }
