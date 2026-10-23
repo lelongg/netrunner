@@ -86,7 +86,7 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
       if (safety && !safety.safe) {
         const canRezOne = target!.ices.some((i) => i.rezzed || rezCostOf(i) <= obs.credits - 1);
         const hq = obs.servers.find((s) => s.key === "hq")!;
-        const hqSafer = serverSafety(obs, hq).margin > safety.margin + 2 && obs.hand.length < 5;
+        const hqSafer = serverSafety(obs, hq).margin > safety.margin + 2 && obs.hand.length < 5 && agendasInHand <= 1;
         const contestable = target!.ices.length >= 1 && canRezOne && obs.credits >= 3 && !hqSafer && (safety.margin >= -4 || (racing && safety.margin >= -8));
         p.score = contestable ? Math.min(p.score, racing ? 58 : 48) - (points >= 3 ? 10 : 0) : Math.min(p.score, 15);
         p.why += ` (the Runner can get in: margin ${safety.margin}${racing ? ", racing" : ""}${canRezOne ? "" : ", no ice can be rezzed"}${hqSafer ? ", HQ is safer" : ""})`;
@@ -97,7 +97,7 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
 
   const urtica = inHand(obs, "Urtica Cipher");
   const bait = remotes(obs).find((s) => s.ices.length > 0 && !s.content.length);
-  if (urtica && !obs.hand.some((c) => c.type === "Agenda") && bait && obs.credits >= 2 && remotes(obs).length <= 2) push(proposal(playOf(obs, urtica, bait.label), 48, `install Urtica Cipher in ${bait.label} as an advanceable bait`, "install-trap"));
+  if (urtica && obs.credits >= 2 && remotes(obs).length <= 3) push(proposal(playOf(obs, urtica, "New remote"), obs.turn <= 3 ? 50 : 40, `install Urtica Cipher in a new remote as a bait`, "install-trap"));
   for (const s of remotes(obs)) {
     for (const card of s.content) {
       if (card.title !== "Urtica Cipher" || obs.credits < 3 || obs.hand.some((c) => c.type === "Agenda")) continue;
@@ -110,7 +110,7 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
 
   for (const s of remotes(obs)) {
     for (const card of s.content) {
-      if (card.title === "Regolith Mining License" && card.rezzed) push(proposal(cardAction(obs, card, "ability", /take 3/i), obs.credits < 8 ? 57 : 44, "Regolith Mining License: take 3 credits", "click-economy"));
+      if (card.title === "Regolith Mining License" && card.rezzed) push(proposal(cardAction(obs, card, "ability", /take 3/i), obs.credits < 8 ? 57 : obs.credits < 15 ? 44 : 31, "Regolith Mining License: take 3 credits", "click-economy"));
     }
   }
   const hub = inHand(obs, "Superconducting Hub");
@@ -122,7 +122,7 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
   if (weak && !serverSafety(obs, weak).safe && weak.ices.length < 3) {
     const ice = obs.hand.filter((c) => c.type === "ICE").sort((a, b) => (ICE_RANK[b.title] ?? 0) - (ICE_RANK[a.title] ?? 0))[0];
     const budget = obs.credits - weak.ices.length;
-    if (ice && budget >= rezCostOf(ice) + 2) push(proposal(playOf(obs, ice, weak.label), installed ? 74 : 64, `add ${ice.title} to ${weak.label}: the Runner can still get in`, "install-ice"));
+    if (ice && budget >= rezCostOf(ice) + 2) push(proposal(playOf(obs, ice, weak.label), installed ? 74 : obs.credits >= 12 ? 70 : 64, `add ${ice.title} to ${weak.label}: the Runner can still get in`, "install-ice"));
     else if (ice) push(proposal(playOf(obs, ice, weak.label), 30, `add ${ice.title} to ${weak.label} later: not enough credits to rez it`, "install-ice"));
   }
 

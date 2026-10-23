@@ -37,9 +37,17 @@ function targets(obs: Observation, extra = 0, includeWorthless = false): Target[
   return out.sort((a, b) => b.value - b.credits * 0.3 - (a.value - a.credits * 0.3));
 }
 
+function requiredHand(obs: Observation, t: Target) {
+  const adv = Math.max(0, ...t.server.content.map((c: any) => agendaProgress(c).have));
+  const trapDamage = t.server.remote && t.server.content.some((c: any) => !c.rezzed && !c.title) ? 2 + Math.min(adv, 2) : 0;
+  const unrezzed = t.server.ices.filter((i: any) => !i.rezzed).length;
+  const corpCanRez = Number(obs.opp.credit ?? 0) >= 4;
+  return t.damage + trapDamage + (unrezzed ? (corpCanRez ? 3 : 2) : 0) + 1;
+}
+
 function safeHand(obs: Observation, t: Target) {
   const adv = Math.max(0, ...t.server.content.map((c: any) => agendaProgress(c).have));
-  const trapDamage = t.server.remote && t.server.content.some((c: any) => !c.rezzed && !c.title) ? 2 + adv : 0;
+  const trapDamage = t.server.remote && t.server.content.some((c: any) => !c.rezzed && !c.title) ? 2 + Math.min(adv, 2) : 0;
   const unrezzed = t.server.ices.filter((i: any) => !i.rezzed).length;
   const corpPoints = Number(obs.opp["agenda-point"] ?? 0);
   const need = Number(obs.opp["agenda-point-req"] ?? 7);
@@ -54,8 +62,10 @@ function plan(obs: Observation, current: Plan | null): Plan {
   const points = Number(obs.me["agenda-point"] ?? 0);
   const need = Number(obs.me["agenda-point-req"] ?? 7);
   const cov = coverage(obs);
-  const threat = obs.servers.find((s) => s.remote && s.content.some((c: any) => agendaProgress(c).have >= 1 || (!c.rezzed && !c.title && s.ices.length > 0 && obs.turn >= 3 && cov.size >= 1)));
-  if (threat && obs.credits >= 3) return keep("contest", `the Corp is setting up ${threat.label}: get into it before it scores`, { server: threat.label });
+  const overclock = obs.hand.some((c) => c.title === "Overclock") ? 5 : 0;
+  const reach = new Set(targets(obs, overclock, true).filter((t) => t.credits <= obs.credits + overclock + 2).map((t) => t.server.label));
+  const threat = obs.servers.find((s) => s.remote && reach.has(s.label) && s.content.some((c: any) => agendaProgress(c).have >= 1 || (!c.rezzed && !c.title && s.ices.length > 0 && obs.turn >= 3 && cov.size >= 1)));
+  if (threat && obs.credits >= 3 && (obs.hand.length >= 2 || Number(obs.opp["agenda-point"] ?? 0) + 3 >= need)) return keep("contest", `the Corp is setting up ${threat.label}: get into it before it scores`, { server: threat.label });
   if (points >= need - 2 && obs.credits >= 4) return keep("closing", "two points away: hit R&D and HQ every turn");
   if (obs.credits < 5 || cov.size < 2) return keep("setup", "economy first, then Cleaver, Unity and Carmen");
   return keep("pressure", "run the centrals with Jailbreak and Red Team, keep the remote honest");
@@ -140,21 +150,33 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
     if (ability && central) push(proposal(ability, Math.max(runScore(central, 1.5), central.credits === 0 ? 56 : 0), `Red Team run on ${central.server.label}: +3 credits`, "click-economy", central.exact));
   }
 
+  const drawsThisTurn = ((obs.memory.notes.kinds as string[] | undefined) ?? []).filter((k) => k === "draw").length;
   if (plan.kind === "contest") {
     const target = ts.find((t) => t.server.label === plan.detail?.server);
-    if (target && !safeHand(obs, target) && obs.hand.length < 5) {
+    if (target) {
+      for (const p of out) if (p.kind === "install-breaker" && target.server.ices.some((i: any) => !i.rezzed)) p.score = Math.max(p.score, 68);
+    }
+  }
+  if (plan.kind === "contest" && drawsThisTurn < 2) {
+    const target = ts.find((t) => t.server.label === plan.detail?.server);
+    if (target && !safeHand(obs, target) && obs.hand.length < 5 && requiredHand(obs, target) <= 5) {
       const draw = byCommand(obs, "draw")[0];
       if (draw) push(proposal(draw, 59, `draw up before contesting ${target.server.label}`, "draw"));
       if (vrcation && obs.credits >= 1) push(proposal(playOf(obs, vrcation), 66, `VRcation to refill the grip before contesting ${target.server.label}`, "draw"));
     }
   }
   const thin = obs.hand.length <= 1;
-  if (obs.hand.length <= 2 && obs.clicks >= 2 && (obs.me["deck-count"] ?? 0) > 0) {
+  if (obs.hand.length <= 2 && obs.clicks >= 2 && drawsThisTurn < 2 && (obs.me["deck-count"] ?? 0) > 0) {
     const draw = byCommand(obs, "draw")[0];
     if (draw) push(proposal(draw, 52, "draw: too few cards to survive net damage", "draw"));
   }
   for (const p of out) {
     if (thin && (p.kind === "install" || p.kind === "install-breaker" || p.kind === "install-economy") && obs.clicks <= 2) p.score -= 20;
+    if (p.kind === "credit" && obs.credits < 6 && cov.size >= 2) p.score += 12;
+    if (p.kind === "run" || p.kind === "run-event") {
+      const t = ts.find((x) => p.why.includes(x.server.label));
+      if (t && t.credits >= obs.credits - 1 && t.value < 4) p.score -= 12;
+    }
     if (p.kind === "run") {
       const t = ts.find((x) => p.why.startsWith(`run ${x.server.label}`));
       if (t && !safeHand(obs, t)) p.score -= 40;

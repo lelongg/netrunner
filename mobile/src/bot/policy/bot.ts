@@ -66,6 +66,10 @@ export class PolicyBot {
       this.banned.clear();
     }
     updateMemory(this.memory, view, this.side);
+    if (this.memory.notes.kindsTurn !== turnKey) {
+      this.memory.notes.kindsTurn = turnKey;
+      this.memory.notes.kinds = [];
+    }
     this.trackRun(view);
     const obs = observe(view, this.side, this.memory, this.lookup, this.render, this.random);
     const { stage, proposals, unhandled } = this.consider(obs);
@@ -89,6 +93,7 @@ export class PolicyBot {
     const note = unhandled;
     if (note) this.unhandled++;
     if (!chosen && note && this.rescue) chosen = this.rescueMove(obs);
+    if (chosen && stage === "click") (this.memory.notes.kinds as string[]).push(chosen.kind);
     if (chosen?.move.command === "run") {
       const server = obs.servers.find((s) => s.label === (chosen!.move.args as any)?.server);
       this.pendingRun = { server: server?.label ?? "", cids: (server?.content ?? []).filter((c: any) => !c.rezzed && !c["advance-counter"]).map((c: any) => c.cid), points: obs.me["agenda-point"] ?? 0, breached: false, turn: obs.turn };
@@ -190,6 +195,7 @@ export class PolicyBot {
     const points = view[this.side]?.["agenda-point"] ?? 0;
     const stole = points > pending.points;
     if (pending.breached && !stole) pending.cids.forEach((cid) => this.memory.duds.add(cid));
+    if (pending.breached && !stole && pending.server === "R&D") this.memory.notes.rdSeenTurn = Number(view.turn ?? 0);
     noteRun(this.memory, { turn: pending.turn, server: pending.server, successful: pending.breached, stole, accessed: [] });
     this.pendingRun = null;
   }
