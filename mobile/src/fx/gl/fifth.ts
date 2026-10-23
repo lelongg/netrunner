@@ -320,40 +320,6 @@ export async function vrcation(rect: DOMRect, code: string, ready?: Ready, board
   await done();
 }
 
-export async function cookbook(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const book = at(0.52, 0.3);
-  const page = new Graphics();
-  page.blendMode = "add";
-  fx.addChild(page);
-  const glyphs = new Emitter(fx);
-  const glow = glowSprite(fx, glowTexture(), 0xffc35a);
-  glow.position.set(...book);
-  root.addChild(fx);
-  await run(app, (t, dt) => {
-    glow.alpha = 0.45 * Math.sin(Math.PI * span(t, 0, 1.8));
-    glow.scale.set((unit / 128) * 0.5, (unit / 128) * 0.3);
-    page.clear();
-    for (let n = 0; n < 3; n++) {
-      const k = span(t, 0.1 + n * 0.3, 0.5 + n * 0.3);
-      if (k <= 0 || k >= 1) continue;
-      const a = Math.PI * k;
-      const spine = at(0.52, 0.28);
-      const w = unit * 0.28;
-      const tipX = spine[0] + Math.cos(a) * w;
-      const tipY = spine[1] - Math.sin(a) * w * 0.35;
-      page
-        .poly([spine[0], spine[1] - unit * 0.08, tipX, tipY - unit * 0.08, tipX, tipY + unit * 0.08, spine[0], spine[1] + unit * 0.08])
-        .fill({ color: 0xffd890, alpha: 0.25 })
-        .stroke({ width: 1, color: 0xfff0c8, alpha: 0.7 });
-    }
-    if (t < 1.5 && Math.random() < 0.5) glyphs.add(cubeTexture(), book[0] + rnd(-1, 1) * unit * 0.25, book[1], { vy: -unit * rnd(0.15, 0.3), spin: rnd(-1, 1), life: 0.9, tint: 0xffd890, scale: (unit / 180) * rnd(0.2, 0.35), alpha: 0.7 });
-    glyphs.step(dt);
-    return t < 1.8 || glyphs.list.length > 0;
-  });
-  await done();
-}
-
 export async function nicoCampaign(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
   const model = glowSprite(fx, glowTexture(), 0xe8d8ff);

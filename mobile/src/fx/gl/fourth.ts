@@ -77,34 +77,6 @@ export async function phatGioan(rect: DOMRect, code: string, ready?: Ready, boar
   await done();
 }
 
-export async function devadattaDrone(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const fly = at(0.43, 0.36);
-  const halo = glowSprite(fx, glowTexture(), 0x7dff5a);
-  halo.position.set(...fly);
-  const drones = Array.from({ length: 7 }, (_, i) => ({ s: glowSprite(fx, sparkTexture(), 0xd0ffd8), a: (i / 7) * Math.PI * 2, r: rnd(0.22, 0.34), w: rnd(1.5, 2.6) }));
-  const trail = new Emitter(fx);
-  root.addChild(fx);
-  await run(app, (t, dt) => {
-    const on = span(t, 0, 0.3) * (1 - span(t, 1.6, 2));
-    const buzz = 0.6 + 0.4 * Math.sin(t * 60);
-    halo.alpha = on * 0.6 * buzz;
-    halo.scale.set((unit / 128) * 0.35);
-    for (const d of drones) {
-      d.a += d.w * dt;
-      const x = fly[0] + Math.cos(d.a) * unit * d.r;
-      const y = fly[1] + Math.sin(d.a * 1.3) * unit * d.r * 0.6;
-      d.s.position.set(x, y);
-      d.s.alpha = on;
-      d.s.scale.set((unit / 120) * 0.18);
-      if (Math.random() < 0.4) trail.add(sparkTexture(), x, y, { life: 0.3, tint: 0x7dff5a, scale: 0.15 * (unit / 180), grow: -0.3 });
-    }
-    trail.step(dt);
-    return t < 2 || trail.list.length > 0;
-  });
-  await done();
-}
-
 export async function openMarket(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
   const signs: [Pt, number][] = [
@@ -447,36 +419,6 @@ export async function retribution(rect: DOMRect, code: string, ready?: Ready, bo
     wave.time = Math.max(0, t - 0.35);
     shards.step(dt);
     return t < 1.4 || shards.list.length > 0;
-  });
-  await done();
-}
-
-export async function betaBuild(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, card, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const glow = new GlowFilter({ color: 0xd8c8ff, distance: 14, outerStrength: 0, quality: 0.3 });
-  card.filters = [glow];
-  const scan = new Graphics();
-  scan.blendMode = "add";
-  fx.addChild(scan);
-  const visor = glowSprite(fx, glowTexture(), 0x7dff9a);
-  visor.position.set(...at(0.41, 0.13));
-  const bits = new Emitter(fx);
-  root.addChild(fx);
-  await run(app, (t, dt) => {
-    scan.clear();
-    const k = ease.inOut(span(t, 0.1, 1.1));
-    const v = 0.07 + 0.43 * k;
-    if (k > 0 && k < 1) {
-      scan.poly([...at(0.02, v - 0.004), ...at(0.98, v - 0.004), ...at(0.98, v + 0.004), ...at(0.02, v + 0.004)]).fill({ color: WHITE, alpha: 0.9 });
-      scan.poly([...at(0.02, v - 0.05), ...at(0.98, v - 0.05), ...at(0.98, v), ...at(0.02, v)]).fill({ color: 0xd8c8ff, alpha: 0.15 });
-      if (Math.random() < 0.8) bits.add(cubeTexture(), ...at(rnd(0.05, 0.95), v), { vy: -unit * 0.1, life: 0.4, tint: 0xd8c8ff, scale: (unit / 180) * 0.3, alpha: 0.7 });
-    }
-    glow.outerStrength = 2.5 * Math.sin(Math.PI * span(t, 0.5, 1.8));
-    const on = Math.sin(Math.PI * span(t, 0.3, 1.8));
-    visor.alpha = on * (0.7 + 0.3 * Math.sin(t * 14));
-    visor.scale.set((unit / 128) * 0.12);
-    bits.step(dt);
-    return t < 1.8 || bits.list.length > 0;
   });
   await done();
 }

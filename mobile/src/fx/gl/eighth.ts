@@ -109,33 +109,6 @@ export async function tomorrowsHeadline(rect: DOMRect, code: string, ready?: Rea
   await done();
 }
 
-export async function aboveTheLaw(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const sat = glowSprite(fx, sparkTexture(), WHITE);
-  sat.position.set(...at(0.75, 0.13));
-  const g = new Graphics();
-  g.blendMode = "add";
-  fx.addChild(g);
-  const horizon: Pt[] = Array.from({ length: 25 }, (_, i) => at(0.03 + i * 0.039, 0.27 - 0.06 * Math.sin((Math.PI * i) / 24)));
-  root.addChild(fx);
-  await run(app, (t) => {
-    g.clear();
-    const f = Math.sin(Math.PI * span(t, 0, 0.7));
-    sat.alpha = f;
-    sat.rotation = t;
-    sat.scale.set((unit / 120) * 0.5 * f);
-    const k = ease.inOut(span(t, 0.3, 1.3));
-    const fade = 1 - span(t, 1.4, 1.8);
-    const head = k * (horizon.length - 1);
-    const tail = Math.max(0, head - 8);
-    g.moveTo(...horizon[Math.floor(tail)]);
-    for (let i = Math.ceil(tail); i <= head; i++) g.lineTo(...horizon[i]);
-    g.stroke({ width: 1.8, color: 0x9be0ff, alpha: 0.8 * fade });
-    return t < 1.8;
-  });
-  await done();
-}
-
 export async function offworldOfficeScore(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
   const g = new Graphics();

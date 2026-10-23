@@ -66,8 +66,14 @@ function load(file: string): Promise<AudioBuffer | null> {
   return buffer;
 }
 
+let silenced = false;
+
+export function silence() {
+  silenced = true;
+}
+
 export function soundOn() {
-  return settings.sound && settings.volume > 0;
+  return !silenced && settings.sound && settings.volume > 0;
 }
 
 export function cue(name: Sound | string, delay = 0, volume = 1) {

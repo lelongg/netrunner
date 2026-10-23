@@ -36,24 +36,6 @@ function arcFrom(g: Graphics, c: Pt, r: number, a0: number, a1: number) {
   return g.moveTo(c[0] + Math.cos(a0) * r, c[1] + Math.sin(a0) * r).arc(c[0], c[1], r, a0, a1);
 }
 
-export async function charmOffensive(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const between = at(0.62, 0.24);
-  const bokeh = new Emitter(fx);
-  const warm = glowSprite(fx, glowTexture(), 0xffa07a);
-  warm.position.set(...between);
-  root.addChild(fx);
-  await run(app, (t, dt) => {
-    const f = Math.sin(Math.PI * span(t, 0, 1.6));
-    warm.alpha = 0.5 * f;
-    warm.scale.set((unit / 128) * (0.5 + 0.15 * f));
-    if (t < 1.2 && Math.random() < 0.8) bokeh.add(glowTexture(), ...at(rnd(0.3, 0.92), rnd(0.25, 0.5)), { vy: -unit * rnd(0.08, 0.2), vx: rnd(-1, 1) * unit * 0.03, life: rnd(0.8, 1.2), tint: [0xffb08a, 0xff8ab0, 0xffe0a0][Math.floor(rnd(0, 3))], scale: (unit / 128) * rnd(0.05, 0.11), alpha: 0.75 });
-    bokeh.step(dt);
-    return t < 1.6 || bokeh.list.length > 0;
-  });
-  await done();
-}
-
 export async function shred(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, card, fx, done, unit, at } = await scene(rect, code, ready, board);
   const amp = at(0.38, 0.36);
@@ -152,145 +134,6 @@ export async function illumination(rect: DOMRect, code: string, ready?: Ready, b
     return t < 1.7 || motes.list.length > 0;
   });
   card.filters = [];
-  await done();
-}
-
-export async function blingPose(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const c = at(0.48, 0.32);
-  const g = new Graphics();
-  g.blendMode = "add";
-  fx.addChild(g);
-  const glint = glowSprite(fx, sparkTexture(), WHITE);
-  glint.position.set(...at(0.4, 0.24));
-  root.addChild(fx);
-  await run(app, (t) => {
-    g.clear();
-    const fade = 1 - span(t, 1.3, 1.7);
-    const on = span(t, 0, 0.3) * fade;
-    const R = unit * 0.2;
-    for (let i = 0; i < 5; i++) {
-      const a = t * 2.2 + (i * Math.PI) / 5;
-      const w = Math.abs(Math.cos(a)) * R;
-      g.ellipse(c[0], c[1], Math.max(0.5, w), R * 0.9).stroke({ width: 1, color: 0x8fd8ff, alpha: 0.55 * on });
-    }
-    for (let j = 1; j < 4; j++) g.ellipse(c[0], c[1] - R * 0.9 + (R * 1.8 * j) / 4, R * Math.sin((Math.PI * j) / 4), R * 0.1).stroke({ width: 1, color: 0x8fd8ff, alpha: 0.4 * on });
-    const f = Math.sin(Math.PI * span(t, 0.6, 1.2));
-    glint.alpha = f;
-    glint.rotation = t;
-    glint.scale.set((unit / 120) * 0.5 * f);
-    return t < 1.7;
-  });
-  await done();
-}
-
-export async function cacophonyPose(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, card, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const bird = at(0.38, 0.25);
-  const split = new RGBSplitFilter({ red: { x: 0, y: 0 }, green: { x: 0, y: 0 }, blue: { x: 0, y: 0 } });
-  card.filters = [split];
-  const bits = new Emitter(fx);
-  const colors = [0xff4fb0, 0x4fe0ff, 0x8aff6a, 0xffd84a];
-  root.addChild(fx);
-  await run(app, (t, dt) => {
-    const on = Math.sin(Math.PI * span(t, 0, 1.4));
-    const jit = Math.random() < 0.15 * on ? unit * 0.006 : 0;
-    split.red = { x: jit, y: 0 };
-    split.blue = { x: -jit, y: jit * 0.5 };
-    if (t < 1.1 && Math.random() < 0.7) {
-      const a = rnd(0, Math.PI * 2);
-      bits.add(triTexture(), bird[0] + Math.cos(a) * unit * 0.1, bird[1] + Math.sin(a) * unit * 0.08, { vx: Math.cos(a) * unit * rnd(0.4, 0.9), vy: Math.sin(a) * unit * rnd(0.3, 0.7), drag: 1.5, spin: rnd(-6, 6), life: 0.8, tint: colors[Math.floor(rnd(0, 4))], scale: (unit / 180) * rnd(0.15, 0.3), alpha: 0.85 });
-    }
-    bits.step(dt);
-    return t < 1.4 || bits.list.length > 0;
-  });
-  card.filters = [];
-  await done();
-}
-
-export async function cacophony(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, card, fx, world, done, unit, at } = await scene(rect, code, ready, board);
-  const bird = at(0.38, 0.25);
-  const split = new RGBSplitFilter({ red: { x: 0, y: 0 }, green: { x: 0, y: 0 }, blue: { x: 0, y: 0 } });
-  card.filters = [split];
-  const g = new Graphics();
-  g.blendMode = "add";
-  world.addChild(g);
-  const colors = [0xff4fb0, 0x4fe0ff, 0x8aff6a, 0xffd84a];
-  root.addChild(fx);
-  await run(app, (t) => {
-    g.clear();
-    const src = root.toGlobal({ x: bird[0], y: bird[1] });
-    const on = 1 - span(t, 0.3, 0.6);
-    split.red = { x: unit * 0.008 * on * Math.sin(t * 40), y: 0 };
-    split.blue = { x: -unit * 0.008 * on * Math.sin(t * 33), y: 0 };
-    for (let i = 0; i < 3; i++) {
-      const k = span(t, i * 0.18, i * 0.18 + 0.7);
-      if (k <= 0 || k >= 1) continue;
-      const R = unit * (0.2 + 2.2 * ease.out(k));
-      g.moveTo(src.x + R, src.y);
-      for (let s = 1; s <= 48; s++) {
-        const a = (s / 48) * Math.PI * 2;
-        const r = R * (1 + 0.06 * Math.sin(a * 9 + t * 30));
-        g.lineTo(src.x + Math.cos(a) * r, src.y + Math.sin(a) * r);
-      }
-      g.stroke({ width: 2 * (1 - k) + 0.6, color: colors[i], alpha: 0.75 * (1 - k) });
-    }
-    return t < 1.2;
-  });
-  card.filters = [];
-  g.destroy();
-  await done();
-}
-
-export async function detentePose(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const holo = at(0.38, 0.27);
-  const face = glowSprite(fx, cardTexture(), 0x6ad8ff);
-  face.position.set(...holo);
-  const chips = [at(0.08, 0.46), at(0.15, 0.48), at(0.22, 0.45)].map((p) => {
-    const s = glowSprite(fx, sparkTexture(), 0xff6a6a);
-    s.position.set(...p);
-    return s;
-  });
-  root.addChild(fx);
-  await run(app, (t) => {
-    const fade = 1 - span(t, 1.3, 1.7);
-    face.alpha = 0.8 * span(t, 0, 0.2) * fade;
-    face.scale.set((unit / 180) * 1.3 * Math.cos(t * 6), (unit / 180) * 1.3);
-    face.rotation = -0.3;
-    chips.forEach((c, i) => {
-      const f = Math.sin(Math.PI * span(t, 0.4 + i * 0.15, 0.9 + i * 0.15));
-      c.alpha = f;
-      c.scale.set((unit / 120) * 0.3 * f);
-    });
-    return t < 1.7;
-  });
-  await done();
-}
-
-export async function detente(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, world, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const holo = at(0.38, 0.27);
-  const cards = [0, 1].map(() => glowSprite(world, cardTexture(), 0x6ad8ff));
-  const trail = new Emitter(world);
-  root.addChild(fx);
-  await run(app, (t, dt) => {
-    const src = root.toGlobal({ x: holo[0], y: holo[1] });
-    cards.forEach((c, i) => {
-      const k = span(t, i * 0.15, i * 0.15 + 0.7);
-      const e = ease.inOut(k);
-      const to: Pt = [src.x + (i ? 1 : -1) * unit * 0.3, src.y - unit * 1.6];
-      const p = bezier([src.x, src.y], [src.x + (i ? 1 : -1) * unit * 0.6, src.y - unit * 0.6], to, e);
-      c.position.set(...p);
-      c.rotation = (i ? 1 : -1) * e * 2;
-      c.alpha = k > 0 && k < 1 ? 0.9 * (1 - k * k) : 0;
-      c.scale.set((unit / 180) * 1.1);
-      if (k > 0 && k < 1 && Math.random() < 0.6) trail.add(sparkTexture(), ...p, { life: 0.35, tint: 0x6ad8ff, scale: (unit / 180) * 0.3, grow: -0.8 });
-    });
-    trail.step(dt);
-    return t < 1 || trail.list.length > 0;
-  });
   await done();
 }
 
@@ -449,24 +292,6 @@ export async function madani(rect: DOMRect, code: string, ready?: Ready, board?:
     }
     feathers.step(dt);
     return t < 0.6 || feathers.list.length > 0;
-  });
-  await done();
-}
-
-export async function knickknack(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const bowl = at(0.64, 0.36);
-  const smoke = new Smoke(fx);
-  const holo = glowSprite(fx, glowTexture(), 0x4fd8ff);
-  holo.position.set(...at(0.42, 0.33));
-  root.addChild(fx);
-  await run(app, (t, dt) => {
-    if (t < 1.2 && Math.random() < 0.45) smoke.puff(bowl[0] + rnd(-1, 1) * unit * 0.08, bowl[1], { vy: -unit * rnd(0.15, 0.3), vx: rnd(-1, 1) * unit * 0.03, size: unit * 0.15, life: 1.3, grow: 2.2, tint: 0xf4f0e8, alpha: 0.55 });
-    const f = Math.sin(Math.PI * span(t, 0.2, 1.4));
-    holo.alpha = 0.6 * f;
-    holo.scale.set((unit / 128) * 0.12);
-    smoke.step(dt);
-    return t < 1.6 || smoke.list.length > 0;
   });
   await done();
 }

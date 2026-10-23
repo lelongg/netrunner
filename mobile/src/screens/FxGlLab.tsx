@@ -280,7 +280,8 @@ export function FxGlLab() {
   }, [loop, busy]);
 
   useEffect(() => {
-    strip.current?.querySelector(".on")?.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" });
+    const el = strip.current?.querySelector<HTMLElement>(".on");
+    if (el && strip.current) strip.current.scrollTo({ left: el.offsetLeft - (strip.current.clientWidth - el.offsetWidth) / 2, behavior: "smooth" });
   }, [pick]);
 
   const choose = (i: number) => {

@@ -9,7 +9,7 @@ import { animate } from "motion";
 import { installTips } from "./tips";
 import { PeekHost, installCardPeek } from "./peek";
 import { installMotion, useLoop } from "./fx/ui";
-import { unlockSound } from "./sound";
+import { silence, unlockSound } from "./sound";
 import { dive } from "./fx/dive";
 import { Credits } from "./screens/Credits";
 import { Profile } from "./screens/Profile";
@@ -605,13 +605,17 @@ onSettings(syncSettings);
 installTips();
 installCardPeek();
 installMotion();
+const lab = new URLSearchParams(location.search).has("fxgl");
+if (lab) silence();
 unlockSound();
-initMusic();
-installUiSounds();
-setMood("menu");
+if (!lab) {
+  initMusic();
+  installUiSounds();
+  setMood("menu");
+}
 startEngineWorker();
 render(
-  new URLSearchParams(location.search).has("fxgl") ? (
+  lab ? (
     <>
       <FxGlLab />
       <UpdateBanner />
