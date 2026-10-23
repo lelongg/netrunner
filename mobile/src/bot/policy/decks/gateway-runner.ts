@@ -5,7 +5,8 @@ import { registerPolicy } from "../registry.ts";
 import { fromCandidate, labelCost, runServer, runnerRun } from "../runs.ts";
 import { agendaProgress, coverage, estimateRun, iceThreat, isIcebreaker, playCostOf } from "../tactics.ts";
 const ICE_TYPES = new Set(["Barrier", "Code Gate", "Sentry"]);
-import type { DeckPolicy, Observation, Plan, Proposal, ServerInfo } from "../types.ts";
+import type { DeckList, DeckPolicy, Observation, Plan, Proposal, ServerInfo } from "../types.ts";
+import { CORE_CORP_DECKS } from "./core.ts";
 import { GATEWAY_CORP_BEGINNER, GATEWAY_CORP_INTERMEDIATE, GATEWAY_RUNNER_BEGINNER, GATEWAY_RUNNER_INTERMEDIATE } from "./gateway.ts";
 
 const isEconomyCard = (obs: Observation, c: any) => obs.profile.economy.has(c.title);
@@ -42,17 +43,27 @@ function targets(obs: Observation, extra = 0, includeWorthless = false): Target[
   return out.sort((a, b) => b.value - b.credits * 0.3 - (a.value - a.credits * 0.3));
 }
 
-const TRAPS = ["Urtica Cipher"];
-
-function trapsLeft(obs: Observation): number {
+const TRAP_DAMAGE: Record<string, (adv: number) => number> = { "Urtica Cipher": (adv) => 2 + Math.min(adv, 2), "Byte!": () => 3, "Snare!": () => 3 };
+const TRAPS = Object.keys(TRAP_DAMAGE);
+const KNOWN_CORP_DECKS: DeckList[] = [GATEWAY_CORP_BEGINNER, GATEWAY_CORP_INTERMEDIATE, ...CORE_CORP_DECKS];
+const opponentDeck = (obs: Observation) => {
   const identity = String(obs.opp.identity?.title ?? "");
-  const deck = [GATEWAY_CORP_BEGINNER, GATEWAY_CORP_INTERMEDIATE].find((d) => d.identity === identity);
-  if (!deck) return 1;
-  const total = deck.cards.filter((c) => TRAPS.includes(c.title)).reduce((n, c) => n + c.qty, 0);
+  return KNOWN_CORP_DECKS.find((d) => d.identity === identity);
+};
+
+function trapsLeft(obs: Observation): { count: number; damage: (adv: number) => number } {
+  const deck = opponentDeck(obs);
+  const none = { count: 0, damage: () => 0 };
+  if (!deck) return { count: 1, damage: TRAP_DAMAGE["Urtica Cipher"] };
+  const inDeck = deck.cards.filter((c) => TRAPS.includes(c.title));
+  if (!inDeck.length) return none;
+  const total = inDeck.reduce((n, c) => n + c.qty, 0);
   const known = new Set<string>();
   for (const s of obs.servers) for (const c of s.content) if (TRAPS.includes(c.title ?? obs.memory.seen.get(c.cid)?.title ?? "")) known.add(c.cid);
   for (const c of obs.opp.discard ?? []) if (TRAPS.includes(c.title ?? "")) known.add(c.cid);
-  return Math.max(0, total - known.size);
+  const count = Math.max(0, total - known.size);
+  const damage = (adv: number) => Math.max(...inDeck.map((c) => TRAP_DAMAGE[c.title](adv)));
+  return count ? { count, damage } : none;
 }
 
 function fullyCovered(obs: Observation, t: Target) {
@@ -64,10 +75,9 @@ function fullyCovered(obs: Observation, t: Target) {
 }
 
 function trapOdds(obs: Observation): number {
-  const traps = trapsLeft(obs);
+  const traps = trapsLeft(obs).count;
   if (traps === 0) return 0;
-  const identity = String(obs.opp.identity?.title ?? "");
-  const deck = [GATEWAY_CORP_BEGINNER, GATEWAY_CORP_INTERMEDIATE].find((d) => d.identity === identity);
+  const deck = opponentDeck(obs);
   if (!deck) return 0.5;
   const isAgenda = (title: string) => obs.info({ title }).type === "Agenda";
   const total = deck.cards.filter((c) => isAgenda(c.title)).reduce((n, c) => n + c.qty, 0);
@@ -80,11 +90,12 @@ const ambushDeck = (obs: Observation) => /jinteki/i.test(String(obs.opp.identity
 function accessRisk(obs: Observation, t: Target) {
   const adv = Math.max(0, ...t.server.content.map((c: any) => agendaProgress(c).have));
   const hidden = t.server.remote && t.server.content.some((c: any) => !c.rezzed && !c.title && !obs.memory.seen.has(c.cid));
-  if (!t.server.remote && ambushDeck(obs) && Number(obs.opp.credit ?? 0) >= 4) return t.damage + 3;
+  const traps = trapsLeft(obs);
+  if (!t.server.remote && traps.count > 0 && Number(obs.opp.credit ?? 0) >= 4) return t.damage + traps.damage(0);
   if (!hidden) return t.damage;
   const odds = trapOdds(obs);
   if (odds === 0 || (adv >= 2 && odds <= 0.2)) return t.damage;
-  return t.damage + 2 + Math.min(adv, 2);
+  return t.damage + traps.damage(adv);
 }
 
 function requiredHand(obs: Observation, t: Target, covered = fullyCovered(obs, t)) {
@@ -285,6 +296,10 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
       }
     }
   }
+  if (cov.size < 2 && obs.credits >= 10 && obs.hand.length <= 4 && drawsThisTurn < 3 && (obs.me["deck-count"] ?? 0) > 0) {
+    const draw = byCommand(obs, "draw")[0];
+    if (draw) push(proposal(draw, 48, "draw: rich but the rig is missing breakers", "draw"));
+  }
   const thin = obs.hand.length <= 1;
   const floor = reserve(obs);
   const floorNear = floor - obs.credits <= 6;
@@ -333,6 +348,10 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
     if (p.kind === "run") {
       const t = ts.find((x) => p.why.startsWith(`run ${x.server.label}`));
       if (t && !safeHand(obs, t)) p.score -= 40;
+      if (t && t.server.ices.some((i: any) => !i.rezzed) && !fullyCovered(obs, t) && Number(obs.opp.credit ?? 0) >= 4 && t.value < 8) {
+        p.score -= 12;
+        p.why += " (an unrezzed ice may be one the rig cannot break)";
+      }
       if (plan.kind === "contest" && t?.server.label === plan.detail?.server) p.score += 20;
       if (plan.kind === "closing" && t && !t.server.remote) p.score += 10;
       if (plan.kind === "setup" && t && t.credits > 0) p.score -= 10;
