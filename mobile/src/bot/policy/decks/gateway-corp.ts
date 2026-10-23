@@ -87,19 +87,20 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
         const canRezOne = target!.ices.some((i) => i.rezzed || rezCostOf(i) <= obs.credits - 1);
         const hq = obs.servers.find((s) => s.key === "hq")!;
         const hqSafer = serverSafety(obs, hq).margin > safety.margin + 2 && obs.hand.length < 5 && agendasInHand <= 1;
-        const contestable = target!.ices.length >= 1 && canRezOne && obs.credits >= 3 && !hqSafer && (safety.margin >= -4 || (racing && safety.margin >= -8));
+        const runnerCredits = Number(obs.opp.credit ?? 0);
+        const contestable = target!.ices.length >= 1 && canRezOne && obs.credits >= 3 && !hqSafer && plan.kind !== "economy" && (safety.margin >= -4 || (racing && runnerCredits <= 6 && safety.margin >= -8));
         p.score = contestable ? Math.min(p.score, racing ? 58 : 48) - (points >= 3 ? 10 : 0) : Math.min(p.score, 15);
         p.why += ` (the Runner can get in: margin ${safety.margin}${racing ? ", racing" : ""}${canRezOne ? "" : ", no ice can be rezzed"}${hqSafer ? ", HQ is safer" : ""})`;
-      } else if (card && obs.clicks < 3 && canScoreNextTurn(obs, card, !!seamless)) p.score = Math.max(p.score, 72);
+      } else if (card && target && safety?.safe && obs.clicks < 3 && canScoreNextTurn(obs, card, !!seamless)) p.score = Math.max(p.score, 72);
       if (obs.clicks === 3) p.score = Math.min(p.score, 50);
     }
   }
 
   const agendasStuck = obs.hand.some((c) => c.type === "Agenda") && !out.some((p) => p.kind === "install-agenda" && p.score > 20);
   const idle = !out.some((p) => p.kind !== "credit" && p.kind !== "draw" && p.score > 32);
-  if (agendasStuck && idle && obs.credits >= 6 && Number(obs.me["deck-count"] ?? 0) > 8) {
+  if (agendasStuck && idle && obs.credits >= 6 && (obs.hand.length <= 4 || obs.credits >= 10) && Number(obs.me["deck-count"] ?? 0) > 8) {
     const draw = byCommand(obs, "draw")[0];
-    if (draw) push(proposal(draw, 45, "draw: agendas wait in HQ and nothing in hand builds a remote for them", "draw"));
+    if (draw) push(proposal(draw, obs.hand.length <= 4 ? 45 : 40, "draw: agendas wait in HQ and nothing in hand builds a remote for them", "draw"));
   }
 
   const urtica = inHand(obs, "Urtica Cipher");
@@ -165,6 +166,7 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
     }
     if (plan.kind === "defend" && p.kind === "install-ice" && /(HQ|R&D)/.test(p.why)) p.score += 15;
     if (plan.kind === "economy" && (p.kind === "economy" || p.kind === "install-economy" || p.kind === "rez-economy" || p.kind === "click-economy")) p.score += 8;
+    if (plan.kind === "economy" && p.kind === "install-ice" && !/is open/.test(p.why)) p.score -= 10;
     if (plan.kind === "window" && p.kind === "install-agenda") p.score += 5;
   }
   return out;

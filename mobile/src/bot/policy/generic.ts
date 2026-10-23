@@ -94,7 +94,7 @@ export function corpProposals(obs: Observation): Proposal[] {
       push(proposal(playOf(obs, card, t.server.label), t.score - penalty, `install ${card.title} on ${t.server.label}: ${t.why}`, "install-ice"));
     }
   }
-  if (agendas.length && obs.hand.length > 5) push(proposal(playOf(obs, agendas[0], "New remote"), 25, `install ${agendas[0].title} naked to avoid discarding it`, "install-agenda"));
+  if (agendas.length && obs.hand.length > 5) push(proposal(playOf(obs, agendas[0], "New remote"), 25, `install ${agendas[0].title} naked to avoid discarding it`, "install-naked"));
   const trap = obs.hand.find((c) => c.type === "Asset" && isTrap(obs.info(c).text));
   if (trap && obs.servers.filter((s) => s.remote).length < 4 && obs.credits >= 3) push(proposal(playOf(obs, trap, "New remote"), 38, `install ${trap.title} as a bait`, "install-trap"));
   if (tagged(obs.view) && obs.credits >= 4 && (obs.view.runner?.rig?.resource ?? []).length) push(proposal(byCommand(obs, "trash-resource")[0], 45, "trash a resource while the Runner is tagged", "trash-resource"));
@@ -103,6 +103,7 @@ export function corpProposals(obs: Observation): Proposal[] {
   const broke = obs.credits < 3 && obs.servers.some((s) => s.ices.some((i) => !i.rezzed && rezCostOf(i) > obs.credits));
   const rich = obs.credits >= 12 && obs.hand.length <= 2;
   if (obs.hand.length < 4 && deckLeft > 8) push(proposal(byCommand(obs, "draw")[0], broke ? 29 : rich ? 50 : 35, rich ? "draw: rich but nothing to spend on" : "draw: the hand is thin", "draw"));
+  if (obs.credits >= 15 && deckLeft > 8) push(proposal(byCommand(obs, "draw")[0], 40, "draw: credits are plentiful, cards are not", "draw"));
   push(proposal(byCommand(obs, "credit")[0], 30 + (wantCredits ? 10 : 0) + (obs.credits < 3 ? 4 : 0) + (broke ? 8 : 0), broke ? "take a credit: unrezzed ice cannot be rezzed" : wantCredits ? "take a credit towards an economy operation in hand" : "take a credit", "credit"));
   if (deckLeft > 8) push(proposal(byCommand(obs, "draw")[0], 28, "draw a card", "draw"));
   return out;
