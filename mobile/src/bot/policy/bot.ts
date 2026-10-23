@@ -194,7 +194,7 @@ export class PolicyBot {
     const pending = this.pendingRun;
     if (!pending) return;
     if (view.run) {
-      if (view.run.successful) pending.breached = true;
+      if (view.run.successful || view.run.phase === "success") pending.breached = true;
       return;
     }
     const points = view[this.side]?.["agenda-point"] ?? 0;

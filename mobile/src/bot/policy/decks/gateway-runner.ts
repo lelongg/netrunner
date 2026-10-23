@@ -3,7 +3,8 @@ import { playOf, proposal, serverValue } from "../generic.ts";
 import { choiceLabel, choiceMove, choices, findChoice, promptFrom, selectMove, selectable } from "../prompts.ts";
 import { registerPolicy } from "../registry.ts";
 import { fromCandidate, runnerRun } from "../runs.ts";
-import { agendaProgress, coverage, estimateRun, isIcebreaker, playCostOf } from "../tactics.ts";
+import { agendaProgress, coverage, estimateRun, iceThreat, isIcebreaker, playCostOf } from "../tactics.ts";
+const ICE_TYPES = new Set(["Barrier", "Code Gate", "Sentry"]);
 import type { DeckPolicy, Observation, Plan, Proposal, ServerInfo } from "../types.ts";
 import { GATEWAY_RUNNER_BEGINNER, GATEWAY_RUNNER_INTERMEDIATE } from "./gateway.ts";
 
@@ -82,10 +83,10 @@ function mulligan(obs: Observation) {
 }
 
 function reserve(obs: Observation): number {
-  const iced = obs.servers.filter((s) => s.remote && s.ices.length > 0);
+  const iced = obs.servers.filter((s) => s.remote && s.ices.length > 0 && !s.content.some((c: any) => c.rezzed && c.type === "Asset"));
   if (!iced.length) return 4;
   const costs = iced.map((s) => estimateRun(obs, s, 3, 99).credits + 1);
-  return Math.min(10, Math.max(4, Math.min(...costs)));
+  return Math.min(12, Math.max(4, Math.max(...costs)));
 }
 
 function bestServerChoice(obs: Observation, allowed: (label: string) => boolean, extra = 0, paid = 0): { label: string; why: string } | null {
@@ -176,6 +177,12 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
   }
   const thin = obs.hand.length <= 1;
   const floor = reserve(obs);
+  const lockedOut = obs.servers.filter((s) => !s.remote).every((s) => s.ices.some((i: any) => i.rezzed && !(i.subtypes ?? []).some((t: string) => ICE_TYPES.has(t) && cov.has(t as any)) && iceThreat(i, obs.info(i)).etr));
+  if (lockedOut && obs.credits >= 8) {
+    const draw = byCommand(obs, "draw")[0];
+    if (draw && obs.hand.length < 5 && drawsThisTurn < 3) push(proposal(draw, 58, "draw: the centrals are locked behind ice no breaker answers", "draw"));
+    if (mayfly && memoryLeft >= 2 && obs.credits >= 10) push(proposal(playOf(obs, mayfly), 62, "Mayfly: the only way through the ice right now", "install-breaker"));
+  }
   const spend = (p: Proposal): number => {
     if (p.kind === "run" || p.kind === "run-event" || p.kind === "click-economy") {
       const t = ts.find((x) => p.why.includes(x.server.label));
@@ -203,7 +210,7 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
   for (const p of out) if (p.kind === "install-breaker" && p.why.startsWith("install Mayfly") && plan.kind !== "contest") p.score = 20;
   for (const p of out) {
     if (thin && (p.kind === "install" || p.kind === "install-breaker" || p.kind === "install-economy") && obs.clicks <= 2) p.score -= 20;
-    if (p.kind === "credit" && obs.credits < 8 && cov.size >= 2) p.score += 12;
+    if (p.kind === "credit" && (obs.credits < 8 || obs.credits < floor) && cov.size >= 2) p.score += 12;
     if (p.kind === "run" || p.kind === "run-event") {
       const t = ts.find((x) => p.why.includes(x.server.label));
       if (t && t.credits > 0 && obs.credits - t.credits < 3 && t.value < 5 && plan.kind !== "closing") p.score -= 22;

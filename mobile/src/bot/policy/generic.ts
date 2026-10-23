@@ -36,7 +36,7 @@ export function corpProposals(obs: Observation): Proposal[] {
       if (card.type !== "Agenda" || obs.credits < 1) continue;
       const { have, need } = agendaProgress(card);
       const finish = have + obs.clicks >= need && obs.credits >= need - have;
-      const score = finish ? 90 : server.ices.length ? 60 + have * 5 : 30;
+      const score = (finish ? 90 : server.ices.length ? 60 + have * 5 : 30) - (!finish && obs.credits <= 2 ? 25 : 0);
       push(proposal(cardAction(obs, card, "advance"), score, finish ? `advance ${card.title}: it scores this turn` : `advance ${card.title} (${have}/${need})`, "advance"));
     }
   }
@@ -54,10 +54,12 @@ export function corpProposals(obs: Observation): Proposal[] {
     if (gain > cost && cost <= obs.credits) push(proposal(playOf(obs, card), obs.credits < 8 ? 65 + (gain - cost) : 45, `play ${card.title}: +${gain - cost} net`, "economy"));
   }
   const openRemotes = obs.servers.filter((s) => s.remote && !s.content.length);
+  const runnerCredits = Number(obs.view.runner?.credit ?? 0);
   for (const card of obs.hand) {
     if (card.type !== "Asset" || !isEconomy(obs.info(card).text) || isTrap(obs.info(card).text)) continue;
     const target = openRemotes.find((s) => !s.ices.length)?.label ?? (obs.servers.filter((s) => s.remote).length < 4 ? "New remote" : undefined);
-    if (target) push(proposal(playOf(obs, card, target), obs.credits < 6 ? 55 : 35, `install ${card.title} in ${target}`, "install-economy"));
+    const exposed = runnerCredits >= Number(card.trash ?? 2) + 4;
+    if (target) push(proposal(playOf(obs, card, target), (obs.credits < 6 ? 55 : 35) - (exposed ? 12 : 0), `install ${card.title} in ${target}${exposed ? " (the Runner can afford to trash it)" : ""}`, "install-economy"));
   }
   for (const server of obs.servers.filter((s) => s.remote)) {
     for (const card of server.content) {
@@ -72,9 +74,9 @@ export function corpProposals(obs: Observation): Proposal[] {
     const hq = obs.servers.find((s) => s.key === "hq")!;
     const rd = obs.servers.find((s) => s.key === "rd")!;
     const targets: { server: { label: string; ices: any[] }; score: number; why: string }[] = [];
-    if (!hq.ices.length) targets.push({ server: hq, score: 50, why: "HQ is open" });
-    if (!rd.ices.length) targets.push({ server: rd, score: 50, why: "R&D is open" });
-    if (agendas.length && !empty.length) targets.push({ server: { label: "New remote", ices: [] }, score: 52, why: "an agenda in hand needs a protected remote" });
+    if (!hq.ices.length) targets.push({ server: hq, score: agendas.length ? 60 : 50, why: agendas.length ? "HQ is open with an agenda in hand" : "HQ is open" });
+    if (!rd.ices.length) targets.push({ server: rd, score: 48, why: "R&D is open" });
+    if (agendas.length && !empty.length) targets.push({ server: { label: "New remote", ices: [] }, score: hq.ices.length ? 52 : 45, why: "an agenda in hand needs a protected remote" });
     for (const s of obs.servers.filter((x) => x.remote && x.content.length && x.ices.length < 2)) targets.push({ server: s, score: 45, why: `${s.label} holds something worth protecting` });
     if (obs.credits >= 6) {
       for (const s of [rd, hq].sort((a, b) => a.ices.length - b.ices.length)) if (s.ices.length < 3) targets.push({ server: s, score: 40 - s.ices.length * 3, why: `deepen ${s.label}` });
