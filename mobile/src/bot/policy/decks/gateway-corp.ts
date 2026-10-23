@@ -118,6 +118,10 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
         p.why += ` (the Runner can get in: margin ${safety.margin}${breached ? ", and stole from there since the ice last changed" : ""}${behind ? ", but sitting loses" : ""}${racing ? ", racing" : ""}${taxRace ? (desperate ? ", R&D is running out" : ", rich enough to make every run expensive") : ""}${canRezOne ? "" : ", no ice can be rezzed"}${hqSafer ? ", HQ is safer" : ""})`;
       } else if (card && target && safety?.safe && obs.clicks < 3 && canScoreNextTurn(obs, card, !!seamless)) p.score = Math.max(p.score, 72);
       if (obs.clicks === 3) p.score = Math.min(p.score, 50);
+      if (safety && target && target.ices.some((i: any) => !i.rezzed) && safety.rezCost > obs.credits - 1) {
+        p.score = Math.min(p.score, 15);
+        p.why += ` (cannot rez the ice there: ${safety.rezCost} needed)`;
+      }
     }
   }
 
@@ -159,7 +163,9 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
   if (agendasHeld >= 1 && hqServer.ices.length < hqCap && !serverSafety(obs, hqServer).safe) {
     const ice = obs.hand.filter((c) => c.type === "ICE").sort((a, b) => iceRank(obs, b) - iceRank(obs, a))[0];
     const budget = obs.credits - hqServer.ices.length;
-    if (ice && budget >= rezCostOf(ice) + 2) push(proposal(playOf(obs, ice, "HQ"), agendasHeld >= 2 ? 72 : 63, `add ${ice.title} to HQ: ${agendasHeld} agenda${agendasHeld > 1 ? "s" : ""} in hand and the Runner can get in`, "install-ice"));
+    const hqRuns = (((obs.memory.notes.runsSeen ?? {}) as Record<string, number[]>)["HQ"] ?? []).filter((t) => t >= obs.turn - 3).length;
+    const quietHq = hqServer.ices.length >= 1 && hqRuns === 0;
+    if (ice && budget >= rezCostOf(ice) + 2) push(proposal(playOf(obs, ice, "HQ"), Math.min(quietHq ? 58 : 99, agendasHeld >= 2 ? 72 : 63), `add ${ice.title} to HQ: ${agendasHeld} agenda${agendasHeld > 1 ? "s" : ""} in hand and the Runner can get in${quietHq ? ", though HQ has been quiet" : ""}`, "install-ice"));
   }
   const endsRun = (c: any) => iceThreat({ ...c, subroutines: c.subroutines ?? [] }, obs.info(c)).etr;
   const scoringShell = remotes(obs).find((s) => s.ices.length > 0 && s.content.every((c: any) => c.type === "Upgrade"));
@@ -169,7 +175,7 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
     const ice = obs.hand.filter((c) => c.type === "ICE").sort((a, b) => iceRank(obs, b) + (endsRun(b) ? 5 : 0) - (iceRank(obs, a) + (endsRun(a) ? 5 : 0)))[0];
     const budget = obs.credits - weak.ices.length;
     const pointless = porous && weak.ices.length >= 3 && ice && !endsRun(ice);
-    if (ice && !pointless && budget >= rezCostOf(ice) + 2) push(proposal(playOf(obs, ice, weak.label), installed ? 74 : obs.credits >= 12 ? 70 : 64, `add ${ice.title} to ${weak.label}: the Runner can still get in${porous ? " and nothing there ends the run" : ""}`, "install-ice"));
+    if (ice && !pointless && budget >= rezCostOf(ice) + 2) push(proposal(playOf(obs, ice, weak.label), (installed ? 74 : obs.credits >= 12 ? 70 : 64) + (porous && endsRun(ice) ? 6 : 0), `add ${ice.title} to ${weak.label}: the Runner can still get in${porous ? " and nothing there ends the run" : ""}`, "install-ice"));
     else if (ice) push(proposal(playOf(obs, ice, weak.label), 30, `add ${ice.title} to ${weak.label} later: not enough credits to rez it`, "install-ice"));
   }
 
