@@ -160,14 +160,16 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
   const remoteReady = remotes(obs).some((s) => s.ices.length > 0 && s.content.every((c: any) => c.type === "Upgrade"));
   const rdOpen = obs.servers.find((s) => s.key === "rd")!.ices.length === 0;
   const hqCap = rdOpen ? 1 : agendasHeld >= 3 && !remoteReady && obs.hand.some((c) => c.type === "ICE") ? 2 : 3;
+  const endsRun = (c: any) => iceThreat({ ...c, subroutines: c.subroutines ?? [] }, obs.info(c), 99).etr;
   if (agendasHeld >= 1 && hqServer.ices.length < hqCap && !serverSafety(obs, hqServer).safe) {
-    const ice = obs.hand.filter((c) => c.type === "ICE").sort((a, b) => iceRank(obs, b) - iceRank(obs, a))[0];
+    const iceInHand = obs.hand.filter((c) => c.type === "ICE");
+    const spareEnder = iceInHand.some((c) => endsRun(c)) && iceInHand.some((c) => !endsRun(c));
+    const ice = iceInHand.sort((a, b) => iceRank(obs, b) - (spareEnder && endsRun(b) ? 20 : 0) - (iceRank(obs, a) - (spareEnder && endsRun(a) ? 20 : 0)))[0];
     const budget = obs.credits - hqServer.ices.length;
     const hqRuns = (((obs.memory.notes.runsSeen ?? {}) as Record<string, number[]>)["HQ"] ?? []).filter((t) => t >= obs.turn - 3).length;
     const quietHq = hqServer.ices.length >= 1 && hqRuns === 0;
     if (ice && budget >= rezCostOf(ice) + 2) push(proposal(playOf(obs, ice, "HQ"), Math.min(quietHq ? 58 : 99, agendasHeld >= 2 ? 72 : 63), `add ${ice.title} to HQ: ${agendasHeld} agenda${agendasHeld > 1 ? "s" : ""} in hand and the Runner can get in${quietHq ? ", though HQ has been quiet" : ""}`, "install-ice"));
   }
-  const endsRun = (c: any) => iceThreat({ ...c, subroutines: c.subroutines ?? [] }, obs.info(c)).etr;
   const scoringShell = remotes(obs).find((s) => s.ices.length > 0 && s.content.every((c: any) => c.type === "Upgrade"));
   const weak = installed?.server ?? (obs.hand.some((c) => c.type === "Agenda") ? bait ?? scoringShell : undefined);
   const porous = weak ? !weak.ices.some((i: any) => endsRun(i)) : false;
