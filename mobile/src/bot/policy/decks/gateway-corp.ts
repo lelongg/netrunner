@@ -118,6 +118,13 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
   const baitSafe = bait ? serverSafety(obs, bait).safe : false;
   if (hub && bait && baitSafe && obs.clicks >= 1 && obs.credits >= 2 && !installed) push(proposal(playOf(obs, hub, bait.label), 66, `Superconducting Hub in ${bait.label} only needs 3 advancements: cheap to score next turn`, "install-agenda"));
   if (office && bait && baitSafe && obs.credits >= 3 && !installed && obs.clicks <= 2) push(proposal(playOf(obs, office, bait.label), 71, `Offworld Office in ${bait.label} pays 7 when scored: install late in the turn`, "install-agenda"));
+  const hqServer = obs.servers.find((s) => s.key === "hq")!;
+  const agendasHeld = obs.hand.filter((c) => c.type === "Agenda").length;
+  if (agendasHeld >= 1 && hqServer.ices.length < 3 && !serverSafety(obs, hqServer).safe) {
+    const ice = obs.hand.filter((c) => c.type === "ICE").sort((a, b) => (ICE_RANK[b.title] ?? 0) - (ICE_RANK[a.title] ?? 0))[0];
+    const budget = obs.credits - hqServer.ices.length;
+    if (ice && budget >= rezCostOf(ice) + 2) push(proposal(playOf(obs, ice, "HQ"), agendasHeld >= 2 ? 72 : 63, `add ${ice.title} to HQ: ${agendasHeld} agenda${agendasHeld > 1 ? "s" : ""} in hand and the Runner can get in`, "install-ice"));
+  }
   const weak = installed?.server ?? (obs.hand.some((c) => c.type === "Agenda") ? bait : undefined);
   if (weak && !serverSafety(obs, weak).safe && weak.ices.length < 3) {
     const ice = obs.hand.filter((c) => c.type === "ICE").sort((a, b) => (ICE_RANK[b.title] ?? 0) - (ICE_RANK[a.title] ?? 0))[0];

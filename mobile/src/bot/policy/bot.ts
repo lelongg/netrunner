@@ -1,5 +1,6 @@
 import type { Side } from "../../engine.ts";
 import { basicCommands, promptOf, runCommands } from "../../game/actions.ts";
+import { serverName } from "../../game/describe.ts";
 import { corpFreeProposals, corpProposals, genericPlan, runnerProposals } from "./generic.ts";
 import { emptyMemory, noteRun, observe, updateMemory } from "./observe.ts";
 import { genericPrompt, mulliganProposal } from "./prompts.ts";
@@ -35,7 +36,7 @@ export class PolicyBot {
   private pendingKind: { key: string; kind: string } | null = null;
   private confirmed = false;
   private turnKey = "";
-  private pendingRun: { server: string; cids: string[]; points: number; breached: boolean; turn: number } | null = null;
+  private pendingRun: { key: string; server: string; accessed: string[]; points: number; breached: boolean; turn: number } | null = null;
   private lookup: Lookup;
   private random: () => number;
   private render: (msg: unknown) => string;
@@ -95,11 +96,6 @@ export class PolicyBot {
     if (note) this.unhandled++;
     if (!chosen && note && this.rescue) chosen = this.rescueMove(obs);
     this.pendingKind = chosen && stage === "click" ? { key: moveKey(chosen.move), kind: chosen.kind } : null;
-    if (chosen?.move.command === "run") {
-      const server = obs.servers.find((s) => s.label === (chosen!.move.args as any)?.server);
-      this.pendingRun = { server: server?.label ?? "", cids: (server?.content ?? []).filter((c: any) => !c.rezzed && !c["advance-counter"]).map((c: any) => c.cid), points: obs.me["agenda-point"] ?? 0, breached: false, turn: obs.turn };
-      this.memory.runsThisTurn++;
-    }
     const ms = (typeof performance !== "undefined" ? performance.now() : Date.now()) - started;
     if (this.record) {
       this.records.push({ n: this.n, turn: obs.turn, side: this.side, active: obs.active, stage, plan: this.plan, chosen, considered: ranked.slice(0, 6), refused: refused || undefined, unhandled: note, ms, signature });
@@ -185,23 +181,33 @@ export class PolicyBot {
   }
 
   private trackRun(view: any) {
-    if (!this.pendingRun && view.run && this.side === "runner") {
-      const key = view.run.server?.[0];
-      const label = key === "hq" ? "HQ" : key === "rd" ? "R&D" : key === "archives" ? "Archives" : key?.startsWith("remote") ? `Server ${key.slice(6)}` : String(key);
-      this.pendingRun = { server: label, cids: [], points: view[this.side]?.["agenda-point"] ?? 0, breached: false, turn: Number(view.turn ?? 0) };
+    if (this.side !== "runner") return;
+    if (!this.pendingRun && view.run) {
+      const key = String(view.run.server?.[0] ?? "");
+      this.pendingRun = { key, server: serverName(key), accessed: [], points: view[this.side]?.["agenda-point"] ?? 0, breached: false, turn: Number(view.turn ?? 0) };
       this.memory.runsThisTurn++;
     }
     const pending = this.pendingRun;
     if (!pending) return;
     if (view.run) {
       if (view.run.successful || view.run.phase === "success") pending.breached = true;
+      const prompt = promptOf(view, this.side);
+      const cid = prompt?.card?.cid;
+      if (cid && /accessed/i.test(String(prompt?.msg ?? ""))) {
+        const installed = (view.corp?.servers?.[pending.key]?.content ?? []).find((c: any) => c.cid === cid);
+        const title = prompt?.card?.title ?? installed?.title;
+        if (installed && title) this.memory.seen.set(cid, { cid, title, type: prompt?.card?.type ?? installed.type, zone: "servers", turn: Number(view.turn ?? 0) });
+        if (title && !pending.accessed.includes(title)) pending.accessed.push(title);
+      }
       return;
     }
     const points = view[this.side]?.["agenda-point"] ?? 0;
     const stole = points > pending.points;
-    if (pending.breached && !stole) pending.cids.forEach((cid) => this.memory.duds.add(cid));
-    if (pending.breached && !stole && pending.server === "R&D") this.memory.notes.rdSeenTurn = Number(view.turn ?? 0);
-    noteRun(this.memory, { turn: pending.turn, server: pending.server, successful: pending.breached, stole, accessed: [] });
+    if (pending.breached && !stole && pending.key.startsWith("remote")) {
+      for (const c of view.corp?.servers?.[pending.key]?.content ?? []) if (!c.rezzed) this.memory.duds.add(c.cid);
+    }
+    if (pending.breached && !stole && pending.key === "rd") this.memory.notes.rdSeenTurn = Number(view.turn ?? 0);
+    noteRun(this.memory, { turn: pending.turn, server: pending.server, successful: pending.breached, stole, accessed: pending.accessed });
     this.pendingRun = null;
   }
 

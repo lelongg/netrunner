@@ -98,7 +98,8 @@ export function corpProposals(obs: Observation): Proposal[] {
   const wantCredits = obs.hand.some((c) => c.type === "Operation" && gainOf(obs.info(c).text) > playCostOf(c) && playCostOf(c) > obs.credits);
   const deckLeft = Number(obs.me["deck-count"] ?? 0);
   const broke = obs.credits < 3 && obs.servers.some((s) => s.ices.some((i) => !i.rezzed && rezCostOf(i) > obs.credits));
-  if (obs.hand.length < 4 && deckLeft > 8) push(proposal(byCommand(obs, "draw")[0], broke ? 29 : 35, "draw: the hand is thin", "draw"));
+  const rich = obs.credits >= 12 && obs.hand.length <= 2;
+  if (obs.hand.length < 4 && deckLeft > 8) push(proposal(byCommand(obs, "draw")[0], broke ? 29 : rich ? 50 : 35, rich ? "draw: rich but nothing to spend on" : "draw: the hand is thin", "draw"));
   push(proposal(byCommand(obs, "credit")[0], 30 + (wantCredits ? 10 : 0) + (obs.credits < 3 ? 4 : 0) + (broke ? 8 : 0), broke ? "take a credit: unrezzed ice cannot be rezzed" : wantCredits ? "take a credit towards an economy operation in hand" : "take a credit", "credit"));
   if (deckLeft > 8) push(proposal(byCommand(obs, "draw")[0], 28, "draw a card", "draw"));
   return out;
@@ -110,7 +111,11 @@ export function serverValue(obs: Observation, server: Observation["servers"][num
   if (server.key === "archives") return (obs.opp.discard ?? []).some((c: any) => !c.seen && !c.title) ? 1.5 : 0;
   if (!server.content.length) return 0;
   const adv = Math.max(0, ...server.content.map((c: any) => agendaProgress(c).have));
-  const unknown = server.content.some((c: any) => (!c.title || c.type === "Agenda") && (agendaProgress(c).have > 0 || !obs.memory.duds.has(c.cid)));
+  const unknown = server.content.some((c: any) => {
+    const known = c.title ? c : obs.memory.seen.get(c.cid);
+    if (known) return known.type === "Agenda";
+    return !obs.memory.duds.has(c.cid);
+  });
   if (unknown) return 5 + adv * 3;
   const trashable = server.content.some((c: any) => c.rezzed && c.trash != null && obs.credits >= Number(c.trash) + 3 && isEconomy(obs.info(c).text));
   return trashable ? 2 : 0;
