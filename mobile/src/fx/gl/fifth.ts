@@ -194,30 +194,6 @@ export async function malapertDataVault(rect: DOMRect, code: string, ready?: Rea
   await done();
 }
 
-export async function vultureFund(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const holo = at(0.22, 0.4);
-  const shadow = new Graphics();
-  fx.addChild(shadow);
-  const glow = glowSprite(fx, glowTexture(), RED);
-  glow.position.set(...holo);
-  const motes = new Emitter(fx);
-  root.addChild(fx);
-  await run(app, (t, dt) => {
-    shadow.clear();
-    const k = span(t, 0.1, 1.7);
-    const [x, y] = at(-0.15 + 1.3 * k, 0.12 + 0.03 * Math.sin(k * 6));
-    shadow.ellipse(x, y, unit * 0.16, unit * 0.035).fill({ color: 0x06141a, alpha: 0.4 * Math.sin(Math.PI * k) });
-    shadow.poly([x - unit * 0.02, y - unit * 0.02, x + unit * 0.04, y - unit * 0.09, x + unit * 0.06, y - unit * 0.02]).fill({ color: 0x06141a, alpha: 0.4 * Math.sin(Math.PI * k) });
-    glow.alpha = (Math.random() < 0.1 ? 0.2 : 0.55) * (1 - span(t, 1.6, 2));
-    glow.scale.set((unit / 128) * 0.18);
-    if (t < 1.5 && Math.random() < 0.4) motes.add(glowTexture(), ...at(rnd(0, 1), rnd(0.05, 0.45)), { vy: -unit * rnd(0.05, 0.12), life: 1.2, tint: 0xbff6ff, scale: (unit / 128) * rnd(0.01, 0.02) });
-    motes.step(dt);
-    return t < 2 || motes.list.length > 0;
-  });
-  await done();
-}
-
 export async function synchrocyclotron(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
   const c = at(0.5, 0.27);
@@ -656,54 +632,6 @@ export async function empiricistFire(rect: DOMRect, code: string, ready?: Ready,
     return t < 0.9;
   });
   scan.destroy();
-  await done();
-}
-
-export async function vicsek(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const c = at(0.6, 0.62);
-  const flock = Array.from({ length: 16 }, () => ({ s: glowSprite(fx, wingTexture(), 0x7fdcff), p: [c[0] + rnd(-1, 1) * unit * 0.3, c[1] + rnd(-1, 1) * unit * 0.2] as Pt, a: rnd(0, Math.PI * 2) }));
-  root.addChild(fx);
-  await run(app, (t, dt) => {
-    const order = span(t, 0.2, 1);
-    const mean = Math.atan2(
-      flock.reduce((m, f) => m + Math.sin(f.a), 0),
-      flock.reduce((m, f) => m + Math.cos(f.a), 0),
-    );
-    const on = span(t, 0, 0.3) * (1 - span(t, 1.6, 2));
-    for (const f of flock) {
-      const toward = Math.atan2(c[1] - f.p[1], c[0] - f.p[0]);
-      f.a += ((mean - f.a) * order * 0.15 + (toward - f.a) * 0.05 + rnd(-0.3, 0.3) * (1 - order)) * 1;
-      f.p = [f.p[0] + Math.cos(f.a) * unit * 0.5 * dt, f.p[1] + Math.sin(f.a) * unit * 0.5 * dt];
-      f.s.position.set(...f.p);
-      f.s.rotation = f.a + Math.PI / 2;
-      f.s.alpha = on;
-      f.s.scale.set((unit / 180) * 0.9, (unit / 180) * 0.9 * (0.6 + 0.4 * Math.sin(t * 30)));
-    }
-    return t < 2;
-  });
-  await done();
-}
-
-export async function vicsekFire(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const src = at(0.6, 0.62);
-  root.addChild(fx);
-  const target: Pt = board?.runner ? pt(board.runner) : [innerWidth / 2, innerHeight * 0.9];
-  const g = root.toGlobal({ x: src[0], y: src[1] });
-  const swarm = Array.from({ length: 12 }, (_, i) => homing(app.stage, wingTexture(), [g.x, g.y], target, i * 0.04, 0xbff0ff, (unit / 180) * 0.6, rnd(-1, 1) * unit));
-  const trail = new Emitter(app.stage);
-  let hit = false;
-  await run(app, (t, dt) => {
-    for (const s of swarm) s.s.scale.y = s.s.scale.x * (0.6 + 0.4 * Math.sin(t * 30));
-    if (flyHome(swarm, t, trail, 0xbff0ff) === swarm.length && !hit) {
-      hit = true;
-      if (board?.runner) prism(document.querySelector('[data-anchor="runner-panel"]'), 0.4);
-    }
-    trail.step(dt);
-    return !hit || trail.list.length > 0;
-  });
-  for (const s of swarm) s.s.destroy();
   await done();
 }
 
