@@ -32,6 +32,8 @@ export class HeuristicBot {
   private runs = 0;
   private banned = new Set<string>();
   private last = { key: "", signature: "", count: 0 };
+  private pending = { key: "", signature: "" };
+  private confirmed = false;
   private duds = new Set<string>();
   private pendingRun: { cids: string[]; points: number; breached: boolean } | null = null;
 
@@ -57,14 +59,23 @@ export class HeuristicBot {
     const move = this.pick(view);
     if (!move) return null;
     const key = `${move.command}:${move.say ?? ""}:${JSON.stringify(move.args ?? null)}`;
-    const signature = this.signature(view);
+    const signature = this.signature(view, move.command !== "score");
     if (key === this.last.key && signature === this.last.signature) {
       if (++this.last.count >= 2) {
         this.banned.add(key);
         this.last = { key: "", signature: "", count: 0 };
+        if (this.depth < 3) {
+          this.depth++;
+          try {
+            return this.decide(view) ?? this.fallback(view);
+          } finally {
+            this.depth--;
+          }
+        }
         return this.fallback(view);
       }
-    } else this.last = { key, signature, count: 0 };
+    } else if (!this.confirmed) this.last = { key, signature, count: 0 };
+    this.pending = { key, signature };
     if (move.command === "run") {
       this.runs++;
       const key = Object.keys(view.corp?.servers ?? {}).find((k) => serverLabel(k) === (move.args as any)?.server);
@@ -72,6 +83,15 @@ export class HeuristicBot {
       this.pendingRun = content.length ? { cids: content.filter((c) => !c.rezzed && !c["advance-counter"]).map((c) => c.cid), points: view.runner?.["agenda-point"] ?? 0, breached: false } : null;
     }
     return move;
+  }
+
+  private depth = 0;
+
+  applied(move: Move) {
+    this.confirmed = true;
+    if (move.command === "toast") return;
+    const key = `${move.command}:${move.say ?? ""}:${JSON.stringify(move.args ?? null)}`;
+    if (key !== this.last.key || this.pending.signature !== this.last.signature) this.last = { key, signature: this.pending.key === key ? this.pending.signature : "", count: 0 };
   }
 
   private trackRun(view: any) {
@@ -85,9 +105,9 @@ export class HeuristicBot {
     this.pendingRun = null;
   }
 
-  private signature(view: any) {
+  private signature(view: any, withLog = true) {
     const me = view[this.side] ?? {};
-    return JSON.stringify([me.click, me.credit, me.hand?.length, promptOf(view, this.side)?.eid, view.run?.phase, view.run?.position, view.run?.["no-action"], view.encounters?.["no-action"], (view.log ?? []).length]);
+    return JSON.stringify([me.click, me.credit, me.hand?.length, promptOf(view, this.side)?.eid, view.run?.phase, view.run?.position, view.run?.["no-action"], view.encounters?.["no-action"], withLog ? (view.log ?? []).length : 0]);
   }
 
   private allowed(move: Move | null | undefined): Move | null {
@@ -219,7 +239,8 @@ export class HeuristicBot {
     const unique = [...new Map(all.map((c) => [c.cid, c])).values()];
     const msg = String(typeof prompt.msg === "string" ? prompt.msg : "");
     let pick: any;
-    if (/discard/i.test(msg)) pick = [...unique].sort((a, b) => this.cardValue(a) - this.cardValue(b))[0];
+    if (/credit providing/i.test(msg)) pick = unique.find((c) => Number(c.counter?.credit ?? 0) > 0);
+    else if (/discard/i.test(msg)) pick = [...unique].sort((a, b) => this.cardValue(a) - this.cardValue(b))[0];
     else {
       const mine = (c: any) => c.side === (this.side === "corp" ? "Corp" : "Runner");
       const hostile = /(trash|derez|expose|damage|destroy|remove)/i.test(msg);
@@ -351,7 +372,7 @@ export class HeuristicBot {
     }
     if (view.runner?.tag?.["is-tagged"] || (view.runner?.tag?.total ?? 0) > 0) {
       const trash = basicCommands(view, "corp").find((c) => c.command === "trash-resource" && c.enabled !== false);
-      if (trash && me.credit >= 4) {
+      if (trash && me.credit >= 4 && (view.runner?.rig?.resource ?? []).length) {
         const move = this.allowed({ command: "trash-resource" });
         if (move) return move;
       }

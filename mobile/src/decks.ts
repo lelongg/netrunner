@@ -1,4 +1,5 @@
 import type { Card, CardDb, Deck, DeckEntry, Matchup, PreconDeck, Side } from "./engine";
+import { CORE_DECKS } from "./bot/policy/decks/core";
 
 const normalize = (s: string) =>
   s
@@ -112,6 +113,7 @@ export function fromWire(w: WireDeck, db: CardDb): Deck {
 export const engineDeck = (d: Deck) => ({ identity: d.identity, cards: d.cards.map(({ qty, card }) => ({ qty, card })) });
 
 const STORE = "nsg.decks";
+const CORE_SEEDED = "nsg.decks.core-seeded";
 const MAX_DECKS = 80;
 
 export interface StoredDeck extends WireDeck {
@@ -188,20 +190,34 @@ export function removeDeck(id: string) {
 const SEEDED = "nsg.seededStarters";
 
 export function seedStarters(db: CardDb, matchups: Matchup[]) {
+  let fresh = false;
   try {
-    if (localStorage.getItem(SEEDED) || savedDecks().length) return;
-    localStorage.setItem(SEEDED, "1");
+    fresh = !localStorage.getItem(SEEDED) && !savedDecks().length;
+    if (fresh) localStorage.setItem(SEEDED, "1");
   } catch {
     return;
   }
-  const starters = matchups.filter((m) => m.corp.name.includes("System Gateway"));
-  for (const m of [...starters].reverse()) {
-    for (const side of ["corp", "runner"] as Side[]) {
-      const p = m[side];
-      try {
-        const stored = putDeck({ ...toWire({ ...fromPrecon(p, db), name: `${p.name} · ${m.title}` }), side, format: "casual" });
-        if (m === starters[0]) setDefaultDeckId(side, stored.id);
-      } catch {}
+  if (fresh) {
+    const starters = matchups.filter((m) => m.corp.name.includes("System Gateway"));
+    for (const m of [...starters].reverse()) {
+      for (const side of ["corp", "runner"] as Side[]) {
+        const p = m[side];
+        try {
+          const stored = putDeck({ ...toWire({ ...fromPrecon(p, db), name: `${p.name} · ${m.title}` }), side, format: "casual" });
+          if (m === starters[0]) setDefaultDeckId(side, stored.id);
+        } catch {}
+      }
     }
+  }
+  try {
+    if (localStorage.getItem(CORE_SEEDED)) return;
+    localStorage.setItem(CORE_SEEDED, "1");
+  } catch {
+    return;
+  }
+  for (const d of [...CORE_DECKS].reverse()) {
+    try {
+      putDeck({ ...toWire(fromPrecon(d, db)), side: d.side, format: "core" });
+    } catch {}
   }
 }

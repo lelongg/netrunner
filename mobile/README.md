@@ -107,6 +107,17 @@ node --experimental-strip-types scripts/bot-eval.mjs 20 bot-vs-random 0   # 20 g
 node --experimental-strip-types scripts/bot-eval.mjs 20 bot-vs-bot 1      # intermediate decks
 ```
 
+`src/bot/policy/` adds deck policies on top of it: a plan kept between decisions, scored
+proposals with a reason, and deck-specific knowledge for the System Gateway starter decks.
+A deck with a policy (matched by its exact card list) gets it; other decks keep the heuristic
+bot. `scripts/policy-eval.mjs` plays seeded games between policies, the heuristic bot and a
+random player, and exports the situations worth a look (refused moves, unhandled prompts,
+losses) as the deciding side saw them. See [`docs/policies.md`](docs/policies.md).
+
+```sh
+node --experimental-strip-types scripts/policy-eval.mjs --games 20 --corp policy --runner heuristic --out /tmp/eval
+```
+
 `scripts/fuzz.mjs` plays random legal moves to hunt for engine errors and dead-end prompts.
 
 ## Development
