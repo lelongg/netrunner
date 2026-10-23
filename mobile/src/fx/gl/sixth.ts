@@ -102,66 +102,6 @@ export async function carnivore(rect: DOMRect, code: string, ready?: Ready, boar
   await done();
 }
 
-export async function cleaver(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const sc = await scene(rect, code, ready, board);
-  const { app, root, world, fx, done, unit, at } = sc;
-  const pane = at(0.62, 0.3);
-  const g = new Graphics();
-  world.addChild(g);
-  const glow = new Graphics();
-  glow.blendMode = "add";
-  world.addChild(glow);
-  const bits = new Emitter(world);
-  root.addChild(fx);
-  const W = unit * 0.32;
-  const H = unit * 0.22;
-  let hit = false;
-  await run(
-    app,
-    (t, dt) => {
-      g.clear();
-      glow.clear();
-      const src = root.toGlobal({ x: pane[0], y: pane[1] });
-      const to = sc.strike ?? ([src.x, src.y] as Pt);
-      const fly = ease.inOut(span(t, 0, 0.35));
-      const c = lerp([src.x, src.y], to, fly);
-      const rot = -0.5 + fly * 0.4;
-      const part = ease.out(span(t, 0.38, 0.9));
-      const fade = 1 - span(t, 0.6, 1);
-      const cos = Math.cos(rot);
-      const sin = Math.sin(rot);
-      const P = (x: number, y: number, o: number): number[] => [c[0] + (x * cos - y * sin) + o * cos * unit * 0.25, c[1] + (x * sin + y * cos) + o * sin * unit * 0.25 + Math.abs(o) * unit * 0.15];
-      for (const side of t < 0.38 ? [0] : [-1, 1]) {
-        const o = side * part;
-        const xs = side < 0 ? [-W, 0] : side > 0 ? [0, W] : [-W, W];
-        const poly = [...P(xs[0], -H, o), ...P(xs[1], -H, o), ...P(xs[1], H, o), ...P(xs[0], H, o)];
-        g.poly(poly).fill({ color: 0xff9fb8, alpha: 0.28 * fade });
-        glow.poly(poly).stroke({ width: 1.5, color: 0xffd6e0, alpha: 0.9 * fade });
-      }
-      const slash = span(t, 0.36, 0.55);
-      if (slash > 0 && slash < 1) {
-        const L = unit * 0.9;
-        const e = ease.out(slash);
-        glow
-          .moveTo(to[0] - L * 0.6 * Math.cos(rot + 1.3), to[1] - L * 0.6 * Math.sin(rot + 1.3))
-          .lineTo(to[0] + (-0.6 + 1.2 * e) * L * Math.cos(rot + 1.3), to[1] + (-0.6 + 1.2 * e) * L * Math.sin(rot + 1.3))
-          .stroke({ width: unit * 0.025 * (1 - slash) + 1.5, color: 0xff4a5a, alpha: 0.9 });
-      }
-      if (!hit && t > 0.38) {
-        hit = true;
-        for (let i = 0; i < 20; i++) bits.add(triTexture(), to[0] + rnd(-1, 1) * W * 0.5, to[1] + rnd(-1, 1) * H * 0.5, { vx: rnd(-1, 1) * unit * 2, vy: rnd(-1.2, 0.4) * unit * 1.6, gravity: unit * 3, spin: rnd(-8, 8), life: 0.7, tint: i % 3 ? 0xff7a8c : 0xffd0d8, scale: (unit / 180) * rnd(0.25, 0.5), alpha: 0.85 });
-        navigator.vibrate?.(20);
-      }
-      bits.step(dt);
-      return t < 1 || bits.list.length > 0;
-    },
-    sc.strike ? 1.1 : 1,
-  );
-  g.destroy();
-  glow.destroy();
-  await done();
-}
-
 export async function leech(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
   const mouth = at(0.63, 0.26);
