@@ -43,16 +43,6 @@ const nuggetTexture = () =>
     g.stroke();
   });
 
-function path(pts: Pt[], k: number): Pt {
-  const lens = pts.slice(1).map((p, i) => Math.hypot(p[0] - pts[i][0], p[1] - pts[i][1]));
-  let d = k * lens.reduce((a, b) => a + b, 0);
-  for (let i = 0; i < lens.length; i++) {
-    if (d <= lens[i]) return lerp(pts[i], pts[i + 1], lens[i] ? d / lens[i] : 0);
-    d -= lens[i];
-  }
-  return pts[pts.length - 1];
-}
-
 const MUDRAS: [number, number][] = [
   [0.72, 0.635],
   [0.72, 0.775],
@@ -147,65 +137,6 @@ export async function karunaFire(rect: DOMRect, code: string, ready?: Ready, boa
     return t < 1.4 || embers.list.length > 0;
   });
   g.destroy();
-  await done();
-}
-
-const BODY: [number, number][] = [
-  [0.07, 0.43],
-  [0.2, 0.375],
-  [0.33, 0.355],
-  [0.45, 0.37],
-  [0.55, 0.35],
-  [0.6, 0.28],
-  [0.62, 0.22],
-];
-
-export async function leechPose(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const body = BODY.map(([u, v]) => at(u, v));
-  const g = new Graphics();
-  g.blendMode = "add";
-  fx.addChild(g);
-  const eyes = [at(0.47, 0.215), at(0.57, 0.165)].map((p) => {
-    const s = glowSprite(fx, glowTexture(), 0x6aff6a);
-    s.position.set(...p);
-    return s;
-  });
-  const box: Pt = at(0.78, 0.235);
-  const mouth: Pt = at(0.63, 0.24);
-  const motes = new Emitter(fx);
-  root.addChild(fx);
-  await run(app, (t, dt) => {
-    g.clear();
-    const fade = 1 - span(t, 1.5, 1.9);
-    for (let n = 0; n < 2; n++) {
-      const k = span(t, n * 0.35, n * 0.35 + 0.9);
-      if (k <= 0 || k >= 1) continue;
-      const a = path(body, Math.max(0, k - 0.12));
-      const b = path(body, k);
-      const f = Math.sin(Math.PI * k);
-      for (const [w, c, al] of [
-        [unit * 0.06, 0xd04aff, 0.45],
-        [2, 0xffc8ff, 0.9],
-      ] as const) {
-        g.moveTo(...a);
-        for (let q = 1; q <= 8; q++) g.lineTo(...path(body, Math.max(0, k - 0.12 + (0.12 * q) / 8)));
-        g.stroke({ width: w, color: c, alpha: al * f, cap: "round" });
-      }
-      g.circle(b[0], b[1], unit * 0.03).fill({ color: 0xffb0ff, alpha: 0.85 * f });
-    }
-    const wake = span(t, 0.9, 1.1) * fade;
-    for (const e of eyes) {
-      e.alpha = 0.75 * wake * (0.8 + 0.2 * Math.sin(t * 12));
-      e.scale.set((unit / 128) * 0.1);
-    }
-    if (t > 0.9 && t < 1.6 && Math.random() < 0.9) {
-      const from: Pt = [box[0] + rnd(-1, 1) * unit * 0.08, box[1] + rnd(-1, 1) * unit * 0.04];
-      motes.add(sparkTexture(), ...from, { vx: (mouth[0] - from[0]) * 2.2, vy: (mouth[1] - from[1]) * 2.2, life: 0.45, tint: Math.random() < 0.5 ? 0x7af0ff : 0xb0fff0, scale: (unit / 180) * 0.24, alpha: 0.7 });
-    }
-    motes.step(dt);
-    return t < 1.9 || motes.list.length > 0;
-  });
   await done();
 }
 

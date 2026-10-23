@@ -1,8 +1,8 @@
 import { Graphics, Sprite } from "pixi.js";
 import { GlitchFilter } from "pixi-filters";
 import { Emitter, ease, glowTexture, lightning, run, span, sparkTexture } from "./stage";
-import { type Board, Fire, GOLD, type Ready, Smoke, WHITE, coinTexture, flyHome, homing, pt, scene, shimmer } from "./kit";
-import { type Pt, glyphTexture, glowSprite, lerp, rnd, strikeFx } from "./more";
+import { type Board, Fire, type Ready, Smoke, WHITE, flyHome, homing, pt, scene, shimmer } from "./kit";
+import { type Pt, glowSprite, lerp, rnd, strikeFx } from "./more";
 import { bezier, jolt } from "./sixth";
 
 function blaze(fire: Fire, x: number, y: number, r: number, n: number) {
@@ -150,39 +150,6 @@ export async function gourmand(rect: DOMRect, code: string, ready?: Ready, board
       c.s.scale.set((unit / 120) * 0.22 * (1 - 0.6 * k));
     }
     return t < 1.7;
-  });
-  await done();
-}
-
-export async function hedgeFund(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const pit = at(0.5, 0.3);
-  const screens: Pt[] = [at(0.47, 0.3), at(0.41, 0.38), at(0.9, 0.33)];
-  const g = new Graphics();
-  g.blendMode = "add";
-  fx.addChild(g);
-  const glows = screens.map((p) => {
-    const s = glowSprite(fx, glowTexture(), 0x9ad8ff);
-    s.position.set(...p);
-    return s;
-  });
-  const sources: Pt[] = [at(-0.05, 0.1), at(1.05, 0.15), at(-0.05, 0.45), at(1.05, 0.45), at(0.3, -0.05), at(0.75, -0.05), at(0.5, 0.55), at(0.1, 0.25), at(0.92, 0.22)];
-  const flights = sources.map((s, i) => homing(fx, glyphTexture(), s, pit, 0.2 + i * 0.09, 0xe8c860, (unit / 48) * 0.18, rnd(-1, 1) * unit * 0.2));
-  const trail = new Emitter(fx);
-  root.addChild(fx);
-  await run(app, (t, dt) => {
-    g.clear();
-    const fade = 1 - span(t, 1.6, 2);
-    screens.forEach((p, i) => {
-      const f = span(t, 0.1 + i * 0.12, 0.3 + i * 0.12) * fade;
-      glows[i].alpha = 0.22 * f * (0.8 + 0.2 * Math.sin(t * 9 + i));
-      glows[i].scale.set((unit / 128) * 0.1);
-    });
-    const landed = flyHome(flights, t, trail, 0xe8c860);
-    const k = landed / flights.length;
-    if (k > 0) g.circle(...pit, unit * (0.05 + 0.08 * k)).stroke({ width: 1.2, color: 0xffe08a, alpha: 0.5 * fade * (1 - span(t, 1.2, 1.6)) });
-    trail.step(dt);
-    return t < 2 || trail.list.length > 0;
   });
   await done();
 }
