@@ -444,20 +444,22 @@ the tag on.
 
 | Corp \ Runner | Party Hard | Stolen Goods | Planning Ahead |
 |---|---|---|---|
-| Discretion Advised, vs reference Runners | 5 | 4 | 3 |
-| Advanced Yomi, vs reference Runners | 6 | 4 | 6 |
-| Hyper Velocity, vs reference Runners | 3 | 5 | 3 |
-| Quick and Dirty, vs reference Runners | 8 | 6 | 8 |
+| Discretion Advised, vs reference Runners | 7 | 4 | 4 |
+| Advanced Yomi, vs reference Runners | 6 | 5 | 5 |
+| Hyper Velocity, vs reference Runners | 3 | 3 | 3 |
+| Quick and Dirty, vs reference Runners | 9 | 6 | 8 |
 | reference Haas-Bioroid, vs the new Runners | 3 | 6 | 4 |
 | reference Jinteki, vs the new Runners | 1 | 2 | 1 |
 | reference NBN, vs the new Runners | 5 | 6 | 8 |
 | reference Weyland, vs the new Runners | 5 | 7 | 5 |
 
-The Corp policies on the SG Only lists win 61 of 120 against the reference Runners (47
+The Corp policies on the SG Only lists win 63 of 120 against the reference Runners (47
 before the Corp changes, Advanced Yomi from 6 to 16 of 30); the Runner policies on the SG
 Only lists win 67 of 120 against the reference Corps. Policy against policy on the new
-lists: Corp 65 of 120. Hyper Velocity (NBN) is now the weakest Corp at 11 of 30 against the
-reference and is the next target.
+lists: Corp 65 of 120. Hyper Velocity (NBN) stays at 9 of 30 against the reference: its
+list wins through tags (Ping and Funhouse on the remote, Predictive Planogram and Public
+Trail while tagged, Orbital Superiority as a kill) and the Corp archetype does not yet
+chain those; it is the next target.
 
 Every Corp deck beats the heuristic Runner and every Runner deck beats the heuristic Corp
 by more than the interval, which is what the shared archetypes bought; the Haas-Bioroid
