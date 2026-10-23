@@ -217,55 +217,6 @@ export async function vicsekFire(rect: DOMRect, code: string, ready?: Ready, boa
   await done();
 }
 
-export async function vultureFund(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const holo: [Pt, Pt, Pt, Pt] = [at(0.16, 0.39), at(0.31, 0.385), at(0.32, 0.465), at(0.17, 0.47)];
-  const fins = [0, 1].map(() => glowSprite(fx, finTexture(), 0x0a2a30));
-  for (const f of fins) f.blendMode = "normal";
-  const g = new Graphics();
-  g.blendMode = "add";
-  fx.addChild(g);
-  const sparks = new Emitter(fx);
-  root.addChild(fx);
-  await run(app, (t, dt) => {
-    g.clear();
-    const fade = 1 - span(t, 1.6, 2);
-    fins.forEach((f, i) => {
-      const k = span(t, i * 0.4, 1.6 + i * 0.4);
-      const dir = i ? -1 : 1;
-      const p = at(i ? 1.05 - 1.1 * k : -0.05 + 1.1 * k, 0.11 + i * 0.05 + 0.015 * Math.sin(k * 8));
-      f.position.set(...p);
-      f.scale.set((unit / 96) * 0.32 * dir, (unit / 96) * 0.32);
-      f.alpha = 0.45 * Math.sin(Math.PI * k);
-    });
-    for (let i = 0; i < 5; i++) {
-      const v = 0.06 + i * 0.045;
-      const pts: number[] = [];
-      for (let s = 0; s <= 20; s++) {
-        const u = 0.05 + s * 0.045;
-        pts.push(...at(u, v + 0.008 * Math.sin(u * 18 + t * 3 + i)));
-      }
-      g.poly(pts, false).stroke({ width: 1, color: 0x8ff0f0, alpha: 0.12 * fade * span(t, 0, 0.4) });
-    }
-    const on = span(t, 0.2, 0.4) * fade;
-    const flick = Math.random() < 0.08 ? 0.4 : 1;
-    const graph: number[] = [];
-    const k = span(t, 0.3, 1.2);
-    for (let s = 0; s <= 10 * k; s++) {
-      const x = s / 10;
-      const y = 0.7 - 0.45 * Math.sin(x * Math.PI * 0.9) + 0.1 * Math.sin(x * 9);
-      const top = lerp(holo[0], holo[1], x);
-      const bot = lerp(holo[3], holo[2], x);
-      graph.push(...lerp(top, bot, 0.15 + y * 0.7));
-    }
-    if (graph.length >= 4) g.poly(graph, false).stroke({ width: 1.4, color: 0xffb0a0, alpha: 0.85 * on * flick });
-    if (t > 0.9 && t < 1.5 && Math.random() < 0.35) sparks.add(sparkTexture(), ...lerp(holo[0], holo[2], rnd(0.2, 0.8)), { vy: -unit * rnd(0.15, 0.3), vx: rnd(-1, 1) * unit * 0.05, life: 0.6, tint: 0xf6c945, scale: (unit / 180) * 0.2 });
-    sparks.step(dt);
-    return t < 2 || sparks.list.length > 0;
-  });
-  await done();
-}
-
 export async function topDownSolutions(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
   const eyes = HEADS.map((h) => {
