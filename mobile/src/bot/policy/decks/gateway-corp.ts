@@ -227,8 +227,14 @@ function run(obs: Observation, plan: Plan): Proposal | null {
     const installed = agendaIn(obs);
     const reserve = installed && server?.key !== installed.server.key ? Math.min(scoringCost(installed.card), 3) : 0;
     const threat = iceThreat(ice, obs.info(ice), Number(obs.opp.credit ?? 0));
-    const breakable = runnerBreaks(obs, ice);
+    const subs = (ice.subroutines ?? []).length || 3;
+    const clickable = (ice.subtypes ?? []).includes("Bioroid") && Number(obs.opp.click ?? 0) >= subs;
+    const breakable = runnerBreaks(obs, ice) || clickable;
     const worth = server && (server.content.length > 0 || server.key === "rd" || (server.key === "hq" && obs.hand.some((c) => c.type === "Agenda")) || (server.key === "archives" && (obs.me.discard ?? []).some((c: any) => c.type === "Agenda")));
+    if (clickable && obs.credits < cost + 4) {
+      const next = byCommand(obs, "continue")[0];
+      if (next) return fromCandidate(next, 30, `leave ${ice.title} unrezzed: the Runner has the clicks to walk through it`, "pass");
+    }
     if (cost <= obs.credits - reserve && (worth || (!breakable && threat.etr && cost <= 3))) return fromCandidate(rez, 80, `rez ${ice.title} (${cost}): ${breakable ? "taxes the Runner" : "the Runner cannot break it"}`, "rez");
     if (cost <= obs.credits && !breakable && threat.etr && server?.remote && server.content.length) return fromCandidate(rez, 82, `rez ${ice.title}: it ends the run`, "rez");
   }
