@@ -9201,6 +9201,19 @@ button.player-chip {
   color: var(--cyan);
 }
 
+.fxgl-filter {
+  display: grid;
+}
+
+.fxgl-filter button {
+  min-height: 40px;
+}
+
+.fxgl-filter button.on {
+  border-color: var(--cyan);
+  color: var(--cyan);
+}
+
 .fxgl-search {
   min-height: 40px;
 }

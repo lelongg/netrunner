@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "preact/hooks";
+import { useEffect, useRef, useState } from "preact/hooks";
 import { INSTALL, PLAY, REZ, SCORE } from "../fx/signatures";
 import { FX, type Kind, glEffect } from "../fx/gl";
 import { setAim } from "../fx/gl/aim";
@@ -205,7 +205,7 @@ function loadNotes(): Notes {
 }
 
 const VIEW = "nsg.fxlab";
-type View = { title?: string; kind?: Kind; query?: string; speed?: number; tile?: boolean; aimed?: boolean };
+type View = { title?: string; kind?: Kind; query?: string; speed?: number; tile?: boolean; aimed?: boolean; todo?: boolean };
 
 function loadView(): View {
   try {
@@ -248,6 +248,7 @@ export function FxGlLab() {
   const [speed, setSpeed] = useState(saved.speed && SPEEDS.includes(saved.speed) ? saved.speed : 1);
   const [tile, setTile] = useState(!!saved.tile);
   const [aimed, setAimed] = useState(!!saved.aimed);
+  const [todo, setTodo] = useState(!!saved.todo);
   const [notes, setNotes] = useState<Notes>(loadNotes);
   const [pass, setPass] = useState<Pass>(loadPass);
   const [versions, setVersions] = useState<Record<string, string>>({});
@@ -258,7 +259,6 @@ export function FxGlLab() {
   const run = useRef(0);
   const pending = useRef(false);
   const card = CARDS[pick];
-  const shown = useMemo(() => CARDS.map((c, i) => ({ c, i })).filter(({ c }) => c.title.toLowerCase().includes(query.trim().toLowerCase())), [query]);
 
   const play = async (old = false) => {
     const el = img.current;
@@ -296,9 +296,9 @@ export function FxGlLab() {
   }, []);
   useEffect(() => {
     try {
-      localStorage.setItem(VIEW, JSON.stringify({ title: CARDS[pick].title, kind, query, speed, tile, aimed }));
+      localStorage.setItem(VIEW, JSON.stringify({ title: CARDS[pick].title, kind, query, speed, tile, aimed, todo }));
     } catch {}
-  }, [pick, kind, query, speed, tile, aimed]);
+  }, [pick, kind, query, speed, tile, aimed, todo]);
   useEffect(() => () => setFxSpeed(1), []);
 
   useEffect(() => {
@@ -357,6 +357,9 @@ export function FxGlLab() {
     return !!r?.v && !!v && r.v !== v;
   };
   const tag = (k: string) => (changed(k) ? "changed" : mark(notes[k]));
+  const toReview = (k: string) => changed(k) && !reviewed(notes[k]);
+  const pendingCount = CARDS.reduce((n, c) => n + c.kinds.filter((k) => toReview(noteKey(c.title, k))).length, 0);
+  const shown = CARDS.map((c, i) => ({ c, i })).filter(({ c, i }) => c.title.toLowerCase().includes(query.trim().toLowerCase()) && (!todo || i === pick || c.kinds.some((k) => toReview(noteKey(c.title, k)))));
   const update = (patch: Review) => {
     const r = { ...review, ...patch, v: versionOf(key) };
     const next = { ...notes, [key]: r };
@@ -508,6 +511,11 @@ export function FxGlLab() {
         </div>
       </div>
 
+      <div class="fxgl-filter">
+        <button class={todo ? "on" : ""} onClick={() => setTodo(!todo)}>
+          Changed, not reviewed ({pendingCount})
+        </button>
+      </div>
       <input class="fxgl-search" type="search" placeholder={`Search ${CARDS.length} cards`} value={query} onInput={(e) => setQuery((e.target as HTMLInputElement).value)} />
       <div class="fxgl-strip" ref={strip}>
         {shown.map(({ c, i }) => (
