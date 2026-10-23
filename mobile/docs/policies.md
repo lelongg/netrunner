@@ -121,16 +121,40 @@ the last points sit behind an ice type no breaker answers.
 ```sh
 cd mobile
 npm run engine && npm run cards           # once
-node --experimental-strip-types scripts/policy-eval.mjs --games 20 --corp policy --runner heuristic --out /tmp/eval
+node --experimental-strip-types scripts/policy-eval.mjs --grid --games 20 --corp ref --runner policy --split test
+node --experimental-strip-types scripts/policy-eval.mjs --games 20 --corp policy --runner-list my-runner.txt --out /tmp/eval
 node --experimental-strip-types scripts/policy-eval.mjs --help
 ```
 
 Games are seeded: `--split` picks one of three disjoint seed sets (`design` for reading
 situations and changing policies, `tune` for adjusting scores, `test` for the final
 comparison) and `--seed` an offset inside it, so a result can be replayed exactly. Players are
-`policy`, `heuristic` or `random`; `--matchup` picks the preconstructed matchup (0 beginner,
-1 intermediate). The summary gives wins per side with a 95% interval, unfinished and blocked
-games, engine errors, refused moves, unhandled prompts and decision times.
+`policy` (the working tree), `ref` (the frozen reference, below), `heuristic` or `random`;
+`--matchup` picks the preconstructed matchup (0 beginner, 1 intermediate), `--corp-deck` and
+`--runner-deck` a core deck, `--grid` every core Corp deck against every core Runner deck,
+`--corp-list` and `--runner-list` a decklist text file (a human's own deck, for instance).
+The summary gives wins per side with a 95% interval, unfinished and blocked games, engine
+errors, refused moves, unhandled prompts and decision times.
+
+### Opponents, from weakest to strongest
+
+The heuristic bot is a floor, not a bar: it is stateless and reads no card text, so a
+policy that merely beats it has shown little. Progress is measured against opponents that
+actually push back:
+
+1. **The frozen reference** (`ref`). `scripts/policy-reference.json` pins a commit; `ref`
+   plays the policies of that commit from a detached worktree under `.policy-ref/`, created
+   on first use. A new version of a policy has to beat the previous reference on the `test`
+   split, in both seats, before the reference moves forward to it. Freezing is a one-line
+   change of the pinned commit, made only after the comparison, so the bar only rises.
+2. **The other policies** (`--grid`). Every Corp policy against every Runner policy on the
+   core decks. This is where the policies are developed: a weakness in one is a win for the
+   other, so the grid keeps both sides honest.
+3. **Human decks and replays** (`--corp-list`, `--runner-list`, the app's replays). The
+   objective is to beat a human, so the lists a human beat the bot with become test
+   opponents, played by the policy of the matching faction when one exists and by the
+   generic policy otherwise.
+4. **The heuristic bot**, kept as a sanity check that nothing regressed into nonsense.
 
 With `--out`, the run writes:
 
@@ -214,7 +238,9 @@ credits, a full hand and a three-ice remote clicking for credits until it decked
    split; keep the change only if the flagged situations are gone and the win rate did not
    drop.
 4. Bump the policy `version`.
-5. Run the `test` split against the heuristic bot in both seats before claiming progress.
+5. Run the `test` split against the frozen reference in both seats (`--corp ref` for the
+   Runner policies, `--runner ref` for the Corp policies) before claiming progress, then
+   move the reference forward to the new commit.
 
 A single loss or a single disagreement with the model is not evidence of a bug: the model's
 suggestion is a hypothesis that the games must confirm. Changes that fix exactly one replay
@@ -346,6 +372,46 @@ Policy against policy on the test split (`--grid`, 20 games per cell, Corp wins)
 | NBN: Reality Plus | 13 (0.65 ±0.21) | 10 (0.50 ±0.22) | 13 (0.65 ±0.21) |
 | Weyland: Built to Last | 12 (0.60 ±0.21) | 15 (0.75 ±0.19) | 11 (0.55 ±0.22) |
 
+### Against the frozen reference
+
+The reference of this loop was the policies and decks as merged in PR #1 (`aef9a54`, the
+bots the app shipped with); `scripts/policy-reference.json` now pins this loop's policies
+for the next one. Test split, 10 games per cell, each table shows Corp wins.
+
+Runner policies of this loop against the reference Corps (`--corp ref --runner policy`):
+
+| Corp (reference) \ Runner | Anarch: Loup | Criminal: Zahya | Shaper: Tāo |
+|---|---|---|---|
+| Haas-Bioroid: Precision Design | 3 (0.30 ±0.28) | 3 (0.30 ±0.28) | 5 (0.50 ±0.31) |
+| Jinteki: Restoring Humanity | 0 (0.00) | 1 (0.10 ±0.19) | 5 (0.50 ±0.31) |
+| NBN: Reality Plus | 5 (0.50 ±0.31) | 7 (0.70 ±0.28) | 5 (0.50 ±0.31) |
+| Weyland: Built to Last | 5 (0.50 ±0.31) | 6 (0.60 ±0.30) | 5 (0.50 ±0.31) |
+
+Corp policies of this loop against the reference Runners (`--corp policy --runner ref`):
+
+| Corp \ Runner (reference) | Anarch: Loup | Criminal: Zahya | Shaper: Tāo |
+|---|---|---|---|
+| Haas-Bioroid: Precision Design | 6 (0.60 ±0.30) | 5 (0.50 ±0.31) | 6 (0.60 ±0.30) |
+| Jinteki: Restoring Humanity | 6 (0.60 ±0.30) | 7 (0.70 ±0.28) | 6 (0.60 ±0.30) |
+| NBN: Reality Plus | 7 (0.70 ±0.28) | 5 (0.50 ±0.31) | 6 (0.60 ±0.30) |
+| Weyland: Built to Last | 6 (0.60 ±0.30) | 5 (0.50 ±0.31) | 6 (0.60 ±0.30) |
+
+Summed over the twelve pairs, the Runner policies win 70 of 120 games against the reference
+Corps (the same policies before this loop won 48 of 120 on the design split) and the Corp
+policies win 71 of 120 against the reference Runners. The Runner gains come from the games
+read in this loop: tags are no longer taken when the Corp can punish them before they are
+cleared, Botulus sits on the ice guarding the scoring remote, the Runner digs for the breaker
+type that guards what matters instead of clicking for credits, Mayfly is kept for a planned
+contest, and Semak-samun is broken with a fracter instead of costing three cards. The
+reference now points at this loop's policies, so the next loop has to beat these.
+
+Against a human's deck: the Weyland list that beat the Anarch bot 9–1 in the app (replay
+`XL9A7P49`), played by the Weyland policy through nearest-deck matching, loses 12–8 to the
+Anarch policy on the tune split (20 games); before this loop it was winning most games.
+
+The grid above against the reference is the figure to improve. The heuristic bot stays in
+the table below only as the floor.
+
 Every Corp deck beats the heuristic Runner and every Runner deck beats the heuristic Corp
 by more than the interval, which is what the shared archetypes bought; the Haas-Bioroid
 line is the lowest because the heuristic Zahya trashes its unprotected campaigns. Against
@@ -366,8 +432,10 @@ Known limits:
   asset, runs HQ when it is flooded and keeps ten credits leaves the Corp without a window.
   The Corp needs protected economy and faster scoring to close that gap.
 - Break costs are parsed from card text: breakers with unusual wording are estimated.
-- Only the System Gateway starter decks have a policy. Other decks use the generic policy,
-  whose quality is close to the heuristic bot.
+- A deck without an exact policy is played by the policy of the nearest registered deck
+  (same identity, or at least half the cards in common); that policy's deck-specific rules
+  simply never fire for cards the deck does not hold. Decks further away than that use the
+  generic policy, whose quality is close to the heuristic bot.
 - Two loops found during this work were in moves the engine refuses silently (trashing a
   resource when the Runner has none, rezzing an asset instead of the approached ice). The
   stall guard only catches a refused move when the same move is applied twice in the same

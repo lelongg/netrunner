@@ -1,5 +1,5 @@
 import { cardWorth, choiceLabel, choiceMove, choices, findChoice, promptFrom, selectMove, selectable } from "./prompts.ts";
-import { agendaProgress, iceThreat, strengthOf } from "./tactics.ts";
+import { agendaProgress, iceThreat, strengthOf, tagPunisher } from "./tactics.ts";
 import type { Observation, Proposal } from "./types.ts";
 
 const yes = (obs: Observation, score: number, why: string): Proposal | null => {
@@ -144,8 +144,12 @@ export function cardPrompt(obs: Observation): Proposal[] {
     const server = obs.servers.find((s) => s.key === obs.run?.server?.[0]);
     const worth = server ? server.content.some((c: any) => c.type === "Agenda" || (!c.rezzed && !c.title)) || ((server.key === "rd" || server.key === "hq") && obs.credits >= 4) : false;
     const tags = Number(obs.me.tag?.base ?? 0);
-    if (worth && tags === 0 && obs.credits >= 2) push(pickChoice(obs, /tag/i, 65, "Funhouse: take the tag, remove it later"));
-    push(pickChoice(obs, /end the run/i, 55, "Funhouse: not worth a tag"));
+    const nbn = /nbn/i.test(String(obs.opp.identity?.faction ?? obs.opp.identity?.title ?? ""));
+    const scoring = server ? server.content.some((c: any) => c.type === "Agenda" || agendaProgress(c).have > 0) : false;
+    const clearable = obs.clicks >= 1 && obs.credits >= 6;
+    const safe = !tagPunisher(obs) || clearable || (scoring && obs.hand.length >= 5);
+    if (worth && safe && obs.credits >= 2 && (tags === 0 || !nbn)) push(pickChoice(obs, /tag/i, 65, "Funhouse: take the tag, remove it later"));
+    push(pickChoice(obs, /end the run/i, 55, tagPunisher(obs) && !safe ? "Funhouse: a tag here gets punished before it can be cleared" : "Funhouse: not worth a tag"));
     return out;
   }
   if (from === "Public Trail" && /choose one/i.test(msg)) {
@@ -156,13 +160,18 @@ export function cardPrompt(obs: Observation): Proposal[] {
   }
   if (from === "Mutual Favor" && /choose an icebreaker/i.test(msg)) {
     const covered = new Set(obs.rig.filter((c: any) => (c.subtypes ?? []).includes("Icebreaker")).flatMap((c: any) => c.subtypes ?? []));
+    const seenTypes = new Set<string>();
+    for (const s of obs.servers) for (const i of s.ices) if (i.rezzed) for (const t of i.subtypes ?? []) seenTypes.add(t);
+    for (const title of obs.memory.opponentTitles) for (const t of obs.info({ title }).subtypes ?? []) if (["Barrier", "Code Gate", "Sentry"].includes(t)) seenTypes.add(t);
     const missing = (["Barrier", "Code Gate", "Sentry"] as const).filter((t) => !covered.has(t === "Barrier" ? "Fracter" : t === "Code Gate" ? "Decoder" : "Killer"));
-    const wanted = missing.flatMap((t) => obs.profile.breakers[t]);
-    for (const c of choices(obs)) {
-      const title = choiceLabel(obs, c);
-      if (wanted.includes(title)) {
-        push({ move: choiceMove(obs, c), score: 75, why: `Mutual Favor: ${title} covers what the rig lacks`, kind: "choice" });
-        return out;
+    const ordered = [...missing].sort((a, b) => Number(seenTypes.has(b)) - Number(seenTypes.has(a)));
+    for (const type of ordered) {
+      for (const c of choices(obs)) {
+        const title = choiceLabel(obs, c);
+        if (obs.profile.breakers[type].includes(title)) {
+          push({ move: choiceMove(obs, c), score: 75, why: `Mutual Favor: ${title} covers ${type}${seenTypes.has(type) ? ", which the Corp has shown" : ""}`, kind: "choice" });
+          return out;
+        }
       }
     }
     return out;
@@ -198,7 +207,7 @@ export function cardPrompt(obs: Observation): Proposal[] {
     const grip = obs.hand.length;
     const server = obs.servers.find((s) => s.key === obs.run?.server?.[0]);
     const worth = server ? server.content.some((c: any) => c.type === "Agenda" || (!c.rezzed && !c.title)) || server.key === "rd" || server.key === "hq" : false;
-    if (grip >= 5 && worth) push(pickChoice(obs, /damage/i, 70, "Semak-samun: take the damage, the server is worth it"));
+    if (grip >= 4 && worth) push(pickChoice(obs, /damage/i, 70, "Semak-samun: take the damage, the server is worth it"));
     push(pickChoice(obs, /end the run/i, 60, "Semak-samun: end the run rather than lose three cards"));
     return out;
   }

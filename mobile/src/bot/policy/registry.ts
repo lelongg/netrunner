@@ -42,14 +42,31 @@ export interface Match {
   exact: boolean;
 }
 
+const overlap = (a: DeckList, b: DeckList) => {
+  const have = new Map<string, number>();
+  for (const { title, qty } of a.cards) have.set(title, (have.get(title) ?? 0) + qty);
+  let shared = 0;
+  for (const { title, qty } of b.cards) shared += Math.min(qty, have.get(title) ?? 0);
+  return shared / Math.max(1, a.cards.reduce((n, c) => n + c.qty, 0));
+};
+
 export function findPolicy(side: Side, deck: AnyDeck | undefined): Match | null {
   if (!deck) return null;
-  const fp = fingerprint(deck);
+  const list = deckList(deck);
+  const fp = fingerprint(list);
   for (const policy of policies) {
     if (policy.side !== side) continue;
     if (policy.decks.some((d) => fingerprint(d) === fp)) return { policy, fingerprint: fp, exact: true };
   }
-  return null;
+  let best: { policy: DeckPolicy; score: number } | null = null;
+  for (const policy of policies) {
+    if (policy.side !== side) continue;
+    for (const d of policy.decks) {
+      const score = (d.identity === list.identity ? 1 : 0) + overlap(list, d);
+      if (score >= 0.5 && (!best || score > best.score)) best = { policy, score };
+    }
+  }
+  return best ? { policy: best.policy, fingerprint: fp, exact: false } : null;
 }
 
 export function policyById(id: string): DeckPolicy | undefined {
