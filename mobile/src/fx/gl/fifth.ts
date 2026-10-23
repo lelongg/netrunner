@@ -104,33 +104,6 @@ export async function mayfly(rect: DOMRect, code: string, ready?: Ready, board?:
   await done();
 }
 
-export async function idiosyncresis(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, card, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const eye = at(0.53, 0.2);
-  const glitch = new GlitchFilter({ slices: 10, offset: 0, fillMode: 2, red: { x: 0, y: 0 }, blue: { x: 0, y: 0 } });
-  card.filters = [glitch];
-  const bits = new Emitter(fx);
-  const iris = glowSprite(fx, glowTexture(), WHITE);
-  iris.position.set(...eye);
-  root.addChild(fx);
-  await run(app, (t, dt) => {
-    const on = Math.sin(Math.PI * span(t, 0, 1.6));
-    glitch.offset = Math.random() < 0.15 * on ? unit * 0.04 : 0;
-    glitch.seed = Math.random();
-    iris.alpha = 0.7 * on;
-    iris.scale.set((unit / 128) * 0.08);
-    if (on > 0.2)
-      for (let n = 0; n < 2; n++) {
-        const d = rnd(0, 1);
-        bits.add(sliverTexture(), eye[0] + unit * 0.05, eye[1] + rnd(-1, 1) * unit * 0.03, { vx: unit * rnd(0.5, 0.9), vy: -unit * rnd(0, 0.15), life: 0.6, tint: d < 0.5 ? 0xb6ff5a : 0xffd84a, scale: (unit / 180) * rnd(0.2, 0.4), alpha: 0.9 });
-      }
-    for (const b of bits.list) b.s.rotation = Math.atan2(b.vy, b.vx);
-    bits.step(dt);
-    return t < 1.7 || bits.list.length > 0;
-  });
-  await done();
-}
-
 export async function stowawayPose(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
   const urchins: [Pt, number][] = [
@@ -162,34 +135,6 @@ export async function stowawayPose(rect: DOMRect, code: string, ready?: Ready, b
     vine.clear();
     if (host) tether(vine, urchins[0][0], host, ease.inOut(span(t, 0.3, 1)), 0xffb347, unit * 0.008, fade, unit * 0.03, t);
     return t < 1.9;
-  });
-  await done();
-}
-
-export async function malapertDataVault(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const sweep = new Graphics();
-  sweep.blendMode = "add";
-  fx.addChild(sweep);
-  const tip = glowSprite(fx, sparkTexture(), WHITE);
-  tip.position.set(...at(0.45, 0.26));
-  const motes = new Emitter(fx);
-  root.addChild(fx);
-  await run(app, (t, dt) => {
-    sweep.clear();
-    const k = ease.inOut(span(t, 0.1, 1.2));
-    if (k > 0 && k < 1) {
-      const u = -0.05 + 1.1 * k;
-      quad(sweep, at, u - 0.06, 0.08, u + 0.06, 0.48).fill({ color: 0x9bffe0, alpha: 0.12 });
-      quad(sweep, at, u - 0.005, 0.08, u + 0.005, 0.48).fill({ color: WHITE, alpha: 0.5 });
-      if (Math.random() < 0.7) motes.add(cubeTexture(), ...at(u, rnd(0.2, 0.46)), { vy: -unit * 0.05, life: 0.5, tint: Math.random() < 0.5 ? 0x9bffe0 : 0xffb0d8, scale: (unit / 180) * 0.2, alpha: 0.6 });
-    }
-    const g = Math.sin(Math.PI * span(t, 1, 1.6));
-    tip.alpha = g;
-    tip.rotation = t;
-    tip.scale.set((unit / 120) * 0.4 * g);
-    motes.step(dt);
-    return t < 1.7 || motes.list.length > 0;
   });
   await done();
 }
@@ -316,66 +261,6 @@ export async function nicoCampaign(rect: DOMRect, code: string, ready?: Ready, b
   await done();
 }
 
-export async function merciaBallard(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const g = new Graphics();
-  g.blendMode = "add";
-  fx.addChild(g);
-  const petals = new Emitter(fx);
-  root.addChild(fx);
-  await run(app, (t, dt) => {
-    g.clear();
-    const k = ease.inOut(span(t, 0.1, 1.1));
-    const v = 0.27 + 0.25 * k;
-    const fade = 1 - span(t, 1.5, 1.9);
-    if (k > 0 && k < 1)
-      g.moveTo(...at(0.05, v))
-        .lineTo(...at(0.75, v))
-        .stroke({ width: 2, color: 0xbfe6ff, alpha: 0.9 });
-    for (let i = 0; i < 8; i++) {
-      const vv = 0.27 + (0.25 * i) / 8;
-      if (vv > v) break;
-      g.moveTo(...at(0.08, vv))
-        .lineTo(...at(0.72, vv))
-        .stroke({ width: 1, color: 0x9be8ff, alpha: 0.25 * fade });
-    }
-    if (t < 1.5 && Math.random() < 0.2) petals.add(petalTexture(), ...at(rnd(0.75, 0.98), rnd(0.12, 0.3)), { vx: -unit * 0.05, vy: unit * 0.08, spin: rnd(-2, 2), life: 1.2, tint: 0xd890ff, scale: (unit / 180) * 0.3, alpha: 0.8, blend: "normal" });
-    petals.step(dt);
-    return t < 1.9 || petals.list.length > 0;
-  });
-  await done();
-}
-
-export async function mitraAman(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const hud = at(0.68, 0.33);
-  const g = new Graphics();
-  g.blendMode = "add";
-  fx.addChild(g);
-  const drops = new Emitter(fx);
-  root.addChild(fx);
-  await run(app, (t, dt) => {
-    g.clear();
-    const fade = 1 - span(t, 1.6, 2);
-    const pts: number[] = [];
-    for (let i = 0; i <= 30; i++) {
-      const u = i / 30;
-      const ph = (u * 3 - t * 1.5) % 1;
-      const beat = Math.abs(ph - 0.5) < 0.04 ? (ph < 0.5 ? -1 : 1) : 0;
-      pts.push(hud[0] - unit * 0.18 + u * unit * 0.36, hud[1] + unit * 0.13 + beat * unit * 0.05);
-    }
-    g.poly(pts, false).stroke({ width: 1.5, color: 0x9be8ff, alpha: 0.9 * fade * span(t, 0, 0.3) });
-    for (let i = 0; i < 3; i++) {
-      const k = 0.5 + 0.5 * Math.sin(t * 5 + i * 2);
-      g.circle(hud[0] - unit * 0.12 + i * unit * 0.1, hud[1] - unit * 0.08, unit * 0.035).stroke({ width: 1.5, color: 0x9be8ff, alpha: (0.3 + 0.6 * k) * fade });
-    }
-    if (t < 1.6 && Math.random() < 0.25) drops.add(glowTexture(), ...at(rnd(0.3, 0.5), rnd(0.13, 0.25)), { vy: unit * 0.06, life: 0.8, tint: 0xd8f0ff, scale: (unit / 128) * 0.015 });
-    drops.step(dt);
-    return t < 2 || drops.list.length > 0;
-  });
-  await done();
-}
-
 export async function hantuPose(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, card, fx, done, unit, at } = await scene(rect, code, ready, board);
   const ghost = at(0.64, 0.3);
@@ -414,172 +299,6 @@ export async function hantu(rect: DOMRect, code: string, ready?: Ready, board?: 
   await done();
 }
 
-export async function magistrateRevontulet(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const aurora = new Graphics();
-  aurora.blendMode = "add";
-  fx.addChild(aurora);
-  const crown = glowSprite(fx, sparkTexture(), GOLD);
-  crown.position.set(...at(0.5, 0.23));
-  root.addChild(fx);
-  await run(app, (t) => {
-    aurora.clear();
-    const on = Math.sin(Math.PI * span(t, 0, 2));
-    AURORA.forEach((c, n) => {
-      for (let i = 0; i < 24; i++) {
-        const u = 0.05 + (0.9 * i) / 24;
-        const top = 0.08 + 0.04 * Math.sin(u * 8 + t * 2 + n);
-        const h = 0.12 + 0.06 * Math.sin(u * 5 - t * 3 + n * 2);
-        const [x0, y0] = at(u + n * 0.01, top);
-        const [x1, y1] = at(u + n * 0.01, top + h);
-        aurora
-          .moveTo(x0, y0)
-          .lineTo(x1, y1)
-          .stroke({ width: unit * 0.03, color: c, alpha: 0.12 * on });
-      }
-    });
-    const g = Math.sin(Math.PI * span(t, 0.6, 1.2));
-    crown.alpha = g;
-    crown.rotation = t;
-    crown.scale.set((unit / 120) * 0.45 * g);
-    return t < 2;
-  });
-  await done();
-}
-
-export async function lethe(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const bowl = at(0.4, 0.62);
-  const stream = new Emitter(fx);
-  const mist = new Smoke(fx);
-  root.addChild(fx);
-  await run(app, (t, dt) => {
-    if (t < 1.5)
-      for (let n = 0; n < 2; n++) {
-        const [x, y] = at(0.4 + rnd(-0.02, 0.02), 0.62);
-        const [tx] = at(0.9, 0.62);
-        stream.add(glowTexture(), x, y, { vx: (tx - x) * rnd(0.9, 1.3), vy: rnd(-1, 1) * unit * 0.03, life: 0.8, tint: 0xbff6ff, scale: (unit / 128) * rnd(0.03, 0.05) });
-      }
-    if (t < 1.4 && Math.random() < 0.3) mist.puff(...bowl, { vx: rnd(-1, 1) * unit * 0.1, vy: -unit * 0.05, life: 1.4, size: unit * 0.1, grow: 2.2, tint: 0xbfe6ff, alpha: 0.35, add: true });
-    stream.step(dt);
-    mist.step(dt);
-    return t < 1.8 || stream.list.length > 0;
-  });
-  await done();
-}
-
-export async function letheFire(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const bowl = at(0.4, 0.62);
-  const mist = new Smoke(app.stage);
-  root.addChild(fx);
-  const target: Pt = board?.runner ? pt(board.runner) : [innerWidth / 2, innerHeight * 0.9];
-  let hit = false;
-  await run(app, (t, dt) => {
-    const src = root.toGlobal({ x: bowl[0], y: bowl[1] });
-    if (t < 0.5)
-      for (let n = 0; n < 2; n++) {
-        const k = rnd(0, 1);
-        const [x, y] = lerp([src.x, src.y], target, k * span(t, 0, 0.5));
-        mist.puff(x, y, { vx: rnd(-1, 1) * unit * 0.1, vy: rnd(-1, 1) * unit * 0.1, life: 0.9, size: unit * 0.12, grow: 2, tint: 0xbfe6ff, alpha: 0.4, add: true });
-      }
-    if (!hit && t > 0.5) {
-      hit = true;
-      if (board?.runner) prism(document.querySelector('[data-anchor="runner-panel"]'), 0.4);
-    }
-    mist.step(dt);
-    return t < 0.7 || mist.list.length > 0;
-  });
-  await done();
-}
-
-export async function scatterField(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const orbs = [0.56, 0.64, 0.73, 0.82].map((v, i) => {
-    const s = glowSprite(fx, glowTexture(), 0xfff2d8);
-    s.position.set(...at(0.19 + (i % 2) * 0.03, v));
-    return s;
-  });
-  root.addChild(fx);
-  await run(app, (t) => {
-    orbs.forEach((o, i) => {
-      const k = span(t, 0.15 + i * 0.15, 0.35 + i * 0.15) * (1 - span(t, 1.6, 2));
-      o.alpha = k * (0.7 + 0.3 * Math.sin(t * 9 + i));
-      o.scale.set((unit / 128) * 0.12);
-    });
-    return t < 2;
-  });
-  await done();
-}
-
-export async function scatterFieldFire(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const beams = new Graphics();
-  beams.blendMode = "add";
-  fx.addChild(beams);
-  root.addChild(fx);
-  await run(app, (t) => {
-    beams.clear();
-    const fade = 1 - span(t, 0.5, 0.9);
-    [0.56, 0.64, 0.73, 0.82].forEach((v, i) => {
-      const k = ease.out(span(t, i * 0.05, 0.3 + i * 0.05));
-      for (const da of [-0.06, 0, 0.06])
-        beams
-          .moveTo(...at(0.2, v))
-          .lineTo(...at(0.2 + 0.75 * k, v + da * k))
-          .stroke({ width: unit * 0.008, color: 0xfff2d8, alpha: 0.8 * fade });
-    });
-    return t < 0.9;
-  });
-  await done();
-}
-
-export async function lionsmane(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const core = at(0.28, 0.63);
-  const fire = new Fire(fx, undefined, unit * 0.3);
-  root.addChild(fx);
-  await run(app, (t, dt) => {
-    const on = Math.sin(Math.PI * span(t, 0, 1.6));
-    if (on > 0.1) {
-      const a = t * 5 + rnd(-0.3, 0.3);
-      const r = unit * rnd(0.05, 0.25);
-      fire.emit(core[0] + Math.cos(a) * r, core[1] + Math.sin(a) * r, { vx: -Math.sin(a) * unit * 0.5, vy: Math.cos(a) * unit * 0.5, size: unit * rnd(0.07, 0.11) * on, life: 0.5 });
-    }
-    fire.step(dt);
-    return t < 1.6 || fire.list.length > 0;
-  });
-  await done();
-}
-
-export async function lionsmaneFire(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const core = at(0.28, 0.63);
-  const fire = new Fire(app.stage, undefined, unit * 0.2);
-  root.addChild(fx);
-  const target: Pt = board?.runner ? pt(board.runner) : [innerWidth / 2, innerHeight * 0.9];
-  let hit = false;
-  await run(app, (t, dt) => {
-    const src = root.toGlobal({ x: core[0], y: core[1] });
-    if (t < 0.4) {
-      const dx = target[0] - src.x;
-      const dy = target[1] - src.y;
-      const d = Math.hypot(dx, dy) || 1;
-      for (let n = 0; n < 3; n++) {
-        const s = rnd(-0.15, 0.15);
-        fire.emit(src.x, src.y, { vx: ((dx * Math.cos(s) - dy * Math.sin(s)) / d) * d * 1.8, vy: ((dx * Math.sin(s) + dy * Math.cos(s)) / d) * d * 1.8, size: unit * rnd(0.06, 0.1), life: 0.55 });
-      }
-    }
-    if (!hit && t > 0.45) {
-      hit = true;
-      if (board?.runner) prism(document.querySelector('[data-anchor="runner-panel"]'), 0.4);
-    }
-    fire.step(dt);
-    return t < 0.6 || fire.list.length > 0;
-  });
-  await done();
-}
-
 export async function empiricist(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, card, fx, done, unit, at } = await scene(rect, code, ready, board);
   const glow = new GlowFilter({ color: 0x9be8ff, distance: 10, outerStrength: 0, quality: 0.3 });
@@ -606,32 +325,6 @@ export async function empiricist(rect: DOMRect, code: string, ready?: Ready, boa
     glow.outerStrength = 1.5 * on;
     return t < 1.8;
   });
-  await done();
-}
-
-export async function empiricistFire(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, fx, done, at } = await scene(rect, code, ready, board);
-  const lens = at(0.38, 0.78);
-  const scan = new Graphics();
-  scan.blendMode = "add";
-  app.stage.addChild(scan);
-  root.addChild(fx);
-  const target = board?.runner ?? null;
-  await run(app, (t) => {
-    scan.clear();
-    if (target) {
-      const src = root.toGlobal({ x: lens[0], y: lens[1] });
-      const k = span(t, 0, 0.7);
-      const y = target.top + target.height * k;
-      scan.poly([src.x, src.y, target.left, y, target.right, y]).fill({ color: 0x9be8ff, alpha: 0.12 * (1 - span(t, 0.6, 0.9)) });
-      scan
-        .moveTo(target.left, y)
-        .lineTo(target.right, y)
-        .stroke({ width: 2, color: WHITE, alpha: 1 - span(t, 0.6, 0.9) });
-    }
-    return t < 0.9;
-  });
-  scan.destroy();
   await done();
 }
 

@@ -925,3 +925,4 @@ export * from "./revB";
 export * from "./revC";
 export * from "./revG";
 export * from "./revE";
+export * from "./revD";
