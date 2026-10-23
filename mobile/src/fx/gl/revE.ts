@@ -60,7 +60,8 @@ export async function syailendra(rect: DOMRect, code: string, ready?: Ready, boa
   const tip = glowSprite(fx, glowTexture(), 0xe8fff0);
   tip.position.set(...at(0.233, 0.627));
   const pip = glowSprite(fx, sparkTexture(), 0xdff6ff);
-  const ring = (a: number) => at(0.278 + 0.11 * Math.cos(a), 0.75 + 0.235 * Math.sin(a));
+  const ring = (a: number) => at(0.295 + 0.075 * Math.cos(a), 0.71 + 0.145 * Math.sin(a));
+  const shown = (a: number) => Math.cos(a) < 0.55;
   root.addChild(fx);
   await run(app, (t) => {
     g.clear();
@@ -77,12 +78,16 @@ export async function syailendra(rect: DOMRect, code: string, ready?: Ready, boa
     const a0 = -Math.PI / 2;
     const head = a0 + k * Math.PI * 2;
     if (k > 0 && k < 1) {
-      g.moveTo(...ring(Math.max(a0, head - 1.2)));
-      for (let i = 1; i <= 20; i++) g.lineTo(...ring(Math.max(a0, head - 1.2) + ((head - Math.max(a0, head - 1.2)) * i) / 20));
+      const from = Math.max(a0, head - 1.2);
+      for (let i = 0; i < 20; i++) {
+        const a = from + ((head - from) * i) / 20;
+        const b = from + ((head - from) * (i + 1)) / 20;
+        if (shown(a) && shown(b)) g.moveTo(...ring(a)).lineTo(...ring(b));
+      }
       g.stroke({ width: 2.2, color: 0xbfeaff, alpha: 0.9 * fade });
     }
     pip.position.set(...ring(head));
-    pip.alpha = k > 0 && k < 1 ? 0.9 * fade : 0;
+    pip.alpha = k > 0 && k < 1 && shown(head) ? 0.9 * fade : 0;
     pip.scale.set((unit / 120) * 0.25);
     const b = Math.sin(Math.PI * span(t, 0.9, 1.8));
     tip.alpha = 0.45 * b;

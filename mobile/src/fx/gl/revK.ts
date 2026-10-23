@@ -43,67 +43,18 @@ function clip(root: Container, sprite: Container, poly: Pt[]) {
 
 export async function vultureFund(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, card, done, unit, at } = await scene(rect, code, ready, board);
-  const art: Pt[] = [at(0.03, 0.07), at(0.97, 0.07), at(0.97, 0.52), at(0.03, 0.52)];
   const tablet: Quad = [at(0.144, 0.404), at(0.356, 0.424), at(0.333, 0.499), at(0.167, 0.479)];
   const glow = keyed(root, card, [1, -0.7, -0.6], 0.15, 3, 0xff6a4a);
   clip(root, glow, tablet);
-  const holder = new Container();
-  root.addChildAt(holder, root.getChildIndex(card) + 1);
-  const dim = copy(card);
-  const cm = new ColorMatrixFilter();
-  cm.brightness(0.45, false);
-  dim.filters = [cm];
-  const shadow = new Graphics();
-  holder.addChild(dim, shadow);
-  dim.mask = shadow;
-  clip(root, holder, art);
   const g = new Graphics();
   layer(root, false).addChild(g);
   const curve = [0.15, 0.22, 0.18, 0.4, 0.34, 0.55, 0.5, 0.72, 0.66, 0.85];
   await run(app, (t) => {
-    shadow.clear();
-    const k = ease.inOut(span(t, 0, 1.15));
-    if (k > 0 && k < 1) {
-      const c = lerp(at(1.35, -0.05), at(-0.35, 0.55), k);
-      const s = unit * 1.1;
-      const flap = Math.sin(t * 8) * 0.08;
-      const P = (x: number, y: number): Pt => [c[0] + x * s, c[1] + y * s];
-      shadow.moveTo(...P(0.05, -0.02));
-      const wing = (d: number) => {
-        shadow
-          .quadraticCurveTo(...P(d * 0.25, -0.3 - flap), ...P(d * 0.62, -0.18 - flap))
-          .lineTo(...P(d * 0.68, -0.08 - flap * 0.5))
-          .lineTo(...P(d * 0.6, -0.06))
-          .lineTo(...P(d * 0.64, 0.0))
-          .lineTo(...P(d * 0.54, -0.01))
-          .lineTo(...P(d * 0.56, 0.06))
-          .lineTo(...P(d * 0.46, 0.03))
-          .quadraticCurveTo(...P(d * 0.22, 0.04), ...P(d * 0.06, 0.12));
-      };
-      wing(1);
-      shadow
-        .lineTo(...P(0.03, 0.26))
-        .lineTo(...P(-0.03, 0.26))
-        .lineTo(...P(-0.06, 0.12));
-      shadow
-        .quadraticCurveTo(...P(-0.22, 0.04), ...P(-0.46, 0.03))
-        .lineTo(...P(-0.56, 0.06))
-        .lineTo(...P(-0.54, -0.01))
-        .lineTo(...P(-0.64, 0.0))
-        .lineTo(...P(-0.6, -0.06))
-        .lineTo(...P(-0.68, -0.08 - flap * 0.5))
-        .lineTo(...P(-0.62, -0.18 - flap))
-        .quadraticCurveTo(...P(-0.25, -0.3 - flap), ...P(-0.05, -0.02))
-        .lineTo(...P(0, -0.1))
-        .closePath()
-        .fill(0xffffff);
-      dim.alpha = 0.85 * Math.min(1, Math.sin(Math.PI * k) * 1.6);
-    }
     const beat = (b: number) => Math.max(0, 1 - Math.abs(t - b) / 0.12);
-    glow.alpha = 0.3 * span(t, 0.5, 0.8) * (1 - span(t, 1.5, 1.8)) + 0.6 * Math.max(beat(0.85), beat(1.1), beat(1.35));
+    glow.alpha = 0.3 * span(t, 0.1, 0.35) * (1 - span(t, 1.2, 1.5)) + 0.6 * Math.max(beat(0.4), beat(0.65), beat(0.9));
     g.clear();
-    const draw = span(t, 0.7, 1.4);
-    const fade = 1 - span(t, 1.55, 1.85);
+    const draw = span(t, 0.25, 0.95);
+    const fade = 1 - span(t, 1.2, 1.5);
     if (draw > 0) {
       const n = Math.max(1, Math.floor(draw * (curve.length - 1)));
       const pts = curve.slice(0, n + 1).map((r, i) => bi(tablet, 0.1 + (0.8 * i) / (curve.length - 1), 0.12 + 0.7 * r));
@@ -115,10 +66,9 @@ export async function vultureFund(rect: DOMRect, code: string, ready?: Ready, bo
       g.stroke({ width: 1.6, color: 0xffd0c0, alpha: 0.95 * fade, join: "round" });
       g.circle(...pts[pts.length - 1], unit * 0.008).fill({ color: 0xffe0d0, alpha: fade });
     }
-    return t < 1.85;
+    return t < 1.5;
   });
   glow.destroy();
-  holder.destroy({ children: true });
   await done();
 }
 
@@ -173,8 +123,8 @@ export async function anoeticVoid(rect: DOMRect, code: string, ready?: Ready, bo
   const embers = keyed(root, card, [0.55, 0.45, 0], 0.62, 3.5, 0xffb070);
   clip(root, embers, art);
   const orbs: [Pt, number][] = [
-    [at(0.467, 0.163), unit * 0.05],
-    [at(0.708, 0.139), unit * 0.05],
+    [at(0.463, 0.167), unit * 0.045],
+    [at(0.714, 0.154), unit * 0.07],
   ];
   const g = new Graphics();
   layer(root, false).addChild(g);
@@ -196,109 +146,44 @@ export async function anoeticVoid(rect: DOMRect, code: string, ready?: Ready, bo
         }
         g.stroke({ width: 1.5 - j * 0.35, color: j ? 0xff9a50 : 0xffe0a0, alpha: (0.95 - j * 0.25) * on });
       }
+      for (let ray = 0; ray < 16; ray++) {
+        const a = (ray / 16) * Math.PI * 2 + i * 0.4 + t * 0.35;
+        const len = r * (0.5 + 0.45 * (0.5 + 0.5 * Math.sin(t * 7 + ray * 2.3 + i)));
+        const r0 = r * 1.15;
+        g.moveTo(c[0] + Math.cos(a) * r0, c[1] + Math.sin(a) * r0).lineTo(c[0] + Math.cos(a) * (r0 + len * on), c[1] + Math.sin(a) * (r0 + len * on));
+      }
+      g.stroke({ width: 1, color: 0xffc080, alpha: 0.55 * on });
       const flare = span(t, 0.5 + i * 0.15, 1.2 + i * 0.15);
-      if (flare > 0 && flare < 1) g.circle(c[0], c[1], r * (1.1 + 3 * ease.out(flare))).stroke({ width: 1.3, color: 0xffb070, alpha: 0.75 * (1 - flare) });
+      if (flare > 0 && flare < 1) g.circle(c[0], c[1], r * (1.1 + 1.5 * ease.out(flare))).stroke({ width: 1.3, color: 0xffb070, alpha: 0.75 * (1 - flare) });
     });
+    const link = span(t, 0.75, 1.05) * (1 - span(t, 1.3, 1.7));
+    if (link > 0) {
+      const [a, ra] = orbs[0];
+      const [b, rb] = orbs[1];
+      const ang = Math.atan2(b[1] - a[1], b[0] - a[0]);
+      const p0: Pt = [a[0] + Math.cos(ang) * ra * 1.2, a[1] + Math.sin(ang) * ra * 1.2];
+      const p1: Pt = [b[0] - Math.cos(ang) * rb * 1.2, b[1] - Math.sin(ang) * rb * 1.2];
+      const reach = ease.out(span(t, 0.75, 1.05));
+      for (const [lift, w, col, al] of [
+        [0.09, 3, 0xff7a3a, 0.35],
+        [0.09, 1.2, 0xffe0b0, 0.9],
+        [0.05, 1, 0xffb070, 0.5],
+      ] as const) {
+        const mid: Pt = [(p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2 - unit * lift];
+        g.moveTo(...p0);
+        for (let q = 1; q <= 24; q++) {
+          const f = (q / 24) * reach;
+          const m = 1 - f;
+          const jit = Math.sin(f * 40 + t * 30) * unit * 0.004;
+          g.lineTo(m * m * p0[0] + 2 * m * f * mid[0] + f * f * p1[0], m * m * p0[1] + 2 * m * f * mid[1] + f * f * p1[1] + jit);
+        }
+        g.stroke({ width: w, color: col, alpha: al * link });
+      }
+    }
     return t < 1.8;
   });
   dark.destroy();
   embers.destroy();
-  await done();
-}
-
-export async function betaBuild(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, card, done, unit, at } = await scene(rect, code, ready, board);
-  const sketch = copy(card);
-  const cm = new ColorMatrixFilter();
-  cm.matrix = [0.3, 0.45, 0.1, 0, 0.04, 0.22, 0.4, 0.1, 0, 0, 0.35, 0.6, 0.15, 0, 0.08, 0, 0, 0, 1, 0];
-  const glitch = new GlitchFilter({ slices: 10, offset: 0, fillMode: 2, red: { x: 0, y: 0 }, blue: { x: 0, y: 0 } });
-  sketch.filters = [cm];
-  root.addChildAt(sketch, root.getChildIndex(card) + 1);
-  const mask = new Graphics();
-  root.addChild(mask);
-  sketch.mask = mask;
-  const grid = new Graphics();
-  root.addChild(grid);
-  const gm = new Graphics();
-  root.addChild(gm);
-  grid.mask = gm;
-  const g = new Graphics();
-  layer(root, false).addChild(g);
-  const visor = at(0.417, 0.193);
-  await run(app, (t) => {
-    const cover = span(t, 0, 0.25);
-    const k = ease.inOut(span(t, 0.3, 1.15));
-    const u = 0.035 + 0.93 * k;
-    const region = [at(u, 0.075), at(0.965, 0.075), at(0.965, 0.515), at(u, 0.515)];
-    mask.clear().poly(region.flat()).fill(0xffffff);
-    gm.clear().poly(region.flat()).fill(0xffffff);
-    sketch.alpha = cover * (1 - span(t, 1.15, 1.25));
-    sketch.filters = k > 0 && k < 1 && Math.random() < 0.35 ? [cm, glitch] : [cm];
-    glitch.offset = unit * 0.012;
-    glitch.seed = Math.random();
-    grid.clear();
-    for (let i = 0; i <= 12; i++) grid.moveTo(...at(0.035 + i * 0.0775, 0.075)).lineTo(...at(0.035 + i * 0.0775, 0.515));
-    for (let j = 0; j <= 6; j++) grid.moveTo(...at(0.035, 0.075 + j * 0.0733)).lineTo(...at(0.965, 0.075 + j * 0.0733));
-    grid.stroke({ width: 1, color: 0xd8c8ff, alpha: 0.25 * cover * (1 - span(t, 1.15, 1.25)) });
-    g.clear();
-    if (k > 0 && k < 1) {
-      g.moveTo(...at(u, 0.075))
-        .lineTo(...at(u, 0.515))
-        .stroke({ width: unit * 0.02, color: 0xb08aff, alpha: 0.25 });
-      g.moveTo(...at(u, 0.075))
-        .lineTo(...at(u, 0.515))
-        .stroke({ width: 1.5, color: 0xf0e8ff, alpha: 0.9 });
-      for (let i = 0; i < 4; i++) {
-        const v = 0.08 + ((i * 0.13 + t * 0.9) % 0.43);
-        g.moveTo(...at(u - 0.03, v))
-          .lineTo(...at(u, v))
-          .stroke({ width: 1, color: 0x9dffb0, alpha: 0.7 });
-      }
-    }
-    const lit = Math.sin(Math.PI * span(t, 1.1, 1.6));
-    if (lit > 0) {
-      star(g, visor, unit * 0.06 * lit, 0x9dffb0, 0.85, t);
-      g.ellipse(visor[0], visor[1], unit * 0.05 * lit, unit * 0.014 * lit).stroke({ width: 1, color: 0x9dffb0, alpha: 0.6 * lit });
-    }
-    return t < 1.6;
-  });
-  sketch.destroy();
-  grid.destroy();
-  await done();
-}
-
-export async function charmOffensive(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, card, done, unit, at } = await scene(rect, code, ready, board);
-  const focal = at(0.66, 0.28);
-  const shot = new Container();
-  const dim = copy(card);
-  const cm = new ColorMatrixFilter();
-  dim.filters = [cm];
-  const lit = copy(card);
-  const focus = focusFilter([0.66, 0.28], 0.1, 0.3, rect.width / rect.height);
-  lit.filters = [focus];
-  shot.addChild(dim, lit);
-  root.addChildAt(shot, root.getChildIndex(card) + 1);
-  clip(root, shot, [at(0.035, 0.075), at(0.965, 0.075), at(0.965, 0.515), at(0.035, 0.515)]);
-  pivot(shot, focal);
-  const warm = keyed(root, card, [0.7, 0.2, -0.6], 0.32, 1.6, 0xffb070);
-  const wm = new Graphics();
-  root.addChild(wm);
-  warm.mask = wm;
-  await run(app, (t) => {
-    const k = ease.inOut(span(t, 0, 1.1));
-    const out = span(t, 1.45, 1.85);
-    shot.scale.set(1 + 0.14 * k * (1 - ease.inOut(out)));
-    cm.brightness(1 - 0.5 * k * (1 - out), false);
-    shot.alpha = 1 - out;
-    wm.clear()
-      .ellipse(focal[0], focal[1], unit * 0.24, unit * 0.16)
-      .fill(0xffffff);
-    warm.alpha = 0.35 * Math.sin(Math.PI * span(t, 0.4, 1.8));
-    return t < 1.85;
-  });
-  shot.destroy({ children: true });
-  warm.destroy();
   await done();
 }
 
@@ -327,125 +212,11 @@ function cracks(origin: [number, number], n: number) {
   return out;
 }
 
-export async function cleaverPose(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, card, done, unit, at } = await scene(rect, code, ready, board);
-  const pane = PANE.map(([u, v]) => at(u, v)) as Quad;
-  const slab = piece(root, card, pane);
-  const center = bi(pane, 0.5, 0.5);
-  pivot(slab, center);
-  const leak = keyed(root, card, [0.5, 0.25, 0.25], 0.35, 2.2, 0xff8aa8);
-  clip(root, leak, pane);
-  const net = cracks([0.62, 0.42], 7);
-  const g = new Graphics();
-  layer(root, false).addChild(g);
-  await run(app, (t) => {
-    const hit = span(t, 0.15, 0.2);
-    const shake = t > 0.18 && t < 0.5 ? Math.sin(t * 90) * (1 - span(t, 0.18, 0.5)) : 0;
-    slab.rotation = shake * 0.012;
-    slab.scale.set(1 + 0.02 * hit * (1 - span(t, 0.2, 0.5)));
-    const spread = ease.out(span(t, 0.18, 0.6));
-    const fade = 1 - span(t, 1.25, 1.6);
-    leak.alpha = 0.6 * spread * fade * (0.85 + 0.15 * Math.sin(t * 20));
-    g.clear();
-    for (const c of net) {
-      const k = Math.min(1, Math.max(0, (spread - c.d) / 0.6));
-      if (k <= 0) continue;
-      const m = Math.max(1, Math.round((c.pts.length - 1) * k));
-      const pts = c.pts.slice(0, m + 1).map(([s, r]) => bi(pane, s, r));
-      for (const [w, col, a] of [
-        [2.4, 0x2a0508, 0.55],
-        [1, 0xffd6e0, 0.95],
-      ] as const) {
-        g.moveTo(...pts[0]);
-        for (const p of pts.slice(1)) g.lineTo(...p);
-        g.stroke({ width: w, color: col, alpha: a * fade, join: "round", cap: "round" });
-      }
-    }
-    const flash = Math.max(0, 1 - Math.abs(t - 0.2) / 0.12);
-    if (flash > 0) star(g, bi(pane, 0.62, 0.42), unit * 0.12 * flash, 0xffc0d0, 0.8 * flash, 0.3);
-    return t < 1.6;
-  });
-  leak.destroy();
-  await done();
-}
-
-export async function cleaver(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const sc = await scene(rect, code, ready, board);
-  const { app, root, world, card, done, unit, at } = sc;
-  const pane = PANE.map(([u, v]) => at(u, v)) as Quad;
-  const blade = piece(root, card, pane);
-  const grip = at(0.5, 0.34);
-  pivot(blade, grip);
-  const cover = new Graphics().poly(pane.flat()).fill({ color: 0x1c0407, alpha: 0.92 });
-  root.addChildAt(cover, root.getChildIndex(card) + 1);
-  const g = new Graphics();
-  world.addChild(g);
-  let hit = false;
-  await run(
-    app,
-    (t) => {
-      const wind = ease.out(span(t, 0, 0.3));
-      const chop = span(t, 0.3, 0.42) ** 2;
-      const back = ease.inOut(span(t, 0.6, 1.0));
-      blade.rotation = (-0.35 * wind + 0.5 * chop) * (1 - back);
-      cover.alpha = Math.min(1, Math.abs(blade.rotation) * 8);
-      g.clear();
-      const tip = root.toGlobal({ x: bi(pane, 0.85, 0.85)[0], y: bi(pane, 0.85, 0.85)[1] });
-      const target: Pt = sc.strike ?? [tip.x, tip.y];
-      if (!hit && t > 0.42) {
-        hit = true;
-        navigator.vibrate?.(30);
-      }
-      if (hit) {
-        const s = ease.out(span(t, 0.42, 0.7));
-        const fade = 1 - span(t, 0.8, 1.25);
-        const ang = -0.6;
-        const L = unit * 0.9 * s;
-        const dx = Math.cos(ang);
-        const dy = Math.sin(ang);
-        const a: Pt = [target[0] - dx * L * 0.5, target[1] - dy * L * 0.5];
-        const b: Pt = [target[0] + dx * L * 0.5, target[1] + dy * L * 0.5];
-        const nx = -dy;
-        const ny = dx;
-        const w = unit * 0.022 * (1 - 0.6 * span(t, 0.5, 0.9));
-        g.poly([...a, target[0] + nx * w, target[1] + ny * w, ...b, target[0] - nx * w, target[1] - ny * w]).fill({ color: 0xff3a5a, alpha: 0.45 * fade });
-        g.moveTo(...a)
-          .lineTo(...b)
-          .stroke({ width: 1.6, color: 0xffe6ee, alpha: 0.95 * fade, cap: "round" });
-        const gap = unit * 0.04 * s;
-        for (const side of [-1, 1]) {
-          const ox = nx * gap * side;
-          const oy = ny * gap * side;
-          g.moveTo(a[0] * 0.35 + target[0] * 0.65 + ox, a[1] * 0.35 + target[1] * 0.65 + oy)
-            .lineTo(b[0] * 0.35 + target[0] * 0.65 + ox, b[1] * 0.35 + target[1] * 0.65 + oy)
-            .stroke({ width: 1, color: 0xff9ab0, alpha: 0.6 * fade });
-        }
-        for (let i = 0; i < 6; i++) {
-          const side = i % 2 ? 1 : -1;
-          const along = (i / 5 - 0.5) * L * 0.8;
-          const d = unit * (0.05 + 0.25 * s) * (0.6 + (i % 3) * 0.25);
-          const c: Pt = [target[0] + dx * along + nx * d * side, target[1] + dy * along + ny * d * side + unit * 0.3 * s * s];
-          const r = unit * 0.022;
-          const rot = t * 6 * side + i;
-          const P = (x: number, y: number) => [c[0] + x * Math.cos(rot) - y * Math.sin(rot), c[1] + x * Math.sin(rot) + y * Math.cos(rot)];
-          g.poly([...P(0, -r), ...P(r * 0.8, r * 0.5), ...P(-r * 0.6, r * 0.4)])
-            .fill({ color: 0xff8aa8, alpha: 0.5 * fade })
-            .stroke({ width: 1, color: 0xffe0e8, alpha: 0.8 * fade });
-        }
-      }
-      return t < 1.25;
-    },
-    sc.strike ? 1.1 : 1,
-  );
-  g.destroy();
-  await done();
-}
-
 const BOOK: Quad = [
-  [0.183, 0.296],
-  [0.846, 0.255],
-  [0.696, 0.496],
-  [0.167, 0.374],
+  [0.194, 0.295],
+  [0.79, 0.268],
+  [0.684, 0.497],
+  [0.167, 0.378],
 ];
 
 export async function cookbook(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
@@ -802,11 +573,11 @@ export async function idiosyncresis(rect: DOMRect, code: string, ready?: Ready, 
   const eyesGlow = keyed(root, card, [0.4, 0.4, 0.2], 0.85, 6, 0xfff4b0);
   clip(root, eyesGlow, [at(0.42, 0.18), at(0.6, 0.18), at(0.6, 0.29), at(0.42, 0.29)]);
   const streams: [Pt, Pt, Pt][] = [
-    [at(0.03, 0.43), at(0.18, 0.37), at(0.35, 0.32)],
-    [at(0.06, 0.37), at(0.2, 0.33), at(0.33, 0.3)],
-    [at(0.6, 0.22), at(0.7, 0.19), at(0.8, 0.14)],
+    [at(0.02, 0.41), at(0.17, 0.375), at(0.34, 0.32)],
+    [at(0.05, 0.37), at(0.19, 0.345), at(0.33, 0.305)],
+    [at(0.61, 0.195), at(0.71, 0.18), at(0.83, 0.16)],
   ];
-  const mouth = at(0.6, 0.275);
+  const mouth = at(0.608, 0.27);
   const g = new Graphics();
   layer(root, false).addChild(g);
   const bits = Array.from({ length: 30 }, (_, i) => ({ path: i % 3, off: i / 30 + rnd(0, 0.03), len: rnd(0.02, 0.05), col: i % 4 ? 0xd8ff5a : 0xffd84a }));
