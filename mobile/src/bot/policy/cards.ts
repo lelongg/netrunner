@@ -61,6 +61,37 @@ function corpOwnSelect(obs: Observation, msg: string): Proposal[] {
   return out;
 }
 
+const breakerFirst = (a: any, b: any) => (a.subtypes ?? []).includes("Icebreaker") ? -1 : (b.subtypes ?? []).includes("Icebreaker") ? 1 : Number(b.cost ?? 0) - Number(a.cost ?? 0);
+
+function corpHostileSelect(obs: Observation, msg: string): Proposal[] {
+  const cards = selectable(obs).filter((c) => c.side === "Runner");
+  if (!cards.length) return [];
+  let pick: any;
+  if (/program/i.test(msg)) pick = [...cards].sort(breakerFirst)[0];
+  else if (/resource/i.test(msg)) pick = [...cards].sort((a, b) => Number(b.counter?.credit ?? 0) - Number(a.counter?.credit ?? 0) || Number(b.cost ?? 0) - Number(a.cost ?? 0))[0];
+  else pick = [...cards].sort(breakerFirst)[0];
+  return pick ? [{ move: selectMove(obs, pick), score: 55, why: `trash ${pick.title}`, kind: "select" }] : [];
+}
+
+function installLocation(obs: Observation): Proposal[] {
+  const out: Proposal[] = [];
+  const labels = choices(obs).map((c) => ({ c, label: choiceLabel(obs, c) }));
+  const open = obs.servers.filter((s) => !s.remote && s.ices.length === 0);
+  const naked = obs.servers.filter((s) => s.remote && s.ices.length === 0 && s.content.length);
+  const scoring = obs.servers.filter((s) => s.remote && s.ices.length > 0 && s.content.some((c: any) => c.type === "Agenda" || !c.rezzed));
+  const wanted = [...naked, ...open.filter((s) => s.key === "hq"), ...open, ...scoring].map((s) => s.label);
+  for (const label of wanted) {
+    const hit = labels.find((l) => l.label === label);
+    if (hit) {
+      out.push({ move: choiceMove(obs, hit.c), score: 60, why: `install it protecting ${label}`, kind: "choice" });
+      return out;
+    }
+  }
+  const remote = labels.find((l) => /new remote/i.test(l.label));
+  if (remote) out.push({ move: choiceMove(obs, remote.c), score: 50, why: "install it on a new remote", kind: "choice" });
+  return out;
+}
+
 export function cardPrompt(obs: Observation): Proposal[] {
   const from = promptFrom(obs);
   const msg = obs.promptText;
@@ -68,7 +99,17 @@ export function cardPrompt(obs: Observation): Proposal[] {
   const out: Proposal[] = [];
   const push = (p: Proposal | null) => p && out.push(p);
   if (obs.side === "corp") {
+    if (type === "select" && /(program|resource|hardware|installed runner card) to trash|choose a target for (retribution|above the law|ballista)/i.test(msg)) return corpHostileSelect(obs, msg);
     if (type === "select") return corpOwnSelect(obs, msg);
+    if (/^choose a location to install/i.test(msg)) return installLocation(obs);
+    if (from === "Ballista" && /choose one/i.test(msg)) {
+      const server = obs.servers.find((s) => s.key === obs.run?.server?.[0]);
+      const programs: any[] = obs.view.runner?.rig?.program ?? [];
+      if (server && corpAgendaIn(obs, server)) push(pickChoice(obs, /end the run/i, 70, "Ballista: end the run on the scoring remote"));
+      if (programs.length) push(pickChoice(obs, /trash/i, 65, "Ballista: trash a program"));
+      push(pickChoice(obs, /end the run/i, 50, "Ballista: end the run"));
+      return out;
+    }
     if (from === "Byte!" && /pay \d+/i.test(msg)) {
       const grip = runnerGrip(obs);
       const cost = Number(msg.match(/pay (\d+)/i)?.[1] ?? 4);
@@ -97,6 +138,52 @@ export function cardPrompt(obs: Observation): Proposal[] {
       push(yes(obs, 60, "Precision Design: take a card back from Archives"));
       return out;
     }
+    return out;
+  }
+  if (from === "Funhouse" && /choose one/i.test(msg)) {
+    const server = obs.servers.find((s) => s.key === obs.run?.server?.[0]);
+    const worth = server ? server.content.some((c: any) => c.type === "Agenda" || (!c.rezzed && !c.title)) || ((server.key === "rd" || server.key === "hq") && obs.credits >= 4) : false;
+    const tags = Number(obs.me.tag?.base ?? 0);
+    if (worth && tags === 0 && obs.credits >= 2) push(pickChoice(obs, /tag/i, 65, "Funhouse: take the tag, remove it later"));
+    push(pickChoice(obs, /end the run/i, 55, "Funhouse: not worth a tag"));
+    return out;
+  }
+  if (from === "Public Trail" && /choose one/i.test(msg)) {
+    if (obs.credits >= 11) push(pickChoice(obs, /pay/i, 70, "Public Trail: pay rather than be tagged"));
+    push(pickChoice(obs, /tag/i, 60, "Public Trail: take the tag and clear it next turn"));
+    push(pickChoice(obs, /pay/i, 40, "Public Trail: pay"));
+    return out;
+  }
+  if (from === "Mutual Favor" && /choose an icebreaker/i.test(msg)) {
+    const covered = new Set(obs.rig.filter((c: any) => (c.subtypes ?? []).includes("Icebreaker")).flatMap((c: any) => c.subtypes ?? []));
+    const missing = (["Barrier", "Code Gate", "Sentry"] as const).filter((t) => !covered.has(t === "Barrier" ? "Fracter" : t === "Code Gate" ? "Decoder" : "Killer"));
+    const wanted = missing.flatMap((t) => obs.profile.breakers[t]);
+    for (const c of choices(obs)) {
+      const title = choiceLabel(obs, c);
+      if (wanted.includes(title)) {
+        push({ move: choiceMove(obs, c), score: 75, why: `Mutual Favor: ${title} covers what the rig lacks`, kind: "choice" });
+        return out;
+      }
+    }
+    return out;
+  }
+  if (from === "\"Knickknack\" O'Brian" && type === "select") {
+    const cards = selectable(obs).filter((c) => c.side === "Runner" && c.title !== "\"Knickknack\" O'Brian");
+    const junk = cards.filter((c) => (c.type === "Resource" && Number(c.counter?.credit ?? 0) === 0 && /job|contract|team|hustle/i.test(c.title)) || c.title === "Mayfly");
+    const done = choices(obs).find((c) => c.value === "Done");
+    if (junk[0] && Number(junk[0].cost ?? 0) >= 1) push({ move: selectMove(obs, junk[0]), score: 60, why: `Knickknack: sell ${junk[0].title}`, kind: "select" });
+    else if (done) push({ move: choiceMove(obs, done), score: 60, why: "Knickknack: nothing worth selling", kind: "select" });
+    return out;
+  }
+  if (from === "GAMEDRAGON™ Pro" && type === "select") {
+    const pick = [...selectable(obs)].filter((c) => (c.subtypes ?? []).includes("Icebreaker") && !(c.subtypes ?? []).includes("AI")).sort((a, b) => strengthOf(a) - strengthOf(b))[0];
+    if (pick) push({ move: selectMove(obs, pick), score: 60, why: `GAMEDRAGON Pro on ${pick.title}`, kind: "select" });
+    return out;
+  }
+  if (from === "Lie Low" && /choose one/i.test(msg)) {
+    const tags = Number(obs.me.tag?.base ?? 0);
+    if (tags > 0) push(pickChoice(obs, /tag/i, 70, "Lie Low: shed the tags"));
+    push(pickChoice(obs, /draw/i, 60, "Lie Low: draw four"));
     return out;
   }
   if (from === "Karunā" && /jack out/i.test(msg)) {
