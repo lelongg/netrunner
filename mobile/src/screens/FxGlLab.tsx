@@ -357,7 +357,7 @@ export function FxGlLab() {
     return !!r?.v && !!v && r.v !== v;
   };
   const tag = (k: string) => (changed(k) ? "changed" : mark(notes[k]));
-  const toReview = (k: string) => changed(k) && !reviewed(notes[k]);
+  const toReview = (k: string) => changed(k);
   const pendingCount = CARDS.reduce((n, c) => n + c.kinds.filter((k) => toReview(noteKey(c.title, k))).length, 0);
   const shown = CARDS.map((c, i) => ({ c, i })).filter(({ c, i }) => c.title.toLowerCase().includes(query.trim().toLowerCase()) && (!todo || !pendingCount || i === pick || c.kinds.some((k) => toReview(noteKey(c.title, k)))));
   const update = (patch: Review) => {
@@ -369,7 +369,7 @@ export function FxGlLab() {
   };
   const send = async () => {
     const total = CARDS.reduce((n, c) => n + c.kinds.length, 0);
-    const stale = CARDS.flatMap((c) => c.kinds.map((k) => noteKey(c.title, k))).filter((k) => !reviewed(notes[k]) && changed(k));
+    const stale = CARDS.flatMap((c) => c.kinds.map((k) => noteKey(c.title, k))).filter((k) => changed(k));
     const text = [`FX lab review · pass ${pass.n} (${filled.length}/${total} reviewed)`, ...filled.map(([k, v]) => line(k, v)), ...(stale.length ? ["", `Changed since an earlier review, not re-reviewed yet (${stale.length}):`, ...stale.map((k) => `- ${k} · v:${versionOf(k)}`)] : [])].join("\n");
     try {
       if (navigator.share) {
