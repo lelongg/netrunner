@@ -565,11 +565,10 @@ const dash = (g: Graphics, a: Pt, b: Pt, color: number, alpha: number) =>
 
 export async function idiosyncresis(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, card, done, unit, at } = await scene(rect, code, ready, board);
-  const art: Pt[] = [at(0.03, 0.07), at(0.97, 0.07), at(0.97, 0.52), at(0.03, 0.52)];
+  const art: Pt[] = [at(0.03, 0.1), at(0.97, 0.1), at(0.97, 0.52), at(0.03, 0.52)];
   const face = piece(root, card, art);
   const flow = shimmer(root, face, rect, unit * 0.045);
   const split = new RGBSplitFilter({ red: { x: 0, y: 0 }, green: { x: 0, y: 0 }, blue: { x: 0, y: 0 } });
-  face.filters = [...(face.filters ?? []), split];
   const eyesGlow = keyed(root, card, [0.4, 0.4, 0.2], 0.85, 6, 0xfff4b0);
   clip(root, eyesGlow, [at(0.42, 0.18), at(0.6, 0.18), at(0.6, 0.29), at(0.42, 0.29)]);
   const streams: [Pt, Pt, Pt][] = [
@@ -586,8 +585,9 @@ export async function idiosyncresis(rect: DOMRect, code: string, ready?: Ready, 
     const env = Math.sin(Math.PI * span(t, 0, 1.9));
     flow(t, env);
     const jolt = Math.max(...screams.map((b) => Math.max(0, 1 - Math.abs(t - b) / 0.08)));
-    split.red = { x: unit * 0.014 * jolt, y: -unit * 0.004 * jolt };
-    split.blue = { x: -unit * 0.014 * jolt, y: unit * 0.004 * jolt };
+    root.filters = jolt > 0 ? [split] : [];
+    split.red = { x: unit * 0.014 * jolt, y: 0 };
+    split.blue = { x: -unit * 0.014 * jolt, y: 0 };
     eyesGlow.alpha = 0.8 * env;
     g.clear();
     for (const b of bits) {
@@ -605,6 +605,7 @@ export async function idiosyncresis(rect: DOMRect, code: string, ready?: Ready, 
     });
     return t < 1.9;
   });
+  root.filters = [];
   eyesGlow.destroy();
   await done();
 }
