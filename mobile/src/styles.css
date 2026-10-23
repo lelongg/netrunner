@@ -9175,7 +9175,7 @@ button.player-chip {
 
 .fxgl-controls {
   display: grid;
-  grid-template-columns: 2fr repeat(5, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 6px;
 }
 
@@ -9190,6 +9190,10 @@ button.player-chip {
 .fxgl-strip button.on {
   border-color: var(--cyan);
   color: var(--cyan);
+}
+
+.fxgl-kinds button.playing {
+  background: color-mix(in srgb, var(--cyan) 14%, transparent);
 }
 
 .fxgl-play {

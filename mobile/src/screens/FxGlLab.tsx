@@ -197,6 +197,17 @@ function loadNotes(): Notes {
   }
 }
 
+const VIEW = "nsg.fxlab";
+type View = { title?: string; kind?: Kind; query?: string; speed?: number; tile?: boolean; aimed?: boolean };
+
+function loadView(): View {
+  try {
+    return JSON.parse(localStorage.getItem(VIEW) ?? "{}") as View;
+  } catch {
+    return {};
+  }
+}
+
 function saveNotes(n: Notes) {
   try {
     localStorage.setItem(NOTES, JSON.stringify(n));
@@ -204,14 +215,15 @@ function saveNotes(n: Notes) {
 }
 
 export function FxGlLab() {
-  const [pick, setPick] = useState(0);
-  const [kind, setKind] = useState<Kind>(CARDS[0].kinds[0]);
-  const [query, setQuery] = useState("");
+  const [saved] = useState(loadView);
+  const [pick, setPick] = useState(() => Math.max(0, CARDS.findIndex((c) => c.title === saved.title)));
+  const [kind, setKind] = useState<Kind>(() => (saved.kind && CARDS[pick]?.kinds.includes(saved.kind) ? saved.kind : CARDS[pick].kinds[0]));
+  const [query, setQuery] = useState(saved.query ?? "");
   const [busy, setBusy] = useState(false);
   const [loop, setLoop] = useState(false);
-  const [speed, setSpeed] = useState(1);
-  const [tile, setTile] = useState(false);
-  const [aimed, setAimed] = useState(false);
+  const [speed, setSpeed] = useState(saved.speed && SPEEDS.includes(saved.speed) ? saved.speed : 1);
+  const [tile, setTile] = useState(!!saved.tile);
+  const [aimed, setAimed] = useState(!!saved.aimed);
   const [notes, setNotes] = useState<Notes>(loadNotes);
   const [sent, setSent] = useState("");
   const img = useRef<HTMLImageElement>(null);
@@ -243,6 +255,11 @@ export function FxGlLab() {
   };
 
   useEffect(() => setFxSpeed(speed), [speed]);
+  useEffect(() => {
+    try {
+      localStorage.setItem(VIEW, JSON.stringify({ title: CARDS[pick].title, kind, query, speed, tile, aimed }));
+    } catch {}
+  }, [pick, kind, query, speed, tile, aimed]);
   useEffect(() => () => setFxSpeed(1), []);
 
   useEffect(() => {
@@ -370,16 +387,13 @@ export function FxGlLab() {
 
       <div class="fxgl-kinds" role="tablist">
         {card.kinds.map((k) => (
-          <button role="tab" aria-selected={k === kind} class={[k === kind ? "on" : "", mark(notes[noteKey(card.title, k)])].join(" ")} onClick={() => setKind(k)}>
+          <button role="tab" aria-selected={k === kind} class={[k === kind ? "on" : "", k === kind && busy ? "playing" : "", mark(notes[noteKey(card.title, k)])].join(" ")} onClick={() => (k === kind ? void play() : setKind(k))}>
             {KIND_LABEL[k]}
           </button>
         ))}
       </div>
 
       <div class="fxgl-controls">
-        <button class="fxgl-play" disabled={busy} onClick={() => play()}>
-          {busy ? "Playing…" : "Replay"}
-        </button>
         <button class={loop ? "on" : ""} onClick={() => setLoop(!loop)}>
           Loop
         </button>
