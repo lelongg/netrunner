@@ -359,7 +359,7 @@ export function FxGlLab() {
   const tag = (k: string) => (changed(k) ? "changed" : mark(notes[k]));
   const toReview = (k: string) => changed(k) && !reviewed(notes[k]);
   const pendingCount = CARDS.reduce((n, c) => n + c.kinds.filter((k) => toReview(noteKey(c.title, k))).length, 0);
-  const shown = CARDS.map((c, i) => ({ c, i })).filter(({ c, i }) => c.title.toLowerCase().includes(query.trim().toLowerCase()) && (!todo || i === pick || c.kinds.some((k) => toReview(noteKey(c.title, k)))));
+  const shown = CARDS.map((c, i) => ({ c, i })).filter(({ c, i }) => c.title.toLowerCase().includes(query.trim().toLowerCase()) && (!todo || !pendingCount || i === pick || c.kinds.some((k) => toReview(noteKey(c.title, k)))));
   const update = (patch: Review) => {
     const r = { ...review, ...patch, v: versionOf(key) };
     const next = { ...notes, [key]: r };
@@ -512,7 +512,7 @@ export function FxGlLab() {
       </div>
 
       <div class="fxgl-filter">
-        <button class={todo ? "on" : ""} onClick={() => setTodo(!todo)}>
+        <button class={todo && pendingCount ? "on" : ""} disabled={!pendingCount} onClick={() => setTodo(!todo)}>
           Changed, not reviewed ({pendingCount})
         </button>
       </div>
