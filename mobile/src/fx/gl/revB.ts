@@ -313,12 +313,12 @@ export async function peerReview(rect: DOMRect, code: string, ready?: Ready, boa
 }
 
 const NPOT_AXIS: [Pt, Pt] = [
-  [0.57, 0.72],
-  [0.22, 0.81],
+  [0.55, 0.73],
+  [0.2, 0.86],
 ];
 const CLAMPS: [number, number][] = [
-  [0.66, 0.6],
-  [0.68, 0.9],
+  [0.65, 0.62],
+  [0.71, 0.93],
 ];
 
 function mouth(at: At, k: number, r: number) {
@@ -399,14 +399,14 @@ export async function nPotFire(rect: DOMRect, code: string, ready?: Ready, board
 
 export async function plutus(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const sockets = [at(0.385, 0.25), at(0.53, 0.25)].map((p) => {
+  const sockets = [at(0.461, 0.254), at(0.528, 0.258)].map((p) => {
     const s = glowSprite(fx, glowTexture(), 0xb07aff);
     s.position.set(...p);
     return s;
   });
-  const glints = Array.from({ length: 6 }, () => ({ s: glowSprite(fx, sparkTexture(), 0xffe08a), p: at(rnd(0.38, 0.52), rnd(0.36, 0.48)), d: rnd(0.3, 1.2) }));
+  const glints = Array.from({ length: 6 }, () => ({ s: glowSprite(fx, sparkTexture(), 0xffe08a), p: at(rnd(0.4, 0.62), rnd(0.36, 0.46)), d: rnd(0.3, 1.2) }));
   const coins = new Emitter(fx);
-  const lip = at(0.45, 0.34);
+  const lip = at(0.49, 0.33);
   root.addChild(fx);
   await run(app, (t, dt) => {
     const fade = 1 - span(t, 1.5, 1.9);

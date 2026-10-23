@@ -108,9 +108,9 @@ export async function greenmailScore(rect: DOMRect, code: string, ready?: Ready,
 
 export async function longevityScore(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const core = at(0.38, 0.28);
+  const core = at(0.47, 0.27);
   const rx = rect.width * 0.25;
-  const ry = rect.height * 0.2;
+  const ry = rect.height * 0.17;
   const g = new Graphics();
   g.blendMode = "add";
   fx.addChild(g);
@@ -118,7 +118,7 @@ export async function longevityScore(rect: DOMRect, code: string, ready?: Ready,
   const heart = glowSprite(fx, glowTexture(), 0xff9a3a);
   heart.position.set(...core);
   const face = glowSprite(fx, glowTexture(), 0xdce8ff);
-  face.position.set(...at(0.84, 0.27));
+  face.position.set(...at(0.83, 0.31));
   root.addChild(fx);
   await run(app, (t, dt) => {
     g.clear();
@@ -215,15 +215,16 @@ export async function offworldOfficeScore(rect: DOMRect, code: string, ready?: R
 
 export async function orbitalScore(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const starts: Pt[] = [at(0.37, 0.19), at(0.38, 0.205), at(0.39, 0.22)];
-  const hit = at(0.82, 0.355);
+  const starts: Pt[] = [at(0.411, 0.223), at(0.417, 0.235), at(0.417, 0.246)];
+  const ends: Pt[] = [at(0.583, 0.272), at(0.667, 0.314), at(0.839, 0.397)];
+  const hit = ends[2];
   const g = new Graphics();
   g.blendMode = "add";
   fx.addChild(g);
   const flare = glowSprite(fx, glowTexture(), 0xff7a2a);
   flare.position.set(...hit);
   const panel = glowSprite(fx, sparkTexture(), 0xdfe8ff);
-  panel.position.set(...at(0.6, 0.12));
+  panel.position.set(...at(0.57, 0.15));
   const embers = new Emitter(fx);
   const smoke = new Smoke(fx);
   root.addChild(fx);
@@ -237,7 +238,7 @@ export async function orbitalScore(rect: DOMRect, code: string, ready?: Ready, b
       const k = span(t, 0.25 + i * 0.08, 0.5 + i * 0.08);
       const off = 1 - span(t, 0.9 + i * 0.08, 1.2 + i * 0.08);
       if (k <= 0 || off <= 0) return;
-      const tip = lerp(s, hit, ease.out(k));
+      const tip = lerp(s, ends[i], ease.out(k));
       g.moveTo(...s)
         .lineTo(...tip)
         .stroke({ width: unit * 0.018, color: 0xff6a1a, alpha: 0.35 * off });
@@ -262,15 +263,17 @@ export async function orbitalScore(rect: DOMRect, code: string, ready?: Ready, b
 
 export async function projectIngatanScore(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const panels: Pt[] = [at(0.5, 0.25), at(0.77, 0.19), at(0.13, 0.38), at(0.38, 0.41)];
+  const quads: [Pt, Pt, Pt, Pt][] = [
+    [at(0.45, 0.235), at(0.578, 0.181), at(0.624, 0.248), at(0.492, 0.318)],
+    [at(0.689, 0.199), at(0.778, 0.158), at(0.802, 0.211), at(0.708, 0.246)],
+    [at(0.05, 0.373), at(0.178, 0.335), at(0.222, 0.397), at(0.094, 0.433)],
+    [at(0.32, 0.405), at(0.439, 0.349), at(0.464, 0.417), at(0.344, 0.476)],
+  ];
+  const panels: Pt[] = quads.map((q) => lerp(lerp(q[0], q[1], 0.5), lerp(q[3], q[2], 0.5), 0.5));
   const g = new Graphics();
   g.blendMode = "add";
   fx.addChild(g);
   const motes = new Emitter(fx);
-  const w = rect.width * 0.075;
-  const h = rect.height * 0.04;
-  const rot = -0.35;
-  const corner = (c: Pt, x: number, y: number): Pt => [c[0] + x * Math.cos(rot) - y * Math.sin(rot), c[1] + x * Math.sin(rot) + y * Math.cos(rot)];
   root.addChild(fx);
   await run(app, (t, dt) => {
     g.clear();
@@ -278,12 +281,12 @@ export async function projectIngatanScore(rect: DOMRect, code: string, ready?: R
     panels.forEach((c, i) => {
       const k = span(t, 0.1 + i * 0.2, 0.7 + i * 0.2);
       if (k <= 0) return;
-      const quad = [corner(c, -w, -h), corner(c, w, -h), corner(c, w, h), corner(c, -w, h)];
-      g.poly(quad.flat()).stroke({ width: 1.2, color: 0xc8ff6a, alpha: 0.75 * Math.min(1, k * 3) * fade });
+      const q = quads[i];
+      g.poly(q.flat()).stroke({ width: 1.2, color: 0xc8ff6a, alpha: 0.75 * Math.min(1, k * 3) * fade });
       if (k < 1) {
-        const x = -w + 2 * w * ease.inOut(k);
-        g.moveTo(...corner(c, x, -h))
-          .lineTo(...corner(c, x, h))
+        const x = ease.inOut(k);
+        g.moveTo(...lerp(q[0], q[1], x))
+          .lineTo(...lerp(q[3], q[2], x))
           .stroke({ width: 1.6, color: 0xeaffc0, alpha: 0.8 * fade });
       }
       if (i > 0) {

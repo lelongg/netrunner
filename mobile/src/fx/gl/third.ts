@@ -7,7 +7,7 @@ import { type Pt, glowSprite, lerp, pose, prism, rnd, shardTexture, strikeFx, te
 const ORANGE = 0xff8a2a;
 const PINK = 0xff4f9a;
 
-const sealTexture = () =>
+export const sealTexture = () =>
   painted("seal", 96, 96, (g) => {
     g.strokeStyle = "#fff";
     g.lineWidth = 4;

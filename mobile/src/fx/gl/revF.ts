@@ -187,43 +187,6 @@ export async function hedgeFund(rect: DOMRect, code: string, ready?: Ready, boar
   await done();
 }
 
-export async function governmentSubsidy(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const hand = at(0.33, 0.3);
-  const boss = at(0.74, 0.3);
-  const glint = glowSprite(fx, sparkTexture(), 0xffe7a0);
-  glint.position.set(...hand);
-  const coins = Array.from({ length: 12 }, (_, i) => {
-    const s = glowSprite(fx, coinTexture(), WHITE);
-    s.blendMode = "normal";
-    const keep = i % 6 === 0;
-    const away: Pt = keep ? boss : at(rnd(0.1, 0.95), rnd(-0.1, 0.05));
-    return { s, keep, to: away, d: 0.35 + i * 0.05, arc: rnd(-1, 1) * unit * 0.2 };
-  });
-  const motes = new Emitter(fx);
-  root.addChild(fx);
-  await run(app, (t, dt) => {
-    const f = Math.sin(Math.PI * span(t, 0.05, 0.6));
-    glint.alpha = 0.8 * f;
-    glint.rotation = t * 2;
-    glint.scale.set((unit / 120) * 0.3 * f);
-    for (const c of coins) {
-      const k = span(t, c.d, c.d + 0.75);
-      const e = ease.inOut(k);
-      const ctrl: Pt = [(hand[0] + c.to[0]) / 2 + c.arc, Math.min(hand[1], c.to[1]) - unit * 0.12];
-      const p = bezier(hand, ctrl, c.to, e);
-      c.s.position.set(...p);
-      c.s.rotation = t * 4;
-      c.s.scale.set((unit / 64) * 0.09 * (c.keep ? 1 : 1 - 0.5 * k));
-      c.s.alpha = k <= 0 || k >= 1 ? 0 : c.keep ? 1 : 0.9 * (1 - k);
-      if (c.keep && k > 0 && k < 1 && Math.random() < 0.4) motes.add(sparkTexture(), ...p, { life: 0.35, tint: 0xffd870, scale: (unit / 180) * 0.2, grow: -0.5 });
-    }
-    motes.step(dt);
-    return t < 1.6 || motes.list.length > 0;
-  });
-  await done();
-}
-
 export async function measuredResponse(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, card, fx, done, unit, at } = await scene(rect, code, ready, board);
   const blast = at(0.82, 0.24);

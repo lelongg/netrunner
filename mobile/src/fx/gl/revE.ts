@@ -77,8 +77,8 @@ function lattice(g: Graphics, c: Pt, R: number, spin: number, alpha: number, gro
 
 export async function kessleroid(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const c = at(0.6, 0.74);
-  const R = unit * 0.3;
+  const c = at(0.53, 0.74);
+  const R = unit * 0.28;
   const g = new Graphics();
   g.blendMode = "add";
   fx.addChild(g);
@@ -108,8 +108,8 @@ export async function kessleroid(rect: DOMRect, code: string, ready?: Ready, boa
 
 export async function kessleroidFire(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, world, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const c = at(0.6, 0.74);
-  const R = unit * 0.3;
+  const c = at(0.53, 0.74);
+  const R = unit * 0.28;
   const g = new Graphics();
   g.blendMode = "add";
   fx.addChild(g);
@@ -340,66 +340,6 @@ const SCREENS: [number, number, number, number][] = [
   [0.41, 0.77, 0.69, 0.95],
   [0.21, 0.85, 0.41, 0.97],
 ];
-
-export async function doomscrollFire(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, world, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const g = new Graphics();
-  g.blendMode = "add";
-  fx.addChild(g);
-  const w = new Graphics();
-  world.addChild(w);
-  const glow = new Graphics();
-  glow.blendMode = "add";
-  world.addChild(glow);
-  const maw = at(0.56, 0.89);
-  const target = runnerAt(board);
-  const tendrils = [-0.35, 0, 0.35].map((bend, i) => ({ bend, d: 0.35 + i * 0.07, off: (i - 1) * unit * 0.12 }));
-  let hit = false;
-  root.addChild(fx);
-  await run(app, (t) => {
-    g.clear();
-    w.clear();
-    glow.clear();
-    const on = span(t, 0, 0.15) * (1 - span(t, 0.9, 1.2));
-    SCREENS.forEach(([u0, v0, u1, v1], s) => {
-      for (let i = 0; i < 5; i++) {
-        const f = (((i / 5 - t * (1.8 + s * 0.2)) % 1) + 1) % 1;
-        const v = v0 + 0.015 + f * (v1 - v0 - 0.03);
-        const edge = Math.min(1, f * 5, (1 - f) * 5);
-        bolt(g, at(u0 + 0.02, v), at(u0 + 0.02 + (u1 - u0 - 0.04) * (0.5 + (0.4 * ((i * 37) % 10)) / 10), v), unit * 0.008, 0xffd84a, 0.85 * on * edge);
-      }
-    });
-    const src = root.toGlobal({ x: maw[0], y: maw[1] });
-    for (const td of tendrils) {
-      const k = ease.out(span(t, td.d, td.d + 0.3));
-      const back = span(t, 0.75, 1.1);
-      if (k <= 0 || back >= 1) continue;
-      const end: Pt = [target[0] + td.off, target[1]];
-      const ctrl: Pt = [(src.x + end[0]) / 2 + (end[1] - src.y) * td.bend, (src.y + end[1]) / 2 - (end[0] - src.x) * td.bend];
-      const reach = k * (1 - back);
-      const pts: Pt[] = [];
-      for (let i = 0; i <= 16; i++) pts.push(bezier([src.x, src.y], ctrl, end, (reach * i) / 16));
-      for (let i = 1; i < pts.length; i++) {
-        const wdt = unit * 0.035 * (1 - i / pts.length) + 1;
-        w.moveTo(...pts[i - 1])
-          .lineTo(...pts[i])
-          .stroke({ width: wdt, color: 0x1c1420, alpha: 0.9, cap: "round" });
-        glow
-          .moveTo(...pts[i - 1])
-          .lineTo(...pts[i])
-          .stroke({ width: 1.2, color: 0xffc84a, alpha: 0.7, cap: "round" });
-      }
-    }
-    if (!hit && t > 0.6) {
-      hit = true;
-      jolt(board, 0.45);
-    }
-    return t < 1.2;
-  });
-  w.destroy();
-  glow.destroy();
-  await done();
-}
 
 const BIOROIDS: Pt[] = [
   [0.044, 0.405],

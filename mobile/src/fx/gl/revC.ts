@@ -409,10 +409,10 @@ export async function palisadeFire(rect: DOMRect, code: string, ready?: Ready, b
 }
 
 const TIPS: [number, number][] = [
-  [0.82, 0.235],
-  [0.78, 0.4],
-  [0.46, 0.39],
-  [0.62, 0.2],
+  [0.85, 0.235],
+  [0.79, 0.39],
+  [0.5, 0.37],
+  [0.665, 0.25],
 ];
 
 export async function pantographPose(rect: DOMRect, code: string, ready?: Ready, board?: Board) {

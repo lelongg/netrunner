@@ -539,9 +539,9 @@ export async function idiosyncresis(rect: DOMRect, code: string, ready?: Ready, 
     return s;
   });
   const streams: [Pt, Pt, Pt][] = [
-    [at(0.02, 0.4), at(0.3, 0.3), at(0.47, 0.2)],
-    [at(0.06, 0.32), at(0.28, 0.26), at(0.42, 0.21)],
-    [at(0.58, 0.15), at(0.72, 0.12), at(0.86, 0.12)],
+    [at(0.03, 0.43), at(0.18, 0.37), at(0.35, 0.32)],
+    [at(0.06, 0.37), at(0.2, 0.33), at(0.33, 0.3)],
+    [at(0.6, 0.22), at(0.7, 0.19), at(0.8, 0.14)],
   ];
   const dashes = Array.from({ length: 36 }, (_, i) => ({ s: glowSprite(fx, dashTexture(), i % 3 ? 0xd8ff5a : 0xffd84a), path: i % 3, off: rnd(0, 1), speed: rnd(0.35, 0.6) }));
   const g = new Graphics();
