@@ -420,14 +420,14 @@ for (const m of pairs) {
 }
 if (pairs.length > 1) {
   console.log("");
-  console.log(`| Corp \\ Runner | ${CORE_RUNNER_DECKS.map((r) => r.name.replace(/^Core /, "")).join(" | ")} |`);
+  console.log(`| Corp \\ Runner | ${CORE_RUNNER_DECKS.map((r) => r.name.replace(/ \(SG Only\)$/, "")).join(" | ")} |`);
   console.log(`|---|${CORE_RUNNER_DECKS.map(() => "---").join("|")}|`);
   for (const c of CORE_CORP_DECKS) {
     const cells = CORE_RUNNER_DECKS.map((r) => {
       const t = table.find((x) => x.corpName === c.name && x.runnerName === r.name);
       return t ? `${t.corp} (${(t.corp / games).toFixed(2)} ${ci(t.corp, games)})${t.none ? ` · ${t.none} unfinished` : ""}${t.errors ? ` · ${t.errors} errors` : ""}` : "-";
     });
-    console.log(`| ${c.name.replace(/^Core /, "")} | ${cells.join(" | ")} |`);
+    console.log(`| ${c.name.replace(/ \(SG Only\)$/, "")} | ${cells.join(" | ")} |`);
   }
   console.log("");
   console.log(`Cells are Corp wins out of ${games} games · corp=${players.corp} runner=${players.runner}.`);
