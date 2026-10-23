@@ -54,7 +54,12 @@ const opponentDeck = (obs: Observation) => {
 function trapsLeft(obs: Observation): { count: number; damage: (adv: number) => number } {
   const deck = opponentDeck(obs);
   const none = { count: 0, damage: () => 0 };
-  if (!deck) return { count: 1, damage: TRAP_DAMAGE["Urtica Cipher"] };
+  if (!deck) {
+    const faction = String(obs.opp.identity?.faction ?? "");
+    const seenTrap = [...obs.memory.opponentTitles].some((t) => TRAPS.includes(t));
+    if (!/jinteki/i.test(faction) && !seenTrap) return none;
+    return { count: 1, damage: (adv) => Math.max(TRAP_DAMAGE["Urtica Cipher"](adv), 3) };
+  }
   const inDeck = deck.cards.filter((c) => TRAPS.includes(c.title));
   if (!inDeck.length) return none;
   const total = inDeck.reduce((n, c) => n + c.qty, 0);
@@ -296,9 +301,22 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
       }
     }
   }
-  if (cov.size < 2 && obs.credits >= 10 && obs.hand.length <= 4 && drawsThisTurn < 3 && (obs.me["deck-count"] ?? 0) > 0) {
+  if (cov.size < 2 && obs.credits >= 6 && (obs.hand.length <= 4 || obs.credits >= 15) && drawsThisTurn < 3 && (obs.me["deck-count"] ?? 0) > 0) {
     const draw = byCommand(obs, "draw")[0];
     if (draw) push(proposal(draw, 48, "draw: rich but the rig is missing breakers", "draw"));
+  }
+  if (obs.credits >= 20 && drawsThisTurn < 3 && (obs.me["deck-count"] ?? 0) > 0) {
+    const draw = byCommand(obs, "draw")[0];
+    if (draw) push(proposal(draw, 44, "draw: credits are not the problem", "draw"));
+  }
+  if (obs.credits <= 3 && obs.hand.length <= 3 && drawsThisTurn < 2 && !obs.hand.some((c) => isEconomyCard(obs, c) && playCostOf(c) <= obs.credits) && (obs.me["deck-count"] ?? 0) > 0) {
+    const draw = byCommand(obs, "draw")[0];
+    if (draw) push(proposal(draw, 46, "draw: poor and nothing in hand earns credits", "draw"));
+  }
+  const tagPunisher = /nbn|weyland/i.test(String(obs.opp.identity?.faction ?? "")) || [...obs.memory.opponentTitles].some((t) => /^(Public Trail|Retribution|Bigger Picture)$/.test(t));
+  if (tagPunisher && ranSuccessfullyThisTurn(obs) && obs.credits < 8 && Number(obs.opp.credit ?? 0) >= 4 && obs.clicks <= 2) {
+    const credit = byCommand(obs, "credit")[0];
+    if (credit) push(proposal(credit, 57, "take a credit: eight credits make Public Trail a tax instead of a tag", "credit"));
   }
   const thin = obs.hand.length <= 1;
   const floor = reserve(obs);

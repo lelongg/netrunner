@@ -5,6 +5,8 @@ import { PolicyBot } from "../src/bot/policy/bot.ts";
 import { findPolicy } from "../src/bot/policy/registry.ts";
 import "../src/bot/policy/decks/index.ts";
 import { coreDeck } from "../src/bot/policy/decks/core.ts";
+import { parseDecklist } from "../src/decks.ts";
+import { readFileSync } from "node:fs";
 import { promptOf, runCommands } from "../src/game/actions.ts";
 import { candidateActions } from "../src/game/candidates.ts";
 import { gameLines, logLines } from "../src/game/describe.ts";
@@ -12,7 +14,7 @@ import { gameLines, logLines } from "../src/game/describe.ts";
 const args = parseArgs(process.argv.slice(2));
 if (args.help || (!args.new && !args.state)) {
   console.log(`Play a game against the bot from this terminal, one decision per call.
-  --new --side corp|runner [--matchup 0|1 | --corp-deck KEY --runner-deck KEY] [--seed N] [--bot policy|heuristic] --state FILE   start a game
+  --new --side corp|runner [--matchup 0|1 | --corp-deck KEY --runner-deck KEY | --corp-list FILE --runner-list FILE] [--seed N] [--bot policy|heuristic] --state FILE   start a game
   --state FILE                          show the board and the actions
   --state FILE --act ID [--amount N] [--text T]   perform one action, then let the bot play until the next decision
   --state FILE --log N                  show the last N log lines`);
@@ -26,6 +28,12 @@ engine.loadCards(cards);
 engine.loadDictionary("en", read("../public/i18n/en/messages.ftl") + read("../public/i18n/en/ui.ftl"));
 engine.setLanguage("en");
 const matchups = engine.precons();
+const cardDb = { all: cards, byTitle, byCode: new Map(cards.map((c) => [c.code, c])) };
+const listDeck = (file, side) => {
+  const deck = parseDecklist(readFileSync(file, "utf8"), side, cardDb, file);
+  return { key: `list:${file}`, name: deck.name, identity: deck.identity.title, cards: deck.cards.map((e) => ({ qty: e.qty, title: e.card.title })) };
+};
+
 const lookup = (title) => byTitle.get(title);
 const render = (m) => {
   try {
@@ -82,7 +90,7 @@ const other = (s) => (s === "corp" ? "runner" : "corp");
 const statePath = String(args.state);
 let state;
 if (args.new) {
-  state = { seed: Number(args.seed ?? Date.now() % 1000000), matchup: Number(args.matchup ?? 0), decks: { corp: args["corp-deck"] ? String(args["corp-deck"]) : null, runner: args["runner-deck"] ? String(args["runner-deck"]) : null }, side: String(args.side ?? "runner"), bot: String(args.bot ?? "policy"), log: [], seen: 0 };
+  state = { seed: Number(args.seed ?? Date.now() % 1000000), matchup: Number(args.matchup ?? 0), decks: { corp: args["corp-list"] ? `list:${args["corp-list"]}` : args["corp-deck"] ? String(args["corp-deck"]) : null, runner: args["runner-list"] ? `list:${args["runner-list"]}` : args["runner-deck"] ? String(args["runner-deck"]) : null }, side: String(args.side ?? "runner"), bot: String(args.bot ?? "policy"), log: [], seen: 0 };
   writeFileSync(statePath, JSON.stringify(state));
 } else {
   if (!existsSync(statePath)) throw new Error(`no game at ${statePath}; start one with --new`);
@@ -93,6 +101,7 @@ const me = state.side;
 const botSide = other(me);
 const base = matchups[state.matchup];
 const pickDeck = (key, side) => {
+  if (key.startsWith("list:")) return listDeck(key.slice(5), side);
   const d = coreDeck(key);
   if (!d || d.side !== side) throw new Error(`Unknown ${side} core deck: ${key}`);
   return d;

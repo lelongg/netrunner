@@ -1,4 +1,4 @@
-import { bestBreak, coverage, estimateRun, iceThreat, isIcebreaker, rezCostOf, strengthOf } from "./tactics.ts";
+import { bestBreak, coverage, estimateRun, iceThreat, isIcebreaker, rezCostOf, strengthOf, hostedBreaker } from "./tactics.ts";
 import { byCommand } from "./observe.ts";
 import type { Candidate } from "../../game/candidates.ts";
 import type { Observation, Proposal } from "./types.ts";
@@ -34,6 +34,11 @@ export function encounterPlan(obs: Observation): { proposal: Proposal; threat: R
   if (!live) return null;
   const worth = threat.etr || threat.damage > 0 || threat.creditLoss > 0 || threat.tag;
   if (!worth) return null;
+  const hosted = hostedBreaker(obs, ice);
+  if (hosted) {
+    const use = byCommand(obs, "ability", (c) => (c.args as any)?.card?.cid === hosted.cid)[0] ?? byCommand(obs, "runner-ability", (c) => (c.args as any)?.card?.cid === hosted.cid)[0];
+    if (use) return { proposal: fromCandidate(use, 86, `break ${ice.title} with the counters on ${hosted.title}`, "break"), threat };
+  }
   const full = byCommand(obs, "dynamic-ability", (c) => /fully break/i.test(c.label))
     .map((c) => ({ c, cost: labelCost(c.label) }))
     .sort((a, b) => a.cost - b.cost)[0];

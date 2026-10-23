@@ -6,6 +6,8 @@ import { PolicyBot } from "../src/bot/policy/bot.ts";
 import { fingerprint, findPolicy, listPolicies } from "../src/bot/policy/registry.ts";
 import "../src/bot/policy/decks/index.ts";
 import { CORE_CORP_DECKS, CORE_RUNNER_DECKS, coreDeck } from "../src/bot/policy/decks/core.ts";
+import { parseDecklist } from "../src/decks.ts";
+import { readFileSync } from "node:fs";
 import { basicCommands, cardCommands, promptOf, runCommands } from "../src/game/actions.ts";
 import { gameLines, logLines } from "../src/game/describe.ts";
 
@@ -19,6 +21,8 @@ if (args.help) {
   --corp-deck KEY    core deck for the Corp (core-hb, core-jinteki, core-nbn, core-weyland) instead of the matchup's
   --runner-deck KEY  core deck for the Runner (core-anarch, core-criminal, core-shaper) instead of the matchup's
   --grid             play every core Corp deck against every core Runner deck and print the table
+  --corp-list FILE   a decklist text file (one "3x Card" per line, identity first) for the Corp
+  --runner-list FILE a decklist text file for the Runner
   --split NAME       seed set: design | tune | test (default design); seeds never overlap between splits
   --seed N           base seed inside the split (default 1)
   --max-actions N    actions before a game is declared unfinished (default 3000)
@@ -36,6 +40,12 @@ engine.loadDictionary("en", (await read("../public/i18n/en/messages.ftl")) + (aw
 engine.setLanguage("en");
 const matchups = engine.precons();
 const lookup = (title) => byTitle.get(title);
+const cardDb = { all: cards, byTitle, byCode: new Map(cards.map((c) => [c.code, c])) };
+const listDeck = (file, side) => {
+  const deck = parseDecklist(readFileSync(file, "utf8"), side, cardDb, file);
+  return { key: `list:${file}`, name: deck.name, identity: deck.identity.title, cards: deck.cards.map((e) => ({ qty: e.qty, title: e.card.title })) };
+};
+
 const render = (m) => {
   try {
     return engine.renderMessage(m);
@@ -305,10 +315,11 @@ const pickDeck = (key, side) => {
   if (!d || d.side !== side) throw new Error(`Unknown ${side} core deck: ${key}`);
   return d;
 };
+const chosen = (side) => (args[`${side}-list`] ? listDeck(String(args[`${side}-list`]), side) : args[`${side}-deck`] ? pickDeck(args[`${side}-deck`], side) : null);
 const matchupOf = (corp, runner) => ({ key: `${corp.key ?? corp.name}+${runner.key ?? runner.name}`, title: `${corp.name} vs ${runner.name}`, corp, runner });
 const pairs = args.grid
   ? CORE_CORP_DECKS.flatMap((c) => CORE_RUNNER_DECKS.map((r) => matchupOf(c, r)))
-  : [args["corp-deck"] || args["runner-deck"] ? matchupOf(args["corp-deck"] ? pickDeck(args["corp-deck"], "corp") : matchups[matchup].corp, args["runner-deck"] ? pickDeck(args["runner-deck"], "runner") : matchups[matchup].runner) : matchups[matchup]];
+  : [chosen("corp") || chosen("runner") ? matchupOf(chosen("corp") ?? matchups[matchup].corp, chosen("runner") ?? matchups[matchup].runner) : matchups[matchup]];
 
 const ci = (k, n) => {
   if (!n) return "";

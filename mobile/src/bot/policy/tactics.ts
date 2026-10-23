@@ -102,7 +102,19 @@ export interface BreakOption {
   cost: Estimate;
 }
 
+export function hostedBreaker(obs: Observation, ice: any): any | null {
+  const runnerName = "Runner";
+  for (const h of ice?.hosted ?? []) {
+    if (h.side !== runnerName) continue;
+    const text = plain(obs.info(h).text ?? "");
+    if (/hosted virus counter:\s*break 1 subroutine on host ice/i.test(text) && Number(h.counter?.virus ?? 0) >= Math.max(1, (ice.subroutines ?? []).filter((s: any) => !s.broken && !s.fired).length || 1)) return h;
+  }
+  return null;
+}
+
 export function bestBreak(obs: Observation, ice: any): BreakOption | null {
+  const hosted = hostedBreaker(obs, ice);
+  if (hosted) return { profile: { card: hosted, breaks: "AI", strength: 99, breakCost: 0, subsPerBreak: 1, pumpCost: 0, pumpStrength: 0, exact: true }, cost: { value: 0, exact: true } };
   let best: BreakOption | null = null;
   for (const profile of rigProfiles(obs)) {
     if (!canBreak(profile, ice)) continue;
