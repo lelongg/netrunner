@@ -12,12 +12,13 @@ export interface RunResult {
   views: Partial<Record<Seat, any>>;
 }
 
-export type Probe = { k: "try"; command: string; args: unknown } | { k: "break"; ice: unknown; breaker: unknown; want: string[]; boost?: number } | { k: "funds"; card: unknown };
+export type Probe = { k: "try"; command: string; args: unknown } | { k: "break"; ice: unknown; breaker: unknown; want: string[]; boost?: number } | { k: "funds"; card: unknown } | { k: "moves"; moves: { command: string; args?: unknown }[] };
 
 export interface ProbeResult {
   ok: boolean;
   credits?: number;
   funds?: Funds;
+  view?: any;
 }
 
 export interface GameHost {
@@ -105,6 +106,13 @@ export class GameRunner {
 
   private trial(game: GameHandle, side: Side, probe: Probe, snapshot: Snapshot): ProbeResult {
     if (probe.k === "try") return { ok: this.tryOn(game, side, probe.command, probe.args, false) && !this.engine.unchanged(game, snapshot) };
+    if (probe.k === "moves") {
+      for (const [i, m] of probe.moves.entries()) {
+        if (!this.tryOn(game, side, m.command, m.args ?? null, true)) return { ok: false };
+        if (i === 0 && this.engine.unchanged(game, snapshot)) return { ok: false };
+      }
+      return { ok: true, view: this.engine.view(game, side) };
+    }
     if (probe.k === "funds") {
       const funds = this.engine.availableCredits(game, side, probe.card);
       return { ok: !!funds, funds };

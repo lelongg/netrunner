@@ -7,7 +7,7 @@ import { agendaProgress, breakerProfile, coverage, estimateRun, iceThreat, isIce
 const ICE_TYPES = new Set(["Barrier", "Code Gate", "Sentry"]);
 import type { DeckList, DeckPolicy, Observation, Plan, Proposal, ServerInfo } from "../types.ts";
 import { CORE_CORP_DECKS } from "./core.ts";
-import { unrezzedPrice } from "../value.ts";
+import { unrezzedPrice, unseenIceDamage } from "../value.ts";
 import { GATEWAY_CORP_BEGINNER, GATEWAY_CORP_INTERMEDIATE, GATEWAY_RUNNER_BEGINNER, GATEWAY_RUNNER_INTERMEDIATE } from "./gateway.ts";
 
 const isEconomyCard = (obs: Observation, c: any) => obs.profile.economy.has(c.title);
@@ -122,8 +122,10 @@ function accessRisk(obs: Observation, t: Target) {
 function requiredHand(obs: Observation, t: Target, covered = fullyCovered(obs, t)) {
   const unrezzed = t.server.ices.filter((i: any) => !i.rezzed).length;
   const corpCredits = Number(obs.opp.credit ?? 0);
-  const hurts = ambushDeck(obs) || [...obs.memory.opponentTitles].some((title) => /net damage/i.test(obs.info({ title }).text ?? "") && (obs.info({ title }).type ?? "") === "ICE");
-  const iceDamage = unrezzed && !(covered && obs.credits >= t.credits + 2) ? (hurts ? (corpCredits >= 4 ? 3 : corpCredits >= 1 ? 2 : 0) : corpCredits >= 1 ? 1 : 0) : 0;
+  const known = unseenIceDamage(obs);
+  const hurts = known == null ? ambushDeck(obs) || [...obs.memory.opponentTitles].some((title) => /net damage/i.test(obs.info({ title }).text ?? "") && (obs.info({ title }).type ?? "") === "ICE") : known >= 2;
+  const exposed = unrezzed > 0 && !(covered && obs.credits >= t.credits + 2);
+  const iceDamage = !exposed || corpCredits < 1 ? 0 : known != null ? Math.min(3, known) : hurts ? (corpCredits >= 4 ? 3 : 2) : 1;
   return accessRisk(obs, t) + iceDamage;
 }
 
@@ -392,7 +394,8 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
   };
   for (const p of out) {
     const cost = spend(p);
-    if (cost > 0 && floorNear && obs.credits - cost < floor && !(plan.kind === "contest" && p.why.includes(String(plan.detail?.server))) && !(plan.kind === "closing" && (p.kind === "run" || p.kind === "run-event")) && !p.why.startsWith("install Cleaver") && !p.why.startsWith("install Unity") && !p.why.startsWith("install Carmen")) {
+    const cheapRun = (p.kind === "run" || p.kind === "run-event") && cost <= 3;
+    if (cost > 0 && !cheapRun && floorNear && obs.credits - cost < floor && !(plan.kind === "contest" && p.why.includes(String(plan.detail?.server))) && !(plan.kind === "closing" && (p.kind === "run" || p.kind === "run-event")) && !p.why.startsWith("install Cleaver") && !p.why.startsWith("install Unity") && !p.why.startsWith("install Carmen")) {
       p.score -= 15;
       p.why += ` (would drop below the ${floor} needed for the remote)`;
     }
@@ -409,7 +412,10 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
     if (p.kind === "credit" && (obs.credits < 8 || (floorNear && obs.credits < floor)) && cov.size >= 2) p.score += 12;
     if (p.kind === "run" || p.kind === "run-event") {
       const t = ts.find((x) => p.why.includes(x.server.label));
-      if (t && t.credits > 0 && obs.credits - t.credits < 3 && t.value < 5 && plan.kind !== "closing") p.score -= 22;
+      if (t && t.credits > 0 && obs.credits - t.credits < 3 && t.value < 5 && plan.kind !== "closing") {
+        p.score -= 22;
+        p.why += " (would leave under 3 credits for little value)";
+      }
     }
     if (p.kind === "remove-tag" && punisher) p.score = 78;
     if (richNoRig && (p.kind === "click-economy" || p.kind === "credit")) p.score -= 15;
@@ -423,7 +429,10 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
     }
     if (p.kind === "run") {
       const t = ts.find((x) => p.why.startsWith(`run ${x.server.label}`));
-      if (t && !safeHand(obs, t)) p.score -= 40;
+      if (t && !safeHand(obs, t)) {
+        p.score -= 40;
+        p.why += ` (the grip cannot survive the access: ${requiredHand(obs, t)} cards needed)`;
+      }
       if (t && t.tags > 0 && punisher && !(obs.clicks >= 2 && obs.credits - t.credits >= 2) && !(plan.kind === "contest" && plan.detail?.server === t.server.label)) {
         p.score -= 30;
         p.why += " (a tag the Corp would punish before it can be cleared)";
@@ -434,7 +443,10 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
       }
       if (plan.kind === "contest" && t?.server.label === plan.detail?.server) p.score += 20;
       if (plan.kind === "closing" && t && !t.server.remote) p.score += 10;
-      if (plan.kind === "setup" && t && t.credits > 0) p.score -= 10;
+      if (plan.kind === "setup" && t && t.credits > 0) {
+        p.score -= 10;
+        p.why += " (still setting up)";
+      }
     }
     if (plan.kind === "setup" && (p.kind === "economy" || p.kind === "install-economy")) p.score += 6;
     if (p.kind === "install" && plan.kind === "contest") p.score -= 10;

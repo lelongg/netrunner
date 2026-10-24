@@ -116,6 +116,41 @@ of the run or when the clicks are simply cheaper than the credits, and the Runne
 when the rezzed ice ahead cannot be paid for. In the `closing` plan Mayfly is installed when
 the last points sit behind an ice type no breaker answers.
 
+## Simulation
+
+The engine exposes `checkpoint`, `act`, `restore` and `unchanged`, which the app already
+uses to test which actions are legal and what a break costs. A checkpoint is a reference to
+the engine's immutable state, so trying a move and rolling it back costs one action. The bot
+uses the same four calls through `policy/simulate.ts`:
+
+- `evaluate(view, side)` in `policy/evaluate.ts` is a static score of a view from one side:
+  credits, clicks, agenda points, cards in hand, tags and brain damage, installed cards at
+  their cost plus one, rezzed ice at rez cost plus two, advancement counters, credits and
+  counters hosted on cards, minus the same for the opponent;
+- after ranking its proposals, the bot plays each of the top six that sit within twelve
+  points of the best on the real game, resolves the prompts its own policy would answer
+  (up to five in a chain), reads the view, restores the game, and adds the clamped change
+  of the evaluation (±6) to the proposal's score, shown in the reason as `[+4.0]`. A move
+  the engine refuses or that leaves the game unchanged is dropped with "(the engine refused
+  it)";
+- on a select prompt on its own turn, every selectable card becomes a measured option at a
+  low base score, so the simulation decides when no handler has an opinion.
+
+Hidden information stays hidden: a move is only simulated when its outcome is public and
+deterministic. Runs, draws, and any card or prompt whose text mentions drawing, accessing,
+revealing, looking at, searching, shuffling, exposing, a trace or a random choice are never
+simulated, and nothing is simulated during a run. Only the acting side's own view is read
+after the trial. The opponent's decisions are never simulated: a trial stops at the first
+prompt that is not the bot's.
+
+The evaluation script runs both sides with simulation by default (`--sim 0` turns it off,
+`--sim corp` or `--sim runner` limits it to one side, `--sim-weight` scales the delta). The
+terminal harness and the app do the same, the app through the engine worker's `moves`
+probe and `PolicyBot.decideAsync`. A decision costs about 15 ms on average instead of
+under 1 ms, with a worst case near half a second on a crowded board.
+
+SIMULATION_RESULTS
+
 ## Evaluation
 
 ```sh

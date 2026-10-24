@@ -5,9 +5,11 @@ import { corpFreeProposals, corpProposals, genericPlan, runnerProposals } from "
 import { emptyMemory, noteRun, observe, updateMemory } from "./observe.ts";
 import { type AnyDeck, deckList, fingerprint } from "./registry.ts";
 import { cardPrompt } from "./cards.ts";
-import { genericPrompt, mulliganProposal } from "./prompts.ts";
+import { genericPrompt, mulliganProposal, selectMove, selectable } from "./prompts.ts";
 import { breakSubChoice, corpRun, runnerRun } from "./runs.ts";
 import { isEconomy, isIcebreaker } from "./tactics.ts";
+import { evaluate } from "./evaluate.ts";
+import { type AsyncSimulator, type SimOutcome, type SimReport, type Simulator, simulatable } from "./simulate.ts";
 import type { DecisionRecord, DeckList, DeckPolicy, Lookup, Memory, Move, Observation, Plan, Proposal } from "./types.ts";
 
 const FREE_KINDS = new Set(["score", "rez-economy", "rez", "end"]);
@@ -20,6 +22,34 @@ export interface BotOptions {
   maxRecords?: number;
   rescue?: boolean;
   deck?: AnyDeck;
+  simulate?: Simulator;
+  simWeight?: number;
+  simulated?: number;
+}
+
+interface Context {
+  obs: Observation;
+  stage: DecisionRecord["stage"];
+  ranked: Proposal[];
+  unhandled?: string;
+  signature: string;
+  started: number;
+}
+
+function cloneMemory(m: Memory): Memory {
+  return { seen: new Map(m.seen), firstSeen: new Map(m.firstSeen), installedAt: new Map(m.installedAt), opponentTitles: new Set(m.opponentTitles), duds: new Set(m.duds), runs: [...m.runs], runsThisTurn: m.runsThisTurn, turnKey: m.turnKey, notes: structuredClone(m.notes) };
+}
+
+function driveSync(gen: Generator<Move[], SimReport | null, SimOutcome>, simulate: Simulator): SimReport | null {
+  let step = gen.next();
+  while (!step.done) step = gen.next(simulate(step.value));
+  return step.value;
+}
+
+async function driveAsync(gen: Generator<Move[], SimReport | null, SimOutcome>, simulate: AsyncSimulator): Promise<SimReport | null> {
+  let step = gen.next();
+  while (!step.done) step = gen.next(await simulate(step.value));
+  return step.value;
 }
 
 const moveKey = (m: Move) => `${m.command}:${m.say ?? ""}:${JSON.stringify(m.args ?? null)}`;
@@ -47,6 +77,9 @@ export class PolicyBot {
   private maxRecords: number;
   private rescue: boolean;
   private deck: DeckList | null;
+  private simulate: Simulator | null;
+  private simWeight: number;
+  private simulated: number;
 
   constructor(side: Side, policy: DeckPolicy | null, lookup: Lookup, options: BotOptions = {}) {
     this.side = side;
@@ -58,6 +91,9 @@ export class PolicyBot {
     this.maxRecords = options.maxRecords ?? 5000;
     this.rescue = options.rescue ?? false;
     this.deck = options.deck ? this.ownDeck(deckList(options.deck)) : null;
+    this.simulate = options.simulate ?? null;
+    this.simWeight = options.simWeight ?? 1;
+    this.simulated = options.simulated ?? 6;
   }
 
   private ownDeck(list: DeckList): DeckList {
@@ -70,6 +106,20 @@ export class PolicyBot {
   }
 
   decide(view: any): Move | null {
+    const ctx = this.rank(view);
+    if (!ctx) return null;
+    if (this.simulate) for (const p of this.toSimulate(ctx)) this.applyReport(p, driveSync(this.simulation(p, ctx.obs), this.simulate));
+    return this.choose(ctx);
+  }
+
+  async decideAsync(view: any, simulate: AsyncSimulator): Promise<Move | null> {
+    const ctx = this.rank(view);
+    if (!ctx) return null;
+    for (const p of this.toSimulate(ctx)) this.applyReport(p, await driveAsync(this.simulation(p, ctx.obs), simulate));
+    return this.choose(ctx);
+  }
+
+  private rank(view: any): Context | null {
     if (!view || view.winner) return null;
     const started = typeof performance !== "undefined" ? performance.now() : Date.now();
     const turnKey = `${view.turn}:${view["active-player"]}`;
@@ -89,6 +139,56 @@ export class PolicyBot {
     const { stage, proposals, unhandled } = this.consider(obs);
     const signature = this.signature(obs);
     const ranked = proposals.filter((p) => !this.banned.has(moveKey(p.move))).sort((a, b) => b.score - a.score);
+    return { obs, stage, ranked, unhandled, signature, started };
+  }
+
+  private toSimulate(ctx: Context): Proposal[] {
+    if (ctx.stage !== "click" && ctx.stage !== "free" && ctx.stage !== "prompt") return [];
+    const top = ctx.ranked[0]?.score ?? 0;
+    return ctx.ranked.slice(0, this.simulated).filter((p) => p.score >= top - 12 * this.simWeight && simulatable(p, ctx.obs));
+  }
+
+  private applyReport(p: Proposal, report: SimReport | null) {
+    if (!report) return;
+    if (report.refused) {
+      p.score = -500;
+      p.why += " (the engine refused it)";
+      return;
+    }
+    const delta = Math.max(-6, Math.min(6, report.delta));
+    p.score += delta * this.simWeight;
+    p.why += ` [${report.delta >= 0 ? "+" : ""}${report.delta.toFixed(1)}${report.unresolved ? " unresolved" : ""}]`;
+  }
+
+  private *simulation(p: Proposal, obs: Observation): Generator<Move[], SimReport | null, SimOutcome> {
+    const before = evaluate(obs.view, this.side);
+    const moves = [p.move];
+    const memory = cloneMemory(this.memory);
+    const plan = this.plan;
+    let lastPrompt = "";
+    for (let step = 0; step < 6; step++) {
+      const out = yield moves;
+      if (out.refused) return { refused: true, delta: 0, steps: step, unresolved: false };
+      if (!out.view) return null;
+      const delta = evaluate(out.view, this.side) - before;
+      const prompt = promptOf(out.view, this.side);
+      const type = prompt?.["prompt-type"];
+      if (!prompt || type === "waiting" || type === "run") return { refused: false, delta, steps: step, unresolved: false };
+      const key = `${prompt.eid?.eid ?? ""}:${this.render(prompt.msg)}`;
+      if (key === lastPrompt || step === 5) return { refused: false, delta, steps: step, unresolved: true };
+      lastPrompt = key;
+      const next = observe(out.view, this.side, memory, this.lookup, this.render, this.random, this.deck);
+      const answers = this.answerPrompt(next).sort((a, b) => b.score - a.score);
+      this.plan = plan;
+      if (!answers.length) return { refused: false, delta, steps: step, unresolved: true };
+      moves.push(answers[0].move);
+    }
+    return { refused: false, delta: 0, steps: 6, unresolved: true };
+  }
+
+  private choose(ctx: Context): Move | null {
+    const { obs, stage, signature, started } = ctx;
+    const ranked = [...ctx.ranked].sort((a, b) => b.score - a.score);
     let chosen: Proposal | null = ranked[0] ?? null;
     let refused = false;
     if (chosen) {
@@ -104,13 +204,13 @@ export class PolicyBot {
       } else if (!this.confirmed) this.last = { key, signature, count: 0 };
       if (chosen) this.pending = { key: moveKey(chosen.move), signature };
     }
-    const note = unhandled;
+    const note = ctx.unhandled;
     if (note) this.unhandled++;
     if (!chosen && note && this.rescue) chosen = this.rescueMove(obs);
     this.pendingKind = chosen && stage === "click" ? { key: moveKey(chosen.move), kind: chosen.kind } : null;
     const ms = (typeof performance !== "undefined" ? performance.now() : Date.now()) - started;
     if (this.record) {
-      this.records.push({ n: this.n, turn: obs.turn, side: this.side, active: obs.active, stage, plan: this.plan, chosen, considered: ranked.slice(0, 6), refused: refused || undefined, unhandled: note, ms, signature, prompt: obs.prompt ? `${obs.prompt.card?.title ?? "?"} [${obs.promptType}]: ${obs.promptText}` : undefined });
+      this.records.push({ n: this.n, turn: obs.turn, side: this.side, active: obs.active, stage, plan: this.plan, chosen, considered: ranked.slice(0, 12), refused: refused || undefined, unhandled: note, ms, signature, prompt: obs.prompt ? `${obs.prompt.card?.title ?? "?"} [${obs.promptType}]: ${obs.promptText}` : undefined });
       if (this.records.length > this.maxRecords) this.records.shift();
     }
     this.n++;
@@ -177,6 +277,13 @@ export class PolicyBot {
     }
     const deck = this.policy?.prompt?.(obs, this.currentPlan(obs));
     const out = [deck, breakSubChoice(obs), ...cardPrompt(obs), ...genericPrompt(obs, this.plan)].filter((p): p is Proposal => !!p);
+    if (this.simulate && obs.promptType === "select") {
+      const keys = new Set(out.map((p) => moveKey(p.move)));
+      for (const card of selectable(obs).slice(0, 8)) {
+        const p: Proposal = { move: selectMove(obs, card), score: 24, why: `select ${card.title ?? "a facedown card"}: measured`, kind: "select" };
+        if (!keys.has(moveKey(p.move)) && simulatable(p, obs)) out.push(p);
+      }
+    }
     out.forEach((p, i) => (p.score -= i * 0.001));
     return out;
   }

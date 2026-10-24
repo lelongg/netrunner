@@ -49,7 +49,7 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
   }
   const amaze = glacier.inHand(obs, "AMAZE Amusements");
   const scoring = glacier.scoringRemote(obs) ?? bait;
-  if (amaze && scoring && obs.credits >= 1 && !scoring.content.some((c: any) => c.title === "AMAZE Amusements")) push(proposal(playOf(obs, amaze, scoring.label), 46, `AMAZE Amusements in ${scoring.label}: a steal costs two tags`, "install-upgrade"));
+  if (amaze && scoring && scoring.ices.length > 0 && obs.credits >= 1 && !scoring.content.some((c: any) => c.title === "AMAZE Amusements")) push(proposal(playOf(obs, amaze, scoring.label), 46, `AMAZE Amusements in ${scoring.label}: a steal costs two tags`, "install-upgrade"));
   for (const p of out) {
     if (p.kind === "install-agenda" && isTagged && obs.hand.some((c) => c.title === "Orbital Superiority" && p.why.includes(c.title))) p.score += 6;
     if (p.kind === "install-ice" && isTagged && /Lamplighter|Doomscroll/.test(p.why)) p.score += 4;

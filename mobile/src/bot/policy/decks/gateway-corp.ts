@@ -155,7 +155,7 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
   }
 
   const skunk = inHand(obs, "Manegarm Skunkworks");
-  if (skunk && (scoring ?? bait) && obs.credits >= 4) push(proposal(playOf(obs, skunk, (scoring ?? bait)!.label), 46, `Manegarm Skunkworks in ${(scoring ?? bait)!.label}: the Runner pays 2 clicks or 5 credits to get in`, "install-upgrade"));
+  if (skunk && (scoring ?? bait) && (scoring ?? bait)!.ices.length > 0 && obs.credits >= 4) push(proposal(playOf(obs, skunk, (scoring ?? bait)!.label), 46, `Manegarm Skunkworks in ${(scoring ?? bait)!.label}: the Runner pays 2 clicks or 5 credits to get in`, "install-upgrade"));
 
   for (const s of remotes(obs)) {
     for (const card of s.content) {

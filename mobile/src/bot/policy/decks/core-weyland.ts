@@ -34,7 +34,7 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
   if (kpi && obs.credits >= 1) push(proposal(playOf(obs, kpi), obs.hand.some((c) => c.type === "ICE") ? 62 : 46, "Key Performance Indicators: free ice and credits", "economy"));
   const vault = glacier.inHand(obs, "Malapert Data Vault");
   const scoring = glacier.scoringRemote(obs) ?? bait;
-  if (vault && scoring && obs.credits >= 2 && !scoring.content.some((c: any) => c.title === "Malapert Data Vault")) push(proposal(playOf(obs, vault, scoring.label), 40, `Malapert Data Vault in ${scoring.label}: a card every score`, "install-upgrade"));
+  if (vault && scoring && scoring.ices.length > 0 && obs.credits >= 2 && !scoring.content.some((c: any) => c.title === "Malapert Data Vault")) push(proposal(playOf(obs, vault, scoring.label), 40, `Malapert Data Vault in ${scoring.label}: a card every score`, "install-upgrade"));
   const retribution = glacier.inHand(obs, "Retribution");
   const rig = [...(obs.view.runner?.rig?.program ?? []), ...(obs.view.runner?.rig?.hardware ?? [])];
   if (retribution && tagged(obs.view) && obs.credits >= 1 && rig.length) push(proposal(playOf(obs, retribution), 78, "Retribution: trash a program or hardware while the Runner is tagged", "punish"));

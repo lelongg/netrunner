@@ -2,11 +2,13 @@ import type { Side } from "../engine.ts";
 import { HeuristicBot, type Lookup, type Move } from "./heuristic.ts";
 import { PolicyBot, type BotOptions } from "./policy/bot.ts";
 import { type AnyDeck, findPolicy } from "./policy/registry.ts";
+import type { AsyncSimulator } from "./policy/simulate.ts";
 import "./policy/decks/index.ts";
 
 export interface Bot {
   readonly side: Side;
   decide(view: any): Move | null;
+  decideAsync?(view: any, simulate: AsyncSimulator): Promise<Move | null>;
   applied?(move: Move): void;
 }
 

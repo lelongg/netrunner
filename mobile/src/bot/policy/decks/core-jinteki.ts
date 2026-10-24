@@ -22,7 +22,7 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
   }
   const vd = glacier.inHand(obs, "Anoetic Void");
   const scoring = glacier.scoringRemote(obs) ?? glacier.remotes(obs).find((s) => s.ices.length > 0 && !s.content.length);
-  if (vd && scoring && !scoring.content.some((c: any) => c.title === "Anoetic Void") && obs.hand.length >= 3) push(proposal(playOf(obs, vd, scoring.label), 58, `Anoetic Void in ${scoring.label}: two credits and two cards end any run`, "install-upgrade"));
+  if (vd && scoring && scoring.ices.length > 0 && !scoring.content.some((c: any) => c.title === "Anoetic Void") && obs.hand.length >= 3) push(proposal(playOf(obs, vd, scoring.label), 58, `Anoetic Void in ${scoring.label}: two credits and two cards end any run`, "install-upgrade"));
   const installedAgenda = glacier.agendaIn(obs);
   for (const s of glacier.remotes(obs)) {
     for (const card of s.content) {

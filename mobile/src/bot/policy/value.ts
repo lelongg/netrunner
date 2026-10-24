@@ -70,6 +70,20 @@ export function centralValue(obs: Observation, server: ServerInfo): number | nul
   return expectedPoints * 7 + credits * 0.6;
 }
 
+export function unseenIceDamage(obs: Observation): number | null {
+  const deck = assumedDeck(obs);
+  if (!deck) return null;
+  const onBoard = new Map<string, number>();
+  for (const s of obs.servers) for (const i of s.ices) if (i.title) onBoard.set(i.title, (onBoard.get(i.title) ?? 0) + 1);
+  for (const c of obs.opp.discard ?? []) if (c.type === "ICE" && c.title) onBoard.set(c.title, (onBoard.get(c.title) ?? 0) + 1);
+  let worst = 0;
+  for (const c of cardsOf(obs, deck)) {
+    if (c.info.type !== "ICE" || c.qty <= (onBoard.get(c.title) ?? 0)) continue;
+    worst = Math.max(worst, iceThreat({ title: c.title, subtypes: c.info.subtypes ?? [], strength: Number(c.info.strength ?? 0), subroutines: [] }, c.info, obs.credits, obs.hand.length).damage);
+  }
+  return worst;
+}
+
 export interface UnrezzedPrice {
   cost: number;
   blocked: number;

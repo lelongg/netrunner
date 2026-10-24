@@ -212,6 +212,7 @@ export class Session {
   private log: LocalEntry[] = [];
   private closed = false;
   private bot?: Bot;
+  private botBusy = false;
   private botTimer?: number;
   private transport?: Transport;
   private seat: Seat = 0;
@@ -575,14 +576,24 @@ export class Session {
     if (!this.views[bot.side] || this.views[bot.side].winner) return;
     this.botTimer = window.setTimeout(() => {
       this.botTimer = undefined;
-      if (this.closed || this.held) return;
-      if (this.pending) return;
-      const move = bot.decide(this.views[bot.side]);
-      if (!move) return;
-      bot.applied?.(move);
-      if (move.say) this.say(move.say, bot.side);
-      else if (this.online()) this.send(move.command, move.args ?? null);
-      else this.perform({ side: bot.side, kind: "act", command: move.command, args: move.args ?? null });
+      if (this.closed || this.held || this.pending || this.botBusy) return;
+      const view = this.views[bot.side];
+      const simulate = (moves: { command: string; args?: unknown }[]) => this.probe(bot.side, [{ k: "moves", moves }]).then((r) => ({ refused: r[0]?.ok === false, view: r[0]?.view ?? null }));
+      const decided = bot.decideAsync && this.host && !this.online() ? bot.decideAsync(view, simulate) : Promise.resolve(bot.decide(view));
+      this.botBusy = true;
+      decided
+        .then((move) => {
+          this.botBusy = false;
+          if (!move || this.closed || this.held || this.pending) return;
+          if (this.views[bot.side] !== view) return this.scheduleBot();
+          bot.applied?.(move);
+          if (move.say) this.say(move.say, bot.side);
+          else if (this.online()) this.send(move.command, move.args ?? null);
+          else this.perform({ side: bot.side, kind: "act", command: move.command, args: move.args ?? null });
+        })
+        .catch(() => {
+          this.botBusy = false;
+        });
     }, BOT_DELAY_MS);
   }
 
