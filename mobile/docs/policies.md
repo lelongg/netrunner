@@ -475,6 +475,29 @@ Corp: its list wins through tags (Ping and Funhouse on the remote, Predictive Pl
 Public Trail while tagged, Orbital Superiority as a kill) and the archetype does not yet
 chain those.
 
+### Mistake counts on the SG Only decks
+
+Design split, 10 games per cell, the counts the evaluation detects from the full game state.
+Reading them before any replay found three rules worth fixing in one afternoon: the Offworld
+Office install that bypassed the one-ice test, the Runner refusing any contest with a
+five-card access risk and clicking credits instead, and a covered duplicate breaker in hand
+silencing the "rich with no rig" draw.
+
+| Side and deck | Before | After |
+|---|---|---|
+| Runner rich credit clicks, Party Hard, 40 games vs the Corp policies | 56 | 26 |
+| Runner rich credit clicks, Stolen Goods, 40 games vs the Corp policies | 61 | 40 |
+| Runner rich credit clicks, Planning Ahead, 40 games vs the Corp policies | 17 | 8 |
+| Runner rich credit clicks, Stolen Goods, 40 games vs the reference Corps | 71 | 13 |
+| Corp agendas stolen from a remote, per Corp deck, 30 games vs the Runner policies | 21 to 27 | 13 to 27 |
+
+The remote steal stays the dominant Corp fault at close to one per game on every list but
+Quick and Dirty, which is why Weyland leads the Corp side. The reference Corps, for
+comparison, carry 13 to 15 unrezzable installs and 36 rich credit clicks per 30 games that
+the current Corps no longer make. Win rates after these changes: Runner policies 69 of 120
+against the reference Corps, Corp policies 64 to 68 of 120 against the reference Runners,
+policy against policy Corp 68 of 120.
+
 Every Corp deck beats the heuristic Runner and every Runner deck beats the heuristic Corp
 by more than the interval, which is what the shared archetypes bought; the Haas-Bioroid
 line is the lowest because the heuristic Zahya trashes its unprotected campaigns. Against
