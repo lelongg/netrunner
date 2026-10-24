@@ -1,7 +1,7 @@
 import { layer } from "./core";
 import { type Kind, glEffect, hasGl, warmGl } from "./gl";
 
-const ORDER: Kind[] = ["play", "score", "rez", "install", "use"];
+const ORDER: Kind[] = ["play", "score", "rez", "use", "install"];
 const MIN_WIDTH = 110;
 let titles: Record<string, string> = {};
 let playing = 0;
