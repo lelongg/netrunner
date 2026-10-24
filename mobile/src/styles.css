@@ -9441,3 +9441,11 @@ button.player-chip {
   color: var(--muted);
   text-align: center;
 }
+
+.stat.alert {
+  color: var(--red);
+}
+
+.stat.alert .icon {
+  color: var(--red);
+}

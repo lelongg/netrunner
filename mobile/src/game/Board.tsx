@@ -115,9 +115,9 @@ function serverOrder(servers: Record<string, any>) {
   return ["hq", "rd", "archives", ...remotes];
 }
 
-function Stat({ icon, label, children }: { icon: IconName; label: string; children: ComponentChildren }) {
+function Stat({ icon, label, children, alert }: { icon: IconName; label: string; children: ComponentChildren; alert?: boolean }) {
   return (
-    <span class="stat" data-tip={icon} aria-label={`${label} ${children}`}>
+    <span class={`stat ${alert ? "alert" : ""}`} data-tip={icon} aria-label={`${label} ${children}`}>
       <Icon name={icon} />
       {children}
     </span>
@@ -134,7 +134,7 @@ function extras(p: any, side: Side) {
         </Stat>,
       );
     out.push(
-      <Stat icon="tag" label="Tags">
+      <Stat icon="tag" label="Tags" alert={(p.tag?.total ?? 0) > 0}>
         {p.tag?.total ?? 0}
       </Stat>,
     );
