@@ -85,10 +85,12 @@ export function corpProposals(obs: Observation): Proposal[] {
     if (obs.credits >= 6) {
       for (const s of [rd, hq].sort((a, b) => a.ices.length - b.ices.length)) if (s.ices.length < 3) targets.push({ server: s, score: 40 - s.ices.length * 3, why: `deepen ${s.label}` });
     }
-    const endsRun = (c: any) => iceThreat({ ...c, subroutines: [] }, obs.info(c)).etr;
+    const endsRun = (c: any) => iceThreat({ ...c, subroutines: [] }, obs.info(c), 99).etr;
     const forRemote = [...ice].sort((a, b) => (endsRun(b) ? 6 : 0) + strengthOf(b) - ((endsRun(a) ? 6 : 0) + strengthOf(a)));
+    const saveEnder = agendas.length > 0 && ice.length >= 2 && ice.filter(endsRun).length < ice.length;
+    const forCentral = saveEnder ? [...ice].sort((a, b) => (endsRun(a) ? 6 : 0) - strengthOf(a) - ((endsRun(b) ? 6 : 0) - strengthOf(b))) : ice;
     for (const t of targets) {
-      const pool = /Server|remote/.test(t.server.label) ? forRemote : ice;
+      const pool = /Server|remote/.test(t.server.label) ? forRemote : forCentral;
       const card = pool.find((c) => rezCostOf(c) <= obs.credits + 3) ?? pool[0];
       const installCost = iceInstallCost(t.server);
       if (installCost > obs.credits) continue;
