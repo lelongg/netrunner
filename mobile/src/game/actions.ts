@@ -316,6 +316,8 @@ export function breakStep(view: any, side: Side, p: BreakPlan, render: (msg: unk
   const pr = promptOf(view, side);
   if (pr && pr["prompt-type"] === "select" && /^Choose a credit providing card/.test(render(pr.msg))) {
     if (!payFromPool) return "wait";
+    const funded = ((pr.selectable ?? []) as unknown[]).map((cid) => findCard(view, cid)).find((c: any) => Number(c?.counter?.credit ?? 0) > 0);
+    if (funded) return { command: "select", args: { card: cardRef(funded), eid: pr.eid, "shift-key-held": true } };
     const done = (Array.isArray(pr.choices) ? pr.choices : []).find((c: any) => c.value === "Done");
     return done ? { command: "choice", args: { eid: pr.eid, choice: { uuid: done.uuid } } } : null;
   }
