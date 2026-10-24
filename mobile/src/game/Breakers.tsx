@@ -46,6 +46,10 @@ export function Breakers({ view, stamp, probe, side, ice, send, onTap, disabled,
   const breakerCards = cards.filter((c) => (c.subtypes ?? []).includes("Icebreaker"));
   const plans = useProbe(partial && wanted ? breakerCards.map((c) => ({ k: "break", ice: ice.cid, breaker: c.cid, want: wantedLabels })) : [], probe, stamp ?? view);
   const planOf = (card: any) => plans?.[breakerCards.indexOf(card)];
+  const fundsOf = useProbe(breakerCards.map((c) => ({ k: "funds", card: c.cid })), probe, stamp ?? view)?.map((r) => r.funds?.total);
+  const known = (fundsOf ?? []).filter((n): n is number => n != null);
+  const funds = known.length ? Math.min(...known) : null;
+  const extraOf = (card: any) => (funds == null ? 0 : (fundsOf?.[breakerCards.indexOf(card)] ?? funds) - funds);
   const unbrokenLabels: string[] = (ice.subroutines ?? []).filter((s: any) => !s.broken && !s.fired && s.resolve !== false).map((s: any) => s.label);
   const reach = useProbe(unbrokenLabels.length ? breakerCards.map((c) => ({ k: "break", ice: ice.cid, breaker: c.cid, want: unbrokenLabels, boost: 99 })) : [], probe, ice.cid);
   const cannotBreak = (card: any) => reach?.[breakerCards.indexOf(card)]?.ok === false;
@@ -81,13 +85,20 @@ export function Breakers({ view, stamp, probe, side, ice, send, onTap, disabled,
   const badPub = view.runner?.["bad-pub-credit"] ?? 0;
   return (
     <div class="breakers">
-      {badPub > 0 && (
-        <div class="brk-head">
-          <span>
-            +<b>{badPub}</b>
-            {glyphs(iconize("[credit]"))} bad publicity for this run
-          </span>
+      {funds != null ? (
+        <div class="brk-funds">
+          {funds}
+          {glyphs(iconize("[credit]"))}
         </div>
+      ) : (
+        badPub > 0 && (
+          <div class="brk-head">
+            <span>
+              +<b>{badPub}</b>
+              {glyphs(iconize("[credit]"))} bad publicity for this run
+            </span>
+          </div>
+        )
       )}
       {fromIce.map((cmd) => {
         const [cost, effect] = splitCost(cmd.label);
@@ -160,6 +171,15 @@ export function Breakers({ view, stamp, probe, side, ice, send, onTap, disabled,
                 <span class="brk-name">{card.title}</span>
                 <span class="brk-meta">
                   {(card.subtypes ?? []).filter((t: string) => t !== "Icebreaker").join(" · ")}
+                  {extraOf(card) > 0 && (
+                    <>
+                      {" · "}
+                      <span class="brk-extra" aria-label={`${extraOf(card)} more credits for this breaker`}>
+                        +{extraOf(card)}
+                        {glyphs(iconize("[credit]"))}
+                      </span>
+                    </>
+                  )}
                   {(() => {
                     const str = card["current-strength"] ?? card.strength;
                     if (str == null) return null;

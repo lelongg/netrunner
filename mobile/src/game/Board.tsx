@@ -3,7 +3,7 @@ import type { ComponentChildren } from "preact";
 import { type CardDb, type EngineApi, type Side, cardImage } from "../engine";
 import type { Session } from "../session";
 import { Cta, Meter, Ticker, ask, tell } from "../ui";
-import { useFx, iceKind, quietUntil } from "../fx/director";
+import { groupBreaks, useFx, iceKind, quietUntil } from "../fx/director";
 import { Count, useLoop } from "../fx/ui";
 import { animate } from "../fx/core";
 import { type BreakPlan, type Command, breakStep, cardRef, pendingChoice, awaitingMove, basicCommands, currentIce, findCard, otherSide, promptOf, runCommands, siblingsOf } from "./actions";
@@ -1140,6 +1140,7 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
   const [planTick, setPlanTick] = useState(0);
   const breakSome = (breaker: any, want: string[]) => {
     plan.current = { ice: ice?.cid, breaker: breaker.cid, want, stage: "pump", steps: 0 };
+    groupBreaks(true);
     setPlanTick((t) => t + 1);
   };
   useEffect(() => {
@@ -1147,7 +1148,10 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
     const next = breakStep(view, side, plan.current, render);
     if (next === "wait") plan.current.steps--;
     else if (next) send(next.command, next.args);
-    else plan.current = null;
+    else {
+      plan.current = null;
+      groupBreaks(false);
+    }
   }, [view, session.pending, planTick]);
   const toggleSub = (i: number) => {
     const next = new Set(skipped);

@@ -3114,6 +3114,28 @@ button:active:not(:disabled) {
   color: var(--muted);
 }
 
+.brk-funds {
+  display: flex;
+  justify-content: flex-end;
+  align-items: baseline;
+  color: var(--yellow);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.brk-funds .glyph,
+.brk-extra .glyph {
+  height: 0.74em;
+  margin: 0 0 0 0.12em;
+}
+
+.brk-extra {
+  display: inline-flex;
+  align-items: baseline;
+  color: var(--yellow);
+}
+
 .brk-head b {
   color: var(--yellow);
   font-size: 10px;

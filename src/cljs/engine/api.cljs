@@ -11,7 +11,11 @@
    [game.cards.programs]
    [game.cards.resources]
    [game.cards.upgrades]
+   [game.core.bad-publicity :refer [bad-publicity-available]]
+   [game.core.board :refer [all-installed]]
+   [game.core.costs :refer [total-available-credits]]
    [game.core.diffs :as diffs]
+   [game.core.effects :refer [any-effects]]
    [game.core.process-actions :refer [checkpoint+clean-up command-parser process-action]]
    [game.core.say :refer [system-say]]
    [game.core.set-up :refer [init-game]]
@@ -179,6 +183,22 @@
   action the engine refused."
   [game ^js snapshot]
   (= (game-part @(.-state game)) (.-settled snapshot)))
+
+(defn available-credits
+  "The credits a side could spend on an ability of the installed card cid:
+  the total, and the part of it from the credit pool and from bad publicity."
+  [game side cid]
+  (let [state (.-state game)
+        side (side-kw side)
+        card (some #(when (= cid (:cid %)) %) (all-installed state side))
+        eid {:eid -1 :source card :source-type :ability}
+        total (total-available-credits state side eid card)
+        pool (if (or (any-effects state side :cannot-pay-credit)
+                     (any-effects state side :cannot-pay-credits-from-pool))
+               0
+               (get-in @state [side :credit] 0))
+        bad-pub (if (any-effects state side :cannot-pay-credit) 0 (bad-publicity-available state side))]
+    #js {:total total :pool pool :badPub bad-pub :cards (- total pool bad-pub)}))
 
 (defn say
   [game side user text]
