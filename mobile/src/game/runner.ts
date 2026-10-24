@@ -1,4 +1,4 @@
-import type { EngineApi, GameHandle, Side, Snapshot } from "../engine";
+import type { EngineApi, Funds, GameHandle, Side, Snapshot } from "../engine";
 
 export type Seat = Side | "spectator";
 import { type BreakPlan, breakStep, cardRef, findCard, promptOf } from "./actions";
@@ -12,11 +12,12 @@ export interface RunResult {
   views: Partial<Record<Seat, any>>;
 }
 
-export type Probe = { k: "try"; command: string; args: unknown } | { k: "break"; ice: unknown; breaker: unknown; want: string[]; boost?: number };
+export type Probe = { k: "try"; command: string; args: unknown } | { k: "break"; ice: unknown; breaker: unknown; want: string[]; boost?: number } | { k: "funds"; card: unknown };
 
 export interface ProbeResult {
   ok: boolean;
   credits?: number;
+  funds?: Funds;
 }
 
 export interface GameHost {
@@ -104,10 +105,14 @@ export class GameRunner {
 
   private trial(game: GameHandle, side: Side, probe: Probe, snapshot: Snapshot): ProbeResult {
     if (probe.k === "try") return { ok: this.tryOn(game, side, probe.command, probe.args, false) && !this.engine.unchanged(game, snapshot) };
+    if (probe.k === "funds") {
+      const funds = this.engine.availableCredits(game, side, probe.card);
+      return { ok: !!funds, funds };
+    }
     const open = promptOf(this.engine.view(game, side), side);
     if (open && open["prompt-type"] !== "run") return { ok: false };
     if (probe.boost && !this.tryOn(game, side, "change", { key: "credit", delta: probe.boost }, true)) return { ok: false };
-    const credit = this.engine.view(game, side)[side]?.credit ?? 0;
+    const credit = this.engine.availableCredits(game, side, probe.breaker)?.total ?? 0;
     const plan: BreakPlan = { ice: probe.ice, breaker: probe.breaker, want: probe.want, stage: "pump", steps: 0 };
     const render = (m: unknown) => this.engine.renderMessage(m);
     for (let next = breakStep(this.engine.view(game, side), side, plan, render, true); next && next !== "wait"; next = breakStep(this.engine.view(game, side), side, plan, render, true)) {
@@ -116,7 +121,7 @@ export class GameRunner {
     const after = this.engine.view(game, side);
     const ice = findCard(after, probe.ice);
     const left = (ice?.subroutines ?? []).filter((s: any) => !s.broken && !s.fired && probe.want.includes(s.label));
-    return { ok: !!ice && !left.length, credits: credit - (after[side]?.credit ?? 0) };
+    return { ok: !!ice && !left.length, credits: credit - (this.engine.availableCredits(game, side, probe.breaker)?.total ?? 0) };
   }
 
   probe(side: Side, probes: Probe[]): ProbeResult[] {

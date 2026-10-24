@@ -66,6 +66,14 @@ export interface EngineApi {
   winner(game: GameHandle): string | null;
   renderMessage(msg: unknown): string;
   precons(): Matchup[];
+  availableCredits(game: GameHandle, side: Side, cid: unknown): Funds;
+}
+
+export interface Funds {
+  total: number;
+  pool: number;
+  badPub: number;
+  cards: number;
 }
 
 export interface CardDb {

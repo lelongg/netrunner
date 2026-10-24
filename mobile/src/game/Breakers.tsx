@@ -46,6 +46,10 @@ export function Breakers({ view, stamp, probe, side, ice, send, onTap, disabled,
   const breakerCards = cards.filter((c) => (c.subtypes ?? []).includes("Icebreaker"));
   const plans = useProbe(partial && wanted ? breakerCards.map((c) => ({ k: "break", ice: ice.cid, breaker: c.cid, want: wantedLabels })) : [], probe, stamp ?? view);
   const planOf = (card: any) => plans?.[breakerCards.indexOf(card)];
+  const funds = useProbe(breakerCards.map((c) => ({ k: "funds", card: c.cid })), probe, stamp ?? view)
+    ?.map((r) => r.funds)
+    .filter((f) => f != null)
+    .sort((a, b) => b!.total - a!.total)[0];
   const unbrokenLabels: string[] = (ice.subroutines ?? []).filter((s: any) => !s.broken && !s.fired && s.resolve !== false).map((s: any) => s.label);
   const reach = useProbe(unbrokenLabels.length ? breakerCards.map((c) => ({ k: "break", ice: ice.cid, breaker: c.cid, want: unbrokenLabels, boost: 99 })) : [], probe, ice.cid);
   const cannotBreak = (card: any) => reach?.[breakerCards.indexOf(card)]?.ok === false;
@@ -81,13 +85,28 @@ export function Breakers({ view, stamp, probe, side, ice, send, onTap, disabled,
   const badPub = view.runner?.["bad-pub-credit"] ?? 0;
   return (
     <div class="breakers">
-      {badPub > 0 && (
+      {funds ? (
         <div class="brk-head">
           <span>
-            +<b>{badPub}</b>
-            {glyphs(iconize("[credit]"))} bad publicity for this run
+            <b>{funds.total}</b>
+            {glyphs(iconize("[credit]"))} to spend
+            {funds.total !== funds.pool && (
+              <>
+                {" · "}
+                {[`${funds.pool} pool`, funds.cards > 0 && `${funds.cards} on cards`, funds.badPub > 0 && `${funds.badPub} bad publicity`].filter(Boolean).join(" + ")}
+              </>
+            )}
           </span>
         </div>
+      ) : (
+        badPub > 0 && (
+          <div class="brk-head">
+            <span>
+              +<b>{badPub}</b>
+              {glyphs(iconize("[credit]"))} bad publicity for this run
+            </span>
+          </div>
+        )
       )}
       {fromIce.map((cmd) => {
         const [cost, effect] = splitCost(cmd.label);
