@@ -164,7 +164,8 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
   }
   const hub = inHand(obs, "Superconducting Hub");
   const office = inHand(obs, "Offworld Office");
-  const baitSafe = bait ? serverSafety(obs, bait).safe : false;
+  const runnerCanRig = Number(obs.opp.credit ?? 0) >= 4 && Number(obs.opp["hand-count"] ?? 0) >= 3;
+  const baitSafe = bait ? serverSafety(obs, bait).safe && (bait.ices.length >= 2 || !runnerCanRig) : false;
   if (hub && bait && baitSafe && obs.clicks >= 1 && obs.credits >= 2 && !installed) push(proposal(playOf(obs, hub, bait.label), 66, `Superconducting Hub in ${bait.label} only needs 3 advancements: cheap to score next turn`, "install-agenda"));
   if (office && bait && baitSafe && obs.credits >= 3 && !installed && obs.clicks <= 2) push(proposal(playOf(obs, office, bait.label), 71, `Offworld Office in ${bait.label} pays 7 when scored: install late in the turn`, "install-agenda"));
   const hqServer = obs.servers.find((s) => s.key === "hq")!;

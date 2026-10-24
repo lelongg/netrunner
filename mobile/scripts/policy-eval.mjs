@@ -11,7 +11,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { basicCommands, cardCommands, promptOf, runCommands } from "../src/game/actions.ts";
-import { gameLines, logLines } from "../src/game/describe.ts";
+import { gameLines, logLines, serverName } from "../src/game/describe.ts";
 
 const args = parseArgs(process.argv.slice(2));
 if (args.help) {
@@ -223,6 +223,13 @@ function playGame({ seed, matchup, players, maxActions, full, m = matchups[match
   let stuck = false;
   let decisionMs = { corp: [], runner: [] };
   const lastPlan = { corp: null, runner: null };
+  const mistakes = {};
+  const note = (k) => (mistakes[k] = (mistakes[k] ?? 0) + 1);
+  let lastRunServer = null;
+  let runnerPoints = 0;
+  const thinInstalls = [];
+  const remoteAgendas = (view) => Object.entries(view.corp?.servers ?? {}).flatMap(([key, s]) => (key.startsWith("remote") ? (s.content ?? []).filter((c) => c.type === "Agenda").map((c) => ({ key, cid: c.cid, card: c, ices: s.ices ?? [] })) : []));
+  let knownAgendas = new Set();
   const planChanges = { corp: 0, runner: 0 };
   let planTurn = "";
   const idle = { corp: { turn: -1, kinds: [] }, runner: { turn: -1, kinds: [] } };
@@ -264,6 +271,14 @@ function playGame({ seed, matchup, players, maxActions, full, m = matchups[match
       }
     }
     const v = views.corp;
+    if (v.run?.server?.[0]) lastRunServer = serverName(String(v.run.server[0]));
+    const pts = Number(v.runner?.["agenda-point"] ?? 0);
+    if (pts > runnerPoints && lastRunServer) {
+      const thin = thinInstalls.find((x) => x.server === lastRunServer && Number(v.turn) - x.turn <= 2);
+      if (thin) note("corp:thin-install-stolen");
+      if (/^Server/.test(lastRunServer)) note("corp:stolen-from-remote");
+    }
+    runnerPoints = pts;
     const prompted = ["corp", "runner"].find((s) => moves[s] && promptOf(views[s], s) && promptOf(views[s], s)["prompt-type"] !== "run");
     const side = prompted ?? (moves[v["active-player"]] ? v["active-player"] : ["corp", "runner"].find((s) => moves[s]));
     if (!side) {
@@ -272,6 +287,7 @@ function playGame({ seed, matchup, players, maxActions, full, m = matchups[match
       break;
     }
     const move = moves[side];
+    if (move.command === "credit" && Number(views[side][side]?.credit ?? 0) >= (side === "corp" ? 12 : 10)) note(`${side}:rich-credit-click`);
     actions.push([side, move.say ? "say" : move.command, move.say ?? move.args ?? null]);
     try {
       seeded(rng, () => (move.say ? engine.say(game, side, { username: side }, move.say) : engine.act(game, side, move.command, move.args ?? null)));
@@ -283,6 +299,22 @@ function playGame({ seed, matchup, players, maxActions, full, m = matchups[match
       }
     }
     P[side].bot?.applied?.(move);
+    if (side === "corp") {
+      const now = engine.view(game, "corp");
+      for (const a of remoteAgendas(now)) {
+        if (knownAgendas.has(a.cid)) continue;
+        knownAgendas.add(a.cid);
+        const need = Number(a.card.advancementcost ?? a.card["current-advancement-requirement"] ?? 0);
+        const runnerCredits = Number(now.runner?.credit ?? 0);
+        const grip = Number(now.runner?.["hand-count"] ?? now.runner?.hand?.length ?? 0);
+        const unrezzed = a.ices.filter((i) => !i.rezzed).reduce((sum, i) => sum + Number(i["current-rez-cost"] ?? i.cost ?? 0), 0);
+        if (a.ices.length <= 1 && need >= 4 && runnerCredits >= 4 && grip >= 3) {
+          note("corp:thin-install");
+          thinInstalls.push({ turn: Number(now.turn ?? 0), server: serverName(a.key) });
+        }
+        if (unrezzed > Number(now.corp?.credit ?? 0)) note("corp:unrezzable-install");
+      }
+    }
     n++;
   }
   const v = engine.view(game, "corp");
@@ -323,6 +355,7 @@ function playGame({ seed, matchup, players, maxActions, full, m = matchups[match
     bots: { corp: botStats("corp"), runner: botStats("runner") },
     situations,
     log: actions,
+    mistakes,
     records: full ? { corp: P.corp.bot?.records, runner: P.runner.bot?.records } : undefined,
   };
 }
@@ -387,7 +420,10 @@ async function series(m, out) {
     const policy = b.some((x) => x.decisions != null);
     console.log(`${s}: decision avg ${avg(b.map((x) => x.avgMs))}ms max ${Math.max(...b.map((x) => x.maxMs)).toFixed(1)}ms${policy ? ` | refused ${sum((r) => r.bots[s].refused)}, unhandled ${sum((r) => r.bots[s].unhandled)}` : ""}${results[0]?.fallback[s] ? " | FALLBACK: no deck policy matched, generic policy used" : ""}`);
   }
+  const mistakes = {};
+  for (const r of results) for (const [k, c] of Object.entries(r.mistakes ?? {})) mistakes[k] = (mistakes[k] ?? 0) + c;
   console.log(`situations: ${JSON.stringify(kinds)}${out ? ` → ${out}` : ""}`);
+  console.log(`mistakes over ${games} games: ${JSON.stringify(mistakes)}`);
   if (out) {
     const md = [];
     md.push(`# Situations · ${m.title} · ${players.corp} vs ${players.runner} · split ${split} seed ${base}`, "");
@@ -406,9 +442,9 @@ async function series(m, out) {
       }
     }
     await writeFile(join(out, "situations.md"), md.join("\n"));
-    await writeFile(join(out, "summary.json"), JSON.stringify({ matchup: m.key ?? matchup, title: m.title, decks: { corp: m.corp.name, runner: m.runner.name }, players, split, seed: base, games, wins, reasons, stuck: results.filter((r) => r.stuck).length, errors: sum((r) => r.errors), situations: kinds, policies: listPolicies().map((p) => `${p.id}@${p.version}`) }, null, 2));
+    await writeFile(join(out, "summary.json"), JSON.stringify({ matchup: m.key ?? matchup, title: m.title, decks: { corp: m.corp.name, runner: m.runner.name }, players, split, seed: base, games, wins, reasons, stuck: results.filter((r) => r.stuck).length, errors: sum((r) => r.errors), situations: kinds, mistakes, policies: listPolicies().map((p) => `${p.id}@${p.version}`) }, null, 2));
   }
-  return { wins, results, errors: sum((r) => r.errors), stuck: results.filter((r) => r.stuck).length };
+  return { wins, results, errors: sum((r) => r.errors), stuck: results.filter((r) => r.stuck).length, mistakes };
 }
 
 if (ref) console.log(`reference policies: commit ${ref.sha.slice(0, 12)} · ${ref.listPolicies().map((p) => `${p.id}@${p.version}`).join(", ")}`);
@@ -416,7 +452,7 @@ const table = [];
 for (const m of pairs) {
   const out = outRoot ? (pairs.length > 1 ? join(outRoot, m.key.replace(/[^a-z0-9-]+/gi, "_")) : outRoot) : null;
   const r = await series(m, out);
-  table.push({ corpKey: m.corp.key ?? m.corp.name, runnerKey: m.runner.key ?? m.runner.name, ...r.wins, errors: r.errors, stuck: r.stuck, fallback: r.results[0]?.fallback });
+  table.push({ corpKey: m.corp.key ?? m.corp.name, runnerKey: m.runner.key ?? m.runner.name, ...r.wins, errors: r.errors, stuck: r.stuck, fallback: r.results[0]?.fallback, mistakes: r.mistakes });
 }
 if (pairs.length > 1) {
   console.log("");
@@ -431,4 +467,15 @@ if (pairs.length > 1) {
   }
   console.log("");
   console.log(`Cells are Corp wins out of ${games} games · corp=${players.corp} runner=${players.runner}.`);
+  const byDeck = (side, decks) => decks.map((d) => {
+    const rows = table.filter((x) => x[`${side}Key`] === d.key);
+    const total = {};
+    for (const row of rows) for (const [k, c] of Object.entries(row.mistakes ?? {})) if (k.startsWith(`${side}:`)) total[k.slice(side.length + 1)] = (total[k.slice(side.length + 1)] ?? 0) + c;
+    return `${d.name.replace(/ \(SG Only\)$/, "")}: ${JSON.stringify(total)}`;
+  });
+  console.log("");
+  console.log(`Corp mistakes per deck over ${games * CORE_RUNNER_DECKS.length} games:`);
+  for (const line of byDeck("corp", CORE_CORP_DECKS)) console.log(`  ${line}`);
+  console.log(`Runner mistakes per deck over ${games * CORE_CORP_DECKS.length} games:`);
+  for (const line of byDeck("runner", CORE_RUNNER_DECKS)) console.log(`  ${line}`);
 }
