@@ -36,7 +36,7 @@ export async function stage(): Promise<Application> {
   }
   booting ??= (async () => {
     const a = new Application();
-    await a.init({ backgroundAlpha: 0, antialias: true, resolution: Math.min(devicePixelRatio || 1, 2), autoDensity: true, resizeTo: window, preference: "webgl" });
+    await a.init({ backgroundAlpha: 0, antialias: true, resolution: Math.min(devicePixelRatio || 1, 1.5), autoDensity: true, resizeTo: window, preference: "webgl" });
     a.canvas.className = "fx-gl";
     fxLayer().prepend(a.canvas);
     if (manual()) {
