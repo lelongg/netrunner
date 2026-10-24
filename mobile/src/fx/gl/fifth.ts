@@ -301,7 +301,7 @@ export async function hantu(rect: DOMRect, code: string, ready?: Ready, board?: 
 
 export async function empiricist(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, card, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const glow = new GlowFilter({ color: 0x9be8ff, distance: 10, outerStrength: 0, quality: 0.3 });
+  const glow = new GlowFilter({ color: 0x9be8ff, distance: 6, outerStrength: 0, quality: 0.2 });
   card.filters = [glow];
   const helix = new Graphics();
   helix.blendMode = "add";

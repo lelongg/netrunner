@@ -36,7 +36,7 @@ export async function stage(): Promise<Application> {
   }
   booting ??= (async () => {
     const a = new Application();
-    await a.init({ backgroundAlpha: 0, antialias: true, resolution: Math.min(devicePixelRatio || 1, 2), autoDensity: true, resizeTo: window, preference: "webgl" });
+    await a.init({ backgroundAlpha: 0, antialias: true, resolution: Math.min(devicePixelRatio || 1, 1.5), autoDensity: true, resizeTo: window, preference: "webgl" });
     a.canvas.className = "fx-gl";
     fxLayer().prepend(a.canvas);
     if (manual()) {
@@ -51,9 +51,12 @@ export async function stage(): Promise<Application> {
   return booting;
 }
 
+let shared: AdvancedBloomFilter | null = null;
+export const bloomFilter = () => (shared ??= new AdvancedBloomFilter({ threshold: 0.25, bloomScale: 1.4, brightness: 1.05, blur: 5, quality: 4 }));
+
 export function layer(parent: Container, bloom = true) {
   const c = new Container();
-  if (bloom) c.filters = [new AdvancedBloomFilter({ threshold: 0.25, bloomScale: 1.4, brightness: 1.05, blur: 6, quality: 6 })];
+  if (bloom) c.filters = [bloomFilter()];
   parent.addChild(c);
   return c;
 }

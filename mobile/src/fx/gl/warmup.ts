@@ -1,6 +1,6 @@
 import { type Application, BlurFilter, ColorMatrixFilter, Container, DisplacementFilter, Filter, GlProgram, Graphics, RenderTexture, Sprite, Texture, defaultFilterVert } from "pixi.js";
-import { AdvancedBloomFilter, GlitchFilter, GlowFilter, GodrayFilter, MotionBlurFilter, RGBSplitFilter, ShockwaveFilter, TwistFilter, ZoomBlurFilter } from "pixi-filters";
-import { focusFilter, glowTexture } from "./stage";
+import { GlitchFilter, GlowFilter, GodrayFilter, MotionBlurFilter, RGBSplitFilter, ShockwaveFilter, TwistFilter, ZoomBlurFilter } from "pixi-filters";
+import { bloomFilter, focusFilter, glowTexture } from "./stage";
 import { noiseTexture } from "./kit";
 import { KEY } from "./revJ";
 import { PAINT } from "./revN";
@@ -18,7 +18,29 @@ const tinted = (fragment: string, name: string, group: string) =>
     },
   });
 
-const FILTERS: (() => Filter[])[] = [() => [new AdvancedBloomFilter({ threshold: 0.25, bloomScale: 1.4, brightness: 1.05, blur: 6, quality: 6 })], ...[8, 10, 12, 14, 18].map((distance) => () => [new GlowFilter({ distance, outerStrength: 1, innerStrength: 1, quality: 0.3 })]), () => [new GodrayFilter({ alpha: 1 })], () => [new ShockwaveFilter({ center: { x: 4, y: 4 }, radius: -1, time: 0.1 })], () => [new TwistFilter({ radius: 4, angle: 1 })], () => [new ZoomBlurFilter({ strength: 0.1 })], () => [new MotionBlurFilter({ velocity: { x: 2, y: 0 }, kernelSize: 9 })], () => [new RGBSplitFilter()], () => [new GlitchFilter({ slices: 4, offset: 2 })], () => [new ColorMatrixFilter()], () => [new BlurFilter({ strength: 2, quality: 3 })], () => [new DisplacementFilter({ sprite: new Sprite(noiseTexture()), scale: { x: 1, y: 1 } })], () => [focusFilter([0.5, 0.5], 0.1, 0.3, 1)], () => [tinted(KEY, "fx-key", "key")], () => [tinted(PAINT, "fx-paint", "paint")]];
+const FILTERS: (() => Filter[])[] = [
+  () => [bloomFilter()],
+  ...[
+    [8, 0.3],
+    [6, 0.2],
+    [7, 0.2],
+    [8, 0.2],
+    [11, 0.2],
+  ].map(([distance, quality]) => () => [new GlowFilter({ distance, outerStrength: 1, innerStrength: 1, quality })]),
+  () => [new GodrayFilter({ alpha: 1 })],
+  () => [new ShockwaveFilter({ center: { x: 4, y: 4 }, radius: -1, time: 0.1 })],
+  () => [new TwistFilter({ radius: 4, angle: 1 })],
+  () => [new ZoomBlurFilter({ strength: 0.1 })],
+  () => [new MotionBlurFilter({ velocity: { x: 2, y: 0 }, kernelSize: 9 })],
+  () => [new RGBSplitFilter()],
+  () => [new GlitchFilter({ slices: 4, offset: 2 })],
+  () => [new ColorMatrixFilter()],
+  () => [new BlurFilter({ strength: 2, quality: 3 })],
+  () => [new DisplacementFilter({ sprite: new Sprite(noiseTexture()), scale: { x: 1, y: 1 } })],
+  () => [focusFilter([0.5, 0.5], 0.1, 0.3, 1)],
+  () => [tinted(KEY, "fx-key", "key")],
+  () => [tinted(PAINT, "fx-paint", "paint")],
+];
 
 const later = (f: () => void) => ("requestIdleCallback" in window ? requestIdleCallback(f) : setTimeout(f, 50));
 
