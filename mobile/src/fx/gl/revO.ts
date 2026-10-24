@@ -339,6 +339,78 @@ function glowPiece(root: Container, card: Sprite, poly: Pt[], weights: [number, 
   return box;
 }
 
+function hitRay(o: Pt, a: number, poly: Pt[]): Pt {
+  const dx = Math.cos(a);
+  const dy = Math.sin(a);
+  let best = Infinity;
+  for (let i = 0; i < poly.length; i++) {
+    const [x1, y1] = poly[i];
+    const [x2, y2] = poly[(i + 1) % poly.length];
+    const ex = x2 - x1;
+    const ey = y2 - y1;
+    const den = dx * ey - dy * ex;
+    if (Math.abs(den) < 1e-9) continue;
+    const t = ((x1 - o[0]) * ey - (y1 - o[1]) * ex) / den;
+    const u = ((x1 - o[0]) * dy - (y1 - o[1]) * dx) / den;
+    if (t > 0 && u >= 0 && u <= 1) best = Math.min(best, t);
+  }
+  return [o[0] + dx * best, o[1] + dy * best];
+}
+
+type Shard = { poly: Pt[]; c: Pt; box: Container; hole: Container | null; vx: number; vy: number; spin: number; delay: number; drop: boolean };
+
+function shatter(root: Container, card: Sprite, pane: Pt[], o: Pt, unit: number) {
+  const n = 11;
+  const jit = [0.1, -0.2, 0.15, -0.05, 0.25, -0.15, 0.05, -0.25, 0.2, -0.1, 0.0];
+  const ring = [0.32, 0.4, 0.28, 0.44, 0.35, 0.26, 0.42, 0.33, 0.38, 0.3, 0.36];
+  const ring2 = [0.72, 0.8, 0.68, 0.84, 0.75, 0.7, 0.82, 0.74, 0.78, 0.69, 0.77];
+  const reach = [1, 0.7, 0.95, 0.6, 1, 0.8, 0.65, 1, 0.75, 0.9, 0.62];
+  const rays = Array.from({ length: n }, (_, i) => {
+    const a = ((i + jit[i] * 0.8) / n) * Math.PI * 2 - Math.PI / 2;
+    const h = hitRay(o, a, pane);
+    return { a, h, m: lerp(o, h, ring[i]), q: lerp(o, h, ring2[i]), reach: reach[i] };
+  });
+  const angleOf = (p: Pt) => Math.atan2(p[1] - o[1], p[0] - o[0]);
+  const norm = (a: number, from: number) => {
+    let d = a - from;
+    while (d < 0) d += Math.PI * 2;
+    while (d >= Math.PI * 2) d -= Math.PI * 2;
+    return d;
+  };
+  const shards: Shard[] = [];
+  const make = (poly: Pt[], drop: boolean, delay: number) => {
+    const c = poly.reduce<Pt>((a, p) => [a[0] + p[0] / poly.length, a[1] + p[1] / poly.length], [0, 0]);
+    const hole = drop ? piece(root, card, poly) : null;
+    if (hole) {
+      const cm = new ColorMatrixFilter();
+      cm.brightness(0.55, false);
+      hole.filters = [cm];
+      hole.alpha = 0;
+    }
+    const box = piece(root, card, poly);
+    if (drop) box.addChild(new Graphics().poly(poly.flat()).stroke({ width: 1, color: 0xf2e4f4, alpha: 0.7 }));
+    pivot(box, c);
+    const out = Math.atan2(c[1] - o[1], c[0] - o[0]);
+    shards.push({ poly, c, box, hole, vx: Math.cos(out) * unit * 0.25, vy: -unit * 0.2 + Math.sin(out) * unit * 0.15, spin: (shards.length % 2 ? 1 : -1) * (2 + (shards.length % 3)), delay, drop });
+  };
+  rays.forEach((r, i) => {
+    const nx = rays[(i + 1) % n];
+    const span2 = norm(nx.a, r.a);
+    const corners = pane.filter((p) => norm(angleOf(p), r.a) > 0 && norm(angleOf(p), r.a) < span2).sort((p, q) => norm(angleOf(p), r.a) - norm(angleOf(q), r.a));
+    make([r.q, r.h, ...corners, nx.h, nx.q], false, 0);
+    make([r.m, r.q, nx.q, nx.m], i % 3 !== 1, 0.03 * (i % 4));
+    make([o, r.m, nx.m], false, 0);
+  });
+  return { shards, rays };
+}
+
+const ART: [number, number][] = [
+  [0, 0.07],
+  [1, 0.07],
+  [1, 0.535],
+  [0, 0.535],
+];
+
 export async function retribution(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, card, done, unit, at } = await scene(rect, code, ready, board);
   const grip = at(0.82, 0.315);
@@ -366,6 +438,18 @@ export async function retribution(rect: DOMRect, code: string, ready?: Ready, bo
   const split = new RGBSplitFilter({ red: { x: 0, y: 0 }, green: { x: 0, y: 0 }, blue: { x: 0, y: 0 } });
   const g = new Graphics();
   layer(root, false).addChild(g);
+  const pane: Pt[] = [at(0.22, 0.165), at(0.44, 0.165), at(0.44, 0.292), at(0.1, 0.292), at(0.1, 0.19), at(0.18, 0.185)];
+  const crackAt = at(0.33, 0.235);
+  const { shards, rays } = shatter(root, card, pane, crackAt, unit);
+  for (const sh of shards)
+    if (sh.drop)
+      clip(
+        root,
+        sh.box,
+        ART.map(([u, v]) => at(u, v)),
+      );
+  const cracks = new Graphics();
+  layer(root, false).addChild(cracks);
   const angle = (t: number) => (t < 0.32 ? 0.35 * ease.inOut(span(t, 0, 0.32)) : 0.35 - 2.95 * Math.pow(span(t, 0.32, 0.48), 2.2));
   const strike = 0.48;
   await run(app, (t) => {
@@ -406,7 +490,35 @@ export async function retribution(rect: DOMRect, code: string, ready?: Ready, bo
       }
       g.stroke({ width: 1.6, color: 0xffd6e4, alpha: 0.9 * (1 - k), cap: "round" });
     }
-    return t < 1.1;
+    const ck = span(t, strike, strike + 0.14);
+    const fall = Math.max(0, t - strike - 0.12);
+    for (const sh of shards) {
+      if (ck > 0 && !sh.drop) {
+        const off = unit * 0.006 * Math.sin(sh.c[0] * 0.37 + sh.c[1] * 0.11);
+        sh.box.position.set(sh.c[0] + off, sh.c[1] - off * 0.5);
+      }
+      if (!sh.drop) continue;
+      const ft = Math.max(0, fall - sh.delay);
+      if (sh.hole) sh.hole.alpha = ft > 0 ? 1 : 0;
+      sh.box.position.set(sh.c[0] + sh.vx * ft, sh.c[1] + sh.vy * ft + 0.5 * unit * 3.2 * ft * ft);
+      sh.box.rotation = sh.spin * ft;
+      sh.box.alpha = 1 - span(ft, 0.45, 0.7);
+    }
+    cracks.clear();
+    const cf = 1 - span(t, 1.15, 1.45);
+    if (ck > 0 && cf > 0) {
+      const draw = (w: number, color: number, alpha: number) => {
+        for (const r of rays) cracks.moveTo(...crackAt).lineTo(...lerp(crackAt, r.h, ck * r.reach));
+        rays.forEach((r, i) => {
+          if (ck >= 1 && i % 2 === 0) cracks.moveTo(...r.m).lineTo(...rays[(i + 1) % rays.length].m);
+          if (ck >= 1 && i % 3 !== 1) cracks.moveTo(...r.q).lineTo(...rays[(i + 1) % rays.length].q);
+        });
+        cracks.stroke({ width: w, color, alpha });
+      };
+      draw(1.8, 0x2a1830, 0.35 * cf);
+      draw(0.8, 0xf2e4f4, 0.65 * cf);
+    }
+    return t < 1.5;
   });
   root.rotation = 0;
   root.filters = [];
