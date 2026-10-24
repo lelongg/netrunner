@@ -144,7 +144,7 @@ function readiness(obs: Observation, t: Target): { installs: { title: string; co
     }
   } else if (unrezzed === 0 && t.damage > 0) return null;
   const draws = Math.max(0, accessRisk(obs, t) + 1 - (obs.hand.length - installs.length));
-  if (draws > 3 || accessRisk(obs, t) >= 5) return null;
+  if (draws > 3 || accessRisk(obs, t) >= 7) return null;
   const cost = installs.reduce((n, c) => n + c.cost, 0) + (t.viaMayfly ? t.credits - installs[0].cost : t.credits);
   return { installs, draws, cost };
 }
