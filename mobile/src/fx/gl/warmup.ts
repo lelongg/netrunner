@@ -1,6 +1,6 @@
 import { type Application, BlurFilter, ColorMatrixFilter, Container, DisplacementFilter, Filter, GlProgram, Graphics, RenderTexture, Sprite, Texture, defaultFilterVert } from "pixi.js";
-import { AdvancedBloomFilter, GlitchFilter, GlowFilter, GodrayFilter, MotionBlurFilter, RGBSplitFilter, ShockwaveFilter, TwistFilter, ZoomBlurFilter } from "pixi-filters";
-import { focusFilter, glowTexture } from "./stage";
+import { GlitchFilter, GlowFilter, GodrayFilter, MotionBlurFilter, RGBSplitFilter, ShockwaveFilter, TwistFilter, ZoomBlurFilter } from "pixi-filters";
+import { bloomFilter, focusFilter, glowTexture } from "./stage";
 import { noiseTexture } from "./kit";
 import { KEY } from "./revJ";
 import { PAINT } from "./revN";
@@ -19,7 +19,7 @@ const tinted = (fragment: string, name: string, group: string) =>
   });
 
 const FILTERS: (() => Filter[])[] = [
-  () => [new AdvancedBloomFilter({ threshold: 0.25, bloomScale: 1.4, brightness: 1.05, blur: 6, quality: 6 })],
+  () => [bloomFilter()],
   ...[
     [8, 0.3],
     [6, 0.2],
