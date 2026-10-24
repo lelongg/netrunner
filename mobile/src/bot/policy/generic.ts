@@ -3,6 +3,7 @@ import { byCommand } from "./observe.ts";
 import { fromCandidate } from "./runs.ts";
 import { ICE_TYPES, type IceType, agendaProgress, coverage, estimateRun, gainOf, iceThreat, isEconomy, isIcebreaker, isTrap, iceTypes, playCostOf, rezCostOf, strengthOf, subtypes, tagged } from "./tactics.ts";
 import type { Observation, Plan, Proposal } from "./types.ts";
+import { centralValue } from "./value.ts";
 
 export const playOf = (obs: Observation, card: any, server?: string): Candidate | undefined => byCommand(obs, "play", (c) => (c.args as any)?.card?.cid === card.cid && (server === undefined || (c.args as any)?.server === server))[0];
 export const cardAction = (obs: Observation, card: any, command: string, label?: RegExp): Candidate | undefined => byCommand(obs, command, (c) => (c.args as any)?.card?.cid === card.cid && (!label || label.test(c.label)))[0];
@@ -115,8 +116,8 @@ export function corpProposals(obs: Observation): Proposal[] {
 }
 
 export function serverValue(obs: Observation, server: Observation["servers"][number]): number {
-  if (server.key === "rd") return obs.memory.notes.rdSeenTurn === obs.turn ? 0 : 3;
-  if (server.key === "hq") return 2 + Number(obs.opp["hand-count"] ?? 0) / 5;
+  if (server.key === "rd") return obs.memory.notes.rdSeenTurn === obs.turn ? 0 : (centralValue(obs, server) ?? 3);
+  if (server.key === "hq") return centralValue(obs, server) ?? 2 + Number(obs.opp["hand-count"] ?? 0) / 5;
   if (server.key === "archives") return (obs.opp.discard ?? []).some((c: any) => !c.seen && !c.title) ? 1.5 : 0;
   if (!server.content.length) return 0;
   const adv = Math.max(0, ...server.content.map((c: any) => agendaProgress(c).have));
