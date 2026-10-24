@@ -4,6 +4,7 @@ import * as engine from "../engine/engine.js";
 import { HeuristicBot } from "../src/bot/heuristic.ts";
 import { PolicyBot } from "../src/bot/policy/bot.ts";
 import { engineSimulator } from "../src/bot/policy/simulate.ts";
+import { engineTrial } from "../src/bot/policy/trial.ts";
 import { fingerprint, findPolicy, listPolicies } from "../src/bot/policy/registry.ts";
 import "../src/bot/policy/decks/index.ts";
 import { CORE_CORP_DECKS, CORE_RUNNER_DECKS, coreDeck } from "../src/bot/policy/decks/core.ts";
@@ -174,7 +175,10 @@ function makePlayer(kind, side, precon, random, game) {
   const tree = kind === "ref" ? ref : { PolicyBot, findPolicy };
   const match = tree.findPolicy(side, { identity: precon.identity, cards: precon.cards });
   const simulate = kind === "ref" || args.sim === "0" || (typeof args.sim === "string" && args.sim !== side && args.sim !== "both") ? undefined : engineSimulator(engine, game, side);
-  const bot = new tree.PolicyBot(side, match?.policy ?? null, lookup, { random, render, record: true, rescue: false, deck: { identity: precon.identity, cards: precon.cards }, simulate, simWeight: args["sim-weight"] != null ? Number(args["sim-weight"]) : undefined });
+  const holder = {};
+  const trial = simulate && args.trial !== "0" ? engineTrial(engine, game, side, (v, s) => holder.bot.trialMove(v, s)) : undefined;
+  const bot = new tree.PolicyBot(side, match?.policy ?? null, lookup, { random, render, record: true, rescue: false, deck: { identity: precon.identity, cards: precon.cards }, simulate, trial, simWeight: args["sim-weight"] != null ? Number(args["sim-weight"]) : undefined, measuredBase: args["measured-base"] != null ? Number(args["measured-base"]) : undefined });
+  holder.bot = bot;
   const id = `${kind === "ref" ? `ref@${ref.sha.slice(0, 7)}:` : ""}${bot.policyId}${match && !match.exact ? " (nearest deck)" : ""}`;
   return { kind, id, bot, fallback: !match };
 }

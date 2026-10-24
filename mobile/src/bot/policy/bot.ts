@@ -10,6 +10,7 @@ import { breakSubChoice, corpRun, runnerRun } from "./runs.ts";
 import { isEconomy, isIcebreaker } from "./tactics.ts";
 import { evaluate } from "./evaluate.ts";
 import { type AsyncSimulator, type SimOutcome, type SimReport, type Simulator, simulatable } from "./simulate.ts";
+import type { AsyncTrial, RunTrial, Trial } from "./trial.ts";
 import type { DecisionRecord, DeckList, DeckPolicy, Lookup, Memory, Move, Observation, Plan, Proposal } from "./types.ts";
 
 const FREE_KINDS = new Set(["score", "rez-economy", "rez", "end"]);
@@ -23,8 +24,15 @@ export interface BotOptions {
   rescue?: boolean;
   deck?: AnyDeck;
   simulate?: Simulator;
+  trial?: Trial;
   simWeight?: number;
   simulated?: number;
+  measuredBase?: number;
+}
+
+export interface AsyncTools {
+  simulate?: AsyncSimulator;
+  trial?: AsyncTrial;
 }
 
 interface Context {
@@ -78,8 +86,11 @@ export class PolicyBot {
   private rescue: boolean;
   private deck: DeckList | null;
   private simulate: Simulator | null;
+  private trial: Trial | null;
   private simWeight: number;
   private simulated: number;
+  private measuredBase: number;
+  private trials = new Map<string, { key: string; trial: RunTrial | null }>();
 
   constructor(side: Side, policy: DeckPolicy | null, lookup: Lookup, options: BotOptions = {}) {
     this.side = side;
@@ -92,8 +103,10 @@ export class PolicyBot {
     this.rescue = options.rescue ?? false;
     this.deck = options.deck ? this.ownDeck(deckList(options.deck)) : null;
     this.simulate = options.simulate ?? null;
+    this.trial = options.trial ?? null;
     this.simWeight = options.simWeight ?? 1;
     this.simulated = options.simulated ?? 6;
+    this.measuredBase = options.measuredBase ?? 24;
   }
 
   private ownDeck(list: DeckList): DeckList {
@@ -106,17 +119,59 @@ export class PolicyBot {
   }
 
   decide(view: any): Move | null {
+    if (this.trial) for (const [label, key] of this.trialsWanted(view)) this.storeTrial(label, key, this.trial(label));
     const ctx = this.rank(view);
     if (!ctx) return null;
     if (this.simulate) for (const p of this.toSimulate(ctx)) this.applyReport(p, driveSync(this.simulation(p, ctx.obs), this.simulate));
     return this.choose(ctx);
   }
 
-  async decideAsync(view: any, simulate: AsyncSimulator): Promise<Move | null> {
+  async decideAsync(view: any, tools: AsyncTools): Promise<Move | null> {
+    if (tools.trial) for (const [label, key] of this.trialsWanted(view)) this.storeTrial(label, key, await tools.trial(label));
     const ctx = this.rank(view);
     if (!ctx) return null;
-    for (const p of this.toSimulate(ctx)) this.applyReport(p, await driveAsync(this.simulation(p, ctx.obs), simulate));
+    if (tools.simulate) for (const p of this.toSimulate(ctx)) this.applyReport(p, await driveAsync(this.simulation(p, ctx.obs), tools.simulate));
     return this.choose(ctx);
+  }
+
+  trialMove(view: any, side: Side): Move | null {
+    if (!view || view.winner) return null;
+    if (side === this.side) {
+      const plan = this.plan;
+      const obs = observe(view, this.side, cloneMemory(this.memory), this.lookup, this.render, this.random, this.deck);
+      const { proposals } = this.consider(obs);
+      this.plan = plan;
+      return [...proposals].sort((a, b) => b.score - a.score)[0]?.move ?? null;
+    }
+    const obs = observe(view, side, emptyMemory(), this.lookup, this.render, this.random, null);
+    if (obs.prompt && obs.promptType !== "run" && obs.promptType !== "waiting") return [...genericPrompt(obs, null)].sort((a, b) => b.score - a.score)[0]?.move ?? null;
+    return (side === "corp" ? corpRun(obs) : runnerRun(obs))?.move ?? null;
+  }
+
+  private trialsWanted(view: any): [string, string][] {
+    if (this.side !== "runner" || !view || view.winner || view.run || view["active-player"] !== "runner" || !(Number(view.runner?.click ?? 0) > 0)) return [];
+    const prompt = promptOf(view, this.side);
+    if (prompt && prompt["prompt-type"] !== "run") return [];
+    const rig = ["program", "hardware", "resource"].flatMap((z) => (view.runner?.rig?.[z] ?? []).map((c: any) => `${c.cid}${c.counter ? JSON.stringify(c.counter) : ""}`)).join(",");
+    const base = `${view.turn}:${view.runner?.click}:${view.runner?.credit}:${view.runner?.hand?.length}:${view.runner?.tag?.total ?? 0}:${rig}`;
+    const out: [string, string][] = [];
+    for (const [key, server] of Object.entries<any>(view.corp?.servers ?? {})) {
+      const ices: any[] = server.ices ?? [];
+      if (!ices.length || ices.some((i) => !i.rezzed)) continue;
+      const label = serverName(key);
+      const sig = `${base}|${ices.map((i) => `${i.cid}:${i.strength ?? ""}:${(i.subroutines ?? []).map((s: any) => (s.broken ? "b" : s.fired ? "f" : "-")).join("")}`).join(",")}|${(server.content ?? []).map((c: any) => `${c.cid}:${c.rezzed ? 1 : 0}`).join(",")}`;
+      const cached = this.trials.get(label);
+      if (cached?.key === sig) continue;
+      out.push([label, sig]);
+    }
+    return out;
+  }
+
+  private storeTrial(label: string, key: string, trial: RunTrial | null) {
+    this.trials.set(label, { key, trial });
+    const notes = (this.memory.notes.runTrials ??= {}) as Record<string, RunTrial | null>;
+    for (const [l, t] of this.trials) notes[l] = t.trial;
+    for (const l of Object.keys(notes)) if (!this.trials.has(l)) delete notes[l];
   }
 
   private rank(view: any): Context | null {
@@ -280,7 +335,7 @@ export class PolicyBot {
     if (this.simulate && obs.promptType === "select") {
       const keys = new Set(out.map((p) => moveKey(p.move)));
       for (const card of selectable(obs).slice(0, 8)) {
-        const p: Proposal = { move: selectMove(obs, card), score: 24, why: `select ${card.title ?? "a facedown card"}: measured`, kind: "select" };
+        const p: Proposal = { move: selectMove(obs, card), score: this.measuredBase, why: `select ${card.title ?? "a facedown card"}: measured`, kind: "select" };
         if (!keys.has(moveKey(p.move)) && simulatable(p, obs)) out.push(p);
       }
     }

@@ -579,7 +579,8 @@ export class Session {
       if (this.closed || this.held || this.pending || this.botBusy) return;
       const view = this.views[bot.side];
       const simulate = (moves: { command: string; args?: unknown }[]) => this.probe(bot.side, [{ k: "moves", moves }]).then((r) => ({ refused: r[0]?.ok === false, view: r[0]?.view ?? null }));
-      const decided = bot.decideAsync && this.host && !this.online() ? bot.decideAsync(view, simulate) : Promise.resolve(bot.decide(view));
+      const trial = (server: string) => this.probe(bot.side, [{ k: "run-trial", server, deck: this.opponentDeck ?? null }]).then((r) => r[0]?.trial ?? null);
+      const decided = bot.decideAsync && this.host && !this.online() ? bot.decideAsync(view, { simulate, trial }) : Promise.resolve(bot.decide(view));
       this.botBusy = true;
       decided
         .then((move) => {

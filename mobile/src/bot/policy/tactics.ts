@@ -1,4 +1,5 @@
 import { advancement } from "../../game/actions.ts";
+import type { RunTrial } from "./trial.ts";
 import type { CardInfo, Estimate, Observation, ServerInfo } from "./types.ts";
 import { hiddenBreaker } from "./value.ts";
 
@@ -179,6 +180,12 @@ export function estimateRun(obs: Observation, server: ServerInfo, unrezzedCost =
   if (unrezzed && (coverage(obs).size < 3 || unrezzedBlock > 0.3)) etrRisk = true;
   if (unrezzed && unrezzedBlock >= 0.8) blocked = true;
   return { server, credits, exact, blocked, unrezzed, damage, tags, etrRisk };
+}
+
+export function runTrialOf(obs: Observation, server: ServerInfo): RunEstimate | null {
+  const trial = (obs.memory.notes.runTrials as Record<string, RunTrial | null> | undefined)?.[server.label];
+  if (!trial || server.ices.some((i: any) => !i.rezzed)) return null;
+  return { server, credits: trial.credits, exact: true, blocked: !trial.reached, unrezzed: 0, damage: trial.damage, tags: trial.tags, etrRisk: false };
 }
 
 export function agendaProgress(card: any) {

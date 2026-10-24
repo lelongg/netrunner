@@ -1,7 +1,7 @@
 import type { Candidate } from "../../game/candidates.ts";
 import { byCommand } from "./observe.ts";
 import { fromCandidate } from "./runs.ts";
-import { ICE_TYPES, type IceType, agendaProgress, coverage, estimateRun, gainOf, iceThreat, isEconomy, isIcebreaker, isTrap, iceTypes, playCostOf, rezCostOf, strengthOf, subtypes, tagged } from "./tactics.ts";
+import { ICE_TYPES, type IceType, agendaProgress, coverage, estimateRun, gainOf, iceThreat, isEconomy, isIcebreaker, isTrap, iceTypes, playCostOf, rezCostOf, strengthOf, subtypes, tagged, runTrialOf } from "./tactics.ts";
 import type { Observation, Plan, Proposal } from "./types.ts";
 import { centralValue } from "./value.ts";
 
@@ -137,7 +137,7 @@ export function runProposals(obs: Observation, limit = 2): Proposal[] {
   for (const server of obs.servers) {
     const value = serverValue(obs, server);
     if (value <= 0) continue;
-    const est = estimateRun(obs, server);
+    const est = runTrialOf(obs, server) ?? estimateRun(obs, server);
     if (est.blocked || est.credits > obs.credits) continue;
     if (est.damage >= obs.hand.length) continue;
     const adv = Math.max(0, ...server.content.map((c: any) => agendaProgress(c).have));

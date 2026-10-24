@@ -3,7 +3,7 @@ import { playOf, proposal, serverValue } from "../generic.ts";
 import { choiceLabel, choiceMove, choices, findChoice, promptFrom, selectMove, selectable } from "../prompts.ts";
 import { registerPolicy } from "../registry.ts";
 import { fromCandidate, labelCost, runServer, runnerRun } from "../runs.ts";
-import { agendaProgress, breakerProfile, coverage, estimateRun, iceThreat, isIcebreaker, playCostOf, tagPunisher } from "../tactics.ts";
+import { agendaProgress, breakerProfile, coverage, estimateRun, iceThreat, isIcebreaker, playCostOf, runTrialOf, tagPunisher } from "../tactics.ts";
 const ICE_TYPES = new Set(["Barrier", "Code Gate", "Sentry"]);
 import type { DeckList, DeckPolicy, Observation, Plan, Proposal, ServerInfo } from "../types.ts";
 import { CORE_CORP_DECKS } from "./core.ts";
@@ -45,7 +45,7 @@ function targets(obs: Observation, extra = 0, includeWorthless = false): Target[
     const corpCredits = Number(obs.opp.credit ?? 0);
     const unrezzedCost = corpCredits < 1 ? 0 : price ? Math.max(1, Math.round(price.cost)) : corpCredits < 3 ? 1 : 3;
     const unrezzedBlock = corpCredits < 1 ? 0 : (price?.blocked ?? 0);
-    const est = estimateRun(obs, server, unrezzedCost, obs.credits + extra, [], unrezzedBlock);
+    const est = runTrialOf(obs, server) ?? estimateRun(obs, server, unrezzedCost, obs.credits + extra, [], unrezzedBlock);
     if (!est.blocked) {
       out.push({ server, value, credits: est.credits, exact: est.exact, damage: est.damage, tags: est.tags });
       continue;
