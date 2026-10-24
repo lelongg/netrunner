@@ -94,6 +94,8 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
       const agendasInHand = obs.hand.filter((c) => c.type === "Agenda").length;
       const racing = Number(obs.me["deck-count"] ?? 0) < 12 || agendasInHand >= 2 || obs.hand.length >= 5;
       const points = Number(card?.agendapoints ?? 0);
+      const runnerReady = Number(obs.opp.credit ?? 0) >= 4 && Number(obs.opp["hand-count"] ?? 0) >= 3;
+      const thinAndSlow = !!card && !!target && target.ices.length < 2 && agendaProgress(card).need >= 4 && runnerReady && !canScoreNextTurn(obs, card, !!seamless);
       if (safety && !safety.safe) {
         const canRezOne = target!.ices.some((i) => i.rezzed || rezCostOf(i) <= obs.credits - 1);
         const hq = obs.servers.find((s) => s.key === "hq")!;
@@ -120,6 +122,10 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
         p.why += ` (the Runner can get in: margin ${safety.margin}${breached ? ", and stole from there since the ice last changed" : ""}${cheapEntry ? ", and the run there is nearly free" : race ? ", but sitting loses" : ""}${racing ? ", racing" : ""}${taxRace ? (desperate ? ", R&D is running out" : ", rich enough to make every run expensive") : ""}${canRezOne ? "" : ", no ice can be rezzed"}${hqSafer ? ", HQ is safer" : ""})`;
       } else if (card && target && safety?.safe && obs.clicks < 3 && canScoreNextTurn(obs, card, !!seamless)) p.score = Math.max(p.score, 72);
       if (obs.clicks === 3) p.score = Math.min(p.score, 50);
+      if (thinAndSlow) {
+        p.score = Math.min(p.score, 38);
+        p.why += " (one ice is thin for an agenda that takes two turns)";
+      }
       if (safety && target && target.ices.some((i: any) => !i.rezzed) && safety.rezCost > obs.credits - 1) {
         p.score = Math.min(p.score, 15);
         p.why += ` (cannot rez the ice there: ${safety.rezCost} needed)`;
@@ -129,6 +135,10 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
 
   const agendasStuck = obs.hand.some((c) => c.type === "Agenda") && !out.some((p) => p.kind === "install-agenda" && p.score > 20);
   const idle = !out.some((p) => p.kind !== "credit" && p.kind !== "draw" && p.score > 32);
+  if (idle && obs.credits >= 12 && Number(obs.me["deck-count"] ?? 0) > 8) {
+    const draw = byCommand(obs, "draw")[0];
+    if (draw) push(proposal(draw, 44, "draw: rich and nothing in hand is worth a click, cycle the hand", "draw"));
+  }
   if (agendasStuck && idle && obs.credits >= 6 && (obs.hand.length <= 4 || (obs.credits >= 10 && obs.hand.length <= 6)) && Number(obs.me["deck-count"] ?? 0) > 8) {
     const draw = byCommand(obs, "draw")[0];
     if (draw) push(proposal(draw, obs.hand.length <= 4 ? 45 : 40, "draw: agendas wait in HQ and nothing in hand builds a remote for them", "draw"));
