@@ -78,173 +78,140 @@ export async function anoeticVoid(rect: DOMRect, code: string, ready?: Ready, bo
 }
 
 export async function hedgeFund(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, card, done, unit, at } = await scene(rect, code, ready, board);
-  const frame: Pt[] = [at(0.235, 0.08), at(1, 0.08), at(1, 0.535), at(0, 0.535), at(0, 0.17), at(0.12, 0.172), at(0.205, 0.14)];
-  const tablet: Pt[] = [at(0.382, 0.2835), at(0.465, 0.297), at(0.416, 0.42), at(0.337, 0.393)];
-  const focus = at(0.4, 0.35);
-  const crowd = piece(root, card, frame);
-  pivot(crowd, focus);
-  const near = [
-    { poly: [at(0, 0.22), at(0.26, 0.22), at(0.31, 0.535), at(0, 0.535)], c: at(0.14, 0.38) },
-    { poly: [at(0.85, 0.27), at(1, 0.27), at(1, 0.535), at(0.83, 0.535)], c: at(0.93, 0.4) },
-  ].map(({ poly, c }) => {
-    const p = piece(root, card, poly);
-    root.setChildIndex(p, root.getChildIndex(crowd) + 1);
-    pivot(p, c);
-    clip(root, p, frame);
-    return { p, c };
-  });
-  clip(root, crowd, frame);
-  const gold = glowPiece(root, card, tablet, [0.3, 0.35, 0.35], 0.55, 2.5, 0xffc860);
-  root.setChildIndex(gold, root.getChildIndex(near[1].p) + 1);
-  gold.alpha = 0;
-  const sheen = new Graphics();
-  root.addChild(sheen);
-  const shine = glowPiece(root, card, tablet, [0.3, 0.35, 0.35], 0.4, 3, 0xfff0c0);
-  root.setChildIndex(shine, root.getChildIndex(gold) + 1);
-  shine.mask = sheen;
+  const { app, root, done, unit, at } = await scene(rect, code, ready, board);
+  const knots: Pt[] = [at(0.04, 0.47), at(0.2, 0.41), at(0.3, 0.44), at(0.46, 0.33), at(0.56, 0.37), at(0.73, 0.22), at(0.8, 0.25), at(0.9, 0.155)];
+  const floor = at(0, 0.525)[1];
+  const fill = new Graphics();
+  const g = new Graphics();
   const top = layer(root, false);
+  top.addChild(fill, g);
   const coin = new Sprite(glyphTexture());
   coin.anchor.set(0.5);
   coin.tint = 0xffd27a;
   coin.alpha = 0;
-  coin.rotation = Math.atan2(tablet[1][1] - tablet[0][1], tablet[1][0] - tablet[0][0]);
-  coin.position.set(...lerp(lerp(tablet[0], tablet[2], 0.5), lerp(tablet[1], tablet[3], 0.5), 0.5));
   top.addChild(coin);
+  const step = 0.1;
+  const start = 0.1;
+  const end = start + step * (knots.length - 1);
+  let ticked = 0;
   await run(app, (t) => {
-    const push = ease.back(span(t, 0.1, 0.55));
-    const back = ease.inOut(span(t, 1.05, 1.5));
-    const k = push * (1 - back);
-    crowd.scale.set(1 + 0.1 * k);
-    for (const n of near) {
-      n.p.scale.set(1 + 0.2 * k);
-      const away = (n.c[0] - focus[0]) * 0.08 * k;
-      n.p.position.set(n.c[0] + away, n.c[1]);
+    const fade = 1 - span(t, 1.25, 1.55);
+    const pos = Math.max(0, (t - start) / step);
+    const whole = Math.min(knots.length - 1, Math.floor(pos));
+    const part = whole >= knots.length - 1 ? 0 : ease.back(Math.min(1, pos - whole));
+    const pts: Pt[] = knots.slice(0, whole + 1);
+    if (whole < knots.length - 1 && pos > 0) pts.push(lerp(knots[whole], knots[whole + 1], part));
+    let bump = 0;
+    for (let i = 1; i < knots.length; i++) {
+      const a = t - (start + step * i);
+      if (a > 0) bump += (knots[i - 1][1] - knots[i][1]) * 0.08 * Math.exp(-a * 12) * Math.sin(Math.min(1, a * 10) * Math.PI);
     }
-    const lit = span(t, 0.35, 0.6) * (1 - span(t, 1.1, 1.5));
-    gold.alpha = 0.55 * lit;
-    gold.scale.set(1 + 0.1 * k);
-    gold.pivot.set(...focus);
-    gold.position.set(...focus);
-    const sw = span(t, 0.45, 0.85);
-    sheen.clear();
-    if (sw > 0 && sw < 1) band(sheen, at, sw, 0.025, 0.06, [0.33, 0.28, 0.47, 0.43]);
-    shine.alpha = 0.8;
-    shine.scale.set(1 + 0.1 * k);
-    shine.pivot.set(...focus);
-    shine.position.set(...focus);
-    sheen.scale.set(1 + 0.1 * k);
-    sheen.pivot.set(...focus);
-    sheen.position.set(...focus);
-    const pop = ease.back(span(t, 0.55, 0.8));
-    coin.alpha = 0.9 * Math.min(1, pop * 1.4) * (1 - span(t, 1.05, 1.4));
-    coin.scale.set((unit / 48) * 0.17 * (0.5 + 0.5 * pop) * (1 + 0.1 * k));
-    return t < 1.5;
+    const land = t - end;
+    const ring = land > 0 ? Math.min(1, land / 0.35) : 0;
+    const settle = land > 0 ? Math.exp(-land * 7) * Math.sin(land * 22) : 0;
+    root.position.y += bump - unit * 0.012 * settle;
+    root.scale.set(root.scale.x * (1 + 0.035 * (land > 0 ? Math.exp(-land * 6) : 0)));
+    fill.clear();
+    g.clear();
+    if (pts.length > 1) {
+      const last = pts[pts.length - 1];
+      fill.poly([...pts.flat(), last[0], floor, pts[0][0], floor]).fill({ color: 0xffc860, alpha: 0.13 * fade });
+      for (const [w, color, alpha] of [
+        [unit * 0.03, 0xffb84a, 0.25],
+        [unit * 0.011, 0xffd890, 0.95],
+      ] as const) {
+        g.moveTo(...pts[0]);
+        for (const p of pts.slice(1)) g.lineTo(...p);
+        g.stroke({ width: w, color, alpha: alpha * fade, join: "round", cap: "round" });
+      }
+      for (const p of pts.slice(1, whole + 1)) g.circle(...p, unit * 0.012).fill({ color: 0xfff0c8, alpha: 0.9 * fade });
+    }
+    if (ring > 0 && ring < 1) g.circle(...knots[knots.length - 1], unit * (0.04 + 0.1 * ease.out(ring))).stroke({ width: unit * 0.012 * (1 - ring) + 0.8, color: 0xffd27a, alpha: 0.85 * (1 - ring) });
+    const pop = ease.back(span(t, end, end + 0.25));
+    coin.position.set(knots[knots.length - 1][0] - unit * 0.1, knots[knots.length - 1][1] + unit * 0.02 - unit * 0.04 * pop);
+    coin.alpha = Math.min(1, pop * 1.5) * fade;
+    coin.scale.set((unit / 48) * 0.26 * pop);
+    if (whole > ticked) {
+      ticked = whole;
+      navigator.vibrate?.(8);
+    }
+    return t < 1.55;
   });
   await done();
 }
 
 export async function betaBuild(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, card, done, at } = await scene(rect, code, ready, board);
-  const parts: { poly: [number, number][]; c: [number, number]; at: number; amp: number }[] = [
-    {
-      poly: [
-        [0.12, 0.215],
-        [0.18, 0.168],
-        [0.262, 0.178],
-        [0.272, 0.242],
-        [0.21, 0.282],
-        [0.128, 0.27],
-      ],
-      c: [0.195, 0.225],
-      at: 0.08,
-      amp: 0.26,
-    },
-    {
-      poly: [
-        [0.822, 0.322],
-        [0.87, 0.298],
-        [0.938, 0.302],
-        [0.938, 0.388],
-        [0.885, 0.392],
-        [0.832, 0.362],
-      ],
-      c: [0.88, 0.345],
-      at: 0.26,
-      amp: 0.26,
-    },
-    {
-      poly: [
-        [0.81, 0.235],
-        [0.832, 0.222],
-        [0.925, 0.268],
-        [0.918, 0.302],
-        [0.81, 0.255],
-      ],
-      c: [0.865, 0.262],
-      at: 0.4,
-      amp: 0.2,
-    },
-    {
-      poly: [
-        [0.24, 0.37],
-        [0.58, 0.298],
-        [0.635, 0.338],
-        [0.335, 0.472],
-        [0.25, 0.452],
-      ],
-      c: [0.44, 0.38],
-      at: 0.54,
-      amp: 0.08,
-    },
-    {
-      poly: [
-        [0.36, 0.158],
-        [0.44, 0.128],
-        [0.505, 0.158],
-        [0.512, 0.232],
-        [0.47, 0.258],
-        [0.37, 0.242],
-      ],
-      c: [0.44, 0.2],
-      at: 0.72,
-      amp: 0.14,
-    },
-  ];
-  const built = parts.map((p) => {
-    const poly = p.poly.map(([u, v]) => at(u, v));
-    const c = at(...p.c);
-    const box = piece(root, card, poly);
-    const cm = new ColorMatrixFilter();
-    box.filters = [cm];
-    pivot(box, c);
-    return { ...p, box, cm };
-  });
-  for (const b of [...built].reverse()) {
-    root.setChildIndex(b.box, root.getChildIndex(card) + 1);
-  }
-  const helmet = built[4].poly.map(([u, v]) => at(u, v));
-  const visor = glowPiece(root, card, helmet, [-0.6, 1, -0.5], 0.08, 3, 0x8dffa8);
-  root.addChild(visor);
+  const { app, root, card, done, unit, at } = await scene(rect, code, ready, board);
+  const rail = [at(0.29, 0.372), at(0.61, 0.282)];
+  const muzzle = at(0.628, 0.278);
+  const dir = Math.atan2(rail[1][1] - rail[0][1], rail[1][0] - rail[0][0]);
+  const ux = Math.cos(dir);
+  const uy = Math.sin(dir);
+  const rifle = glowPiece(root, card, [at(0.2, 0.43), at(0.6, 0.262), at(0.648, 0.284), at(0.6, 0.33), at(0.5, 0.405), at(0.3, 0.475), at(0.2, 0.475)], [-0.5, 1, -0.3], 0.18, 2.6, 0x7dffa0);
+  rifle.alpha = 0;
+  const visor = glowPiece(root, card, [at(0.36, 0.158), at(0.44, 0.128), at(0.505, 0.158), at(0.512, 0.232), at(0.47, 0.258), at(0.37, 0.242)], [-0.6, 1, -0.5], 0.08, 3, 0x8dffa8);
   visor.alpha = 0;
-  pivot(visor, at(...built[4].c));
+  const split = new RGBSplitFilter({ red: { x: 0, y: 0 }, green: { x: 0, y: 0 }, blue: { x: 0, y: 0 } });
+  const g = new Graphics();
+  layer(root, false).addChild(g);
+  const shots = [0.32, 0.5, 0.68];
+  const power = [1, 0.75, 0.55];
+  const reach = unit * 2.4;
+  let buzzed = 0;
   await run(app, (t) => {
-    let shake = 0;
-    for (const b of built) {
-      const k = span(t, b.at, b.at + 0.3);
-      const snap = k > 0 && k < 1 ? 1 - ease.back(k) : 0;
-      b.box.scale.set(1 + b.amp * 1.4 * snap);
-      b.cm.brightness(1 + 0.12 * Math.max(0, snap) + (k > 0 && k < 1 ? 0.06 * (1 - k) : 0), false);
-      const after = t - (b.at + 0.13);
-      if (after > 0) shake += 0.006 * Math.sin(after * 80) * Math.exp(-after * 14);
-    }
-    root.rotation = shake;
-    const v = span(t, 0.85, 1.05);
-    visor.alpha = 0.85 * v * (0.85 + 0.15 * Math.sin(t * 18)) * (1 - span(t, 1.35, 1.6));
-    visor.scale.set(built[4].box.scale.x);
-    return t < 1.6;
+    const charge = span(t, 0, 0.3);
+    let kick = 0;
+    let jolt = 0;
+    shots.forEach((s, i) => {
+      const a = t - s;
+      if (a > 0) {
+        kick += power[i] * Math.exp(-a * 16) * Math.sin(Math.min(1, a * 14) * Math.PI * 0.5);
+        jolt = Math.max(jolt, power[i] * Math.exp(-a * 30));
+      }
+    });
+    const pull = 0.25 * Math.sin(Math.PI * charge) * (t < shots[0] ? 1 : 0);
+    const back = unit * 0.045 * (kick + pull);
+    root.position.x -= ux * back;
+    root.position.y -= uy * back;
+    root.rotation = -0.02 * kick;
+    root.scale.set(root.scale.x * (1 + 0.025 * jolt));
+    root.filters = jolt > 0.15 ? [split] : [];
+    split.red = { x: unit * 0.012 * jolt, y: 0 };
+    split.blue = { x: -unit * 0.012 * jolt, y: unit * 0.004 * jolt };
+    rifle.alpha = 0.55 * charge * (1 - span(t, 0.95, 1.3)) + 0.35 * jolt;
+    visor.alpha = 0.8 * span(t, 0.75, 0.95) * (1 - span(t, 1.15, 1.45));
+    g.clear();
+    shots.forEach((s, i) => {
+      const a = t - s;
+      if (a < 0 || a > 0.3) return;
+      const k = a / 0.3;
+      const head = reach * ease.out(Math.min(1, a / 0.12));
+      const tail = reach * ease.out(Math.max(0, (a - 0.04) / 0.16));
+      const pts: Pt[] = Array.from({ length: 8 }, (_, n) => {
+        const d = tail + ((head - tail) * n) / 7;
+        return [muzzle[0] + ux * d, muzzle[1] + uy * d];
+      });
+      ribbon(g, pts, unit * 0.022 * power[i], 0x3dff7a, 0.45 * (1 - k));
+      ribbon(g, pts, unit * 0.007 * power[i], 0xd8ffe2, 0.9 * (1 - k));
+      const r = unit * (0.03 + 0.09 * ease.out(Math.min(1, a / 0.2)));
+      g.ellipse(muzzle[0], muzzle[1], r, r * 0.55).stroke({ width: 1.5, color: 0x7dffa0, alpha: 0.85 * (1 - Math.min(1, a / 0.2)) });
+      if (a < 0.06) {
+        const f = 1 - a / 0.06;
+        for (const side of [-1, 1]) {
+          const px = -uy * side;
+          const py = ux * side;
+          g.poly([muzzle[0], muzzle[1], muzzle[0] + (ux * 0.9 + px * 0.5) * unit * 0.08 * f, muzzle[1] + (uy * 0.9 + py * 0.5) * unit * 0.08 * f, muzzle[0] + ux * unit * 0.14 * f, muzzle[1] + uy * unit * 0.14 * f]).fill({ color: 0x9dffb8, alpha: 0.8 * f });
+        }
+      }
+      if (buzzed <= i) {
+        buzzed = i + 1;
+        navigator.vibrate?.(15);
+      }
+    });
+    return t < 1.45;
   });
   root.rotation = 0;
+  root.filters = [];
   await done();
 }
 
@@ -339,6 +306,78 @@ function glowPiece(root: Container, card: Sprite, poly: Pt[], weights: [number, 
   return box;
 }
 
+function hitRay(o: Pt, a: number, poly: Pt[]): Pt {
+  const dx = Math.cos(a);
+  const dy = Math.sin(a);
+  let best = Infinity;
+  for (let i = 0; i < poly.length; i++) {
+    const [x1, y1] = poly[i];
+    const [x2, y2] = poly[(i + 1) % poly.length];
+    const ex = x2 - x1;
+    const ey = y2 - y1;
+    const den = dx * ey - dy * ex;
+    if (Math.abs(den) < 1e-9) continue;
+    const t = ((x1 - o[0]) * ey - (y1 - o[1]) * ex) / den;
+    const u = ((x1 - o[0]) * dy - (y1 - o[1]) * dx) / den;
+    if (t > 0 && u >= 0 && u <= 1) best = Math.min(best, t);
+  }
+  return [o[0] + dx * best, o[1] + dy * best];
+}
+
+type Shard = { poly: Pt[]; c: Pt; box: Container; hole: Container | null; vx: number; vy: number; spin: number; delay: number; drop: boolean };
+
+function shatter(root: Container, card: Sprite, pane: Pt[], o: Pt, unit: number) {
+  const n = 11;
+  const jit = [0.1, -0.2, 0.15, -0.05, 0.25, -0.15, 0.05, -0.25, 0.2, -0.1, 0.0];
+  const ring = [0.32, 0.4, 0.28, 0.44, 0.35, 0.26, 0.42, 0.33, 0.38, 0.3, 0.36];
+  const ring2 = [0.72, 0.8, 0.68, 0.84, 0.75, 0.7, 0.82, 0.74, 0.78, 0.69, 0.77];
+  const reach = [1, 0.7, 0.95, 0.6, 1, 0.8, 0.65, 1, 0.75, 0.9, 0.62];
+  const rays = Array.from({ length: n }, (_, i) => {
+    const a = ((i + jit[i] * 0.8) / n) * Math.PI * 2 - Math.PI / 2;
+    const h = hitRay(o, a, pane);
+    return { a, h, m: lerp(o, h, ring[i]), q: lerp(o, h, ring2[i]), reach: reach[i] };
+  });
+  const angleOf = (p: Pt) => Math.atan2(p[1] - o[1], p[0] - o[0]);
+  const norm = (a: number, from: number) => {
+    let d = a - from;
+    while (d < 0) d += Math.PI * 2;
+    while (d >= Math.PI * 2) d -= Math.PI * 2;
+    return d;
+  };
+  const shards: Shard[] = [];
+  const make = (poly: Pt[], drop: boolean, delay: number) => {
+    const c = poly.reduce<Pt>((a, p) => [a[0] + p[0] / poly.length, a[1] + p[1] / poly.length], [0, 0]);
+    const hole = drop ? piece(root, card, poly) : null;
+    if (hole) {
+      const cm = new ColorMatrixFilter();
+      cm.brightness(0.55, false);
+      hole.filters = [cm];
+      hole.alpha = 0;
+    }
+    const box = piece(root, card, poly);
+    if (drop) box.addChild(new Graphics().poly(poly.flat()).stroke({ width: 1, color: 0xf2e4f4, alpha: 0.7 }));
+    pivot(box, c);
+    const out = Math.atan2(c[1] - o[1], c[0] - o[0]);
+    shards.push({ poly, c, box, hole, vx: Math.cos(out) * unit * 0.25, vy: -unit * 0.2 + Math.sin(out) * unit * 0.15, spin: (shards.length % 2 ? 1 : -1) * (2 + (shards.length % 3)), delay, drop });
+  };
+  rays.forEach((r, i) => {
+    const nx = rays[(i + 1) % n];
+    const span2 = norm(nx.a, r.a);
+    const corners = pane.filter((p) => norm(angleOf(p), r.a) > 0 && norm(angleOf(p), r.a) < span2).sort((p, q) => norm(angleOf(p), r.a) - norm(angleOf(q), r.a));
+    make([r.q, r.h, ...corners, nx.h, nx.q], false, 0);
+    make([r.m, r.q, nx.q, nx.m], i % 3 !== 1, 0.03 * (i % 4));
+    make([o, r.m, nx.m], false, 0);
+  });
+  return { shards, rays };
+}
+
+const ART: [number, number][] = [
+  [0, 0.07],
+  [1, 0.07],
+  [1, 0.535],
+  [0, 0.535],
+];
+
 export async function retribution(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, card, done, unit, at } = await scene(rect, code, ready, board);
   const grip = at(0.82, 0.315);
@@ -366,6 +405,18 @@ export async function retribution(rect: DOMRect, code: string, ready?: Ready, bo
   const split = new RGBSplitFilter({ red: { x: 0, y: 0 }, green: { x: 0, y: 0 }, blue: { x: 0, y: 0 } });
   const g = new Graphics();
   layer(root, false).addChild(g);
+  const pane: Pt[] = [at(0.22, 0.165), at(0.44, 0.165), at(0.44, 0.292), at(0.1, 0.292), at(0.1, 0.19), at(0.18, 0.185)];
+  const crackAt = at(0.33, 0.235);
+  const { shards, rays } = shatter(root, card, pane, crackAt, unit);
+  for (const sh of shards)
+    if (sh.drop)
+      clip(
+        root,
+        sh.box,
+        ART.map(([u, v]) => at(u, v)),
+      );
+  const cracks = new Graphics();
+  layer(root, false).addChild(cracks);
   const angle = (t: number) => (t < 0.32 ? 0.35 * ease.inOut(span(t, 0, 0.32)) : 0.35 - 2.95 * Math.pow(span(t, 0.32, 0.48), 2.2));
   const strike = 0.48;
   await run(app, (t) => {
@@ -406,7 +457,35 @@ export async function retribution(rect: DOMRect, code: string, ready?: Ready, bo
       }
       g.stroke({ width: 1.6, color: 0xffd6e4, alpha: 0.9 * (1 - k), cap: "round" });
     }
-    return t < 1.1;
+    const ck = span(t, strike, strike + 0.14);
+    const fall = Math.max(0, t - strike - 0.12);
+    for (const sh of shards) {
+      if (ck > 0 && !sh.drop) {
+        const off = unit * 0.006 * Math.sin(sh.c[0] * 0.37 + sh.c[1] * 0.11);
+        sh.box.position.set(sh.c[0] + off, sh.c[1] - off * 0.5);
+      }
+      if (!sh.drop) continue;
+      const ft = Math.max(0, fall - sh.delay);
+      if (sh.hole) sh.hole.alpha = ft > 0 ? 1 : 0;
+      sh.box.position.set(sh.c[0] + sh.vx * ft, sh.c[1] + sh.vy * ft + 0.5 * unit * 3.2 * ft * ft);
+      sh.box.rotation = sh.spin * ft;
+      sh.box.alpha = 1 - span(ft, 0.45, 0.7);
+    }
+    cracks.clear();
+    const cf = 1 - span(t, 1.15, 1.45);
+    if (ck > 0 && cf > 0) {
+      const draw = (w: number, color: number, alpha: number) => {
+        for (const r of rays) cracks.moveTo(...crackAt).lineTo(...lerp(crackAt, r.h, ck * r.reach));
+        rays.forEach((r, i) => {
+          if (ck >= 1 && i % 2 === 0) cracks.moveTo(...r.m).lineTo(...rays[(i + 1) % rays.length].m);
+          if (ck >= 1 && i % 3 !== 1) cracks.moveTo(...r.q).lineTo(...rays[(i + 1) % rays.length].q);
+        });
+        cracks.stroke({ width: w, color, alpha });
+      };
+      draw(1.8, 0x2a1830, 0.35 * cf);
+      draw(0.8, 0xf2e4f4, 0.65 * cf);
+    }
+    return t < 1.5;
   });
   root.rotation = 0;
   root.filters = [];
