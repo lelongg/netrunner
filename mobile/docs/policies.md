@@ -520,6 +520,23 @@ clicks fall again: Party Hard 42 to 9 and Planning Ahead 21 to 6 over 40 games a
 reference Corps, Stolen Goods 40 to 18 and Planning Ahead 8 to 3 against the Corp policies.
 The remote steal stays the Corp's dominant fault and is the next loop.
 
+### After the Hyper Velocity game and replay T2QJASGM
+
+A game played as Hyper Velocity against the Party Hard bot in the terminal harness (won 8
+to 1 on turn 11) and the replay showed the Runner discarding its only fracter to keep a
+second Mayfly, never installing its draw resources, and running Archives with one card in
+it. The Runner now discards by usefulness, installs a resource that draws every turn, only
+values Archives with two or more unseen cards, and the Funhouse test in `estimateRun` uses
+the Runner's real credits rather than the Overclock budget, so it no longer plans a run it
+will refuse at the encounter.
+
+Design split, 10 games per cell: Runner policies 65 of 120 against the reference Corps
+(69 before, inside the interval), policy against policy Corp 66 of 120 (65 before). Runner
+rich credit clicks over 40 games: Party Hard 7, Stolen Goods 13, Planning Ahead 6 against
+the reference Corps; 17, 33 and 2 against the Corp policies. Stolen Goods still sits on
+credits against the Corp policies when every remote is iced twice, which is the next Runner
+loop. The remote steal stays between 12 and 30 per 30 games on the Corp side.
+
 Every Corp deck beats the heuristic Runner and every Runner deck beats the heuristic Corp
 by more than the interval, which is what the shared archetypes bought; the Haas-Bioroid
 line is the lowest because the heuristic Zahya trashes its unprotected campaigns. Against
