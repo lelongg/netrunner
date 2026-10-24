@@ -114,6 +114,16 @@ export const engineDeck = (d: Deck) => ({ identity: d.identity, cards: d.cards.m
 
 const STORE = "nsg.decks";
 const CORE_SEEDED = "nsg.decks.core-seeded-sg-only";
+const EARLIER_REMOVED = "nsg.decks.core-earlier-removed";
+const EARLIER_CORE_NAMES = new Set([
+  "Core Haas-Bioroid: Precision Design",
+  "Core Jinteki: Restoring Humanity",
+  "Core NBN: Reality Plus",
+  "Core Weyland: Built to Last",
+  "Core Anarch: Loup",
+  "Core Criminal: Zahya",
+  "Core Shaper: Tāo",
+]);
 const MAX_DECKS = 80;
 
 export interface StoredDeck extends WireDeck {
@@ -210,6 +220,10 @@ export function seedStarters(db: CardDb, matchups: Matchup[]) {
     }
   }
   try {
+    if (!localStorage.getItem(EARLIER_REMOVED)) {
+      for (const d of savedDecks()) if (d.format === "core" && EARLIER_CORE_NAMES.has(d.name)) removeDeck(d.id);
+      localStorage.setItem(EARLIER_REMOVED, "1");
+    }
     if (localStorage.getItem(CORE_SEEDED)) return;
     localStorage.setItem(CORE_SEEDED, "1");
   } catch {
