@@ -104,7 +104,9 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
         const corpPoints = Number(obs.me["agenda-point"] ?? 0);
         const runnerPoints = Number(obs.opp["agenda-point"] ?? 0);
         const behind = runnerPoints > corpPoints || (obs.turn >= 8 && corpPoints === 0);
-        const contestable = target!.ices.length >= 1 && canRezOne && obs.credits >= 3 && !hqSafer && plan.kind !== "economy" && (safety.margin >= margins[0] || (racing && runnerCredits <= margins[2] && safety.margin >= margins[1]) || (behind && target!.ices.length >= 2));
+        const cheapEntry = safety.runnerCost < 4;
+        const race = behind && target!.ices.length >= 2 && !cheapEntry;
+        const contestable = target!.ices.length >= 1 && canRezOne && obs.credits >= 3 && !hqSafer && plan.kind !== "economy" && (safety.margin >= margins[0] || (racing && runnerCredits <= margins[2] && safety.margin >= margins[1]) || race);
         const rich = obs.credits >= Math.max(15, safety.rezCost + 6);
         const fortress = target!.ices.length >= 3 || (target!.ices.length >= 2 && target!.content.some((c: any) => c.type === "Upgrade"));
         const desperate = Number(obs.me["deck-count"] ?? 99) < 10 && target!.ices.length >= 1 && canRezOne;
@@ -114,8 +116,8 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
         const holdable = agendasInHand <= 2 && Number(obs.me["deck-count"] ?? 0) >= 10;
         const taxRace = !contestable && ((rich && fortress) || desperate);
         const slow = card ? agendaProgress(card).need >= 5 : false;
-        p.score = breached && holdable && !desperate && !behind ? Math.min(p.score, 12) : contestable ? Math.min(p.score, racing ? 58 : 48) - (points >= 3 ? 10 : 0) - (slow ? 8 : 0) : taxRace ? Math.min(p.score, 55) - (points >= 3 ? 8 : 0) - (slow ? 8 : 0) : Math.min(p.score, 15);
-        p.why += ` (the Runner can get in: margin ${safety.margin}${breached ? ", and stole from there since the ice last changed" : ""}${behind ? ", but sitting loses" : ""}${racing ? ", racing" : ""}${taxRace ? (desperate ? ", R&D is running out" : ", rich enough to make every run expensive") : ""}${canRezOne ? "" : ", no ice can be rezzed"}${hqSafer ? ", HQ is safer" : ""})`;
+        p.score = (breached && holdable && !desperate && !race) || (cheapEntry && !desperate) ? Math.min(p.score, 12) : contestable ? Math.min(p.score, racing ? 58 : 48) - (points >= 3 ? 10 : 0) - (slow ? 8 : 0) : taxRace ? Math.min(p.score, 55) - (points >= 3 ? 8 : 0) - (slow ? 8 : 0) : Math.min(p.score, 15);
+        p.why += ` (the Runner can get in: margin ${safety.margin}${breached ? ", and stole from there since the ice last changed" : ""}${cheapEntry ? ", and the run there is nearly free" : race ? ", but sitting loses" : ""}${racing ? ", racing" : ""}${taxRace ? (desperate ? ", R&D is running out" : ", rich enough to make every run expensive") : ""}${canRezOne ? "" : ", no ice can be rezzed"}${hqSafer ? ", HQ is safer" : ""})`;
       } else if (card && target && safety?.safe && obs.clicks < 3 && canScoreNextTurn(obs, card, !!seamless)) p.score = Math.max(p.score, 72);
       if (obs.clicks === 3) p.score = Math.min(p.score, 50);
       if (safety && target && target.ices.some((i: any) => !i.rezzed) && safety.rezCost > obs.credits - 1) {
