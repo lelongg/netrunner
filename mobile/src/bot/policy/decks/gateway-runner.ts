@@ -207,6 +207,10 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
   if (gamble && obs.credits >= 5) push(proposal(playOf(obs, gamble), 75, "Sure Gamble: +4", "economy"));
   const commission = inHand(obs, "Creative Commission");
   if (commission && obs.credits >= 1) push(proposal(playOf(obs, commission), lastClick(obs) ? 74 : 40, lastClick(obs) ? "Creative Commission as the last click: +4 without losing a click" : "Creative Commission (loses a click)", "economy"));
+  for (const card of obs.hand) {
+    if (card.type !== "Resource" || !obs.profile.drawCards.has(card.title) || inRig(obs, card.title) || playCostOf(card) > obs.credits - 1) continue;
+    push(proposal(playOf(obs, card), obs.hand.length <= 4 ? 50 : 40, `${card.title}: cards every turn`, "install-economy"));
+  }
   const vrcation = inHand(obs, "VRcation");
   if (vrcation && obs.credits >= 1 && obs.hand.length <= 3) push(proposal(playOf(obs, vrcation), lastClick(obs) ? 60 : 36, "VRcation: draw 4", "draw"));
   const telework = inHand(obs, "Telework Contract");
@@ -481,7 +485,22 @@ function prompt(obs: Observation, plan: Plan): Proposal | null {
   }
   if (/discard down/i.test(obs.promptText) && obs.promptType === "select") {
     const cards = selectable(obs);
-    const order = (c: any) => (isIcebreaker(c) && !obs.rig.some((r) => r.title === c.title) ? 5 : isEconomyCard(obs, c) ? 4 : c.type === "Hardware" ? 3 : c.title === "Mayfly" ? 1 : 2);
+    const covered = coverage(obs);
+    const order = (c: any) => {
+      const installedCopy = c.type !== "Event" && obs.rig.some((r) => r.title === c.title);
+      if (installedCopy && !isIcebreaker(c)) return 0;
+      if (c.title === "Mayfly") return 1;
+      if (isIcebreaker(c)) {
+        if (installedCopy) return 2;
+        const profile = breakerProfile(c, obs.info(c));
+        const newType = profile && (profile.breaks === "AI" || (profile.breaks as string[]).some((t) => !covered.has(t as any)));
+        return newType ? 6 : 3;
+      }
+      if (playCostOf(c) > obs.credits + 6) return 1.5;
+      if (isEconomyCard(obs, c) || obs.profile.drawCards.has(c.title)) return 4;
+      if (c.type === "Hardware") return 3;
+      return 2.5;
+    };
     const pick = [...cards].sort((a, b) => order(a) - order(b))[0];
     if (pick) return { move: selectMove(obs, pick), score: 60, why: `discard ${pick.title}`, kind: "select" };
   }

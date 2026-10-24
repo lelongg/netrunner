@@ -118,7 +118,7 @@ export function corpProposals(obs: Observation): Proposal[] {
 export function serverValue(obs: Observation, server: Observation["servers"][number]): number {
   if (server.key === "rd") return obs.memory.notes.rdSeenTurn === obs.turn ? 0 : (centralValue(obs, server) ?? 3);
   if (server.key === "hq") return centralValue(obs, server) ?? 2 + Number(obs.opp["hand-count"] ?? 0) / 5;
-  if (server.key === "archives") return (obs.opp.discard ?? []).some((c: any) => !c.seen && !c.title) ? 1.5 : 0;
+  if (server.key === "archives") return (obs.opp.discard ?? []).filter((c: any) => !c.seen && !c.title).length >= 2 ? 1.5 : 0;
   if (!server.content.length) return 0;
   const adv = Math.max(0, ...server.content.map((c: any) => agendaProgress(c).have));
   const unknown = server.content.some((c: any) => {

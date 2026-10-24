@@ -6,7 +6,6 @@ import { findPolicy } from "../src/bot/policy/registry.ts";
 import "../src/bot/policy/decks/index.ts";
 import { coreDeck } from "../src/bot/policy/decks/core.ts";
 import { parseDecklist } from "../src/decks.ts";
-import { readFileSync } from "node:fs";
 import { promptOf, runCommands } from "../src/game/actions.ts";
 import { candidateActions } from "../src/game/candidates.ts";
 import { gameLines, logLines } from "../src/game/describe.ts";
