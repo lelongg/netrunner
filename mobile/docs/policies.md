@@ -149,7 +149,15 @@ terminal harness and the app do the same, the app through the engine worker's `m
 probe and `PolicyBot.decideAsync`. A decision costs about 15 ms on average instead of
 under 1 ms, with a worst case near half a second on a crowded board.
 
-SIMULATION_RESULTS
+Design split, 10 games per cell, simulation on one side only against the frozen reference:
+Runner policies 61 of 120 against the reference Corps (62 without simulation), Corp
+policies 68 of 120 against the reference Runners (65 without). At weight 1 the simulation
+changes few decisions: in two inspected games it flipped one Runner choice (installing Red
+Team instead of clicking for a credit) and no Corp choice, and the measured select options
+only win when no handler scores above them. What it buys today is a floor, not a lift:
+proposals the engine refuses disappear instead of looping, and every proposal's reason
+carries the measured change, which the situation reports now show. Raising the weight, and
+using the trials to price runs through rezzed ice exactly, are the next steps.
 
 ## Evaluation
 
