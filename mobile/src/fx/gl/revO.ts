@@ -78,68 +78,64 @@ export async function anoeticVoid(rect: DOMRect, code: string, ready?: Ready, bo
 }
 
 export async function hedgeFund(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, card, done, unit, at } = await scene(rect, code, ready, board);
-  const frame: Pt[] = [at(0.235, 0.08), at(1, 0.08), at(1, 0.535), at(0, 0.535), at(0, 0.17), at(0.12, 0.172), at(0.205, 0.14)];
-  const tablet: Pt[] = [at(0.382, 0.2835), at(0.465, 0.297), at(0.416, 0.42), at(0.337, 0.393)];
-  const focus = at(0.4, 0.35);
-  const crowd = piece(root, card, frame);
-  pivot(crowd, focus);
-  const near = [
-    { poly: [at(0, 0.22), at(0.26, 0.22), at(0.31, 0.535), at(0, 0.535)], c: at(0.14, 0.38) },
-    { poly: [at(0.85, 0.27), at(1, 0.27), at(1, 0.535), at(0.83, 0.535)], c: at(0.93, 0.4) },
-  ].map(({ poly, c }) => {
-    const p = piece(root, card, poly);
-    root.setChildIndex(p, root.getChildIndex(crowd) + 1);
-    pivot(p, c);
-    clip(root, p, frame);
-    return { p, c };
-  });
-  clip(root, crowd, frame);
-  const gold = glowPiece(root, card, tablet, [0.3, 0.35, 0.35], 0.55, 2.5, 0xffc860);
-  root.setChildIndex(gold, root.getChildIndex(near[1].p) + 1);
-  gold.alpha = 0;
-  const sheen = new Graphics();
-  root.addChild(sheen);
-  const shine = glowPiece(root, card, tablet, [0.3, 0.35, 0.35], 0.4, 3, 0xfff0c0);
-  root.setChildIndex(shine, root.getChildIndex(gold) + 1);
-  shine.mask = sheen;
+  const { app, root, done, unit, at } = await scene(rect, code, ready, board);
+  const knots: Pt[] = [at(0.04, 0.47), at(0.2, 0.41), at(0.3, 0.44), at(0.46, 0.33), at(0.56, 0.37), at(0.73, 0.22), at(0.8, 0.25), at(0.9, 0.155)];
+  const floor = at(0, 0.525)[1];
+  const fill = new Graphics();
+  const g = new Graphics();
   const top = layer(root, false);
+  top.addChild(fill, g);
   const coin = new Sprite(glyphTexture());
   coin.anchor.set(0.5);
   coin.tint = 0xffd27a;
   coin.alpha = 0;
-  coin.rotation = Math.atan2(tablet[1][1] - tablet[0][1], tablet[1][0] - tablet[0][0]);
-  coin.position.set(...lerp(lerp(tablet[0], tablet[2], 0.5), lerp(tablet[1], tablet[3], 0.5), 0.5));
   top.addChild(coin);
+  const step = 0.1;
+  const start = 0.1;
+  const end = start + step * (knots.length - 1);
+  let ticked = 0;
   await run(app, (t) => {
-    const push = ease.back(span(t, 0.1, 0.55));
-    const back = ease.inOut(span(t, 1.05, 1.5));
-    const k = push * (1 - back);
-    crowd.scale.set(1 + 0.1 * k);
-    for (const n of near) {
-      n.p.scale.set(1 + 0.2 * k);
-      const away = (n.c[0] - focus[0]) * 0.08 * k;
-      n.p.position.set(n.c[0] + away, n.c[1]);
+    const fade = 1 - span(t, 1.25, 1.55);
+    const pos = Math.max(0, (t - start) / step);
+    const whole = Math.min(knots.length - 1, Math.floor(pos));
+    const part = whole >= knots.length - 1 ? 0 : ease.back(Math.min(1, pos - whole));
+    const pts: Pt[] = knots.slice(0, whole + 1);
+    if (whole < knots.length - 1 && pos > 0) pts.push(lerp(knots[whole], knots[whole + 1], part));
+    let bump = 0;
+    for (let i = 1; i < knots.length; i++) {
+      const a = t - (start + step * i);
+      if (a > 0) bump += (knots[i - 1][1] - knots[i][1]) * 0.08 * Math.exp(-a * 12) * Math.sin(Math.min(1, a * 10) * Math.PI);
     }
-    const lit = span(t, 0.35, 0.6) * (1 - span(t, 1.1, 1.5));
-    gold.alpha = 0.55 * lit;
-    gold.scale.set(1 + 0.1 * k);
-    gold.pivot.set(...focus);
-    gold.position.set(...focus);
-    const sw = span(t, 0.45, 0.85);
-    sheen.clear();
-    if (sw > 0 && sw < 1) band(sheen, at, sw, 0.025, 0.06, [0.33, 0.28, 0.47, 0.43]);
-    shine.alpha = 0.8;
-    shine.scale.set(1 + 0.1 * k);
-    shine.pivot.set(...focus);
-    shine.position.set(...focus);
-    sheen.scale.set(1 + 0.1 * k);
-    sheen.pivot.set(...focus);
-    sheen.position.set(...focus);
-    const pop = ease.back(span(t, 0.55, 0.8));
-    coin.alpha = 0.9 * Math.min(1, pop * 1.4) * (1 - span(t, 1.05, 1.4));
-    coin.scale.set((unit / 48) * 0.17 * (0.5 + 0.5 * pop) * (1 + 0.1 * k));
-    return t < 1.5;
+    const land = t - end;
+    const ring = land > 0 ? Math.min(1, land / 0.35) : 0;
+    const settle = land > 0 ? Math.exp(-land * 7) * Math.sin(land * 22) : 0;
+    root.position.y += bump - unit * 0.012 * settle;
+    root.scale.set(root.scale.x * (1 + 0.035 * (land > 0 ? Math.exp(-land * 6) : 0)));
+    fill.clear();
+    g.clear();
+    if (pts.length > 1) {
+      const last = pts[pts.length - 1];
+      fill.poly([...pts.flat(), last[0], floor, pts[0][0], floor]).fill({ color: 0xffc860, alpha: 0.13 * fade });
+      for (const [w, color, alpha] of [
+        [unit * 0.03, 0xffb84a, 0.25],
+        [unit * 0.011, 0xffd890, 0.95],
+      ] as const) {
+        g.moveTo(...pts[0]);
+        for (const p of pts.slice(1)) g.lineTo(...p);
+        g.stroke({ width: w, color, alpha: alpha * fade, join: "round", cap: "round" });
+      }
+      for (const p of pts.slice(1, whole + 1)) g.circle(...p, unit * 0.012).fill({ color: 0xfff0c8, alpha: 0.9 * fade });
+    }
+    if (ring > 0 && ring < 1) g.circle(...knots[knots.length - 1], unit * (0.04 + 0.1 * ease.out(ring))).stroke({ width: unit * 0.012 * (1 - ring) + 0.8, color: 0xffd27a, alpha: 0.85 * (1 - ring) });
+    const pop = ease.back(span(t, end, end + 0.25));
+    coin.position.set(knots[knots.length - 1][0] - unit * 0.1, knots[knots.length - 1][1] + unit * 0.02 - unit * 0.04 * pop);
+    coin.alpha = Math.min(1, pop * 1.5) * fade;
+    coin.scale.set((unit / 48) * 0.26 * pop);
+    if (whole > ticked) {
+      ticked = whole;
+      navigator.vibrate?.(8);
+    }
+    return t < 1.55;
   });
   await done();
 }
