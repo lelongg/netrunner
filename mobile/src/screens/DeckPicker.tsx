@@ -107,7 +107,7 @@ export function DeckPicker({ side, db, matchups, value, onChange, onEditDecks, s
           <span class="label">{mine.length || onlyPrecons ? "Precons" : "Ready to play"}</span>
           <ul class="deck-library">
             {precons.map((wire) => (
-              <DeckRow db={db} stored={wire} format={rules ?? "casual"} selected={!value?.ref && value?.name === wire.name} onOpen={() => onChange(wire)} issuesOnly extra={bot ? <span class={`deck-badge ${botPlay(side, wire).rank === 0 ? "ok wide" : "warn"}`}>{botPlay(side, wire).text}</span> : undefined} />
+              <DeckRow db={db} stored={wire} format={rules ?? "casual"} selected={!value?.ref && value?.name === wire.name} onOpen={() => onChange(wire)} issuesOnly note={bot ? <span class={`deck-row-bot rank-${botPlay(side, wire).rank}`}>{botPlay(side, wire).text}</span> : undefined} />
             ))}
           </ul>
         </>
