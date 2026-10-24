@@ -138,7 +138,7 @@ export function QrZoom({ value, code, from, onClose }: { value: string; code: st
   );
 }
 
-export function DeckSheet({ side, db, matchups, value, onPick, onClose, onEditDecks, format }: { side: Side; db: CardDb; matchups: Matchup[]; value?: WireDeck; onPick: (d: WireDeck) => void; onClose: () => void; onEditDecks?: () => void; format?: GameFormat }) {
+export function DeckSheet({ side, db, matchups, value, onPick, onClose, onEditDecks, format, bot }: { side: Side; db: CardDb; matchups: Matchup[]; value?: WireDeck; onPick: (d: WireDeck) => void; onClose: () => void; onEditDecks?: () => void; format?: GameFormat; bot?: boolean }) {
   useBackClose(true, onClose);
   return (
     <div class="sheet-backdrop" onClick={onClose}>
@@ -156,6 +156,7 @@ export function DeckSheet({ side, db, matchups, value, onPick, onClose, onEditDe
           value={value}
           showCurrent={false}
           format={format}
+          bot={bot}
           onEditDecks={
             onEditDecks &&
             (() => {
@@ -273,7 +274,7 @@ function Seat({ label, side, deck, db, matchups, onPick, onSide, locked, name, o
           Choose a deck
         </button>
       )}
-      {choosing && <DeckSheet side={side} db={db} matchups={matchups} value={deck} format={format} onPick={onPick} onEditDecks={onEditDecks && (() => onEditDecks(side))} onClose={() => setChoosing(false)} />}
+      {choosing && <DeckSheet side={side} db={db} matchups={matchups} value={deck} format={format} bot={label === "Bot"} onPick={onPick} onEditDecks={onEditDecks && (() => onEditDecks(side))} onClose={() => setChoosing(false)} />}
       {viewing && current && <DeckView deck={current} format={deckFormat(format) ?? "casual"} onClose={() => setViewing(false)} />}
     </section>
   );
