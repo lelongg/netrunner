@@ -156,8 +156,24 @@ changes few decisions: in two inspected games it flipped one Runner choice (inst
 Team instead of clicking for a credit) and no Corp choice, and the measured select options
 only win when no handler scores above them. What it buys today is a floor, not a lift:
 proposals the engine refuses disappear instead of looping, and every proposal's reason
-carries the measured change, which the situation reports now show. Raising the weight, and
-using the trials to price runs through rezzed ice exactly, are the next steps.
+carries the measured change, which the situation reports now show. Three follow-ups were measured on the same grids:
+
+| Change | Runner vs reference Corps | Corp vs reference Runners |
+|---|---|---|
+| Simulation off | 62 of 120 | 65 of 120 |
+| Simulation, weight 1 | 61 | 68 |
+| Simulation, weight 2 | 63 | 65 |
+| Weight 1 and run trials (Runner only) | 67 | – |
+| Weight 1, measured select options at base 60 | 66 | 55 |
+
+The weight does not matter at this scale. Run trials are kept: the Runner starts a run on a
+checkpoint, its own run policy answers every step while the Corp passes or fires its
+subroutines, and the trial stops at the first access, so the credits, damage and tags of a
+run through fully rezzed ice are exact and no hidden card is read (`policy/trial.ts`, the
+app runs them in the engine worker). Measured select options stay at base 24: at 60 they
+outrank the handlers for discards, Seamless Launch and Send a Message and the Corp drops to
+55, so the static evaluation is not yet a substitute for those rules. Replacing a handler
+is a per-card experiment on this grid, not a switch.
 
 ## Evaluation
 
