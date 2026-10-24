@@ -6,7 +6,7 @@ import { bezier } from "./sixth";
 
 type At = (u: number, v: number) => Pt;
 
-const KEY = `
+export const KEY = `
 precision highp float;
 in vec2 vTextureCoord;
 out vec4 finalColor;
