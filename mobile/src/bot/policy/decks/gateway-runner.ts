@@ -330,14 +330,15 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
     }
   }
   const missingInDeck = [...guarding].filter((t) => obs.profile.breakers[t as "Barrier"].some((title) => !obs.hand.some((c) => c.title === title) && !inRig(obs, title)));
-  if (missingInDeck.length && obs.credits >= 6 && obs.hand.length <= 4 && drawsThisTurn < 2 && (obs.me["deck-count"] ?? 0) > 0 && !obs.hand.some((c) => isIcebreaker(c) && (obs.profile.breakers[missingInDeck[0] as "Barrier"] ?? []).includes(c.title))) {
+  if (missingInDeck.length && obs.credits >= 6 && (obs.hand.length <= 4 || obs.credits >= 10) && drawsThisTurn < 2 && (obs.me["deck-count"] ?? 0) > 0 && !obs.hand.some((c) => isIcebreaker(c) && (obs.profile.breakers[missingInDeck[0] as "Barrier"] ?? []).includes(c.title))) {
     const draw = byCommand(obs, "draw")[0];
     if (draw) push(proposal(draw, 50, `draw: nothing in the rig breaks the ${missingInDeck.join("/")} ice that guards what matters`, "draw"));
   }
-  const richNoRig = cov.size < 2 && obs.credits >= 12 && !obs.hand.some((c) => isIcebreaker(c) && c.title !== "Mayfly" && playCostOf(c) <= obs.credits);
-  if ((obs.credits >= 20 || richNoRig) && drawsThisTurn < 3 && obs.hand.length <= 5 && (obs.me["deck-count"] ?? 0) > 0) {
+  const coversNewType = (c: any) => isIcebreaker(c) && c.title !== "Mayfly" && playCostOf(c) <= obs.credits && (breakerProfile(c, obs.info(c))?.breaks === "AI" || ((breakerProfile(c, obs.info(c))?.breaks as string[] | undefined) ?? []).some((t) => !cov.has(t as any)));
+  const richNoRig = cov.size < 2 && obs.credits >= 12 && !obs.hand.some(coversNewType);
+  if ((obs.credits >= 12 || richNoRig) && drawsThisTurn < 3 && obs.hand.length <= 5 && (obs.me["deck-count"] ?? 0) > 0) {
     const draw = byCommand(obs, "draw")[0];
-    if (draw) push(proposal(draw, richNoRig ? 60 : 44, richNoRig ? "draw: rich with no rig, the breakers are the bottleneck" : "draw: credits are not the problem", "draw"));
+    if (draw) push(proposal(draw, richNoRig ? 60 : obs.credits >= 20 ? 44 : 36, richNoRig ? "draw: rich with no rig, the breakers are the bottleneck" : "draw: credits are not the problem", "draw"));
   }
   if (obs.credits <= 3 && obs.hand.length <= 3 && drawsThisTurn < 2 && !obs.hand.some((c) => isEconomyCard(obs, c) && playCostOf(c) <= obs.credits) && (obs.me["deck-count"] ?? 0) > 0) {
     const draw = byCommand(obs, "draw")[0];
