@@ -458,6 +458,7 @@ let accessing: { title: string; unseen: boolean; stop: () => void; resolve: (ver
 let stageFreeAt = 0;
 let accessLog: { seq: number; lines: string[]; run: boolean }[] = [];
 let accessSeq = 0;
+const lastBreaks = new Map<string, number>();
 
 function movesCard(text: string, title: string) {
   return new RegExp(`\\b(?:steals?|trash(?:es)?|adds?) ${title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(text);
@@ -487,6 +488,14 @@ function readLog(view: any, from: number, render: (m: unknown) => string, before
     } else if (/purges? virus counters/i.test(text)) out.push({ kind: "purge" });
     else if ((m = text.match(/\b(?:accesses|to access) (.+?) from (.+?)\.?$/i))) out.push({ kind: "access", text: m[1], zone: m[2] });
   }
+  const now = performance.now();
+  const hits = out.filter((h) => {
+    if (h.kind !== "break" || !h.breaker || !h.ice) return true;
+    const key = `${h.breaker.cid}:${h.ice.cid}`;
+    const fresh = now - (lastBreaks.get(key) ?? -Infinity) > 6000;
+    lastBreaks.set(key, now);
+    return fresh;
+  });
   const texts = log.slice(from).map((e) => render(e.text));
   accessLog = [...accessLog.slice(-20), { seq: ++accessSeq, lines: texts, run: !!view.run }];
   if (accessing) {
@@ -499,7 +508,7 @@ function readLog(view: any, from: number, render: (m: unknown) => string, before
       setTimeout(() => accessing === pending && pending.stop(), stolen ? 2500 : 1600);
     } else if (!view.run || (texts.length && (pending.unseen || !texts.some((t) => t.includes(pending.title))))) pending.stop();
   }
-  const kept = out.filter((h) => h.kind !== "access" || !texts.some((t) => movesCard(t, h.text ?? "")));
+  const kept = hits.filter((h) => h.kind !== "access" || !texts.some((t) => movesCard(t, h.text ?? "")));
   const dmg = kept.filter((h) => h.kind === "damage");
   return dmg.length > 1 ? [...kept.filter((h) => h.kind !== "damage"), dmg[0]] : kept;
 }

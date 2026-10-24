@@ -3117,8 +3117,7 @@ button:active:not(:disabled) {
 .brk-funds {
   display: flex;
   justify-content: flex-end;
-  align-items: center;
-  gap: 2px;
+  align-items: baseline;
   color: var(--yellow);
   font-size: 13px;
   font-weight: 700;
@@ -3127,13 +3126,13 @@ button:active:not(:disabled) {
 
 .brk-funds .glyph,
 .brk-extra .glyph {
-  vertical-align: middle;
-  margin: 0;
+  height: 0.74em;
+  margin: 0 0 0 0.12em;
 }
 
 .brk-extra {
   display: inline-flex;
-  align-items: center;
+  align-items: baseline;
   color: var(--yellow);
 }
 
