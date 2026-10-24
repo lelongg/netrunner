@@ -5,7 +5,7 @@ import { type Board, Smoke, CREDIT, CYAN, GOLD, GREEN, RED, type Ready, VIOLET, 
 
 export async function sureGamble(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, card, fx, zoom, done, cx } = await scene(rect, code, ready, board);
-  const glow = new GlowFilter({ color: GOLD, distance: 18, outerStrength: 0, innerStrength: 0, quality: 0.3 });
+  const glow = new GlowFilter({ color: GOLD, distance: 11, outerStrength: 0, innerStrength: 0, quality: 0.2 });
   card.filters = [glow];
   const w = rect.width * 0.84;
   const h = rect.height * 0.24;
@@ -385,7 +385,7 @@ export async function creativeCommission(rect: DOMRect, code: string, ready?: Re
       return { r: R * (0.3 + (st.len - 0.3) * k), a: 0.42 * Math.sin(k * 7 + st.seed) * k + st.seed * 0.3 };
     }),
   }));
-  const glow = new GlowFilter({ color: 0xff4fd8, distance: 12, outerStrength: 0, quality: 0.3 });
+  const glow = new GlowFilter({ color: 0xff4fd8, distance: 7, outerStrength: 0, quality: 0.2 });
   card.filters = [glow];
   const paint = new Graphics();
   const beam = new Graphics();

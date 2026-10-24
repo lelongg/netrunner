@@ -111,7 +111,7 @@ export async function unleash(rect: DOMRect, code: string, ready?: Ready, board?
   const { app, root, card, fx, done, unit, at } = await scene(rect, code, ready, board);
   const palms = at(0.45, 0.4);
   const head = at(0.47, 0.12);
-  const glow = new GlowFilter({ color: 0xffe6a0, distance: 14, outerStrength: 0, quality: 0.3 });
+  const glow = new GlowFilter({ color: 0xffe6a0, distance: 8, outerStrength: 0, quality: 0.2 });
   card.filters = [glow];
   const coil = new Graphics();
   coil.blendMode = "add";

@@ -135,7 +135,7 @@ export function pose(color: number, glint: Pt) {
     const mask = new Graphics();
     root.addChild(mask);
     card.mask = mask;
-    const glow = new GlowFilter({ color, distance: 10, outerStrength: 0, innerStrength: 0, quality: 0.3 });
+    const glow = new GlowFilter({ color, distance: 6, outerStrength: 0, innerStrength: 0, quality: 0.2 });
     addFilter(card, glow);
     const line = new Graphics();
     line.blendMode = "add";
