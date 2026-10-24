@@ -167,6 +167,15 @@ With `--out`, the run writes:
   turn) and `loss` (the final board of a lost game).
 - `summary.json`.
 
+Every game also carries a `mistakes` count, detected from the full game state rather than
+from one side's view: `corp:thin-install` (an agenda needing four or more advancements
+installed behind at most one ice while the Runner has four credits and three cards),
+`corp:thin-install-stolen` (such an agenda stolen within two turns),
+`corp:stolen-from-remote`, `corp:unrezzable-install` (an agenda behind unrezzed ice the Corp
+cannot afford to rez), and `corp:rich-credit-click` / `runner:rich-credit-click` (a basic
+credit click at twelve or ten credits). A series prints the totals and `--grid` prints them
+per deck, so the pattern behind a losing cell is visible before any replay is read.
+
 The situations only contain what was observable at decision time. To diagnose with the full
 replay, use the action log and the seed, and keep the two apart in the analysis.
 
