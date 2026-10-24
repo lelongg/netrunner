@@ -5108,6 +5108,19 @@ button.armed {
   background: color-mix(in srgb, var(--yellow) 10%, transparent);
 }
 
+.deck-badge.warn {
+  color: var(--yellow);
+  text-transform: none;
+  letter-spacing: 0.04em;
+  font-size: 10px;
+}
+
+.deck-badge.ok.wide {
+  text-transform: none;
+  letter-spacing: 0.04em;
+  font-size: 10px;
+}
+
 .seat-issues {
   margin-top: 10px;
   padding: 10px 12px;

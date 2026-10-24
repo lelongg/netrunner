@@ -7,6 +7,8 @@ import { type WireDeck, defaultStored, deckSize, fromPrecon, fromWire, putDeck, 
 import { DeckBrowser } from "./DeckBrowser";
 import { Icon } from "../icons";
 import { type GameFormat, FORMATS, analyze, deckFormat } from "../deckrules";
+import { findPolicy } from "../bot/index.ts";
+import { CORE_DECKS } from "../bot/policy/decks/core.ts";
 
 interface Props {
   side: Side;
@@ -17,6 +19,7 @@ interface Props {
   onEditDecks?: () => void;
   showCurrent?: boolean;
   format?: GameFormat;
+  bot?: boolean;
 }
 
 export function problemIn(format: GameFormat, db: CardDb, w: WireDeck): string | null {
@@ -48,7 +51,15 @@ export function defaultDeck(side: Side, db: CardDb, matchups: Matchup[], format:
   return preconChoices(side, db, matchups, format)[0];
 }
 
-export function DeckPicker({ side, db, matchups, value, onChange, onEditDecks, showCurrent = true, format = "casual" }: Props) {
+export function botPlay(side: Side, w: WireDeck): { rank: number; text: string } {
+  const match = findPolicy(side, { identity: w.identity, cards: w.cards });
+  if (!match) return { rank: 2, text: "Bot: generic play, it was not trained on this deck" };
+  if (match.exact) return { rank: 0, text: "Bot: trained on this deck" };
+  const near = match.policy.decks.map((d) => CORE_DECKS.find((c) => c.identity === d.identity && c.cards.length === d.cards.length)?.name ?? d.identity).find(Boolean);
+  return { rank: 1, text: `Bot: plays it like ${near ?? "its faction deck"}, not trained on this list` };
+}
+
+export function DeckPicker({ side, db, matchups, value, onChange, onEditDecks, showCurrent = true, format = "casual", bot = false }: Props) {
   const rules = deckFormat(format);
   const problemOf = (w: WireDeck) => problemIn(format, db, w);
   const [viewing, setViewing] = useState(false);
@@ -56,9 +67,9 @@ export function DeckPicker({ side, db, matchups, value, onChange, onEditDecks, s
     () =>
       savedDecks()
         .filter((d) => d.side === side)
-        .map((d) => ({ deck: d, problem: problemOf(d) }))
-        .sort((a, b) => Number(!!a.problem) - Number(!!b.problem)),
-    [value, format, side],
+        .map((d) => ({ deck: d, problem: problemOf(d), play: bot ? botPlay(side, d) : null }))
+        .sort((a, b) => Number(!!a.problem) - Number(!!b.problem) || (a.play?.rank ?? 0) - (b.play?.rank ?? 0)),
+    [value, format, side, bot],
   );
   const precons = useMemo(() => preconChoices(side, db, matchups, format), [matchups, side, format]);
   const [browsing, setBrowsing] = useState(false);
@@ -85,8 +96,8 @@ export function DeckPicker({ side, db, matchups, value, onChange, onEditDecks, s
         <>
           <span class="label">Your decks</span>
           <ul class="deck-library">
-            {mine.map(({ deck: d, problem }) => (
-              <DeckRow key={d.id} db={db} stored={d} format={rules ?? "casual"} selected={value?.ref ? value.ref === d.id : value?.name === d.name} disabled={!!problem} issuesOnly onOpen={() => onChange({ name: d.name, identity: d.identity, cards: d.cards, ref: d.id })} />
+            {mine.map(({ deck: d, problem, play }) => (
+              <DeckRow key={d.id} db={db} stored={d} format={rules ?? "casual"} selected={value?.ref ? value.ref === d.id : value?.name === d.name} disabled={!!problem} issuesOnly extra={play && !problem ? <span class={`deck-badge ${play.rank === 0 ? "ok wide" : "warn"}`}>{play.text}</span> : undefined} onOpen={() => onChange({ name: d.name, identity: d.identity, cards: d.cards, ref: d.id })} />
             ))}
           </ul>
         </>
@@ -96,7 +107,7 @@ export function DeckPicker({ side, db, matchups, value, onChange, onEditDecks, s
           <span class="label">{mine.length || onlyPrecons ? "Precons" : "Ready to play"}</span>
           <ul class="deck-library">
             {precons.map((wire) => (
-              <DeckRow db={db} stored={wire} format={rules ?? "casual"} selected={!value?.ref && value?.name === wire.name} onOpen={() => onChange(wire)} issuesOnly />
+              <DeckRow db={db} stored={wire} format={rules ?? "casual"} selected={!value?.ref && value?.name === wire.name} onOpen={() => onChange(wire)} issuesOnly extra={bot ? <span class={`deck-badge ${botPlay(side, wire).rank === 0 ? "ok wide" : "warn"}`}>{botPlay(side, wire).text}</span> : undefined} />
             ))}
           </ul>
         </>
