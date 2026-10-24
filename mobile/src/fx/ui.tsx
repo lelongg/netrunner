@@ -39,6 +39,8 @@ export function useLoop(ref: { current: Element | null }, keyframes: any, option
   }, deps);
 }
 
+let pressed = -Infinity;
+
 const BOUNCE = [0.2, 1.25, 0.4, 1] as const;
 const SMOOTH = [0.2, 0.9, 0.3, 1] as const;
 
@@ -81,7 +83,7 @@ const ENTER: [string, (el: HTMLElement) => void][] = [
   [".toast", (el) => rise(el, "translateX(-40px) scale(0.9)", 0.32, BOUNCE)],
   [".encounter", (el) => rise(el, "translateY(24px) scale(0.96)", 0.34, BOUNCE)],
   [".breakers .brk", (el) => rise(el, "translateX(-24px)", 0.3, BOUNCE, indexIn(el) * 0.05)],
-  [".actions .buttons > button, .prompt .choices > button, .prompt > button, .prompt .cta", (el) => rise(el, "translateY(16px) scale(0.94)", 0.3, BOUNCE, indexIn(el) * 0.04)],
+  [".actions .buttons > button, .prompt .choices > button, .prompt > button, .prompt .cta", (el) => performance.now() - pressed > 900 && rise(el, "translateY(16px) scale(0.94)", 0.3, BOUNCE, indexIn(el) * 0.04)],
   [".game-list > *, .home .panel, .lobby .panel", (el) => rise(el, "translateY(18px)", 0.34, SMOOTH, indexIn(el) * 0.05)],
 ];
 
@@ -121,6 +123,7 @@ export function installMotion() {
       if (still()) return;
       const t = (e.target as Element | null)?.closest?.("button, .tile") as HTMLElement | null;
       if (!t || (t as HTMLButtonElement).disabled || t.closest(".fx-layer")) return;
+      if (t.closest(".actions, .prompt")) pressed = performance.now();
       const from = t.classList.contains("tile") ? 0.92 : 0.94;
       animate(t, { transform: [`scale(${from})`, "scale(1)"] }, { duration: 0.3, ease: [0.2, 1.6, 0.4, 1] }).finished.then(
         () => requestAnimationFrame(() => (t.style.transform = "")),

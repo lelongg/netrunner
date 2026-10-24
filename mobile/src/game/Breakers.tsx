@@ -49,11 +49,11 @@ export function Breakers({ view, stamp, probe, side, ice, send, onTap, disabled,
   const unbrokenLabels: string[] = (ice.subroutines ?? []).filter((s: any) => !s.broken && !s.fired && s.resolve !== false).map((s: any) => s.label);
   const reach = useProbe(unbrokenLabels.length ? breakerCards.map((c) => ({ k: "break", ice: ice.cid, breaker: c.cid, want: unbrokenLabels, boost: 99 })) : [], probe, ice.cid);
   const cannotBreak = (card: any) => reach?.[breakerCards.indexOf(card)]?.ok === false;
-  const onIce = hostedOn(view, ice).flatMap((card) =>
-    cardCommandsOf(card)
-      .filter((cmd) => cmd.enabled !== false && (cmd.command === "ability" || cmd.command === "dynamic-ability"))
-      .map((cmd) => ({ card, cmd })),
-  );
+  const onIce = hostedOn(view, ice).flatMap((card) => {
+    const usable = cardCommandsOf(card).filter((cmd) => cmd.enabled !== false && (cmd.command === "ability" || cmd.command === "dynamic-ability"));
+    const single = unbroken.length === 1 && usable.some((cmd) => /break 1 subroutine/i.test(cmd.label));
+    return usable.filter((cmd) => !(single && /fully break/i.test(cmd.label))).map((cmd) => ({ card, cmd }));
+  });
   const breakers = cards.filter((c) => (c.subtypes ?? []).includes("Icebreaker"));
   const others = cards
     .filter((c) => !breakers.includes(c))
@@ -132,9 +132,10 @@ export function Breakers({ view, stamp, probe, side, ice, send, onTap, disabled,
             </div>
             <button class="brk-go" disabled={disabled} onClick={() => send(cmd.command, cmd.args)}>
               <span class="brk-cost">
-                {/^hosted virus counter$/i.test(cost) ? (
-                  <span aria-label="1 hosted virus counter">
-                    1<Icon name="virus" class="glyph" />
+                {/^(\d+ )?hosted virus counters?$/i.test(cost) ? (
+                  <span aria-label={cost}>
+                    {cost.match(/\d+/)?.[0] ?? 1}
+                    <Icon name="virus" class="glyph" />
                   </span>
                 ) : (
                   glyphs(iconize(cost))
