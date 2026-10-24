@@ -880,7 +880,7 @@ export class Session {
     });
     this.log.push(recorded);
     this.persist();
-    this.pending = true;
+    if (entry.side !== this.bot?.side) this.pending = true;
     this.broadcast();
   }
 
