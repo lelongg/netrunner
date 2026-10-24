@@ -983,7 +983,14 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
   const myMove = awaitingMove(view, side);
   const remote = session.lobby.role !== "local" || session.lobby.vsBot;
   const canUndo = !watching && undoAllowed(session, view, side, render, handoffLog);
-  const allowAuto = !disabled && !session.lobby.tutorial && !(session.lobby.role === "local" && !session.lobby.vsBot) && verified?.size === 0;
+  const facing = view.encounters ? findCard(view, currentIce(view)?.cid) : null;
+  const rig = view.runner?.rig ?? {};
+  const canBreak =
+    side === "runner" &&
+    !!facing &&
+    (facing.subroutines ?? []).some((s: any) => !s.broken && !s.fired && s.resolve !== false) &&
+    ((facing.hosted ?? []).some((c: any) => c.side === "Runner") || ["program", "hardware"].some((k) => (rig[k] ?? []).some((c: any) => (c.subtypes ?? []).includes("Icebreaker") || (c.abilities ?? []).length > 0)));
+  const allowAuto = !disabled && !canBreak && !session.lobby.tutorial && !(session.lobby.role === "local" && !session.lobby.vsBot) && verified?.size === 0;
   const forced: { steps: { command: string; args?: unknown }[]; wait: number } | null = (() => {
     if (!allowAuto) return null;
     const pt = openPrompt?.["prompt-type"];
