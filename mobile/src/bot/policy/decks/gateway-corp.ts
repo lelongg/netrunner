@@ -94,7 +94,7 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
       const agendasInHand = obs.hand.filter((c) => c.type === "Agenda").length;
       const racing = Number(obs.me["deck-count"] ?? 0) < 12 || agendasInHand >= 2 || obs.hand.length >= 5;
       const points = Number(card?.agendapoints ?? 0);
-      const runnerReady = Number(obs.opp.credit ?? 0) >= 4 && Number(obs.opp["hand-count"] ?? 0) >= 3;
+      const runnerReady = Number(obs.opp.credit ?? 0) >= 4 && Number(obs.opp["hand-count"] ?? 0) >= 1;
       const thinAndSlow = !!card && !!target && target.ices.length < 2 && agendaProgress(card).need >= 4 && runnerReady && !canScoreNextTurn(obs, card, !!seamless);
       if (safety && !safety.safe) {
         const canRezOne = target!.ices.some((i) => i.rezzed || rezCostOf(i) <= obs.credits - 1);
@@ -164,7 +164,7 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
   }
   const hub = inHand(obs, "Superconducting Hub");
   const office = inHand(obs, "Offworld Office");
-  const runnerCanRig = Number(obs.opp.credit ?? 0) >= 4 && Number(obs.opp["hand-count"] ?? 0) >= 3;
+  const runnerCanRig = Number(obs.opp.credit ?? 0) >= 4 && Number(obs.opp["hand-count"] ?? 0) >= 1;
   const baitSafe = bait ? serverSafety(obs, bait).safe && (bait.ices.length >= 2 || !runnerCanRig) : false;
   if (hub && bait && baitSafe && obs.clicks >= 1 && obs.credits >= 2 && !installed) push(proposal(playOf(obs, hub, bait.label), 66, `Superconducting Hub in ${bait.label} only needs 3 advancements: cheap to score next turn`, "install-agenda"));
   if (office && bait && baitSafe && obs.credits >= 3 && !installed && obs.clicks <= 2) push(proposal(playOf(obs, office, bait.label), 71, `Offworld Office in ${bait.label} pays 7 when scored: install late in the turn`, "install-agenda"));
@@ -210,6 +210,12 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
   const scoringEmpty = scoring ? null : remotes(obs).find((s) => s.ices.length > 0 && !s.content.some((c: any) => c.type !== "Upgrade"));
   if (ambush && scoringEmpty && obs.credits >= 4 && !installed && agendasHeld === 0) push(proposal(playOf(obs, ambush, scoringEmpty.label), 46, `${ambush.title} in ${scoringEmpty.label}: the next run into the scoring remote hurts`, "install-trap"));
 
+  if (agendasHeld === 0 && !installed && obs.credits >= 12 && obs.hand.length <= 6 && Number(obs.me["deck-count"] ?? 0) > 5) {
+    const draw = byCommand(obs, "draw")[0];
+    if (draw) push(proposal(draw, 48, "draw: no agenda in hand and credits to spare, dig for one", "draw"));
+  }
+  const sprint = inHand(obs, "Sprint");
+  if (sprint && agendasHeld === 0 && obs.hand.length <= 5 && Number(obs.me["deck-count"] ?? 0) > 5) push(proposal(playOf(obs, sprint), obs.credits >= 10 ? 56 : 46, "Sprint: three cards to find an agenda, two back into R&D", "draw"));
   const subsidy = inHand(obs, "Government Subsidy");
   if (subsidy && obs.credits >= 10) push(proposal(playOf(obs, subsidy), 68, "Government Subsidy: +5 net, keeps the scoring budget high", "economy"));
   const planogram = inHand(obs, "Predictive Planogram");
