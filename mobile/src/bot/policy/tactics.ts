@@ -1,5 +1,6 @@
 import { advancement } from "../../game/actions.ts";
 import type { CardInfo, Estimate, Observation, ServerInfo } from "./types.ts";
+import { hiddenBreaker } from "./value.ts";
 
 export const ICE_TYPES = ["Barrier", "Code Gate", "Sentry"] as const;
 export type IceType = (typeof ICE_TYPES)[number];
@@ -142,7 +143,7 @@ export interface RunEstimate {
   etrRisk: boolean;
 }
 
-export function estimateRun(obs: Observation, server: ServerInfo, unrezzedCost = 3, budget = Number(obs.view.runner?.credit ?? 0), extra: BreakerProfile[] = []): RunEstimate {
+export function estimateRun(obs: Observation, server: ServerInfo, unrezzedCost = 3, budget = Number(obs.view.runner?.credit ?? 0), extra: BreakerProfile[] = [], unrezzedBlock = 0): RunEstimate {
   let credits = 0;
   let exact = true;
   let blocked = false;
@@ -175,7 +176,8 @@ export function estimateRun(obs: Observation, server: ServerInfo, unrezzedCost =
     if (!option.cost.exact) exact = false;
   }
   for (const c of server.content) if (c.rezzed && c.title === "Manegarm Skunkworks" && Number(obs.clicks ?? 0) < 3) credits += 5;
-  if (unrezzed && coverage(obs).size < 3) etrRisk = true;
+  if (unrezzed && (coverage(obs).size < 3 || unrezzedBlock > 0.3)) etrRisk = true;
+  if (unrezzed && unrezzedBlock >= 0.8) blocked = true;
   return { server, credits, exact, blocked, unrezzed, damage, tags, etrRisk };
 }
 
@@ -232,6 +234,12 @@ export function serverSafety(obs: Observation, server: ServerInfo): Safety {
     const covered = types.length > 0 && types.some((t) => cov.has(t));
     if (!covered) {
       const grip = Number(obs.view.runner?.["hand-count"] ?? obs.view.runner?.hand?.length ?? 5);
+      const hidden = hiddenBreaker(obs, asRezzed);
+      if (hidden && hidden.odds >= 0.25) {
+        runnerCost += hidden.cost + 2;
+        exact = false;
+        continue;
+      }
       if (threat.etr || (threat.damage > 0 && threat.damage >= grip)) blocked = true;
       runnerCost += threat.damage * 2 + threat.creditLoss;
       continue;
@@ -248,7 +256,8 @@ export function serverSafety(obs: Observation, server: ServerInfo): Safety {
     if (activations >= 2) blocked = true;
     else if (activations === 1) runnerCost += 6;
   }
-  const expected = runnerCredits + 4;
+  const income = [...(obs.view.runner?.rig?.resource ?? []), ...(obs.view.runner?.rig?.hardware ?? [])].filter((c: any) => /(gain|take|place) \d+\s*\[credits?\]/i.test(plain(obs.info(c).text ?? ""))).length;
+  const expected = runnerCredits + 4 + Math.min(4, income * 1.5);
   const safe = server.ices.length > 0 && (blocked || runnerCost > expected + 2);
   return { blocked, runnerCost, rezCost, exact, safe, margin: blocked ? Infinity : runnerCost - expected };
 }

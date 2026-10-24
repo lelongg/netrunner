@@ -475,6 +475,51 @@ Corp: its list wins through tags (Ping and Funhouse on the remote, Predictive Pl
 Public Trail while tagged, Orbital Superiority as a kill) and the archetype does not yet
 chain those.
 
+### Mistake counts on the SG Only decks
+
+Design split, 10 games per cell, the counts the evaluation detects from the full game state.
+Reading them before any replay found three rules worth fixing in one afternoon: the Offworld
+Office install that bypassed the one-ice test, the Runner refusing any contest with a
+five-card access risk and clicking credits instead, and a covered duplicate breaker in hand
+silencing the "rich with no rig" draw.
+
+| Side and deck | Before | After |
+|---|---|---|
+| Runner rich credit clicks, Party Hard, 40 games vs the Corp policies | 56 | 26 |
+| Runner rich credit clicks, Stolen Goods, 40 games vs the Corp policies | 61 | 40 |
+| Runner rich credit clicks, Planning Ahead, 40 games vs the Corp policies | 17 | 8 |
+| Runner rich credit clicks, Stolen Goods, 40 games vs the reference Corps | 71 | 13 |
+| Corp agendas stolen from a remote, per Corp deck, 30 games vs the Runner policies | 21 to 27 | 13 to 27 |
+
+The remote steal stays the dominant Corp fault at close to one per game on every list but
+Quick and Dirty, which is why Weyland leads the Corp side. The reference Corps, for
+comparison, carry 13 to 15 unrezzable installs and 36 rich credit clicks per 30 games that
+the current Corps no longer make. Win rates after these changes: Runner policies 69 of 120
+against the reference Corps, Corp policies 64 to 68 of 120 against the reference Runners,
+policy against policy Corp 68 of 120.
+
+### Run value and hidden breakers
+
+`policy/value.ts` replaces three constants with estimates drawn from the opponent's deck
+list (assumed from their identity, and dropped as soon as a seen card contradicts it):
+
+- a central run is worth the remaining agenda density times the accesses (Docklands Pass)
+  times the average points left, plus the passive credits the run yields (Zahya,
+  Pennyshaver, Leech), so R&D and HQ are no longer a flat 3 and 2;
+- an unrezzed ice costs what the rig would pay against the ice still unseen in that deck,
+  and carries the odds that it ends the run against a rig that cannot break it, instead of
+  a flat 0, 1 or 3 credits;
+- on the Corp side, an ice the Runner's rig cannot break counts as breakable at install plus
+  break cost when the Runner's deck holds such a breaker and the odds that it sits in their
+  grip reach a quarter.
+
+Design split, 10 games per cell: Runner policies 69 of 120 against the reference Corps
+(unchanged), Corp policies 63 of 120 against the reference Runners (unchanged), policy
+against policy Corp 65 of 120 (was 68). The win rates hold while the Runner's rich credit
+clicks fall again: Party Hard 42 to 9 and Planning Ahead 21 to 6 over 40 games against the
+reference Corps, Stolen Goods 40 to 18 and Planning Ahead 8 to 3 against the Corp policies.
+The remote steal stays the Corp's dominant fault and is the next loop.
+
 Every Corp deck beats the heuristic Runner and every Runner deck beats the heuristic Corp
 by more than the interval, which is what the shared archetypes bought; the Haas-Bioroid
 line is the lowest because the heuristic Zahya trashes its unprotected campaigns. Against

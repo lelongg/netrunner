@@ -113,7 +113,8 @@ export function fromWire(w: WireDeck, db: CardDb): Deck {
 export const engineDeck = (d: Deck) => ({ identity: d.identity, cards: d.cards.map(({ qty, card }) => ({ qty, card })) });
 
 const STORE = "nsg.decks";
-const CORE_SEEDED = "nsg.decks.core-seeded-sg-only";
+const CATALOGUE_UNSEEDED = "nsg.decks.catalogue-unseeded";
+const cardKey = (cards: [string, number][]) => [...cards].sort(([a], [b]) => a.localeCompare(b)).map(([t, q]) => `${t}:${q}`).join("|");
 const EARLIER_REMOVED = "nsg.decks.core-earlier-removed";
 const EARLIER_CORE_NAMES = new Set([
   "Core Haas-Bioroid: Precision Design",
@@ -224,14 +225,12 @@ export function seedStarters(db: CardDb, matchups: Matchup[]) {
       for (const d of savedDecks()) if (d.format === "core" && EARLIER_CORE_NAMES.has(d.name)) removeDeck(d.id);
       localStorage.setItem(EARLIER_REMOVED, "1");
     }
-    if (localStorage.getItem(CORE_SEEDED)) return;
-    localStorage.setItem(CORE_SEEDED, "1");
+    if (!localStorage.getItem(CATALOGUE_UNSEEDED)) {
+      const catalogue = new Map(CORE_DECKS.map((d) => [d.name, cardKey(d.cards.map((c) => [c.title, c.qty]))]));
+      for (const d of savedDecks()) if (catalogue.get(d.name) === cardKey(d.cards)) removeDeck(d.id);
+      localStorage.setItem(CATALOGUE_UNSEEDED, "1");
+    }
   } catch {
     return;
-  }
-  for (const d of [...CORE_DECKS].reverse()) {
-    try {
-      putDeck({ ...toWire(fromPrecon(d, db)), side: d.side, format: "core" });
-    } catch {}
   }
 }

@@ -7,6 +7,7 @@ import { agendaProgress, breakerProfile, coverage, estimateRun, iceThreat, isIce
 const ICE_TYPES = new Set(["Barrier", "Code Gate", "Sentry"]);
 import type { DeckList, DeckPolicy, Observation, Plan, Proposal, ServerInfo } from "../types.ts";
 import { CORE_CORP_DECKS } from "./core.ts";
+import { unrezzedPrice } from "../value.ts";
 import { GATEWAY_CORP_BEGINNER, GATEWAY_CORP_INTERMEDIATE, GATEWAY_RUNNER_BEGINNER, GATEWAY_RUNNER_INTERMEDIATE } from "./gateway.ts";
 
 const isEconomyCard = (obs: Observation, c: any) => obs.profile.economy.has(c.title);
@@ -37,12 +38,14 @@ function targets(obs: Observation, extra = 0, includeWorthless = false): Target[
   const mayfly = inHand(obs, "Mayfly");
   const mayflyCost = mayfly ? playCostOf(mayfly) : 0;
   const mayflyProfile = mayfly && Number(obs.me.memory?.available ?? 4) - Number(obs.me.memory?.used ?? 0) >= 1 ? breakerProfile(mayfly, obs.info(mayfly)) : null;
+  const price = unrezzedPrice(obs);
   for (const server of obs.servers) {
     const value = serverValue(obs, server);
     if (value <= 0 && !includeWorthless) continue;
     const corpCredits = Number(obs.opp.credit ?? 0);
-    const unrezzedCost = corpCredits < 1 ? 0 : corpCredits < 3 ? 1 : 3;
-    const est = estimateRun(obs, server, unrezzedCost, obs.credits + extra);
+    const unrezzedCost = corpCredits < 1 ? 0 : price ? Math.max(1, Math.round(price.cost)) : corpCredits < 3 ? 1 : 3;
+    const unrezzedBlock = corpCredits < 1 ? 0 : (price?.blocked ?? 0);
+    const est = estimateRun(obs, server, unrezzedCost, obs.credits + extra, [], unrezzedBlock);
     if (!est.blocked) {
       out.push({ server, value, credits: est.credits, exact: est.exact, damage: est.damage, tags: est.tags });
       continue;
@@ -330,14 +333,15 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
     }
   }
   const missingInDeck = [...guarding].filter((t) => obs.profile.breakers[t as "Barrier"].some((title) => !obs.hand.some((c) => c.title === title) && !inRig(obs, title)));
-  if (missingInDeck.length && obs.credits >= 6 && obs.hand.length <= 4 && drawsThisTurn < 2 && (obs.me["deck-count"] ?? 0) > 0 && !obs.hand.some((c) => isIcebreaker(c) && (obs.profile.breakers[missingInDeck[0] as "Barrier"] ?? []).includes(c.title))) {
+  if (missingInDeck.length && obs.credits >= 6 && (obs.hand.length <= 4 || obs.credits >= 10) && drawsThisTurn < 2 && (obs.me["deck-count"] ?? 0) > 0 && !obs.hand.some((c) => isIcebreaker(c) && (obs.profile.breakers[missingInDeck[0] as "Barrier"] ?? []).includes(c.title))) {
     const draw = byCommand(obs, "draw")[0];
     if (draw) push(proposal(draw, 50, `draw: nothing in the rig breaks the ${missingInDeck.join("/")} ice that guards what matters`, "draw"));
   }
-  const richNoRig = cov.size < 2 && obs.credits >= 12 && !obs.hand.some((c) => isIcebreaker(c) && c.title !== "Mayfly" && playCostOf(c) <= obs.credits);
-  if ((obs.credits >= 20 || richNoRig) && drawsThisTurn < 3 && obs.hand.length <= 5 && (obs.me["deck-count"] ?? 0) > 0) {
+  const coversNewType = (c: any) => isIcebreaker(c) && c.title !== "Mayfly" && playCostOf(c) <= obs.credits && (breakerProfile(c, obs.info(c))?.breaks === "AI" || ((breakerProfile(c, obs.info(c))?.breaks as string[] | undefined) ?? []).some((t) => !cov.has(t as any)));
+  const richNoRig = cov.size < 2 && obs.credits >= 12 && !obs.hand.some(coversNewType);
+  if ((obs.credits >= 12 || richNoRig) && drawsThisTurn < 3 && obs.hand.length <= 5 && (obs.me["deck-count"] ?? 0) > 0) {
     const draw = byCommand(obs, "draw")[0];
-    if (draw) push(proposal(draw, richNoRig ? 60 : 44, richNoRig ? "draw: rich with no rig, the breakers are the bottleneck" : "draw: credits are not the problem", "draw"));
+    if (draw) push(proposal(draw, richNoRig ? 60 : obs.credits >= 20 ? 44 : 36, richNoRig ? "draw: rich with no rig, the breakers are the bottleneck" : "draw: credits are not the problem", "draw"));
   }
   if (obs.credits <= 3 && obs.hand.length <= 3 && drawsThisTurn < 2 && !obs.hand.some((c) => isEconomyCard(obs, c) && playCostOf(c) <= obs.credits) && (obs.me["deck-count"] ?? 0) > 0) {
     const draw = byCommand(obs, "draw")[0];

@@ -34,12 +34,22 @@ export function problemIn(format: GameFormat, db: CardDb, w: WireDeck): string |
 }
 
 function preconChoices(side: Side, db: CardDb, matchups: Matchup[], format: GameFormat): WireDeck[] {
-  return matchups.flatMap((m) => {
+  const starters = matchups.flatMap((m) => {
     const p = m[side];
     const name = matchups.filter((o) => o[side].name === p.name).length > 1 ? `${p.name} · ${m.title}` : p.name;
     const wire = toWire({ ...fromPrecon(p, db), name });
     return format === "preconstructed" || !problemIn(format, db, wire) ? [wire] : [];
   });
+  if (format === "preconstructed") return starters;
+  const catalogue = CORE_DECKS.filter((d) => d.side === side).flatMap((d) => {
+    try {
+      const wire = toWire(fromPrecon(d, db));
+      return problemIn(format, db, wire) ? [] : [wire];
+    } catch {
+      return [];
+    }
+  });
+  return [...catalogue, ...starters];
 }
 
 export function defaultDeck(side: Side, db: CardDb, matchups: Matchup[], format: GameFormat): WireDeck | undefined {
