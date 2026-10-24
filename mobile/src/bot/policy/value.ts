@@ -12,8 +12,16 @@ export interface AgendaOutlook {
 
 const cardsOf = (obs: Observation, deck: { cards: { qty: number; title: string }[] }) => deck.cards.map((c) => ({ ...c, info: obs.info({ title: c.title }) as any }));
 
-export function agendaOutlook(obs: Observation): AgendaOutlook | null {
+function assumedDeck(obs: Observation) {
   const deck = knownDeck(obs.opp.identity?.title);
+  if (!deck) return undefined;
+  const titles = new Set(deck.cards.map((c) => c.title));
+  for (const t of obs.memory.opponentTitles) if (t !== deck.identity && !titles.has(t)) return undefined;
+  return deck;
+}
+
+export function agendaOutlook(obs: Observation): AgendaOutlook | null {
+  const deck = assumedDeck(obs);
   if (!deck || obs.side !== "runner") return null;
   const agendas = cardsOf(obs, deck).filter((c) => c.info.type === "Agenda");
   let left = agendas.reduce((n, c) => n + c.qty, 0);
@@ -69,7 +77,7 @@ export interface UnrezzedPrice {
 }
 
 export function unrezzedPrice(obs: Observation): UnrezzedPrice | null {
-  const deck = knownDeck(obs.opp.identity?.title);
+  const deck = assumedDeck(obs);
   if (!deck || obs.side !== "runner") return null;
   const onBoard = new Map<string, number>();
   for (const s of obs.servers) for (const i of s.ices) if (i.title) onBoard.set(i.title, (onBoard.get(i.title) ?? 0) + 1);
@@ -106,7 +114,7 @@ export interface HiddenBreaker {
 
 export function hiddenBreaker(obs: Observation, ice: any): HiddenBreaker | null {
   if (obs.side !== "corp") return null;
-  const deck = knownDeck(obs.opp.identity?.title);
+  const deck = assumedDeck(obs);
   if (!deck) return null;
   const cov = coverage(obs);
   const grip = Number(obs.opp["hand-count"] ?? 0);
