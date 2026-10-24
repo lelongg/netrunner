@@ -136,6 +136,8 @@ function runnerTarget(me: Side): Point {
 }
 
 function iceByTitle(view: any, title: string, before?: Snap): any {
+  const previous = before?.ice != null ? findIn(view, before.ice) : undefined;
+  if (previous?.title && title.includes(previous.title)) return previous;
   const current = currentIce(view) ?? (before?.ice != null ? findIn(view, before.ice) : undefined);
   if (current?.title && title.includes(current.title)) return current;
   const runServer = view.run?.server?.[0] ?? before?.server;

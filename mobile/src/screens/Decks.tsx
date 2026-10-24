@@ -225,7 +225,7 @@ function FitText({ text, class: className }: { text: string; class: string }) {
   );
 }
 
-export function DeckRow({ db, stored, onOpen, format, selected, disabled, issuesOnly, star, extra }: { db: CardDb; stored: WireDeck & { format?: string }; onOpen: () => void; format?: FormatKey; selected?: boolean; disabled?: boolean; issuesOnly?: boolean; star?: { on: boolean; onToggle: () => void }; extra?: ComponentChildren }) {
+export function DeckRow({ db, stored, onOpen, format, selected, disabled, issuesOnly, star, extra, note }: { db: CardDb; stored: WireDeck & { format?: string }; onOpen: () => void; format?: FormatKey; selected?: boolean; disabled?: boolean; issuesOnly?: boolean; star?: { on: boolean; onToggle: () => void }; extra?: ComponentChildren; note?: ComponentChildren }) {
   const deck = useMemo(() => {
     try {
       return fromWire(stored, db);
@@ -272,6 +272,7 @@ export function DeckRow({ db, stored, onOpen, format, selected, disabled, issues
               </span>
             )}
           </span>
+          {note}
         </span>
         {extra}
         {!extra && !(issuesOnly && a.legal) &&

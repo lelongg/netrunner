@@ -794,12 +794,13 @@ export async function flyswatter(rect: DOMRect, code: string, ready?: Ready, boa
   await done();
 }
 
-export const warm = () => stage();
+export const warm = () => stage().then(precompile);
 export * from "./more";
 export * from "./third";
 export * from "./fourth";
 export * from "./fifth";
 import { glowSprite, strikeFx } from "./more";
+import { precompile } from "./warmup";
 export * from "./sixth";
 export * from "./seventh";
 export * from "./eighth";

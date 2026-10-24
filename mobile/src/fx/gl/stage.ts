@@ -1,15 +1,37 @@
 import "pixi.js/unsafe-eval";
-import { Application, Assets, Container, Filter, GlProgram, Graphics, Sprite, Texture, type Ticker, defaultFilterVert } from "pixi.js";
+import { Application, Assets, Container, Filter, GlProgram, Graphics, Sprite, Texture, type Ticker, UPDATE_PRIORITY, defaultFilterVert } from "pixi.js";
 import { AdvancedBloomFilter } from "pixi-filters";
 import { layer as fxLayer } from "../core";
 
 let app: Application | null = null;
 let booting: Promise<Application> | null = null;
 
+const manual = () => !!(window as any).__fxManual;
+let quiet = 0;
+
+export function wake(a: Application) {
+  quiet = 0;
+  if (manual()) return;
+  a.canvas.style.visibility = "";
+  if (!a.ticker.started) a.ticker.start();
+}
+
+function idle(a: Application) {
+  if (manual()) return;
+  if (a.stage.children.length) {
+    quiet = 0;
+    return;
+  }
+  if (++quiet < 2) return;
+  a.ticker.stop();
+  a.canvas.style.visibility = "hidden";
+}
+
 export async function stage(): Promise<Application> {
   if (app) {
     const host = fxLayer();
     if (app.canvas.parentElement !== host) host.prepend(app.canvas);
+    wake(app);
     return app;
   }
   booting ??= (async () => {
@@ -17,11 +39,13 @@ export async function stage(): Promise<Application> {
     await a.init({ backgroundAlpha: 0, antialias: true, resolution: Math.min(devicePixelRatio || 1, 2), autoDensity: true, resizeTo: window, preference: "webgl" });
     a.canvas.className = "fx-gl";
     fxLayer().prepend(a.canvas);
-    if ((window as any).__fxManual) {
+    if (manual()) {
       a.ticker.stop();
       (window as any).__fxFrame = () => a.ticker.update(a.ticker.lastTime + 1000 / 30);
     }
+    a.ticker.add(() => idle(a), undefined, UPDATE_PRIORITY.UTILITY);
     app = a;
+    wake(a);
     return a;
   })();
   return booting;
@@ -136,6 +160,7 @@ export function run(a: Application, tick: Tick, pace = 1) {
       }
     };
     a.ticker.add(fn);
+    wake(a);
   });
 }
 

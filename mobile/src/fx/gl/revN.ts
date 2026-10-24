@@ -25,7 +25,7 @@ const thump = (t: number, at: number, size: number, width = 0.22) => {
   return k > 0 && k < 1 ? size * Math.sin(Math.PI * k) * (1 - k) * 2.2 : 0;
 };
 
-const PAINT = `
+export const PAINT = `
 precision highp float;
 in vec2 vTextureCoord;
 out vec4 finalColor;
