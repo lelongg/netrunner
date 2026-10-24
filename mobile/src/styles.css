@@ -5115,6 +5115,43 @@ button.armed {
   font-size: 10px;
 }
 
+.deck-row-bot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.deck-row-bot::before {
+  content: "";
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+}
+
+.deck-row-bot.rank-0 {
+  color: var(--cyan);
+}
+
+.deck-row-bot.rank-0::before {
+  background: currentColor;
+}
+
+.deck-row-bot.rank-1 {
+  color: var(--yellow);
+}
+
+.deck-row-bot.rank-1::before {
+  background: linear-gradient(90deg, currentColor 50%, transparent 50%);
+}
+
 .deck-badge.ok.wide {
   text-transform: none;
   letter-spacing: 0.04em;

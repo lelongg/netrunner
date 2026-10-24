@@ -53,10 +53,10 @@ export function defaultDeck(side: Side, db: CardDb, matchups: Matchup[], format:
 
 export function botPlay(side: Side, w: WireDeck): { rank: number; text: string } {
   const match = findPolicy(side, { identity: w.identity, cards: w.cards });
-  if (!match) return { rank: 2, text: "Bot: generic play, it was not trained on this deck" };
-  if (match.exact) return { rank: 0, text: "Bot: trained on this deck" };
+  if (!match) return { rank: 2, text: "Bot plays it generically" };
+  if (match.exact) return { rank: 0, text: "Bot trained on this deck" };
   const near = match.policy.decks.map((d) => CORE_DECKS.find((c) => c.identity === d.identity && c.cards.length === d.cards.length)?.name ?? d.identity).find(Boolean);
-  return { rank: 1, text: `Bot: plays it like ${near ?? "its faction deck"}, not trained on this list` };
+  return { rank: 1, text: `Bot plays it like ${near ?? "its faction deck"}` };
 }
 
 export function DeckPicker({ side, db, matchups, value, onChange, onEditDecks, showCurrent = true, format = "casual", bot = false }: Props) {
@@ -97,7 +97,7 @@ export function DeckPicker({ side, db, matchups, value, onChange, onEditDecks, s
           <span class="label">Your decks</span>
           <ul class="deck-library">
             {mine.map(({ deck: d, problem, play }) => (
-              <DeckRow key={d.id} db={db} stored={d} format={rules ?? "casual"} selected={value?.ref ? value.ref === d.id : value?.name === d.name} disabled={!!problem} issuesOnly extra={play && !problem ? <span class={`deck-badge ${play.rank === 0 ? "ok wide" : "warn"}`}>{play.text}</span> : undefined} onOpen={() => onChange({ name: d.name, identity: d.identity, cards: d.cards, ref: d.id })} />
+              <DeckRow key={d.id} db={db} stored={d} format={rules ?? "casual"} selected={value?.ref ? value.ref === d.id : value?.name === d.name} disabled={!!problem} issuesOnly note={play && !problem ? <span class={`deck-row-bot rank-${play.rank}`}>{play.text}</span> : undefined} onOpen={() => onChange({ name: d.name, identity: d.identity, cards: d.cards, ref: d.id })} />
             ))}
           </ul>
         </>
