@@ -458,7 +458,11 @@ let accessing: { title: string; unseen: boolean; stop: () => void; resolve: (ver
 let stageFreeAt = 0;
 let accessLog: { seq: number; lines: string[]; run: boolean }[] = [];
 let accessSeq = 0;
-const lastBreaks = new Map<string, number>();
+let breakGroup: Set<string> | null = null;
+
+export function groupBreaks(on: boolean) {
+  breakGroup = on ? new Set() : null;
+}
 
 function movesCard(text: string, title: string) {
   return new RegExp(`\\b(?:steals?|trash(?:es)?|adds?) ${title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(text);
@@ -488,13 +492,12 @@ function readLog(view: any, from: number, render: (m: unknown) => string, before
     } else if (/purges? virus counters/i.test(text)) out.push({ kind: "purge" });
     else if ((m = text.match(/\b(?:accesses|to access) (.+?) from (.+?)\.?$/i))) out.push({ kind: "access", text: m[1], zone: m[2] });
   }
-  const now = performance.now();
   const hits = out.filter((h) => {
-    if (h.kind !== "break" || !h.breaker || !h.ice) return true;
+    if (h.kind !== "break" || !h.breaker || !h.ice || !breakGroup) return true;
     const key = `${h.breaker.cid}:${h.ice.cid}`;
-    const fresh = now - (lastBreaks.get(key) ?? -Infinity) > 6000;
-    lastBreaks.set(key, now);
-    return fresh;
+    if (breakGroup.has(key)) return false;
+    breakGroup.add(key);
+    return true;
   });
   const texts = log.slice(from).map((e) => render(e.text));
   accessLog = [...accessLog.slice(-20), { seq: ++accessSeq, lines: texts, run: !!view.run }];
