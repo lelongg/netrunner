@@ -145,106 +145,77 @@ export async function hedgeFund(rect: DOMRect, code: string, ready?: Ready, boar
 }
 
 export async function betaBuild(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, card, done, at } = await scene(rect, code, ready, board);
-  const parts: { poly: [number, number][]; c: [number, number]; at: number; amp: number }[] = [
-    {
-      poly: [
-        [0.12, 0.215],
-        [0.18, 0.168],
-        [0.262, 0.178],
-        [0.272, 0.242],
-        [0.21, 0.282],
-        [0.128, 0.27],
-      ],
-      c: [0.195, 0.225],
-      at: 0.08,
-      amp: 0.26,
-    },
-    {
-      poly: [
-        [0.822, 0.322],
-        [0.87, 0.298],
-        [0.938, 0.302],
-        [0.938, 0.388],
-        [0.885, 0.392],
-        [0.832, 0.362],
-      ],
-      c: [0.88, 0.345],
-      at: 0.26,
-      amp: 0.26,
-    },
-    {
-      poly: [
-        [0.81, 0.235],
-        [0.832, 0.222],
-        [0.925, 0.268],
-        [0.918, 0.302],
-        [0.81, 0.255],
-      ],
-      c: [0.865, 0.262],
-      at: 0.4,
-      amp: 0.2,
-    },
-    {
-      poly: [
-        [0.24, 0.37],
-        [0.58, 0.298],
-        [0.635, 0.338],
-        [0.335, 0.472],
-        [0.25, 0.452],
-      ],
-      c: [0.44, 0.38],
-      at: 0.54,
-      amp: 0.08,
-    },
-    {
-      poly: [
-        [0.36, 0.158],
-        [0.44, 0.128],
-        [0.505, 0.158],
-        [0.512, 0.232],
-        [0.47, 0.258],
-        [0.37, 0.242],
-      ],
-      c: [0.44, 0.2],
-      at: 0.72,
-      amp: 0.14,
-    },
-  ];
-  const built = parts.map((p) => {
-    const poly = p.poly.map(([u, v]) => at(u, v));
-    const c = at(...p.c);
-    const box = piece(root, card, poly);
-    const cm = new ColorMatrixFilter();
-    box.filters = [cm];
-    pivot(box, c);
-    return { ...p, box, cm };
-  });
-  for (const b of [...built].reverse()) {
-    root.setChildIndex(b.box, root.getChildIndex(card) + 1);
-  }
-  const helmet = built[4].poly.map(([u, v]) => at(u, v));
-  const visor = glowPiece(root, card, helmet, [-0.6, 1, -0.5], 0.08, 3, 0x8dffa8);
-  root.addChild(visor);
+  const { app, root, card, done, unit, at } = await scene(rect, code, ready, board);
+  const rail = [at(0.29, 0.372), at(0.61, 0.282)];
+  const muzzle = at(0.628, 0.278);
+  const dir = Math.atan2(rail[1][1] - rail[0][1], rail[1][0] - rail[0][0]);
+  const ux = Math.cos(dir);
+  const uy = Math.sin(dir);
+  const rifle = glowPiece(root, card, [at(0.2, 0.43), at(0.6, 0.262), at(0.648, 0.284), at(0.6, 0.33), at(0.5, 0.405), at(0.3, 0.475), at(0.2, 0.475)], [-0.5, 1, -0.3], 0.18, 2.6, 0x7dffa0);
+  rifle.alpha = 0;
+  const visor = glowPiece(root, card, [at(0.36, 0.158), at(0.44, 0.128), at(0.505, 0.158), at(0.512, 0.232), at(0.47, 0.258), at(0.37, 0.242)], [-0.6, 1, -0.5], 0.08, 3, 0x8dffa8);
   visor.alpha = 0;
-  pivot(visor, at(...built[4].c));
+  const split = new RGBSplitFilter({ red: { x: 0, y: 0 }, green: { x: 0, y: 0 }, blue: { x: 0, y: 0 } });
+  const g = new Graphics();
+  layer(root, false).addChild(g);
+  const shots = [0.32, 0.5, 0.68];
+  const power = [1, 0.75, 0.55];
+  const reach = unit * 2.4;
+  let buzzed = 0;
   await run(app, (t) => {
-    let shake = 0;
-    for (const b of built) {
-      const k = span(t, b.at, b.at + 0.3);
-      const snap = k > 0 && k < 1 ? 1 - ease.back(k) : 0;
-      b.box.scale.set(1 + b.amp * 1.4 * snap);
-      b.cm.brightness(1 + 0.12 * Math.max(0, snap) + (k > 0 && k < 1 ? 0.06 * (1 - k) : 0), false);
-      const after = t - (b.at + 0.13);
-      if (after > 0) shake += 0.006 * Math.sin(after * 80) * Math.exp(-after * 14);
-    }
-    root.rotation = shake;
-    const v = span(t, 0.85, 1.05);
-    visor.alpha = 0.85 * v * (0.85 + 0.15 * Math.sin(t * 18)) * (1 - span(t, 1.35, 1.6));
-    visor.scale.set(built[4].box.scale.x);
-    return t < 1.6;
+    const charge = span(t, 0, 0.3);
+    let kick = 0;
+    let jolt = 0;
+    shots.forEach((s, i) => {
+      const a = t - s;
+      if (a > 0) {
+        kick += power[i] * Math.exp(-a * 16) * Math.sin(Math.min(1, a * 14) * Math.PI * 0.5);
+        jolt = Math.max(jolt, power[i] * Math.exp(-a * 30));
+      }
+    });
+    const pull = 0.25 * Math.sin(Math.PI * charge) * (t < shots[0] ? 1 : 0);
+    const back = unit * 0.045 * (kick + pull);
+    root.position.x -= ux * back;
+    root.position.y -= uy * back;
+    root.rotation = -0.02 * kick;
+    root.scale.set(root.scale.x * (1 + 0.025 * jolt));
+    root.filters = jolt > 0.15 ? [split] : [];
+    split.red = { x: unit * 0.012 * jolt, y: 0 };
+    split.blue = { x: -unit * 0.012 * jolt, y: unit * 0.004 * jolt };
+    rifle.alpha = 0.55 * charge * (1 - span(t, 0.95, 1.3)) + 0.35 * jolt;
+    visor.alpha = 0.8 * span(t, 0.75, 0.95) * (1 - span(t, 1.15, 1.45));
+    g.clear();
+    shots.forEach((s, i) => {
+      const a = t - s;
+      if (a < 0 || a > 0.3) return;
+      const k = a / 0.3;
+      const head = reach * ease.out(Math.min(1, a / 0.12));
+      const tail = reach * ease.out(Math.max(0, (a - 0.04) / 0.16));
+      const pts: Pt[] = Array.from({ length: 8 }, (_, n) => {
+        const d = tail + ((head - tail) * n) / 7;
+        return [muzzle[0] + ux * d, muzzle[1] + uy * d];
+      });
+      ribbon(g, pts, unit * 0.022 * power[i], 0x3dff7a, 0.45 * (1 - k));
+      ribbon(g, pts, unit * 0.007 * power[i], 0xd8ffe2, 0.9 * (1 - k));
+      const r = unit * (0.03 + 0.09 * ease.out(Math.min(1, a / 0.2)));
+      g.ellipse(muzzle[0], muzzle[1], r, r * 0.55).stroke({ width: 1.5, color: 0x7dffa0, alpha: 0.85 * (1 - Math.min(1, a / 0.2)) });
+      if (a < 0.06) {
+        const f = 1 - a / 0.06;
+        for (const side of [-1, 1]) {
+          const px = -uy * side;
+          const py = ux * side;
+          g.poly([muzzle[0], muzzle[1], muzzle[0] + (ux * 0.9 + px * 0.5) * unit * 0.08 * f, muzzle[1] + (uy * 0.9 + py * 0.5) * unit * 0.08 * f, muzzle[0] + ux * unit * 0.14 * f, muzzle[1] + uy * unit * 0.14 * f]).fill({ color: 0x9dffb8, alpha: 0.8 * f });
+        }
+      }
+      if (buzzed <= i) {
+        buzzed = i + 1;
+        navigator.vibrate?.(15);
+      }
+    });
+    return t < 1.45;
   });
   root.rotation = 0;
+  root.filters = [];
   await done();
 }
 
