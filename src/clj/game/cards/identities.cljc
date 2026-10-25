@@ -2896,9 +2896,11 @@
              {:req (req (#{:hq :rd} (target-server context))
                           (pos? (total-cards-accessed context)))
               :prompt "Gain 1 [Credits] for each card you accessed?"
+              :autoresolve (get-autoresolve :auto-fire)
               :once :per-turn
               :yes-ability
               {:msg (msg "gain " (total-cards-accessed context) " [Credits]")
                :once :per-turn
                :async true
-               :effect (effect (gain-credits state :runner eid (total-cards-accessed context)))}}}]})
+               :effect (effect (gain-credits state :runner eid (total-cards-accessed context)))}}}]
+   :abilities [(set-autoresolve :auto-fire "Zahya Sadeghi: Versatile Smuggler")]})
