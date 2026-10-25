@@ -75,7 +75,7 @@ export function Breakers({ view, stamp, probe, side, ice, send, onTap, disabled,
     return { card, full, ab, manual };
   });
   const price = (r: (typeof all)[number]) => Number(String(r.ab?.["cost-label"] ?? "").match(/\d+/)?.[0] ?? 0);
-  const rows = all.filter((r) => r.full).sort((a, b) => price(a) - price(b));
+  const rows = all.filter((r) => r.full || (partial && wanted && planOf(r.card)?.ok)).sort((a, b) => price(a) - price(b));
   const usable = all.flatMap((r) => r.manual.map((cmd) => ({ card: r.card, cmd, off: cannotBreak(r.card) })));
   const aimed = others.filter(({ cmd }) => /piece of ice|subroutine/i.test(cmd.label));
   const featured = [...onIce, ...aimed];
@@ -160,7 +160,7 @@ export function Breakers({ view, stamp, probe, side, ice, send, onTap, disabled,
         );
       })}
       {rows.map(({ card, full, ab }) => {
-        const label: string = ab?.label ?? "";
+        const label: string = ab?.label ?? (Number(card["current-strength"] ?? card.strength ?? 0) < Number(ice["current-strength"] ?? ice.strength ?? 0) ? "Match" : "");
         return (
           <div class="brk best">
             <button class="brk-card" onClick={() => onTap(card)} aria-label={card.title}>
@@ -198,8 +198,8 @@ export function Breakers({ view, stamp, probe, side, ice, send, onTap, disabled,
               </span>
               <span class="brk-desc">{partial ? (wanted ? `${label.startsWith("Match") ? "Match strength, break" : "Break"} ${wanted} of ${unbroken.length}` : "Nothing selected") : label.startsWith("Match") ? "Match strength, break all" : "Break all"}</span>
             </div>
-            {full && !(partial && !wanted) && (
-              <button class="brk-go" disabled={disabled || (partial ? !planOf(card)?.ok : full.enabled === false)} onClick={() => (partial ? onPartial?.(card, wantedLabels) : send(full.command, full.args))}>
+            {(partial ? !!wanted : !!full) && (
+              <button class="brk-go" disabled={disabled || (partial ? !planOf(card)?.ok : full!.enabled === false)} onClick={() => (partial ? onPartial?.(card, wantedLabels) : send(full!.command, full!.args))}>
                 <span class="brk-cost">
                   {partial
                     ? (() => {
