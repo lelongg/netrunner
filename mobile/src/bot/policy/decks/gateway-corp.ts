@@ -83,6 +83,12 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
     push(proposal(playOf(obs, card, server.label), isTrap(obs.info(card).text) ? 60 : 57, `bait ${card.title} in ${server.label}: the Runner pays about ${safety.runnerCost} to see it`, "install-bait"));
   }
   const deckLeft = Number(obs.me["deck-count"] ?? 0);
+  const openCentral = obs.servers.find((s) => !s.remote && s.key !== "archives" && !s.ices.length);
+  const drawsSoFar = ((obs.memory.notes.kinds as string[] | undefined) ?? []).filter((k) => k === "draw").length;
+  if (openCentral && !obs.hand.some((c) => c.type === "ICE") && deckLeft > 0 && drawsSoFar < 3) {
+    const draw = byCommand(obs, "draw")[0];
+    if (draw) push(proposal(draw, obs.hand.some((c) => c.type === "Agenda") ? 66 : 60, `draw: ${openCentral.label} is open and no ice is in hand`, "draw"));
+  }
   if (deckLeft <= 8) {
     for (const p of out) {
       if (p.kind === "draw" || /draw two|draw 2|draw three|draw 3/i.test(p.why)) {
