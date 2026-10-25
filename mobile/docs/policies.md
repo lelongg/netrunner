@@ -175,6 +175,30 @@ outrank the handlers for discards, Seamless Launch and Send a Message and the Co
 55, so the static evaluation is not yet a substitute for those rules. Replacing a handler
 is a per-card experiment on this grid, not a switch.
 
+### The Corp runs the Runner's run on its own remote
+
+The 183 remote steals captured over two Corp grids all went through fully rezzed ice, 108 of
+them through three ice: the Runner had the rig and the credits, and the Corp installed the
+agenda anyway because it was behind ("sitting loses"). Three changes follow from that:
+
+- the Corp side of `runTrial` installs the agenda it is considering, clicks its remaining
+  clicks for credits, ends its turn, and lets the Runner run the remote with a hidden hand
+  while the Corp rezzes as it would; the credits and damage of a reached run replace the
+  estimate in `serverSafety`, and a run that does not reach the server leaves the estimate
+  alone, since the Runner may still install the missing breaker from hand;
+- when the Runner can afford the scoring remote with six credits to spare, an asset from
+  hand goes in first as a bait (traps first) and the agenda install waits;
+- the race override is gone: being behind no longer justifies an install the Runner can
+  steal. An agenda installed this turn that scores next turn from zero is not advanced on
+  its install turn, so it sits as an unadvanced facedown card for one Runner turn.
+
+Design split, 10 games per cell, Corp policies against the reference Runners: 62 of 120
+with the trial alone (a reached trial also overrode the hidden-breaker odds, which produced
+thin installs), 67 with the trial fixed and the bait, 63 without the bait, 68 without the
+race override. Against the policy Runners the race override's removal lifts the Corp from
+61–66 to 70 of 120 and halves the remote steals (11 to 17 per 30 games instead of 12 to 30).
+CORP_FINAL_RESULTS
+
 ## Evaluation
 
 ```sh

@@ -119,7 +119,7 @@ export class PolicyBot {
   }
 
   decide(view: any): Move | null {
-    if (this.trial) for (const [label, key] of this.trialsWanted(view)) this.storeTrial(label, key, this.trial(label));
+    if (this.trial) for (const [label, key, prelude] of this.trialsWanted(view)) this.storeTrial(label, key, this.trial(label, prelude));
     const ctx = this.rank(view);
     if (!ctx) return null;
     if (this.simulate) for (const p of this.toSimulate(ctx)) this.applyReport(p, driveSync(this.simulation(p, ctx.obs), this.simulate));
@@ -127,7 +127,7 @@ export class PolicyBot {
   }
 
   async decideAsync(view: any, tools: AsyncTools): Promise<Move | null> {
-    if (tools.trial) for (const [label, key] of this.trialsWanted(view)) this.storeTrial(label, key, await tools.trial(label));
+    if (tools.trial) for (const [label, key, prelude] of this.trialsWanted(view)) this.storeTrial(label, key, await tools.trial(label, prelude));
     const ctx = this.rank(view);
     if (!ctx) return null;
     if (tools.simulate) for (const p of this.toSimulate(ctx)) this.applyReport(p, await driveAsync(this.simulation(p, ctx.obs), tools.simulate));
@@ -148,13 +148,14 @@ export class PolicyBot {
     return (side === "corp" ? corpRun(obs) : runnerRun(obs))?.move ?? null;
   }
 
-  private trialsWanted(view: any): [string, string][] {
-    if (this.side !== "runner" || !view || view.winner || view.run || view["active-player"] !== "runner" || !(Number(view.runner?.click ?? 0) > 0)) return [];
+  private trialsWanted(view: any): [string, string, Move[]][] {
+    if (!view || view.winner || view.run || view["active-player"] !== this.side || !(Number(view[this.side]?.click ?? 0) > 0)) return [];
     const prompt = promptOf(view, this.side);
     if (prompt && prompt["prompt-type"] !== "run") return [];
+    if (this.side === "corp") return this.corpTrialsWanted(view);
     const rig = ["program", "hardware", "resource"].flatMap((z) => (view.runner?.rig?.[z] ?? []).map((c: any) => `${c.cid}${c.counter ? JSON.stringify(c.counter) : ""}`)).join(",");
     const base = `${view.turn}:${view.runner?.click}:${view.runner?.credit}:${view.runner?.hand?.length}:${view.runner?.tag?.total ?? 0}:${rig}`;
-    const out: [string, string][] = [];
+    const out: [string, string, Move[]][] = [];
     for (const [key, server] of Object.entries<any>(view.corp?.servers ?? {})) {
       const ices: any[] = server.ices ?? [];
       if (!ices.length || ices.some((i) => !i.rezzed)) continue;
@@ -162,7 +163,32 @@ export class PolicyBot {
       const sig = `${base}|${ices.map((i) => `${i.cid}:${i.strength ?? ""}:${(i.subroutines ?? []).map((s: any) => (s.broken ? "b" : s.fired ? "f" : "-")).join("")}`).join(",")}|${(server.content ?? []).map((c: any) => `${c.cid}:${c.rezzed ? 1 : 0}`).join(",")}`;
       const cached = this.trials.get(label);
       if (cached?.key === sig) continue;
-      out.push([label, sig]);
+      out.push([label, sig, []]);
+    }
+    return out;
+  }
+
+  private corpTrialsWanted(view: any): [string, string, Move[]][] {
+    const corp = view.corp ?? {};
+    const agenda = (corp.hand ?? []).find((c: any) => c.type === "Agenda");
+    const rig = ["program", "hardware", "resource"].flatMap((z) => (view.runner?.rig?.[z] ?? []).map((c: any) => `${c.cid}${c.counter ? JSON.stringify(c.counter) : ""}`)).join(",");
+    const base = `${view.turn}:${corp.credit}:${view.runner?.credit}:${view.runner?.["hand-count"] ?? view.runner?.hand?.length}:${rig}`;
+    const out: [string, string, Move[]][] = [];
+    const candidates = Object.entries<any>(corp.servers ?? {})
+      .filter(([key, server]) => key.startsWith("remote") && (server.ices ?? []).length > 0)
+      .map(([key, server]) => ({ key, server, holdsAgenda: (server.content ?? []).some((c: any) => c.type === "Agenda") }))
+      .filter((x) => x.holdsAgenda || (agenda && (x.server.content ?? []).every((c: any) => c.type === "Upgrade")))
+      .sort((a, b) => Number(b.holdsAgenda) - Number(a.holdsAgenda) || b.server.ices.length - a.server.ices.length)
+      .slice(0, 2);
+    for (const { key, server, holdsAgenda } of candidates) {
+      const ices: any[] = server.ices ?? [];
+      const content: any[] = server.content ?? [];
+      const label = serverName(key);
+      const prelude: Move[] = agenda && !holdsAgenda ? [{ command: "play", args: { card: { cid: agenda.cid, zone: agenda.zone, side: agenda.side, type: agenda.type, title: agenda.title }, server: label } }] : [];
+      const sig = `${base}|${agenda && !holdsAgenda ? agenda.cid : ""}|${ices.map((i) => `${i.cid}:${i.rezzed ? 1 : 0}:${(i.subroutines ?? []).length}`).join(",")}|${content.map((c) => `${c.cid}:${c.rezzed ? 1 : 0}`).join(",")}`;
+      const cached = this.trials.get(label);
+      if (cached?.key === sig) continue;
+      out.push([label, sig, prelude]);
     }
     return out;
   }

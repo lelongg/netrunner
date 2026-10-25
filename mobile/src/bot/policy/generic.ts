@@ -84,7 +84,11 @@ export function corpProposals(obs: Observation): Proposal[] {
       targets.push({ server: s, score: upgradesOnly && agendas.length ? 56 : 45, why: upgradesOnly ? `${s.label} is the scoring remote: deepen it` : `${s.label} holds something worth protecting` });
     }
     if (obs.credits >= 6) {
-      for (const s of [rd, hq].sort((a, b) => a.ices.length - b.ices.length)) if (s.ices.length < 3) targets.push({ server: s, score: 40 - s.ices.length * 3, why: `deepen ${s.label}` });
+      for (const s of [rd, hq].sort((a, b) => a.ices.length - b.ices.length)) {
+        if (s.ices.length >= 3) continue;
+        const runs = Number(recentRuns(s.label) ?? 0);
+        targets.push({ server: s, score: 40 - s.ices.length * 3 + (runs >= 2 ? 18 : runs ? 9 : 0), why: runs ? `deepen ${s.label}: the Runner ran it ${runs} times lately` : `deepen ${s.label}` });
+      }
     }
     const endsRun = (c: any) => iceThreat({ ...c, subroutines: [] }, obs.info(c), 99).etr;
     const forRemote = [...ice].sort((a, b) => (endsRun(b) ? 6 : 0) + strengthOf(b) - ((endsRun(a) ? 6 : 0) + strengthOf(a)));

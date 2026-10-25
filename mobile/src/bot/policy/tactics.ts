@@ -263,6 +263,12 @@ export function serverSafety(obs: Observation, server: ServerInfo): Safety {
     if (activations >= 2) blocked = true;
     else if (activations === 1) runnerCost += 6;
   }
+  const trial = obs.side === "corp" ? (obs.memory.notes.runTrials as Record<string, RunTrial | null> | undefined)?.[server.label] : undefined;
+  if (trial?.reached) {
+    blocked = false;
+    runnerCost = trial.credits + trial.damage * 2;
+    exact = true;
+  }
   const income = [...(obs.view.runner?.rig?.resource ?? []), ...(obs.view.runner?.rig?.hardware ?? [])].filter((c: any) => /(gain|take|place) \d+\s*\[credits?\]/i.test(plain(obs.info(c).text ?? ""))).length;
   const expected = runnerCredits + 4 + Math.min(4, income * 1.5);
   const safe = server.ices.length > 0 && (blocked || runnerCost > expected + 2);

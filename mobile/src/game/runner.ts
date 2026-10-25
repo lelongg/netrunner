@@ -13,7 +13,7 @@ export interface RunResult {
   views: Partial<Record<Seat, any>>;
 }
 
-export type Probe = { k: "try"; command: string; args: unknown } | { k: "break"; ice: unknown; breaker: unknown; want: string[]; boost?: number } | { k: "funds"; card: unknown } | { k: "moves"; moves: { command: string; args?: unknown }[] } | { k: "run-trial"; server: string; deck: unknown };
+export type Probe = { k: "try"; command: string; args: unknown } | { k: "break"; ice: unknown; breaker: unknown; want: string[]; boost?: number } | { k: "funds"; card: unknown } | { k: "moves"; moves: { command: string; args?: unknown }[] } | { k: "run-trial"; server: string; deck: unknown; prelude?: { command: string; args?: unknown }[] };
 
 export interface ProbeResult {
   ok: boolean;
@@ -109,7 +109,7 @@ export class GameRunner {
 
   private trial(game: GameHandle, side: Side, probe: Probe, snapshot: Snapshot): ProbeResult {
     if (probe.k === "try") return { ok: this.tryOn(game, side, probe.command, probe.args, false) && !this.engine.unchanged(game, snapshot) };
-    if (probe.k === "run-trial") return { ok: true, trial: this.trialStep ? runTrial(this.engine, game, side, probe.server, this.trialStep(side, probe.deck)) : null };
+    if (probe.k === "run-trial") return { ok: true, trial: this.trialStep ? runTrial(this.engine, game, side, probe.server, this.trialStep(side, probe.deck), probe.prelude ?? []) : null };
     if (probe.k === "moves") {
       for (const [i, m] of probe.moves.entries()) {
         if (!this.tryOn(game, side, m.command, m.args ?? null, true)) return { ok: false };
