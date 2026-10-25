@@ -68,6 +68,7 @@ export function serverRank(label: unknown): number | undefined {
 }
 
 export function byServerOrder<T>(items: T[], label: (item: T) => unknown): T[] {
-  if (!items.length || items.some((i) => serverRank(label(i)) === undefined)) return items;
-  return [...items].sort((a, b) => serverRank(label(a))! - serverRank(label(b))!);
+  const servers = items.filter((i) => serverRank(label(i)) !== undefined).sort((a, b) => serverRank(label(a))! - serverRank(label(b))!);
+  let next = 0;
+  return items.map((i) => (serverRank(label(i)) === undefined ? i : servers[next++]));
 }
