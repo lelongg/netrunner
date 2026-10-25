@@ -12,8 +12,7 @@ const runnerGrip = (obs: Observation) => Number(obs.opp["hand-count"] ?? 0);
 const advanceableIce = (obs: Observation) => obs.servers.flatMap((s) => s.ices).filter((i: any) => /you can advance this ice/i.test(obs.info(i).text ?? ""));
 
 function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
-  const out = glacier.proposals(obs, plan, base);
-  const push = (p: Proposal | null) => p && out.push(p);
+  return glacier.proposals(obs, plan, base, (out, push) => {
   const installed = glacier.agendaIn(obs);
   const freshAdvance = (card: any, score: number, why: string) => {
     if (advancement(card) === 0 && obs.credits >= 1) push(proposal(cardAction(obs, card, "advance"), score, why, "advance"));
@@ -41,7 +40,7 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
   for (const p of out) {
     if (p.kind === "advance" && installed && p.why.includes(installed.card.title) && advancement(installed.card) === 0) p.score += 4;
   }
-  return out;
+  });
 }
 
 function prompt(obs: Observation, plan: Plan): Proposal | null {

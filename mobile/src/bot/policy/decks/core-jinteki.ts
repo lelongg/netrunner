@@ -10,8 +10,7 @@ import { glacier } from "./gateway-corp.ts";
 const runnerGrip = (obs: Observation) => Number(obs.opp["hand-count"] ?? 0);
 
 function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
-  const out = glacier.proposals(obs, plan, base);
-  const push = (p: Proposal | null) => p && out.push(p);
+  return glacier.proposals(obs, plan, base, (out, push) => {
   const vd = glacier.inHand(obs, "Anoetic Void");
   const scoring = glacier.scoringRemote(obs) ?? glacier.remotes(obs).find((s) => s.ices.length > 0 && !s.content.length);
   if (vd && scoring && scoring.ices.length > 0 && !scoring.content.some((c: any) => c.title === "Anoetic Void") && obs.hand.length >= 3) push(proposal(playOf(obs, vd, scoring.label), 58, `Anoetic Void in ${scoring.label}: two credits and two cards end any run`, "install-upgrade"));
@@ -27,7 +26,7 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
     if (p.kind === "advance" && obs.hand.some((c) => c.type === "Agenda") && /Urtica/.test(p.why)) p.score = Math.min(p.score, 30);
     if (p.kind === "install-agenda" && obs.memory.notes.scoredPointsThisTurn) p.score -= 5;
   }
-  return out;
+  });
 }
 
 function run(obs: Observation, plan: Plan): Proposal | null {

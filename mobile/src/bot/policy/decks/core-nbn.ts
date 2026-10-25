@@ -16,8 +16,7 @@ const runnerResources = (obs: Observation): any[] => obs.view.runner?.rig?.resou
 const runnerRig = (obs: Observation): any[] => [...(obs.view.runner?.rig?.program ?? []), ...(obs.view.runner?.rig?.hardware ?? [])];
 
 function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
-  const out = glacier.proposals(obs, plan, base);
-  const push = (p: Proposal | null) => p && out.push(p);
+  return glacier.proposals(obs, plan, base, (out, push) => {
   const tags = runnerTags(obs);
   const isTagged = tagged(obs.view) || tags > 0;
   const runnerCredits = Number(obs.opp.credit ?? 0);
@@ -54,7 +53,7 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
     if (p.kind === "install-agenda" && isTagged && obs.hand.some((c) => c.title === "Orbital Superiority" && p.why.includes(c.title))) p.score += 6;
     if (p.kind === "install-ice" && isTagged && /Lamplighter|Doomscroll/.test(p.why)) p.score += 4;
   }
-  return out;
+  });
 }
 
 function prompt(obs: Observation, plan: Plan): Proposal | null {
