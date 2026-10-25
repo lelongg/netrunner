@@ -86,7 +86,7 @@ export function corpProposals(obs: Observation): Proposal[] {
     if (obs.credits >= 6) {
       for (const s of [rd, hq].sort((a, b) => a.ices.length - b.ices.length)) {
         if (s.ices.length >= 3) continue;
-        const runs = Number(recentRuns(s.label) ?? 0);
+        const runs = (globalThis as any).process?.env?.NO_RD_DEEPEN === "1" ? 0 : Number(recentRuns(s.label) ?? 0);
         targets.push({ server: s, score: 40 - s.ices.length * 3 + (runs >= 2 ? 18 : runs ? 9 : 0), why: runs ? `deepen ${s.label}: the Runner ran it ${runs} times lately` : `deepen ${s.label}` });
       }
     }

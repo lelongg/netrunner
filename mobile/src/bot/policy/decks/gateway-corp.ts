@@ -82,6 +82,34 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
     const card = baitCards[0];
     push(proposal(playOf(obs, card, server.label), isTrap(obs.info(card).text) ? 60 : 57, `bait ${card.title} in ${server.label}: the Runner pays about ${safety.runnerCost} to see it`, "install-bait"));
   }
+  const deckLeft = Number(obs.me["deck-count"] ?? 0);
+  if (deckLeft <= 8) {
+    for (const p of out) {
+      if (p.kind === "draw" || /draw two|draw 2|draw three|draw 3/i.test(p.why)) {
+        p.score = Math.min(p.score, 8);
+        p.why += " (R&D is nearly empty)";
+      }
+    }
+  }
+  const spike = inHand(obs, "Neurospike");
+  if (spike && obs.credits >= 3) {
+    const points = Number(obs.memory.notes.scoredPointsThisTurn ?? 0);
+    const grip = Number(obs.opp["hand-count"] ?? 0);
+    const spikes = obs.hand.filter((c) => c.title === "Neurospike").length;
+    const reach = points * Math.min(spikes, obs.clicks, Math.floor(obs.credits / 3));
+    if (points > 0 && grip <= reach) push(proposal(playOf(obs, spike), 120, `Neurospike: ${points} net damage against a grip of ${grip} flatlines the Runner`, "kill"));
+    else if (points >= 2 && grip <= points + 2) push(proposal(playOf(obs, spike), 70, `Neurospike: ${points} net damage leaves the Runner with ${Math.max(0, grip - points)} cards`, "damage"));
+  }
+  if (spike && installed && !Number(obs.memory.notes.scoredPointsThisTurn ?? 0)) {
+    const { have, need } = agendaProgress(installed.card);
+    const spikes = obs.hand.filter((c) => c.title === "Neurospike").length;
+    const left = need - have - (seamless && !installedThisTurn(obs, installed.card) ? 2 : 0);
+    const clicksAfter = obs.clicks - Math.max(0, left) - (seamless && left < need - have ? 1 : 0);
+    const reach = Number(installed.card.agendapoints ?? 0) * Math.min(spikes, Math.max(0, clicksAfter), Math.floor((obs.credits - Math.max(0, left)) / 3));
+    if (clicksAfter >= 1 && reach >= Number(obs.opp["hand-count"] ?? 0)) {
+      for (const p of out) if ((p.kind === "advance" || p.kind === "fast-advance") && p.why.includes(installed.card.title)) p.score = Math.max(p.score, 96);
+    }
+  }
   const iceCount = (obs.memory.notes.iceCount ??= {}) as Record<string, number>;
   const iceChanged = (obs.memory.notes.iceChanged ??= {}) as Record<string, number>;
   for (const s of remotes(obs)) {

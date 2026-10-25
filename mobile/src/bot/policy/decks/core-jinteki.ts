@@ -7,19 +7,11 @@ import type { DeckPolicy, Observation, Plan, Proposal } from "../types.ts";
 import { CORE_JINTEKI } from "./core.ts";
 import { glacier } from "./gateway-corp.ts";
 
-const scoredThisTurn = (obs: Observation) => Number(obs.memory.notes.scoredPointsThisTurn ?? 0) > 0;
 const runnerGrip = (obs: Observation) => Number(obs.opp["hand-count"] ?? 0);
 
 function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
   const out = glacier.proposals(obs, plan, base);
   const push = (p: Proposal | null) => p && out.push(p);
-  const spike = glacier.inHand(obs, "Neurospike");
-  if (spike && obs.credits >= 3) {
-    const points = Number(obs.memory.notes.scoredPointsThisTurn ?? 0);
-    const grip = runnerGrip(obs);
-    if (points > 0 && grip <= points) push(proposal(playOf(obs, spike), 120, `Neurospike: ${points} net damage against a grip of ${grip} flatlines the Runner`, "kill"));
-    else if (points >= 2 && grip <= points + 2) push(proposal(playOf(obs, spike), 70, `Neurospike: ${points} net damage leaves the Runner with ${Math.max(0, grip - points)} cards`, "damage"));
-  }
   const vd = glacier.inHand(obs, "Anoetic Void");
   const scoring = glacier.scoringRemote(obs) ?? glacier.remotes(obs).find((s) => s.ices.length > 0 && !s.content.length);
   if (vd && scoring && scoring.ices.length > 0 && !scoring.content.some((c: any) => c.title === "Anoetic Void") && obs.hand.length >= 3) push(proposal(playOf(obs, vd, scoring.label), 58, `Anoetic Void in ${scoring.label}: two credits and two cards end any run`, "install-upgrade"));
@@ -34,13 +26,6 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
   for (const p of out) {
     if (p.kind === "advance" && obs.hand.some((c) => c.type === "Agenda") && /Urtica/.test(p.why)) p.score = Math.min(p.score, 30);
     if (p.kind === "install-agenda" && obs.memory.notes.scoredPointsThisTurn) p.score -= 5;
-  }
-  const serum = glacier.agendaIn(obs);
-  if (serum && spike && !scoredThisTurn(obs)) {
-    const { have, need } = agendaProgress(serum.card);
-    if (need - have <= obs.clicks - 1 && obs.credits >= need - have + 3 && runnerGrip(obs) <= Number(serum.card.agendapoints ?? 0)) {
-      for (const p of out) if (p.kind === "advance" && p.why.includes(serum.card.title)) p.score = Math.max(p.score, 96);
-    }
   }
   return out;
 }
