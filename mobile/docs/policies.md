@@ -216,7 +216,14 @@ remote steals down to 8–10 per 30 games on three of the four decks. Against th
 Runners the design split reads 56 of 120 and the held-out test split 65 (53 before the
 loop): the reference Runners contest every facedown card when they can afford it, and a
 Corp that waits for a window scores less against them than one that races; the policy
-Runners, which are the stronger of the two, punish the race more. ABLATION_RESULTS
+Runners, which are the stronger of the two, punish the race more. Ablations on the design split, 10 games per cell against the reference Runners: all rules
+56, without remote deepening 57, without the never-advance line 60, without the R&D
+deepening bonus 58, which is noise around one value, so every rule stays. The final code
+reads: Corp 59 of 120 against the reference Runners on the design split, 64 on the test
+split, 71 of 120 against the policy Runners; Runner 64 of 120 against the reference Corps.
+The two yardsticks disagree because the reference Runners run every facedown card they can
+afford while the policy Runners wait for a safe window, and a Corp that plays for a window
+is rewarded by the second and punished by the first.
 
 ## Evaluation
 
