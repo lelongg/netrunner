@@ -136,12 +136,19 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
     if (p.kind === "advance" && installed && p.why.includes(installed.card.title)) {
       const { have, need } = agendaProgress(installed.card);
       const finishable = have + obs.clicks + (seamless && !installedThisTurn(obs, installed.card) ? 1 : 0) >= need;
-      const nextTurn = need - have - (seamless ? 2 : 0) <= 3;
+      const nextTurn = need - have - (seamless ? 1 : 0) <= 3;
+      const unrezzedCost = Math.max(0, ...installed.server.ices.filter((i: any) => !i.rezzed).map((i: any) => rezCostOf(i)));
+      const reserve = unrezzedCost > 0 ? unrezzedCost + rezTax - 1 : 0;
       if (finishable) p.score = Math.max(p.score, 88);
       else if (installed.server.ices.length === 0) p.score = Math.min(p.score, 20);
       else if (installedThisTurn(obs, installed.card) && nextTurn) {
         p.score = Math.min(p.score, 22);
         p.why += " (never advance: it scores next turn from zero)";
+      } else if (reserve > 0 && obs.credits - 1 < reserve && obs.credits + obs.clicks >= reserve) {
+        p.score = Math.min(p.score, 26);
+        p.why += ` (keep ${reserve} credits to rez the ice in front of it)`;
+        const credit = byCommand(obs, "credit")[0];
+        if (credit) push(proposal(credit, 58, `take a credit: ${reserve} needed to rez the ice in front of ${installed.card.title}`, "credit"));
       }
     }
     if (p.kind === "install-agenda") {
@@ -177,6 +184,10 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
       if (safety && !safety.safe && card && target && target.ices.length >= 2 && Number(card.agendapoints ?? 0) <= 1 && agendasHeld >= 2 && Number(obs.opp.credit ?? 0) - safety.runnerCost < safety.runnerCost && obs.credits >= safety.rezCost + 3) {
         p.score = Math.max(p.score, 52);
         p.why += " (a one-point agenda the Runner must pay to see: the next one scores)";
+      }
+      if (card && !seamless && agendaProgress(card).need >= 4 && obs.clicks <= 2 && safety && !safety.blocked && safety.margin < 4) {
+        p.score = Math.min(p.score, 40);
+        p.why += " (two turns to score without Seamless Launch)";
       }
       if (obs.clicks === 3) p.score = Math.min(p.score, 50);
       if (baited && target && baitTargets.some((x) => x.server.label === target.label)) {

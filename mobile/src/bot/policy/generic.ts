@@ -110,8 +110,9 @@ export function corpProposals(obs: Observation): Proposal[] {
       const installCost = iceInstallCost(t.server);
       if (installCost > obs.credits) continue;
       const left = obs.credits - installCost;
+      const overIced = rezDebt + rezCostOf(card) > obs.credits + 6 && !(t.server.ices.length === 0 && rezCostOf(card) <= obs.credits);
       const penalty = (left < rezCostOf(card) ? 8 : 0) + (left < 3 ? 10 : 0) + (rezDebt + rezCostOf(card) > obs.credits + 4 ? 12 : 0);
-      push(proposal(playOf(obs, card, t.server.label), t.score - penalty, `install ${card.title} on ${t.server.label}: ${t.why}${rezDebt + rezCostOf(card) > obs.credits + 4 ? " (more ice than the credits can rez)" : ""}`, "install-ice"));
+      push(proposal(playOf(obs, card, t.server.label), overIced ? Math.min(t.score - penalty, 22) : t.score - penalty, `install ${card.title} on ${t.server.label}: ${t.why}${rezDebt + rezCostOf(card) > obs.credits + 4 ? " (more ice than the credits can rez)" : ""}`, "install-ice"));
     }
   }
   if (agendas.length && obs.hand.length > 5) push(proposal(playOf(obs, agendas[0], "New remote"), 25, `install ${agendas[0].title} naked to avoid discarding it`, "install-naked"));
