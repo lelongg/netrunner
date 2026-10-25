@@ -84,7 +84,7 @@ export function corpProposals(obs: Observation): Proposal[] {
       const upgradesOnly = s.content.every((c: any) => c.type === "Upgrade");
       targets.push({ server: s, score: upgradesOnly && agendas.length ? 56 : 45, why: upgradesOnly ? `${s.label} is the scoring remote: deepen it` : `${s.label} holds something worth protecting` });
     }
-    if (obs.credits >= 12 && (globalThis as any).process?.env?.NO_DEEPEN !== "1") {
+    if (obs.credits >= 12) {
       for (const s of obs.servers.filter((x) => x.remote && x.ices.length >= 2 && x.ices.length < 5 && (x.content.length ? x.content.every((c: any) => c.type === "Upgrade" || c.type === "Agenda") : agendas.length > 0))) {
         const safety = serverSafety(obs, s);
         if (safety.safe || safety.margin >= 0) continue;
@@ -94,7 +94,7 @@ export function corpProposals(obs: Observation): Proposal[] {
     if (obs.credits >= 6) {
       for (const s of [rd, hq].sort((a, b) => a.ices.length - b.ices.length)) {
         if (s.ices.length >= 3) continue;
-        const runs = (globalThis as any).process?.env?.NO_RD_DEEPEN === "1" ? 0 : Number(recentRuns(s.label) ?? 0);
+        const runs = Number(recentRuns(s.label) ?? 0);
         targets.push({ server: s, score: 40 - s.ices.length * 3 + (runs >= 2 ? 18 : runs ? 9 : 0), why: runs ? `deepen ${s.label}: the Runner ran it ${runs} times lately` : `deepen ${s.label}` });
       }
     }

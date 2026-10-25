@@ -139,7 +139,7 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
       const nextTurn = need - have - (seamless ? 2 : 0) <= 3;
       if (finishable) p.score = Math.max(p.score, 88);
       else if (installed.server.ices.length === 0) p.score = Math.min(p.score, 20);
-      else if (installedThisTurn(obs, installed.card) && nextTurn && (globalThis as any).process?.env?.NO_NEVER_ADVANCE !== "1") {
+      else if (installedThisTurn(obs, installed.card) && nextTurn) {
         p.score = Math.min(p.score, 22);
         p.why += " (never advance: it scores next turn from zero)";
       }
