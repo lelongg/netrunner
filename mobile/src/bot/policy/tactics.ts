@@ -160,7 +160,7 @@ export function estimateRun(obs: Observation, server: ServerInfo, unrezzedCost =
       continue;
     }
     const option = bestBreak(obs, ice, extra);
-    const threat = iceThreat(ice, obs.info(ice), budget - credits);
+    const threat = iceThreat(ice, obs.info(ice), Math.min(budget - credits, Number(obs.view.runner?.credit ?? 0) - credits));
     if (threat.encounterTags) {
       tags += threat.encounterTags;
       credits += threat.encounterTags * 2;

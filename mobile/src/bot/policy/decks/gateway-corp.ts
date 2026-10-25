@@ -86,9 +86,10 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
   const deckLeft = Number(obs.me["deck-count"] ?? 0);
   const openCentral = obs.servers.find((s) => !s.remote && s.key !== "archives" && !s.ices.length);
   const drawsSoFar = ((obs.memory.notes.kinds as string[] | undefined) ?? []).filter((k) => k === "draw").length;
-  if (openCentral && !obs.hand.some((c) => c.type === "ICE") && deckLeft > 0 && drawsSoFar < 3) {
+  const hqThin = agendasHeld >= 2 && (obs.servers.find((s) => s.key === "hq")?.ices.length ?? 0) <= 1;
+  if ((openCentral || hqThin) && !obs.hand.some((c) => c.type === "ICE") && deckLeft > 0 && drawsSoFar < 3) {
     const draw = byCommand(obs, "draw")[0];
-    if (draw) push(proposal(draw, obs.hand.some((c) => c.type === "Agenda") ? 66 : 60, `draw: ${openCentral.label} is open and no ice is in hand`, "draw"));
+    if (draw) push(proposal(draw, agendasHeld > 0 ? 66 : 60, openCentral ? `draw: ${openCentral.label} is open and no ice is in hand` : `draw: ${agendasHeld} agendas sit behind one ice and no ice is in hand`, "draw"));
   }
   if (deckLeft <= 8) {
     for (const p of out) {
