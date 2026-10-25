@@ -225,6 +225,17 @@ The two yardsticks disagree because the reference Runners run every facedown car
 afford while the policy Runners wait for a safe window, and a Corp that plays for a window
 is rewarded by the second and punished by the first.
 
+Two more replays (VHDTPF2K 0–9, J6AE57HR 3–7) and the scenario suite then drove a last
+pass: the Corp keeps credits to rez the ice in front of its agenda before advancing, counts
+the Seamless Launch click, caps ice installs past its rez budget, purges a Conduit dig,
+ices a central the Runner keeps running even when poor, and hides an agenda flood with
+Sprint only when HQ is iced. An Overclock allowance in the Runner's purse measured 31
+against 34 of 72 without it and was dropped; the draw rules of that pass doubled the HQ
+steals on the design split (27 of 72) until they were limited to a thin hand. Final
+numbers at 6 games per cell: Corp 37 of 72 on the design split and 48 of 72 on the test
+split (67 percent, against 44 at the start of the Corp loops). Iteration grids now use 72
+games and run two at a time; 120-game grids are kept for the recorded numbers.
+
 ## Scenario tests
 
 `src/bot/policy/scenarios.test.ts` (`npm run scenarios`, also run by CI) asks the bot for
