@@ -187,3 +187,95 @@ describe("runner prices Whitespace with real credits, not Overclock's", () => {
     expect(overclockHq(10)).toBeGreaterThan(30);
   });
 });
+
+describe("corp takes an early window", () => {
+  it("installs an agenda behind rezzed ice the Runner cannot break", () => {
+    const s = new Scenario("core-hb", "core-criminal");
+    centrals(s);
+    s.summon("corp", "Palisade", "Luminal Transubstantiation");
+    s.install("corp", "Palisade", "New remote");
+    s.rez("Palisade");
+    s.clicks("corp", 2);
+    s.credits("corp", 10);
+    const move = s.decide("corp");
+    expect(s.last("corp").chosen?.kind).toBe("install-agenda");
+    expect(move?.command).toBe("play");
+  });
+
+  it("scores an agenda that can be finished this turn", () => {
+    const s = new Scenario("core-hb", "core-criminal");
+    remoteWithAgenda(s, "Luminal Transubstantiation", true);
+    s.endTurn("corp");
+    s.endTurn("runner");
+    s.clearHand("corp");
+    s.credits("corp", 10);
+    for (let i = 0; i < 3; i++) {
+      const move = s.decide("corp");
+      expect(move?.command).toBe("advance");
+      s.act("corp", "Luminal Transubstantiation: Advance");
+    }
+    expect(s.decide("corp")?.command).toBe("score");
+  });
+});
+
+describe("corp protects its agendas in hand", () => {
+  it("never discards an agenda at end of turn while other cards remain", () => {
+    const s = new Scenario("core-hb", "core-criminal");
+    s.clearHand("corp");
+    s.summon("corp", "Send a Message", "Offworld Office", "Hedge Fund", "Tithe", "Whitespace", "Palisade", "Nico Campaign");
+    s.clicks("corp", 0);
+    s.act("corp", "End turn");
+    const move = s.decide("corp");
+    expect(move?.command).toBe("select");
+    const picked = s.last("corp").chosen?.why ?? "";
+    expect(picked).not.toMatch(/Send a Message|Offworld Office/);
+  });
+
+  it("gives Hansei Review a card that is not an agenda", () => {
+    const s = new Scenario("core-nbn", "core-criminal");
+    s.clearHand("corp");
+    s.summon("corp", "Hansei Review", "Send a Message", "Orbital Superiority", "Ping");
+    s.credits("corp", 10);
+    s.act("corp", "Hansei Review: Play");
+    const move = s.decide("corp");
+    expect(move?.command).toBe("select");
+    expect(s.last("corp").chosen?.why ?? "").not.toMatch(/Send a Message|Orbital Superiority/);
+  });
+});
+
+describe("runner reads the corp's purse", () => {
+  it("runs a remote under Tread Lightly when the Corp cannot rez its ice", () => {
+    const s = new Scenario("core-hb", "core-criminal");
+    s.clearHand("corp");
+    s.summon("corp", "Tithe", "Whitespace", "Ansel 1.0", "Pharos", "Offworld Office");
+    s.credits("corp", 40);
+    s.install("corp", "Tithe", "HQ");
+    s.install("corp", "Whitespace", "R&D");
+    s.clicks("corp", 3);
+    s.install("corp", "Ansel 1.0", "New remote");
+    s.install("corp", "Pharos", "Server 1");
+    s.install("corp", "Offworld Office", "Server 1");
+    s.credits("corp", 3);
+    s.endTurn("corp");
+    s.clearHand("runner");
+    s.summon("runner", "Tread Lightly", "Sure Gamble", "Jailbreak", "Jailbreak", "Overclock");
+    s.credits("runner", 6);
+    s.decide("runner");
+    expect(best(s, "runner", (w) => w.startsWith("Tread Lightly into Server 1"))).toBeGreaterThan(50);
+  });
+
+  it("does not run into unrezzed ice with an empty grip", () => {
+    const s = new Scenario("core-hb", "core-criminal");
+    s.clearHand("corp");
+    s.summon("corp", "Tithe", "Offworld Office");
+    s.credits("corp", 40);
+    s.install("corp", "Tithe", "New remote");
+    s.install("corp", "Offworld Office", "Server 1");
+    s.credits("corp", 10);
+    s.endTurn("corp");
+    s.clearHand("runner");
+    s.credits("runner", 8);
+    s.decide("runner");
+    expect(best(s, "runner", (w) => w.startsWith("run Server 1"))).toBeLessThan(30);
+  });
+});

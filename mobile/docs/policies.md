@@ -225,6 +225,23 @@ The two yardsticks disagree because the reference Runners run every facedown car
 afford while the policy Runners wait for a safe window, and a Corp that plays for a window
 is rewarded by the second and punished by the first.
 
+## Scenario tests
+
+`src/bot/policy/scenarios.test.ts` (`npm run scenarios`, also run by CI) asks the bot for
+its decision in exact positions. `scenario.ts` builds a position through the engine's chat
+commands (`/summon`, `/credit`, `/click`, `/discard`, `/rez-free`) on a real game with the
+catalogue decks, with the simulation and the run trials attached as in play, and reads
+back the chosen move and every scored proposal. Each scenario is a fault seen in a replay
+or a harness game, so a rule that regresses fails a named test instead of a grid cell:
+keeping credits to rez the ice in front of an agenda, the Seamless Launch click in the
+never-advance test, rezzing only ice that bites under Tread Lightly, the unrezzed ice
+debt, the rez cushion against Tread Lightly, Overclock against Whitespace's credit check,
+the early window behind ice the Runner cannot break, scoring when the agenda can be
+finished, never discarding an agenda, Hansei Review's trash, Tread Lightly against a broke
+Corp, and not running into unrezzed ice with an empty grip. Writing them found that the
+deck modules' own proposals and the glacier's late rules escaped every install and advance
+guard; the guards now run last over every proposal.
+
 ## Evaluation
 
 ```sh
