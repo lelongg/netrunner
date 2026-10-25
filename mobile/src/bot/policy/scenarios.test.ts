@@ -350,3 +350,89 @@ describe("corp hides an agenda flood with Sprint", () => {
     }
   });
 });
+
+describe("corp does not purge for a shallow dig", () => {
+  it("ices R&D instead of purging when Conduit holds two counters", () => {
+    const s = new Scenario("core-hb", "core-criminal");
+    s.clearHand("corp");
+    s.summon("corp", "Tithe");
+    s.credits("corp", 40);
+    s.install("corp", "Tithe", "HQ");
+    s.rez("Tithe");
+    s.endTurn("corp");
+    s.clearHand("runner");
+    s.summon("runner", "Conduit");
+    s.credits("runner", 10);
+    s.install("runner", "Conduit");
+    for (let i = 0; i < 2; i++) {
+      s.act("runner", "Conduit: [Click]");
+      settleRun(s, "runner");
+    }
+    s.endTurn("runner");
+    s.clearHand("corp");
+    s.summon("corp", "Palisade");
+    s.credits("corp", 6);
+    const move = s.decide("corp");
+    expect(move?.command).not.toBe("purge");
+    expect(best(s, "corp", (w) => w.startsWith("purge"))).toBeLessThan(0);
+    expect(s.last("corp").chosen?.why).toMatch(/R&D/);
+  });
+});
+
+function weylandBoard(s: Scenario) {
+  s.clearHand("corp");
+  s.summon("corp", "Palisade", "Funhouse", "Whitespace", "Pharos", "Tithe", "Whitespace", "Tithe");
+  const places: [string, string][] = [["Palisade", "HQ"], ["Funhouse", "HQ"], ["Whitespace", "R&D"], ["Pharos", "New remote"], ["Tithe", "Server 1"], ["Whitespace", "Server 1"], ["Tithe", "Server 1"]];
+  for (const [ice, server] of places) {
+    s.clicks("corp", 3);
+    s.credits("corp", 40);
+    s.install("corp", ice, server);
+  }
+  s.endTurn("corp");
+}
+
+describe("corp ices a dug R&D even with unrezzed ice elsewhere", () => {
+  it("installs Pharos on R&D after two Conduit runs although the remote's ice is not paid for", () => {
+    const s = new Scenario("core-weyland", "core-criminal");
+    weylandBoard(s);
+    s.clearHand("runner");
+    s.summon("runner", "Conduit", "Buzzsaw");
+    s.credits("runner", 20);
+    s.install("runner", "Conduit");
+    s.install("runner", "Buzzsaw");
+    s.summon("runner", "Sure Gamble", "Sure Gamble", "Jailbreak");
+    for (let i = 0; i < 2; i++) {
+      s.act("runner", "Conduit: [Click]");
+      settleRun(s, "runner");
+    }
+    s.endTurn("runner");
+    s.clearHand("corp");
+    s.summon("corp", "Pharos", "Orbital Superiority");
+    s.credits("corp", 14);
+    const move = s.decide("corp");
+    expect(move?.command).toBe("play");
+    expect(s.last("corp").chosen?.why).toMatch(/Pharos on R&D/);
+  });
+});
+
+describe("corp jams agendas when the hand is flooded", () => {
+  it("installs an agenda behind four ice instead of clicking for credits with four agendas in hand", () => {
+    const s = new Scenario("core-weyland", "core-criminal");
+    weylandBoard(s);
+    s.clearHand("runner");
+    s.summon("runner", "Buzzsaw", "Cleaver", "Carnivore");
+    s.credits("runner", 30);
+    s.install("runner", "Buzzsaw");
+    s.install("runner", "Cleaver");
+    s.install("runner", "Carnivore");
+    s.summon("runner", "Sure Gamble", "Sure Gamble", "Jailbreak", "Dirty Laundry");
+    s.credits("runner", 20);
+    s.endTurn("runner");
+    s.clearHand("corp");
+    s.summon("corp", "Send a Message", "Orbital Superiority", "Offworld Office", "Orbital Superiority", "Public Trail");
+    s.credits("corp", 15);
+    const move = s.decide("corp");
+    expect(move?.command).toBe("play");
+    expect(s.last("corp").chosen?.why).toMatch(/install (Offworld Office|Orbital Superiority) behind 4 ice in Server 1 .*jamming/);
+  });
+});

@@ -22,6 +22,8 @@ function walkCards(x: any, zone: string, f: (card: any, zone: string) => void) {
   for (const [k, v] of Object.entries(x)) if (v && typeof v === "object" && k !== "log" && k !== "prompt-state" && k !== "basic-action-card") walkCards(v, k, f);
 }
 
+const serverLabel = (key: string) => (key === "rd" ? "R&D" : key === "hq" ? "HQ" : key === "archives" ? "Archives" : key.startsWith("remote") ? `Server ${key.slice(6)}` : key);
+
 export function updateMemory(memory: Memory, view: any, side: Side) {
   const turn = Number(view.turn ?? 0);
   const turnKey = `${turn}:${view["active-player"]}`;
@@ -38,9 +40,11 @@ export function updateMemory(memory: Memory, view: any, side: Side) {
     for (const e of lines.slice(start)) {
       const text = String(e?.text?.["raw-text"] ?? "");
       const m = text.match(/to make a run on (HQ|R&D|Archives|Server \d+)/);
-      if (m) {
-        (seen[m[1]] ??= []).push(turn);
-        memory.notes.lastRunServer = m[1];
+      const effect = (e?.text?.["msg/effect-msgs"] ?? []).find((x: any) => x?.["effect/type"] === "make-a-run-on");
+      const label = m ? m[1] : effect ? serverLabel(String(effect["effect/server"] ?? "")) : null;
+      if (label) {
+        (seen[label] ??= []).push(turn);
+        memory.notes.lastRunServer = label;
       }
     }
     memory.notes.logSeen = lines.length;

@@ -57,11 +57,12 @@ export function corpProposals(obs: Observation): Proposal[] {
   }
   const virus = (obs.view.runner?.rig?.program ?? []).map((c: any) => ({ title: c.title, counters: Number(c.counter?.virus ?? 0), text: obs.info(c).text ?? "" }));
   const virusCounters = virus.reduce((n: number, v: any) => n + v.counters, 0);
-  const digging = virus.filter((v: any) => v.counters >= 2 && /access|additional card/i.test(v.text));
+  const digger = virus.some((v: any) => /access|additional card/i.test(v.text));
+  const digging = virus.filter((v: any) => v.counters >= 3 && /access|additional card/i.test(v.text));
   const purge = byCommand(obs, "purge")[0];
-  if (purge && obs.clicks >= 3 && (digging.length || virusCounters >= 5)) {
+  if (purge && obs.clicks >= 3 && (digging.length || virusCounters >= 6)) {
     const worst = digging.sort((a: any, b: any) => b.counters - a.counters)[0];
-    push(proposal(purge, worst ? 52 + Math.min(30, worst.counters * 6) : 50, worst ? `purge: ${worst.title} holds ${worst.counters} virus counters` : `purge ${virusCounters} virus counters`, "purge"));
+    push(proposal(purge, worst ? 52 + Math.min(30, worst.counters * 6) : 46, worst ? `purge: ${worst.title} holds ${worst.counters} virus counters` : `purge ${virusCounters} virus counters`, "purge"));
   }
   const openRemotes = obs.servers.filter((s) => s.remote && !s.content.length);
   const runnerCredits = Number(obs.view.runner?.credit ?? 0);
@@ -83,7 +84,7 @@ export function corpProposals(obs: Observation): Proposal[] {
   if (ice.length) {
     const hq = obs.servers.find((s) => s.key === "hq")!;
     const rd = obs.servers.find((s) => s.key === "rd")!;
-    const targets: { server: { label: string; ices: any[] }; score: number; why: string }[] = [];
+    const targets: { server: { label: string; ices: any[] }; score: number; why: string; urgent?: boolean }[] = [];
     const recentRuns = (label: string) => obs.memory.notes.runsSeen && (obs.memory.notes.runsSeen as Record<string, number[]>)[label]?.filter((t) => t >= obs.turn - 2).length;
     if (!hq.ices.length) targets.push({ server: hq, score: (agendas.length ? 60 : 50) + (recentRuns("HQ") ? 12 : 0), why: agendas.length ? "HQ is open with an agenda in hand" : "HQ is open" });
     if (!rd.ices.length) targets.push({ server: rd, score: 48 + (recentRuns("R&D") ? 14 : 0), why: recentRuns("R&D") ? "R&D is open and the Runner keeps running it" : "R&D is open" });
@@ -100,10 +101,11 @@ export function corpProposals(obs: Observation): Proposal[] {
       }
     }
     for (const s of [rd, hq].sort((a, b) => a.ices.length - b.ices.length)) {
-      if (s.ices.length >= 3) continue;
       const runs = Number(recentRuns(s.label) ?? 0);
+      const siege = runs >= 2 && (digger || s.key === "hq");
+      if (s.ices.length >= (siege ? 4 : 3)) continue;
       if (obs.credits < 6 && runs < 2) continue;
-      targets.push({ server: s, score: 40 - s.ices.length * 3 + (runs >= 2 ? 18 : runs ? 9 : 0), why: runs ? `deepen ${s.label}: the Runner ran it ${runs} times lately` : `deepen ${s.label}` });
+      targets.push({ server: s, score: 40 - s.ices.length * 3 + (runs >= 2 ? 18 : runs ? 9 : 0) + (siege ? 6 : 0), urgent: runs >= 1, why: siege ? `ice ${s.label}: the Runner is digging it (${runs} runs lately)` : runs ? `deepen ${s.label}: the Runner ran it ${runs} times lately` : `deepen ${s.label}` });
     }
     const rezDebt = obs.servers.flatMap((s) => s.ices).filter((i: any) => !i.rezzed).reduce((n: number, i: any) => n + rezCostOf(i), 0);
     const endsRun = (c: any) => iceThreat({ ...c, subroutines: [] }, obs.info(c), 99).etr;
@@ -117,8 +119,8 @@ export function corpProposals(obs: Observation): Proposal[] {
       const installCost = iceInstallCost(t.server);
       if (installCost > obs.credits) continue;
       const left = obs.credits - installCost;
-      const overIced = rezDebt + rezCostOf(card) > obs.credits + 6 && !(t.server.ices.length === 0 && rezCostOf(card) <= obs.credits);
-      const penalty = (left < rezCostOf(card) ? 8 : 0) + (left < 3 ? 10 : 0) + (rezDebt + rezCostOf(card) > obs.credits + 4 ? 12 : 0);
+      const overIced = rezDebt + rezCostOf(card) > obs.credits + 6 && !(t.server.ices.length === 0 && rezCostOf(card) <= obs.credits) && !(t.urgent && rezCostOf(card) <= left);
+      const penalty = (left < rezCostOf(card) ? 8 : 0) + (left < 3 ? 10 : 0) + (rezDebt + rezCostOf(card) > obs.credits + 4 && !(t.urgent && rezCostOf(card) <= left) ? 12 : 0);
       push(proposal(playOf(obs, card, t.server.label), overIced ? Math.min(t.score - penalty, 22) : t.score - penalty, `install ${card.title} on ${t.server.label}: ${t.why}${rezDebt + rezCostOf(card) > obs.credits + 4 ? " (more ice than the credits can rez)" : ""}`, "install-ice"));
     }
   }
@@ -129,7 +131,7 @@ export function corpProposals(obs: Observation): Proposal[] {
   const wantCredits = obs.hand.some((c) => c.type === "Operation" && gainOf(obs.info(c).text) > playCostOf(c) && playCostOf(c) > obs.credits);
   const deckLeft = Number(obs.me["deck-count"] ?? 0);
   const broke = obs.credits < 3 && obs.servers.some((s) => s.ices.some((i) => !i.rezzed && rezCostOf(i) > obs.credits));
-  const rich = obs.credits >= 12 && obs.hand.length <= 2;
+  const rich = obs.credits >= 12 && obs.hand.length <= 2 && !ice.length;
   if (obs.hand.length < 4 && deckLeft > 8) push(proposal(byCommand(obs, "draw")[0], broke ? 29 : rich ? 50 : 35, rich ? "draw: rich but nothing to spend on" : "draw: the hand is thin", "draw"));
   if (obs.credits >= 15 && deckLeft > 8 && obs.hand.length < 5) push(proposal(byCommand(obs, "draw")[0], 40, "draw: credits are plentiful, cards are not", "draw"));
   push(proposal(byCommand(obs, "credit")[0], 30 + (wantCredits ? 10 : 0) + (obs.credits < 3 ? 4 : 0) + (broke ? 8 : 0), broke ? "take a credit: unrezzed ice cannot be rezzed" : wantCredits ? "take a credit towards an economy operation in hand" : "take a credit", "credit"));

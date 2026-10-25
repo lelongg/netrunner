@@ -127,7 +127,7 @@ export class Scenario {
   }
 
   runStep(side: Side) {
-    const labels = ["Approach ice", "Continue", "Approach server", "Breach server", "Let it fire"];
+    const labels = ["Approach ice", "Continue", "Movement", "Approach server", "Breach server", "Let it fire"];
     const c = this.actions(side).find((x) => labels.some((l) => x.label.startsWith(l)));
     if (!c) throw new Error(`no run step for ${side}; have: ${this.actions(side).map((x) => x.label).join(" | ")}`);
     engine.act(this.game, side, c.command, c.args ?? null);
