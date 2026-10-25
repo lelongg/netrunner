@@ -6,6 +6,7 @@ import { corpRun, fromCandidate } from "../runs.ts";
 import { agendaProgress, coverage, iceThreat, isTrap, rezCostOf, serverSafety } from "../tactics.ts";
 import type { DeckPolicy, Observation, Plan, Proposal } from "../types.ts";
 import { GATEWAY_CORP_BEGINNER, GATEWAY_CORP_INTERMEDIATE } from "./gateway.ts";
+import { knownDeck } from "./known.ts";
 
 const isEconomyCard = (obs: Observation, c: any) => obs.profile.economy.has(c.title);
 const iceRank = (obs: Observation, c: any) => {
@@ -97,6 +98,8 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
       }
     }
   }
+  const runnerDeck = knownDeck(String(obs.opp.identity?.title ?? ""));
+  const rezTax = obs.memory.opponentTitles.has("Tread Lightly") || (runnerDeck?.cards.some((c) => /rez cost[^.]*increased/i.test(obs.info({ title: c.title }).text ?? "")) ?? false) ? 3 : 1;
   const spike = inHand(obs, "Neurospike");
   if (spike && obs.credits >= 3) {
     const points = Number(obs.memory.notes.scoredPointsThisTurn ?? 0);
@@ -179,9 +182,9 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
         p.score = Math.min(p.score, 38);
         p.why += " (one ice is thin for an agenda that takes two turns)";
       }
-      if (safety && target && target.ices.some((i: any) => !i.rezzed) && safety.rezCost > obs.credits - 1) {
+      if (safety && target && target.ices.some((i: any) => !i.rezzed) && safety.rezCost > obs.credits - rezTax) {
         p.score = Math.min(p.score, 15);
-        p.why += ` (cannot rez the ice there: ${safety.rezCost} needed)`;
+        p.why += ` (cannot rez the ice there with ${rezTax} to spare: ${safety.rezCost} needed)`;
       }
     }
   }

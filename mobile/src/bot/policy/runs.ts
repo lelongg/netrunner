@@ -20,7 +20,14 @@ export function corpRun(obs: Observation, reserve = 0): Proposal | null {
     const cost = rezCostOf(ice);
     const server = runServer(obs);
     const protects = server && (server.content.length > 0 || !server.remote);
-    if (cost <= obs.credits - reserve && protects) return fromCandidate(rez, 80, `rez ${ice.title} for ${cost} to protect ${server?.label}`, "rez");
+    const runnerCredits = Number(obs.view.runner?.credit ?? 0);
+    const grip = Number(obs.view.runner?.["hand-count"] ?? obs.view.runner?.hand?.length ?? 5);
+    const threat = iceThreat({ ...ice, subroutines: ice.subroutines ?? [] }, obs.info(ice), runnerCredits, grip);
+    const agendaBehind = !!server && (server.content.some((c: any) => c.type === "Agenda") || (server.key === "hq" && obs.hand.some((c) => c.type === "Agenda")));
+    const bites = threat.etr || threat.damage > 0 || threat.tag || threat.encounterTags > 0 || threat.creditLoss >= Math.max(2, cost - 1) || !threat.exact;
+    const affordable = cost <= obs.credits - reserve && (obs.credits - cost >= 2 || threat.etr || agendaBehind);
+    if (affordable && protects && bites) return fromCandidate(rez, 80, `rez ${ice.title} for ${cost} to protect ${server?.label}`, "rez");
+    if (protects && cost <= obs.credits - reserve && !bites) return fromCandidate(byCommand(obs, "continue")[0] ?? rez, 12, `${ice.title} would not stop or hurt the Runner at ${runnerCredits} credits: keep ${cost} credits`, "pass");
   }
   const next = byCommand(obs, "continue")[0];
   return next ? fromCandidate(next, 10, "nothing to do during this run step", "pass") : null;

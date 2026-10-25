@@ -97,18 +97,20 @@ export function corpProposals(obs: Observation): Proposal[] {
         targets.push({ server: s, score: 40 - s.ices.length * 3 + (runs >= 2 ? 18 : runs ? 9 : 0), why: runs ? `deepen ${s.label}: the Runner ran it ${runs} times lately` : `deepen ${s.label}` });
       }
     }
+    const rezDebt = obs.servers.flatMap((s) => s.ices).filter((i: any) => !i.rezzed).reduce((n: number, i: any) => n + rezCostOf(i), 0);
     const endsRun = (c: any) => iceThreat({ ...c, subroutines: [] }, obs.info(c), 99).etr;
     const forRemote = [...ice].sort((a, b) => (endsRun(b) ? 6 : 0) + strengthOf(b) - ((endsRun(a) ? 6 : 0) + strengthOf(a)));
     const saveEnder = agendas.length > 0 && ice.length >= 2 && ice.filter(endsRun).length < ice.length;
     const forCentral = saveEnder ? [...ice].sort((a, b) => (endsRun(a) ? 6 : 0) - strengthOf(a) - ((endsRun(b) ? 6 : 0) - strengthOf(b))) : ice;
     for (const t of targets) {
       const pool = /Server|remote/.test(t.server.label) ? forRemote : forCentral;
-      const card = pool.find((c) => rezCostOf(c) <= obs.credits + 3) ?? pool[0];
+      const spare = Math.max(0, obs.credits - rezDebt);
+      const card = pool.find((c) => rezCostOf(c) <= spare + 1) ?? pool.find((c) => rezCostOf(c) <= obs.credits + 3) ?? pool[0];
       const installCost = iceInstallCost(t.server);
       if (installCost > obs.credits) continue;
       const left = obs.credits - installCost;
-      const penalty = (left < rezCostOf(card) ? 8 : 0) + (left < 3 ? 10 : 0);
-      push(proposal(playOf(obs, card, t.server.label), t.score - penalty, `install ${card.title} on ${t.server.label}: ${t.why}`, "install-ice"));
+      const penalty = (left < rezCostOf(card) ? 8 : 0) + (left < 3 ? 10 : 0) + (rezDebt + rezCostOf(card) > obs.credits + 4 ? 12 : 0);
+      push(proposal(playOf(obs, card, t.server.label), t.score - penalty, `install ${card.title} on ${t.server.label}: ${t.why}${rezDebt + rezCostOf(card) > obs.credits + 4 ? " (more ice than the credits can rez)" : ""}`, "install-ice"));
     }
   }
   if (agendas.length && obs.hand.length > 5) push(proposal(playOf(obs, agendas[0], "New remote"), 25, `install ${agendas[0].title} naked to avoid discarding it`, "install-naked"));
