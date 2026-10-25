@@ -279,3 +279,74 @@ describe("runner reads the corp's purse", () => {
     expect(best(s, "runner", (w) => w.startsWith("run Server 1"))).toBeLessThan(30);
   });
 });
+
+function settleRun(s: Scenario, side: "corp" | "runner") {
+  for (let i = 0; i < 30 && s.view(side).run; i++) {
+    const mine = s.actions(side);
+    const yes = mine.find((x) => x.label === "Choose: Yes" || x.label === "Choose: No action");
+    if (yes) {
+      s.act(side, yes.label);
+      continue;
+    }
+    if (mine.some((x) => x.command === "continue" || x.command === "start-next-phase")) s.runStep(side);
+    else if (s.actions(side === "corp" ? "runner" : "corp").some((x) => x.command === "continue")) s.pass(side === "corp" ? "runner" : "corp");
+    else break;
+  }
+  for (let i = 0; i < 4; i++) {
+    const yes = s.actions(side).find((x) => x.label === "Choose: Yes");
+    if (!yes) break;
+    s.act(side, "Choose: Yes");
+  }
+}
+
+describe("corp answers a virus dig", () => {
+  function conduitDig(credits: number) {
+    const s = new Scenario("core-hb", "core-criminal");
+    s.clearHand("corp");
+    s.summon("corp", "Tithe", "Whitespace", "Palisade");
+    s.credits("corp", 40);
+    s.install("corp", "Tithe", "HQ");
+    s.rez("Tithe");
+    s.endTurn("corp");
+    s.clearHand("runner");
+    s.summon("runner", "Conduit");
+    s.credits("runner", 10);
+    s.install("runner", "Conduit");
+    for (let i = 0; i < 3; i++) {
+      s.act("runner", "Conduit: [Click]");
+      settleRun(s, "runner");
+    }
+    s.endTurn("runner");
+    s.clearHand("corp");
+    s.summon("corp", "Palisade", "Hedge Fund");
+    s.credits("corp", credits);
+    return s;
+  }
+
+  it("purges or ices R&D rather than clicking for credits when Conduit holds three counters", () => {
+    const s = conduitDig(4);
+    const conduit = s.view("corp").runner.rig.program.find((c: any) => c.title === "Conduit");
+    expect(Number(conduit?.counter?.virus ?? 0)).toBeGreaterThanOrEqual(3);
+    const move = s.decide("corp");
+    expect(["purge", "play"]).toContain(move?.command);
+    expect(s.last("corp").chosen?.why).toMatch(/purge|R&D/);
+  });
+});
+
+describe("corp hides an agenda flood with Sprint", () => {
+  it("plays Sprint with four agendas and no ice, and shuffles agendas back", () => {
+    const s = new Scenario("core-hb", "core-criminal");
+    centrals(s);
+    s.summon("corp", "Send a Message", "Offworld Office", "Offworld Office", "Luminal Transubstantiation", "Sprint");
+    s.credits("corp", 20);
+    const move = s.decide("corp");
+    expect(s.last("corp").chosen?.why).toMatch(/Sprint/);
+    s.act("corp", "Sprint: Play");
+    for (let i = 0; i < 2; i++) {
+      const pick = s.decide("corp");
+      expect(pick?.command).toBe("select");
+      expect(s.last("corp").chosen?.why).toMatch(/goes back into R&D/);
+      s.act("corp", "Select " + (s.last("corp").chosen?.why.match(/Sprint: (.+) goes back/)?.[1] ?? ""));
+    }
+  });
+});

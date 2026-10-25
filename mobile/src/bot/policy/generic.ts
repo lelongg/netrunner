@@ -55,6 +55,14 @@ export function corpProposals(obs: Observation): Proposal[] {
     const cost = playCostOf(card);
     if (gain > cost && cost <= obs.credits) push(proposal(playOf(obs, card), obs.credits < 8 ? 65 + (gain - cost) : 45, `play ${card.title}: +${gain - cost} net`, "economy"));
   }
+  const virus = (obs.view.runner?.rig?.program ?? []).map((c: any) => ({ title: c.title, counters: Number(c.counter?.virus ?? 0), text: obs.info(c).text ?? "" }));
+  const virusCounters = virus.reduce((n: number, v: any) => n + v.counters, 0);
+  const digging = virus.filter((v: any) => v.counters >= 2 && /access|additional card/i.test(v.text));
+  const purge = byCommand(obs, "purge")[0];
+  if (purge && obs.clicks >= 3 && (digging.length || virusCounters >= 5)) {
+    const worst = digging.sort((a: any, b: any) => b.counters - a.counters)[0];
+    push(proposal(purge, worst ? 52 + Math.min(30, worst.counters * 6) : 50, worst ? `purge: ${worst.title} holds ${worst.counters} virus counters` : `purge ${virusCounters} virus counters`, "purge"));
+  }
   const openRemotes = obs.servers.filter((s) => s.remote && !s.content.length);
   const runnerCredits = Number(obs.view.runner?.credit ?? 0);
   for (const card of obs.hand) {
@@ -91,12 +99,11 @@ export function corpProposals(obs: Observation): Proposal[] {
         targets.push({ server: s, score: s.content.some((c: any) => c.type === "Agenda") ? 60 : 54, why: `deepen ${s.label}: the Runner still gets in with ${-safety.margin} to spare` });
       }
     }
-    if (obs.credits >= 6) {
-      for (const s of [rd, hq].sort((a, b) => a.ices.length - b.ices.length)) {
-        if (s.ices.length >= 3) continue;
-        const runs = Number(recentRuns(s.label) ?? 0);
-        targets.push({ server: s, score: 40 - s.ices.length * 3 + (runs >= 2 ? 18 : runs ? 9 : 0), why: runs ? `deepen ${s.label}: the Runner ran it ${runs} times lately` : `deepen ${s.label}` });
-      }
+    for (const s of [rd, hq].sort((a, b) => a.ices.length - b.ices.length)) {
+      if (s.ices.length >= 3) continue;
+      const runs = Number(recentRuns(s.label) ?? 0);
+      if (obs.credits < 6 && runs < 2) continue;
+      targets.push({ server: s, score: 40 - s.ices.length * 3 + (runs >= 2 ? 18 : runs ? 9 : 0), why: runs ? `deepen ${s.label}: the Runner ran it ${runs} times lately` : `deepen ${s.label}` });
     }
     const rezDebt = obs.servers.flatMap((s) => s.ices).filter((i: any) => !i.rezzed).reduce((n: number, i: any) => n + rezCostOf(i), 0);
     const endsRun = (c: any) => iceThreat({ ...c, subroutines: [] }, obs.info(c), 99).etr;

@@ -1,6 +1,6 @@
 import { byCommand, installedThisTurn } from "../observe.ts";
 import { cardAction, playOf, proposal } from "../generic.ts";
-import { choiceMove, choices, findChoice, promptFrom, selectMove, selectable } from "../prompts.ts";
+import { cardWorth, choiceMove, choices, findChoice, promptFrom, selectMove, selectable } from "../prompts.ts";
 import { registerPolicy } from "../registry.ts";
 import { corpRun, fromCandidate } from "../runs.ts";
 import { agendaProgress, coverage, iceThreat, isTrap, rezCostOf, serverSafety } from "../tactics.ts";
@@ -87,7 +87,12 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[], extra?: (out:
   const openCentral = obs.servers.find((s) => !s.remote && s.key !== "archives" && !s.ices.length);
   const drawsSoFar = ((obs.memory.notes.kinds as string[] | undefined) ?? []).filter((k) => k === "draw").length;
   const hqThin = agendasHeld >= 2 && (obs.servers.find((s) => s.key === "hq")?.ices.length ?? 0) <= 1;
-  if ((openCentral || hqThin) && !obs.hand.some((c) => c.type === "ICE") && deckLeft > 0 && drawsSoFar < 3) {
+  const noIce = !obs.hand.some((c) => c.type === "ICE");
+  if (noIce && !openCentral && !hqThin && deckLeft > 0 && drawsSoFar < 2 && (obs.credits >= 10 || agendasHeld >= 2)) {
+    const draw = byCommand(obs, "draw")[0];
+    if (draw) push(proposal(draw, agendasHeld >= 2 ? 46 : 40, `draw: no ice in hand${agendasHeld >= 2 ? ` and ${agendasHeld} agendas waiting` : ""}`, "draw"));
+  }
+  if ((openCentral || hqThin) && noIce && deckLeft > 0 && drawsSoFar < 3) {
     const draw = byCommand(obs, "draw")[0];
     if (draw) push(proposal(draw, agendasHeld > 0 ? 66 : 60, openCentral ? `draw: ${openCentral.label} is open and no ice is in hand` : `draw: ${agendasHeld} agendas sit behind one ice and no ice is in hand`, "draw"));
   }
@@ -215,6 +220,7 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[], extra?: (out:
   }
   const sprint = inHand(obs, "Sprint");
   if (sprint && agendasHeld === 0 && obs.hand.length <= 5 && Number(obs.me["deck-count"] ?? 0) > 5) push(proposal(playOf(obs, sprint), obs.credits >= 10 ? 56 : 46, "Sprint: three cards to find an agenda, two back into R&D", "draw"));
+  if (sprint && agendasHeld >= 2 && !installed && Number(obs.me["deck-count"] ?? 0) > 5 && !out.some((p) => p.kind === "install-agenda" && p.score > 40)) push(proposal(playOf(obs, sprint), 68, `Sprint: three cards, and two of ${agendasHeld} agendas back into R&D`, "draw"));
   const subsidy = inHand(obs, "Government Subsidy");
   if (subsidy && obs.credits >= 10) push(proposal(playOf(obs, subsidy), 68, "Government Subsidy: +5 net, keeps the scoring budget high", "economy"));
   const planogram = inHand(obs, "Predictive Planogram");
@@ -332,6 +338,11 @@ function prompt(obs: Observation, plan: Plan): Proposal | null {
     const no = findChoice(obs, /^no$/i);
     if (yes && have >= grip && have > 0) return { move: choiceMove(obs, yes), score: 95, why: `Clearinghouse: ${have} meat damage against a grip of ${grip}`, kind: "choice" };
     if (no) return { move: choiceMove(obs, no), score: 60, why: "Clearinghouse: keep building the threat", kind: "choice" };
+  }
+  if (from === "Sprint" && obs.promptType === "select") {
+    const cards = selectable(obs);
+    const pick = [...cards].sort((a, b) => Number(b.type === "Agenda") - Number(a.type === "Agenda") || cardWorth(obs, a) - cardWorth(obs, b))[0];
+    if (pick) return { move: selectMove(obs, pick), score: 80, why: pick.type === "Agenda" ? `Sprint: ${pick.title} goes back into R&D` : `Sprint: shuffle ${pick.title} back, the least useful card`, kind: "select" };
   }
   if (from === "Seamless Launch" && obs.promptType === "select") {
     const cards = selectable(obs).filter((c) => !installedThisTurn(obs, c));
