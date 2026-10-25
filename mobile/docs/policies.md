@@ -197,7 +197,26 @@ with the trial alone (a reached trial also overrode the hidden-breaker odds, whi
 thin installs), 67 with the trial fixed and the bait, 63 without the bait, 68 without the
 race override. Against the policy Runners the race override's removal lifts the Corp from
 61–66 to 70 of 120 and halves the remote steals (11 to 17 per 30 games instead of 12 to 30).
-CORP_FINAL_RESULTS
+Three harness games played as the Runner against the Corp bot then showed what the grid
+does not: the Corp installed five ice worth 22 credits of rez in three turns and stayed
+under four credits for the rest of the game, paid five of its six credits to rez a
+Whitespace that could not stop an eleven-credit Runner, and installed a three-point agenda
+behind two unrezzed ice with three credits, which Tread Lightly turned into a free access.
+So the Corp now rezzes during a run only when the ice ends the run, hurts, tags or taxes
+at least its own cost, keeps two credits unless an agenda is behind the ice, counts the
+rez cost of every unrezzed ice before installing more, keeps three spare credits over a
+remote's rez cost when the Runner's deck raises rez costs, draws for ice when a central is
+open or agendas pile up behind a thin HQ, and adds a fourth and fifth ice to a scoring
+remote the Runner can still afford rather than opening a weaker one. The Neurospike kill
+line is shared by every Corp deck, a trash prompt that only offers the Corp's own cards
+gives up the least valuable one, and draws stop when R&D is down to eight cards.
+
+Against the policy Runners the Corp went from 61–66 to 74 of 120 over this loop, with
+remote steals down to 8–10 per 30 games on three of the four decks. Against the reference
+Runners the design split reads 56 of 120 and the held-out test split 65 (53 before the
+loop): the reference Runners contest every facedown card when they can afford it, and a
+Corp that waits for a window scores less against them than one that races; the policy
+Runners, which are the stronger of the two, punish the race more. ABLATION_RESULTS
 
 ## Evaluation
 

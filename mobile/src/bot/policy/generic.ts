@@ -41,12 +41,13 @@ export function corpProposals(obs: Observation): Proposal[] {
       push(proposal(cardAction(obs, card, "advance"), score, finish ? `advance ${card.title}: it scores this turn` : `advance ${card.title} (${have}/${need})`, "advance"));
     }
   }
-  const empty = obs.servers.filter((s) => s.remote && s.ices.length > 0 && s.content.every((c: any) => c.type === "Upgrade"));
+  const staleBait = (s: any) => s.content.length === 1 && s.content[0].type === "Asset" && !s.content[0].rezzed && (obs.memory.installedAt.get(s.content[0].cid) ?? obs.turn) <= obs.turn - 2;
+  const empty = obs.servers.filter((s) => s.remote && s.ices.length > 0 && (s.content.every((c: any) => c.type === "Upgrade") || staleBait(s)));
   const agendas = obs.hand.filter((c) => c.type === "Agenda");
   if (agendas.length && empty.length) {
     const agenda = [...agendas].sort((a, b) => agendaProgress(a).need - agendaProgress(b).need)[0];
-    const target = [...empty].sort((a, b) => b.ices.length - a.ices.length)[0];
-    push(proposal(playOf(obs, agenda, target.label), obs.credits >= 2 ? 70 : 40, `install ${agenda.title} behind ${target.ices.length} ice in ${target.label}`, "install-agenda"));
+    const target = [...empty].sort((a, b) => Number(staleBait(a)) - Number(staleBait(b)) || b.ices.length - a.ices.length)[0];
+    push(proposal(playOf(obs, agenda, target.label), obs.credits >= 2 ? 70 : 40, `install ${agenda.title} behind ${target.ices.length} ice in ${target.label}${staleBait(target) ? " over the bait the Runner ignored" : ""}`, "install-agenda"));
   }
   for (const card of obs.hand) {
     if (card.type !== "Operation") continue;
@@ -83,7 +84,7 @@ export function corpProposals(obs: Observation): Proposal[] {
       const upgradesOnly = s.content.every((c: any) => c.type === "Upgrade");
       targets.push({ server: s, score: upgradesOnly && agendas.length ? 56 : 45, why: upgradesOnly ? `${s.label} is the scoring remote: deepen it` : `${s.label} holds something worth protecting` });
     }
-    if (obs.credits >= 12) {
+    if (obs.credits >= 12 && (globalThis as any).process?.env?.NO_DEEPEN !== "1") {
       for (const s of obs.servers.filter((x) => x.remote && x.ices.length >= 2 && x.ices.length < 5 && (x.content.length ? x.content.every((c: any) => c.type === "Upgrade" || c.type === "Agenda") : agendas.length > 0))) {
         const safety = serverSafety(obs, s);
         if (safety.safe || safety.margin >= 0) continue;
@@ -93,7 +94,7 @@ export function corpProposals(obs: Observation): Proposal[] {
     if (obs.credits >= 6) {
       for (const s of [rd, hq].sort((a, b) => a.ices.length - b.ices.length)) {
         if (s.ices.length >= 3) continue;
-        const runs = Number(recentRuns(s.label) ?? 0);
+        const runs = (globalThis as any).process?.env?.NO_RD_DEEPEN === "1" ? 0 : Number(recentRuns(s.label) ?? 0);
         targets.push({ server: s, score: 40 - s.ices.length * 3 + (runs >= 2 ? 18 : runs ? 9 : 0), why: runs ? `deepen ${s.label}: the Runner ran it ${runs} times lately` : `deepen ${s.label}` });
       }
     }

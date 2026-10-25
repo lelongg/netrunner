@@ -139,7 +139,7 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
       const nextTurn = need - have - (seamless ? 2 : 0) <= 3;
       if (finishable) p.score = Math.max(p.score, 88);
       else if (installed.server.ices.length === 0) p.score = Math.min(p.score, 20);
-      else if (installedThisTurn(obs, installed.card) && nextTurn) {
+      else if (installedThisTurn(obs, installed.card) && nextTurn && (globalThis as any).process?.env?.NO_NEVER_ADVANCE !== "1") {
         p.score = Math.min(p.score, 22);
         p.why += " (never advance: it scores next turn from zero)";
       }
@@ -174,6 +174,10 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
         p.score = (breached && holdable && !desperate) || (cheapEntry && !desperate) ? Math.min(p.score, 12) : contestable ? Math.min(p.score, racing ? 58 : 48) - (points >= 3 ? 10 : 0) - (slow ? 8 : 0) : taxRace ? Math.min(p.score, 55) - (points >= 3 ? 8 : 0) - (slow ? 8 : 0) : Math.min(p.score, 15);
         p.why += ` (the Runner can get in: margin ${safety.margin}${breached ? ", and stole from there since the ice last changed" : ""}${cheapEntry ? ", and the run there is nearly free" : ""}${racing ? ", racing" : ""}${taxRace ? (desperate ? ", R&D is running out" : ", rich enough to make every run expensive") : ""}${canRezOne ? "" : ", no ice can be rezzed"}${hqSafer ? ", HQ is safer" : ""})`;
       } else if (card && target && safety?.safe && obs.clicks < 3 && canScoreNextTurn(obs, card, !!seamless)) p.score = Math.max(p.score, 72);
+      if (safety && !safety.safe && card && target && target.ices.length >= 2 && Number(card.agendapoints ?? 0) <= 1 && agendasHeld >= 2 && Number(obs.opp.credit ?? 0) - safety.runnerCost < safety.runnerCost && obs.credits >= safety.rezCost + 3) {
+        p.score = Math.max(p.score, 52);
+        p.why += " (a one-point agenda the Runner must pay to see: the next one scores)";
+      }
       if (obs.clicks === 3) p.score = Math.min(p.score, 50);
       if (baited && target && baitTargets.some((x) => x.server.label === target.label)) {
         p.score = Math.min(p.score, 30);

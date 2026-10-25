@@ -265,7 +265,8 @@ export function serverSafety(obs: Observation, server: ServerInfo): Safety {
   }
   const trial = obs.side === "corp" ? (obs.memory.notes.runTrials as Record<string, RunTrial | null> | undefined)?.[server.label] : undefined;
   if (trial?.reached) {
-    blocked = false;
+    const grip = Number(obs.view.runner?.["hand-count"] ?? obs.view.runner?.hand?.length ?? 5);
+    blocked = trial.damage > 0 && trial.damage >= grip;
     runnerCost = trial.credits + trial.damage * 2;
     exact = true;
   }
