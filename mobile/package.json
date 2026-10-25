@@ -11,6 +11,7 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "typecheck": "tsc",
+    "scenarios": "vitest run src/bot/policy/scenarios.test.ts",
     "journal": "node scripts/journal.mjs"
   },
   "devDependencies": {

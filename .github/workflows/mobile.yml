@@ -92,6 +92,10 @@ jobs:
         if: env.PREVIEW != 'true'
         run: npm run journal --prefix mobile
 
+      - name: Policy scenario tests
+        if: env.PREVIEW != 'true'
+        run: npm run scenarios --prefix mobile
+
       - name: Build mobile app
         run: if [ "$PREVIEW" = "true" ]; then (cd mobile && npx vite build); else npm run build --prefix mobile; fi
         env:
