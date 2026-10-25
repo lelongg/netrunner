@@ -153,12 +153,12 @@ describe("corp keeps a rez cushion against Tread Lightly", () => {
     return best(s, "corp", (w) => w.includes("Offworld Office") && w.includes("Server 1"));
   }
 
-  it("will not put an agenda behind 13 credits of unrezzed ice with 14 credits", () => {
-    expect(remoteShell(14)).toBeLessThanOrEqual(15);
+  it("will not put an agenda behind unrezzed enders it cannot rez under Tread Lightly", () => {
+    expect(remoteShell(7)).toBeLessThanOrEqual(15);
   });
 
-  it("installs once the cushion is there", () => {
-    expect(remoteShell(20)).toBeGreaterThan(30);
+  it("installs once one ender can be rezzed with the cushion", () => {
+    expect(remoteShell(12)).toBeGreaterThan(30);
   });
 });
 

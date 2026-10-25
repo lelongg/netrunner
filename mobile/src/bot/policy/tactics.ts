@@ -89,7 +89,7 @@ export function iceThreat(ice: any, info: CardInfo, runnerCredits?: number, runn
   const subs: any[] = ice.subroutines ?? [];
   const labels = subs.filter((s) => !s.broken && !s.fired).map((s) => String(typeof s.label === "string" ? s.label : ""));
   const text = plain(info.text ?? "");
-  const source = labels.length ? labels.join("\n") : text;
+  const source = labels.length ? labels.join("\n") : text.replace(/\[subroutine\]\s*/gi, "\n");
   const unless = source.match(/end the run unless the runner (?:pays )?(?:suffers?|takes?) (\d+) (?:net|meat) damage/i);
   const damage = [...source.matchAll(/do (\d+) (?:net|meat|core|brain) damage/gi)].reduce((n, m) => n + Number(m[1]), 0) + (unless && (runnerGrip === undefined || runnerGrip > Number(unless[1])) ? Number(unless[1]) : 0);
   const loss = [...source.matchAll(/(?:runner loses|make the runner lose) (\d+)\s*\[credits?\]/gi)].reduce((n, m) => n + Number(m[1]), 0);

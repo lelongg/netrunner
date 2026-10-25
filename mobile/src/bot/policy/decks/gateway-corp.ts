@@ -310,9 +310,11 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[], extra?: (out:
         p.score = Math.min(p.score, 38);
         p.why += " (one ice is thin for an agenda that takes two turns)";
       }
-      if (safety && target && target.ices.some((i: any) => !i.rezzed) && safety.rezCost > obs.credits - rezTax) {
+      const enders = target ? target.ices.filter((i: any) => !i.rezzed && iceThreat({ ...i, subroutines: [] }, obs.info(i), 99).etr).map((i: any) => rezCostOf(i)) : [];
+      const cheapestEnder = enders.length ? Math.min(...enders) : target && target.ices.some((i: any) => !i.rezzed) ? safety?.rezCost ?? 0 : 0;
+      if (safety && target && cheapestEnder > 0 && cheapestEnder + rezTax > obs.credits) {
         p.score = Math.min(p.score, 15);
-        p.why += ` (cannot rez the ice there with ${rezTax} to spare: ${safety.rezCost} needed)`;
+        p.why += ` (cannot rez an ender there with ${rezTax} to spare: ${cheapestEnder} needed)`;
       }
     }
   }
