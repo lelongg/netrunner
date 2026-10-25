@@ -116,6 +116,132 @@ of the run or when the clicks are simply cheaper than the credits, and the Runne
 when the rezzed ice ahead cannot be paid for. In the `closing` plan Mayfly is installed when
 the last points sit behind an ice type no breaker answers.
 
+## Simulation
+
+The engine exposes `checkpoint`, `act`, `restore` and `unchanged`, which the app already
+uses to test which actions are legal and what a break costs. A checkpoint is a reference to
+the engine's immutable state, so trying a move and rolling it back costs one action. The bot
+uses the same four calls through `policy/simulate.ts`:
+
+- `evaluate(view, side)` in `policy/evaluate.ts` is a static score of a view from one side:
+  credits, clicks, agenda points, cards in hand, tags and brain damage, installed cards at
+  their cost plus one, rezzed ice at rez cost plus two, advancement counters, credits and
+  counters hosted on cards, minus the same for the opponent;
+- after ranking its proposals, the bot plays each of the top six that sit within twelve
+  points of the best on the real game, resolves the prompts its own policy would answer
+  (up to five in a chain), reads the view, restores the game, and adds the clamped change
+  of the evaluation (±6) to the proposal's score, shown in the reason as `[+4.0]`. A move
+  the engine refuses or that leaves the game unchanged is dropped with "(the engine refused
+  it)";
+- on a select prompt on its own turn, every selectable card becomes a measured option at a
+  low base score, so the simulation decides when no handler has an opinion.
+
+Hidden information stays hidden: a move is only simulated when its outcome is public and
+deterministic. Runs, draws, and any card or prompt whose text mentions drawing, accessing,
+revealing, looking at, searching, shuffling, exposing, a trace or a random choice are never
+simulated, and nothing is simulated during a run. Only the acting side's own view is read
+after the trial. The opponent's decisions are never simulated: a trial stops at the first
+prompt that is not the bot's.
+
+The evaluation script runs both sides with simulation by default (`--sim 0` turns it off,
+`--sim corp` or `--sim runner` limits it to one side, `--sim-weight` scales the delta). The
+terminal harness and the app do the same, the app through the engine worker's `moves`
+probe and `PolicyBot.decideAsync`. A decision costs about 15 ms on average instead of
+under 1 ms, with a worst case near half a second on a crowded board.
+
+Design split, 10 games per cell, simulation on one side only against the frozen reference:
+Runner policies 61 of 120 against the reference Corps (62 without simulation), Corp
+policies 68 of 120 against the reference Runners (65 without). At weight 1 the simulation
+changes few decisions: in two inspected games it flipped one Runner choice (installing Red
+Team instead of clicking for a credit) and no Corp choice, and the measured select options
+only win when no handler scores above them. What it buys today is a floor, not a lift:
+proposals the engine refuses disappear instead of looping, and every proposal's reason
+carries the measured change, which the situation reports now show. Three follow-ups were measured on the same grids:
+
+| Change | Runner vs reference Corps | Corp vs reference Runners |
+|---|---|---|
+| Simulation off | 62 of 120 | 65 of 120 |
+| Simulation, weight 1 | 61 | 68 |
+| Simulation, weight 2 | 63 | 65 |
+| Weight 1 and run trials (Runner only) | 67 | – |
+| Weight 1, measured select options at base 60 | 66 | 55 |
+
+The weight does not matter at this scale. Run trials are kept: the Runner starts a run on a
+checkpoint, its own run policy answers every step while the Corp passes or fires its
+subroutines, and the trial stops at the first access, so the credits, damage and tags of a
+run through fully rezzed ice are exact and no hidden card is read (`policy/trial.ts`, the
+app runs them in the engine worker). Measured select options stay at base 24: at 60 they
+outrank the handlers for discards, Seamless Launch and Send a Message and the Corp drops to
+55, so the static evaluation is not yet a substitute for those rules. Replacing a handler
+is a per-card experiment on this grid, not a switch.
+
+### The Corp runs the Runner's run on its own remote
+
+The 183 remote steals captured over two Corp grids all went through fully rezzed ice, 108 of
+them through three ice: the Runner had the rig and the credits, and the Corp installed the
+agenda anyway because it was behind ("sitting loses"). Three changes follow from that:
+
+- the Corp side of `runTrial` installs the agenda it is considering, clicks its remaining
+  clicks for credits, ends its turn, and lets the Runner run the remote with a hidden hand
+  while the Corp rezzes as it would; the credits and damage of a reached run replace the
+  estimate in `serverSafety`, and a run that does not reach the server leaves the estimate
+  alone, since the Runner may still install the missing breaker from hand;
+- when the Runner can afford the scoring remote with six credits to spare, an asset from
+  hand goes in first as a bait (traps first) and the agenda install waits;
+- the race override is gone: being behind no longer justifies an install the Runner can
+  steal. An agenda installed this turn that scores next turn from zero is not advanced on
+  its install turn, so it sits as an unadvanced facedown card for one Runner turn.
+
+Design split, 10 games per cell, Corp policies against the reference Runners: 62 of 120
+with the trial alone (a reached trial also overrode the hidden-breaker odds, which produced
+thin installs), 67 with the trial fixed and the bait, 63 without the bait, 68 without the
+race override. Against the policy Runners the race override's removal lifts the Corp from
+61–66 to 70 of 120 and halves the remote steals (11 to 17 per 30 games instead of 12 to 30).
+Three harness games played as the Runner against the Corp bot then showed what the grid
+does not: the Corp installed five ice worth 22 credits of rez in three turns and stayed
+under four credits for the rest of the game, paid five of its six credits to rez a
+Whitespace that could not stop an eleven-credit Runner, and installed a three-point agenda
+behind two unrezzed ice with three credits, which Tread Lightly turned into a free access.
+So the Corp now rezzes during a run only when the ice ends the run, hurts, tags or taxes
+at least its own cost, keeps two credits unless an agenda is behind the ice, counts the
+rez cost of every unrezzed ice before installing more, keeps three spare credits over a
+remote's rez cost when the Runner's deck raises rez costs, draws for ice when a central is
+open or agendas pile up behind a thin HQ, and adds a fourth and fifth ice to a scoring
+remote the Runner can still afford rather than opening a weaker one. The Neurospike kill
+line is shared by every Corp deck, a trash prompt that only offers the Corp's own cards
+gives up the least valuable one, and draws stop when R&D is down to eight cards.
+
+Against the policy Runners the Corp went from 61–66 to 74 of 120 over this loop, with
+remote steals down to 8–10 per 30 games on three of the four decks. Against the reference
+Runners the design split reads 56 of 120 and the held-out test split 65 (53 before the
+loop): the reference Runners contest every facedown card when they can afford it, and a
+Corp that waits for a window scores less against them than one that races; the policy
+Runners, which are the stronger of the two, punish the race more. Ablations on the design split, 10 games per cell against the reference Runners: all rules
+56, without remote deepening 57, without the never-advance line 60, without the R&D
+deepening bonus 58, which is noise around one value, so every rule stays. The final code
+reads: Corp 59 of 120 against the reference Runners on the design split, 64 on the test
+split, 71 of 120 against the policy Runners; Runner 64 of 120 against the reference Corps.
+The two yardsticks disagree because the reference Runners run every facedown card they can
+afford while the policy Runners wait for a safe window, and a Corp that plays for a window
+is rewarded by the second and punished by the first.
+
+## Scenario tests
+
+`src/bot/policy/scenarios.test.ts` (`npm run scenarios`, also run by CI) asks the bot for
+its decision in exact positions. `scenario.ts` builds a position through the engine's chat
+commands (`/summon`, `/credit`, `/click`, `/discard`, `/rez-free`) on a real game with the
+catalogue decks, with the simulation and the run trials attached as in play, and reads
+back the chosen move and every scored proposal. Each scenario is a fault seen in a replay
+or a harness game, so a rule that regresses fails a named test instead of a grid cell:
+keeping credits to rez the ice in front of an agenda, the Seamless Launch click in the
+never-advance test, rezzing only ice that bites under Tread Lightly, the unrezzed ice
+debt, the rez cushion against Tread Lightly, Overclock against Whitespace's credit check,
+the early window behind ice the Runner cannot break, scoring when the agenda can be
+finished, never discarding an agenda, Hansei Review's trash, Tread Lightly against a broke
+Corp, and not running into unrezzed ice with an empty grip. Writing them found that the
+deck modules' own proposals and the glacier's late rules escaped every install and advance
+guard; the guards now run last over every proposal.
+
 ## Evaluation
 
 ```sh
@@ -519,6 +645,23 @@ against policy Corp 65 of 120 (was 68). The win rates hold while the Runner's ri
 clicks fall again: Party Hard 42 to 9 and Planning Ahead 21 to 6 over 40 games against the
 reference Corps, Stolen Goods 40 to 18 and Planning Ahead 8 to 3 against the Corp policies.
 The remote steal stays the Corp's dominant fault and is the next loop.
+
+### After the Hyper Velocity game and replay T2QJASGM
+
+A game played as Hyper Velocity against the Party Hard bot in the terminal harness (won 8
+to 1 on turn 11) and the replay showed the Runner discarding its only fracter to keep a
+second Mayfly, never installing its draw resources, and running Archives with one card in
+it. The Runner now discards by usefulness, installs a resource that draws every turn, only
+values Archives with two or more unseen cards, and the Funhouse test in `estimateRun` uses
+the Runner's real credits rather than the Overclock budget, so it no longer plans a run it
+will refuse at the encounter.
+
+Design split, 10 games per cell: Runner policies 65 of 120 against the reference Corps
+(69 before, inside the interval), policy against policy Corp 66 of 120 (65 before). Runner
+rich credit clicks over 40 games: Party Hard 7, Stolen Goods 13, Planning Ahead 6 against
+the reference Corps; 17, 33 and 2 against the Corp policies. Stolen Goods still sits on
+credits against the Corp policies when every remote is iced twice, which is the next Runner
+loop. The remote steal stays between 12 and 30 per 30 games on the Corp side.
 
 Every Corp deck beats the heuristic Runner and every Runner deck beats the heuristic Corp
 by more than the interval, which is what the shared archetypes bought; the Haas-Bioroid

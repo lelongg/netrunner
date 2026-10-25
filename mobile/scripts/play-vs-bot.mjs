@@ -2,11 +2,12 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import * as engine from "../engine/engine.js";
 import { HeuristicBot } from "../src/bot/heuristic.ts";
 import { PolicyBot } from "../src/bot/policy/bot.ts";
+import { engineSimulator } from "../src/bot/policy/simulate.ts";
+import { engineTrial } from "../src/bot/policy/trial.ts";
 import { findPolicy } from "../src/bot/policy/registry.ts";
 import "../src/bot/policy/decks/index.ts";
 import { coreDeck } from "../src/bot/policy/decks/core.ts";
 import { parseDecklist } from "../src/decks.ts";
-import { readFileSync } from "node:fs";
 import { promptOf, runCommands } from "../src/game/actions.ts";
 import { candidateActions } from "../src/game/candidates.ts";
 import { gameLines, logLines } from "../src/game/describe.ts";
@@ -117,7 +118,7 @@ const botRandom = () => {
 };
 const precon = m[botSide];
 const match = state.bot === "heuristic" ? null : findPolicy(botSide, { identity: precon.identity, cards: precon.cards });
-const bot = state.bot === "heuristic" ? new HeuristicBot(botSide, lookup, botRandom) : new PolicyBot(botSide, match?.policy ?? null, lookup, { random: botRandom, render, record: true, rescue: true, deck: { identity: precon.identity, cards: precon.cards } });
+const bot = state.bot === "heuristic" ? new HeuristicBot(botSide, lookup, botRandom) : new PolicyBot(botSide, match?.policy ?? null, lookup, { random: botRandom, render, record: true, rescue: true, deck: { identity: precon.identity, cards: precon.cards }, simulate: engineSimulator(engine, game, botSide), trial: engineTrial(engine, game, botSide, (v, s) => bot.trialMove(v, s)) });
 
 const aligned = (side, a) => {
   const eid = a?.eid;

@@ -6,8 +6,7 @@ import { CORE_HB } from "./core.ts";
 import { glacier } from "./gateway-corp.ts";
 
 function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
-  const out = glacier.proposals(obs, plan, base);
-  const push = (p: Proposal | null) => p && out.push(p);
+  return glacier.proposals(obs, plan, base, (out, push) => {
   for (const s of glacier.remotes(obs)) {
     for (const card of s.content) {
       if (card.title === "Humanoid Resources" && card.rezzed && obs.clicks >= 3 && obs.hand.filter((c) => c.type !== "Agenda").length >= 2) {
@@ -16,7 +15,7 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
       }
     }
   }
-  return out;
+  });
 }
 
 export const coreHb: DeckPolicy = registerPolicy({

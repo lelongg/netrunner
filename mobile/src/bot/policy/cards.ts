@@ -46,8 +46,10 @@ function corpOwnSelect(obs: Observation, msg: string): Proposal[] {
     return out;
   }
   if (/install/i.test(msg) && !/ice/i.test(msg)) {
-    const safeTypes = ["ICE", "Asset", "Upgrade"];
-    const pick = [...mine].filter((c) => safeTypes.includes(c.type)).sort((a, b) => cardWorth(obs, b) - cardWorth(obs, a))[0];
+    const scoringRoot = obs.servers.some((s) => s.remote && s.ices.length > 0 && s.content.some((c: any) => c.type === "Agenda" || !c.rezzed));
+    const emptyIced = obs.servers.some((s) => s.remote && s.ices.length > 0 && !s.content.length);
+    const fits = (c: any) => c.type === "ICE" || (c.type === "Upgrade" && scoringRoot) || (c.type === "Asset" && emptyIced);
+    const pick = [...mine].filter(fits).sort((a, b) => cardWorth(obs, b) - cardWorth(obs, a))[0];
     if (pick) out.push({ move: selectMove(obs, pick), score: 50, why: `install ${pick.title}`, kind: "select" });
     else if (done) out.push({ move: choiceMove(obs, done), score: 40, why: "nothing worth installing", kind: "select" });
     return out;
@@ -76,6 +78,15 @@ function corpHostileSelect(obs: Observation, msg: string): Proposal[] {
 function installLocation(obs: Observation): Proposal[] {
   const out: Proposal[] = [];
   const labels = choices(obs).map((c) => ({ c, label: choiceLabel(obs, c) }));
+  const card = obs.prompt?.card;
+  if (card && card.type !== "ICE") {
+    const root = card.type === "Upgrade" ? obs.servers.find((s) => s.remote && s.ices.length > 0 && s.content.some((c: any) => c.type === "Agenda" || !c.rezzed) && !s.content.some((c: any) => c.title === card.title)) : obs.servers.find((s) => s.remote && s.ices.length > 0 && !s.content.length);
+    const hit = root ? labels.find((l) => l.label === root.label) : undefined;
+    if (hit) out.push({ move: choiceMove(obs, hit.c), score: 60, why: `install ${card.title} in ${root!.label}`, kind: "choice" });
+    const fresh = labels.find((l) => /new remote/i.test(l.label));
+    if (fresh) out.push({ move: choiceMove(obs, fresh.c), score: 50, why: `install ${card.title} on a new remote`, kind: "choice" });
+    return out;
+  }
   const open = obs.servers.filter((s) => !s.remote && s.ices.length === 0);
   const naked = obs.servers.filter((s) => s.remote && s.ices.length === 0 && s.content.length);
   const scoring = obs.servers.filter((s) => s.remote && s.ices.length > 0 && s.content.some((c: any) => c.type === "Agenda" || !c.rezzed));

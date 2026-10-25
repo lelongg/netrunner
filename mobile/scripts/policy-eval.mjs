@@ -3,6 +3,8 @@ import { join } from "node:path";
 import * as engine from "../engine/engine.js";
 import { HeuristicBot } from "../src/bot/heuristic.ts";
 import { PolicyBot } from "../src/bot/policy/bot.ts";
+import { engineSimulator } from "../src/bot/policy/simulate.ts";
+import { engineTrial } from "../src/bot/policy/trial.ts";
 import { fingerprint, findPolicy, listPolicies } from "../src/bot/policy/registry.ts";
 import "../src/bot/policy/decks/index.ts";
 import { CORE_CORP_DECKS, CORE_RUNNER_DECKS, coreDeck } from "../src/bot/policy/decks/core.ts";
@@ -167,12 +169,16 @@ function randomMove(view, side, pick) {
   return out.length ? out[pick(out.length)] : null;
 }
 
-function makePlayer(kind, side, precon, random) {
+function makePlayer(kind, side, precon, random, game) {
   if (kind === "random") return { kind, id: "random", decide: null };
   if (kind === "heuristic") return { kind, id: "heuristic", bot: new HeuristicBot(side, lookup, random) };
   const tree = kind === "ref" ? ref : { PolicyBot, findPolicy };
   const match = tree.findPolicy(side, { identity: precon.identity, cards: precon.cards });
-  const bot = new tree.PolicyBot(side, match?.policy ?? null, lookup, { random, render, record: true, rescue: false, deck: { identity: precon.identity, cards: precon.cards } });
+  const simulate = kind === "ref" || args.sim === "0" || (typeof args.sim === "string" && args.sim !== side && args.sim !== "both") ? undefined : engineSimulator(engine, game, side);
+  const holder = {};
+  const trial = simulate && args.trial !== "0" ? engineTrial(engine, game, side, (v, s) => holder.bot.trialMove(v, s)) : undefined;
+  const bot = new tree.PolicyBot(side, match?.policy ?? null, lookup, { random, render, record: true, rescue: false, deck: { identity: precon.identity, cards: precon.cards }, simulate, trial, simWeight: args["sim-weight"] != null ? Number(args["sim-weight"]) : undefined, measuredBase: args["measured-base"] != null ? Number(args["measured-base"]) : undefined });
+  holder.bot = bot;
   const id = `${kind === "ref" ? `ref@${ref.sha.slice(0, 7)}:` : ""}${bot.policyId}${match && !match.exact ? " (nearest deck)" : ""}`;
   return { kind, id, bot, fallback: !match };
 }
@@ -215,7 +221,7 @@ function playGame({ seed, matchup, players, maxActions, full, m = matchups[match
   const game = seeded(rng, () =>
     engine.createGame({ gameid: `eval-${seed}`, format: "casual", corp: { user: { username: "corp" }, deck: deck(m.corp) }, runner: { user: { username: "runner" }, deck: deck(m.runner) } }),
   );
-  const P = { corp: makePlayer(players.corp, "corp", m.corp, botRandom("corp")), runner: makePlayer(players.runner, "runner", m.runner, botRandom("runner")) };
+  const P = { corp: makePlayer(players.corp, "corp", m.corp, botRandom("corp"), game), runner: makePlayer(players.runner, "runner", m.runner, botRandom("runner"), game) };
   const situations = [];
   const actions = [];
   let n = 0;
@@ -276,7 +282,10 @@ function playGame({ seed, matchup, players, maxActions, full, m = matchups[match
     if (pts > runnerPoints && lastRunServer) {
       const thin = thinInstalls.find((x) => x.server === lastRunServer && Number(v.turn) - x.turn <= 2);
       if (thin) note("corp:thin-install-stolen");
-      if (/^Server/.test(lastRunServer)) note("corp:stolen-from-remote");
+      if (/^Server/.test(lastRunServer)) {
+        note("corp:stolen-from-remote");
+        if (P.corp.bot instanceof PolicyBot && mistakes["corp:stolen-from-remote"] <= 2) situations.push(snapshot(v, "corp", P.corp.bot, P.corp.bot.records[P.corp.bot.records.length - 1], "remote-steal", `an agenda was stolen from ${lastRunServer}`));
+      }
     }
     runnerPoints = pts;
     const prompted = ["corp", "runner"].find((s) => moves[s] && promptOf(views[s], s) && promptOf(views[s], s)["prompt-type"] !== "run");
@@ -287,7 +296,10 @@ function playGame({ seed, matchup, players, maxActions, full, m = matchups[match
       break;
     }
     const move = moves[side];
-    if (move.command === "credit" && Number(views[side][side]?.credit ?? 0) >= (side === "corp" ? 12 : 10)) note(`${side}:rich-credit-click`);
+    if (move.command === "credit" && Number(views[side][side]?.credit ?? 0) >= (side === "corp" ? 12 : 10)) {
+      note(`${side}:rich-credit-click`);
+      if (P[side].bot instanceof PolicyBot && (mistakes[`${side}:rich-credit-click`] ?? 0) <= 2) situations.push(snapshot(views[side], side, P[side].bot, P[side].bot.records[P[side].bot.records.length - 1], "rich-click", "clicked for a credit while already rich"));
+    }
     actions.push([side, move.say ? "say" : move.command, move.say ?? move.args ?? null]);
     try {
       seeded(rng, () => (move.say ? engine.say(game, side, { username: side }, move.say) : engine.act(game, side, move.command, move.args ?? null)));

@@ -16,8 +16,7 @@ const runnerResources = (obs: Observation): any[] => obs.view.runner?.rig?.resou
 const runnerRig = (obs: Observation): any[] => [...(obs.view.runner?.rig?.program ?? []), ...(obs.view.runner?.rig?.hardware ?? [])];
 
 function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
-  const out = glacier.proposals(obs, plan, base);
-  const push = (p: Proposal | null) => p && out.push(p);
+  return glacier.proposals(obs, plan, base, (out, push) => {
   const tags = runnerTags(obs);
   const isTagged = tagged(obs.view) || tags > 0;
   const runnerCredits = Number(obs.opp.credit ?? 0);
@@ -49,12 +48,12 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
   }
   const amaze = glacier.inHand(obs, "AMAZE Amusements");
   const scoring = glacier.scoringRemote(obs) ?? bait;
-  if (amaze && scoring && obs.credits >= 1 && !scoring.content.some((c: any) => c.title === "AMAZE Amusements")) push(proposal(playOf(obs, amaze, scoring.label), 46, `AMAZE Amusements in ${scoring.label}: a steal costs two tags`, "install-upgrade"));
+  if (amaze && scoring && scoring.ices.length > 0 && obs.credits >= 1 && !scoring.content.some((c: any) => c.title === "AMAZE Amusements")) push(proposal(playOf(obs, amaze, scoring.label), 46, `AMAZE Amusements in ${scoring.label}: a steal costs two tags`, "install-upgrade"));
   for (const p of out) {
     if (p.kind === "install-agenda" && isTagged && obs.hand.some((c) => c.title === "Orbital Superiority" && p.why.includes(c.title))) p.score += 6;
     if (p.kind === "install-ice" && isTagged && /Lamplighter|Doomscroll/.test(p.why)) p.score += 4;
   }
-  return out;
+  });
 }
 
 function prompt(obs: Observation, plan: Plan): Proposal | null {

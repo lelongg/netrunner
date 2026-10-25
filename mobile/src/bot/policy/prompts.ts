@@ -57,8 +57,14 @@ export function genericSelect(obs: Observation): Proposal[] {
     why = "install the strongest ice";
   } else {
     const hostile = /(trash|derez|expose|damage|destroy|remove)/i.test(msg);
-    pick = cards.find((c) => (hostile ? !mine(c) : mine(c))) ?? cards[0];
-    why = hostile ? "target an opposing card" : "target one of my cards";
+    const own = cards.filter(mine);
+    if (hostile && own.length === cards.length) {
+      pick = [...own].sort((a, b) => cardWorth(obs, a) - cardWorth(obs, b))[0];
+      why = "give up the least valuable of my cards";
+    } else {
+      pick = cards.find((c) => (hostile ? !mine(c) : mine(c))) ?? cards[0];
+      why = hostile ? "target an opposing card" : "target one of my cards";
+    }
   }
   if (pick) out.push({ move: selectMove(obs, pick), score: 30, why, kind: "select" });
   if (done) out.push({ move: choiceMove(obs, done), score: 20, why: "nothing left to select", kind: "select" });
@@ -77,6 +83,14 @@ export function scoreChoice(obs: Observation, label: string, value: any): { scor
   const bet = label.match(/^(\d+) \[credits?\]$/i);
   if (bet) return Number(bet[1]) <= Math.min(1, obs.credits) ? { score: 20, why: "spend little" } : { score: 0, why: "too expensive" };
   if (/^(hq|r&d|archives|server \d+|new remote)$/i.test(label)) return { score: 18, why: "a server" };
+  const gain = label.match(/^gain (\d+) \[credits?\]/i);
+  if (gain) return { score: 22 + Number(gain[1]) * 0.5, why: `gain ${gain[1]} credits` };
+  const draw = label.match(/^draw (\d+) cards?/i);
+  if (draw) {
+    const deckLeft = Number(obs.me["deck-count"] ?? 0);
+    if (obs.side === "corp" && deckLeft <= 8) return { score: 2, why: "R&D is nearly empty" };
+    return obs.hand.length <= 3 ? { score: 26, why: `draw ${draw[1]}: the hand is thin` } : { score: 18, why: `draw ${draw[1]}` };
+  }
   return { score: 16, why: "default choice" };
 }
 

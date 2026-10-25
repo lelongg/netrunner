@@ -2,6 +2,7 @@ import type { EngineApi, Funds, GameHandle, Side, Snapshot } from "../engine";
 
 export type Seat = Side | "spectator";
 import { type BreakPlan, breakStep, cardRef, findCard, promptOf } from "./actions";
+import { type RunTrial, type TrialStep, runTrial } from "../bot/policy/trial";
 
 export type LocalEntry = { side: Side; kind: "act"; command: string; args: unknown } | { side: Side; kind: "say"; user?: string; text: string } | { side: Side; kind: "concede" };
 
@@ -12,12 +13,14 @@ export interface RunResult {
   views: Partial<Record<Seat, any>>;
 }
 
-export type Probe = { k: "try"; command: string; args: unknown } | { k: "break"; ice: unknown; breaker: unknown; want: string[]; boost?: number } | { k: "funds"; card: unknown };
+export type Probe = { k: "try"; command: string; args: unknown } | { k: "break"; ice: unknown; breaker: unknown; want: string[]; boost?: number } | { k: "funds"; card: unknown } | { k: "moves"; moves: { command: string; args?: unknown }[] } | { k: "run-trial"; server: string; deck: unknown; prelude?: { command: string; args?: unknown }[] };
 
 export interface ProbeResult {
   ok: boolean;
   credits?: number;
   funds?: Funds;
+  view?: any;
+  trial?: RunTrial | null;
 }
 
 export interface GameHost {
@@ -43,6 +46,7 @@ function sfc32(a: number, b: number, c: number, d: number) {
 }
 
 export class GameRunner {
+  trialStep: ((side: Side, deck: unknown) => TrialStep) | null = null;
   private game?: GameHandle;
   private rng?: () => number;
 
@@ -105,6 +109,14 @@ export class GameRunner {
 
   private trial(game: GameHandle, side: Side, probe: Probe, snapshot: Snapshot): ProbeResult {
     if (probe.k === "try") return { ok: this.tryOn(game, side, probe.command, probe.args, false) && !this.engine.unchanged(game, snapshot) };
+    if (probe.k === "run-trial") return { ok: true, trial: this.trialStep ? runTrial(this.engine, game, side, probe.server, this.trialStep(side, probe.deck), probe.prelude ?? []) : null };
+    if (probe.k === "moves") {
+      for (const [i, m] of probe.moves.entries()) {
+        if (!this.tryOn(game, side, m.command, m.args ?? null, true)) return { ok: false };
+        if (i === 0 && this.engine.unchanged(game, snapshot)) return { ok: false };
+      }
+      return { ok: true, view: this.engine.view(game, side) };
+    }
     if (probe.k === "funds") {
       const funds = this.engine.availableCredits(game, side, probe.card);
       return { ok: !!funds, funds };

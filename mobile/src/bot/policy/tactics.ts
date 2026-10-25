@@ -1,4 +1,5 @@
 import { advancement } from "../../game/actions.ts";
+import type { RunTrial } from "./trial.ts";
 import type { CardInfo, Estimate, Observation, ServerInfo } from "./types.ts";
 import { hiddenBreaker } from "./value.ts";
 
@@ -88,7 +89,7 @@ export function iceThreat(ice: any, info: CardInfo, runnerCredits?: number, runn
   const subs: any[] = ice.subroutines ?? [];
   const labels = subs.filter((s) => !s.broken && !s.fired).map((s) => String(typeof s.label === "string" ? s.label : ""));
   const text = plain(info.text ?? "");
-  const source = labels.length ? labels.join("\n") : text;
+  const source = labels.length ? labels.join("\n") : text.replace(/\[subroutine\]\s*/gi, "\n");
   const unless = source.match(/end the run unless the runner (?:pays )?(?:suffers?|takes?) (\d+) (?:net|meat) damage/i);
   const damage = [...source.matchAll(/do (\d+) (?:net|meat|core|brain) damage/gi)].reduce((n, m) => n + Number(m[1]), 0) + (unless && (runnerGrip === undefined || runnerGrip > Number(unless[1])) ? Number(unless[1]) : 0);
   const loss = [...source.matchAll(/(?:runner loses|make the runner lose) (\d+)\s*\[credits?\]/gi)].reduce((n, m) => n + Number(m[1]), 0);
@@ -159,11 +160,11 @@ export function estimateRun(obs: Observation, server: ServerInfo, unrezzedCost =
       continue;
     }
     const option = bestBreak(obs, ice, extra);
-    const threat = iceThreat(ice, obs.info(ice), budget - credits);
+    const threat = iceThreat(ice, obs.info(ice), Math.min(budget - credits, Number(obs.view.runner?.credit ?? 0) - credits));
     if (threat.encounterTags) {
       tags += threat.encounterTags;
       credits += threat.encounterTags * 2;
-      if (tagPunisher(obs) && !(Number(obs.clicks ?? 0) >= 2 && budget - credits >= 4)) blocked = true;
+      if (tagPunisher(obs) && !(Number(obs.clicks ?? 0) >= 2 && Math.min(budget - credits, Number(obs.view.runner?.credit ?? 0)) >= 4)) blocked = true;
     }
     if (!option || credits + option.cost.value > budget) {
       if (threat.etr) blocked = true;
@@ -179,6 +180,12 @@ export function estimateRun(obs: Observation, server: ServerInfo, unrezzedCost =
   if (unrezzed && (coverage(obs).size < 3 || unrezzedBlock > 0.3)) etrRisk = true;
   if (unrezzed && unrezzedBlock >= 0.8) blocked = true;
   return { server, credits, exact, blocked, unrezzed, damage, tags, etrRisk };
+}
+
+export function runTrialOf(obs: Observation, server: ServerInfo): RunEstimate | null {
+  const trial = (obs.memory.notes.runTrials as Record<string, RunTrial | null> | undefined)?.[server.label];
+  if (!trial || server.ices.some((i: any) => !i.rezzed)) return null;
+  return { server, credits: trial.credits, exact: true, blocked: !trial.reached, unrezzed: 0, damage: trial.damage, tags: trial.tags, etrRisk: false };
 }
 
 export function agendaProgress(card: any) {
@@ -255,6 +262,13 @@ export function serverSafety(obs: Observation, server: ServerInfo): Safety {
     const activations = Math.min(Math.floor(obs.credits / 2), Math.floor(obs.hand.filter((c: any) => c.type !== "Agenda").length / 2));
     if (activations >= 2) blocked = true;
     else if (activations === 1) runnerCost += 6;
+  }
+  const trial = obs.side === "corp" ? (obs.memory.notes.runTrials as Record<string, RunTrial | null> | undefined)?.[server.label] : undefined;
+  if (trial?.reached) {
+    const grip = Number(obs.view.runner?.["hand-count"] ?? obs.view.runner?.hand?.length ?? 5);
+    blocked = trial.damage > 0 && trial.damage >= grip;
+    runnerCost = trial.credits + trial.damage * 2;
+    exact = true;
   }
   const income = [...(obs.view.runner?.rig?.resource ?? []), ...(obs.view.runner?.rig?.hardware ?? [])].filter((c: any) => /(gain|take|place) \d+\s*\[credits?\]/i.test(plain(obs.info(c).text ?? ""))).length;
   const expected = runnerCredits + 4 + Math.min(4, income * 1.5);
