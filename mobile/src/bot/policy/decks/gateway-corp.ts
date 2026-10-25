@@ -88,7 +88,7 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[], extra?: (out:
   const drawsSoFar = ((obs.memory.notes.kinds as string[] | undefined) ?? []).filter((k) => k === "draw").length;
   const hqThin = agendasHeld >= 2 && (obs.servers.find((s) => s.key === "hq")?.ices.length ?? 0) <= 1;
   const noIce = !obs.hand.some((c) => c.type === "ICE");
-  if (noIce && !openCentral && !hqThin && deckLeft > 0 && drawsSoFar < 2 && (obs.credits >= 10 || agendasHeld >= 2)) {
+  if (noIce && !openCentral && !hqThin && deckLeft > 0 && drawsSoFar < 1 && obs.hand.length <= 3 && (obs.credits >= 10 || agendasHeld >= 2)) {
     const draw = byCommand(obs, "draw")[0];
     if (draw) push(proposal(draw, agendasHeld >= 2 ? 46 : 40, `draw: no ice in hand${agendasHeld >= 2 ? ` and ${agendasHeld} agendas waiting` : ""}`, "draw"));
   }
@@ -220,7 +220,7 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[], extra?: (out:
   }
   const sprint = inHand(obs, "Sprint");
   if (sprint && agendasHeld === 0 && obs.hand.length <= 5 && Number(obs.me["deck-count"] ?? 0) > 5) push(proposal(playOf(obs, sprint), obs.credits >= 10 ? 56 : 46, "Sprint: three cards to find an agenda, two back into R&D", "draw"));
-  if (sprint && agendasHeld >= 2 && !installed && Number(obs.me["deck-count"] ?? 0) > 5 && !out.some((p) => p.kind === "install-agenda" && p.score > 40)) push(proposal(playOf(obs, sprint), 68, `Sprint: three cards, and two of ${agendasHeld} agendas back into R&D`, "draw"));
+  if (sprint && agendasHeld >= 2 && !installed && Number(obs.me["deck-count"] ?? 0) > 5 && !out.some((p) => p.kind === "install-agenda" && p.score > 40)) push(proposal(playOf(obs, sprint), (obs.servers.find((s) => s.key === "hq")?.ices.length ?? 0) >= 2 ? 56 : 44, `Sprint: three cards, and two of ${agendasHeld} agendas back into R&D`, "draw"));
   const subsidy = inHand(obs, "Government Subsidy");
   if (subsidy && obs.credits >= 10) push(proposal(playOf(obs, subsidy), 68, "Government Subsidy: +5 net, keeps the scoring budget high", "economy"));
   const planogram = inHand(obs, "Predictive Planogram");

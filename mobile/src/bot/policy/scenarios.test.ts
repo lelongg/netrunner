@@ -339,8 +339,8 @@ describe("corp hides an agenda flood with Sprint", () => {
     centrals(s);
     s.summon("corp", "Send a Message", "Offworld Office", "Offworld Office", "Luminal Transubstantiation", "Sprint");
     s.credits("corp", 20);
-    const move = s.decide("corp");
-    expect(s.last("corp").chosen?.why).toMatch(/Sprint/);
+    s.decide("corp");
+    expect(best(s, "corp", (w) => w.startsWith("Sprint: three cards, and two of"))).toBeGreaterThan(40);
     s.act("corp", "Sprint: Play");
     for (let i = 0; i < 2; i++) {
       const pick = s.decide("corp");

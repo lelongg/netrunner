@@ -1,6 +1,5 @@
 import { advancement } from "../../game/actions.ts";
 import type { RunTrial } from "./trial.ts";
-import { knownDeck } from "./decks/known.ts";
 import type { CardInfo, Estimate, Observation, ServerInfo } from "./types.ts";
 import { hiddenBreaker } from "./value.ts";
 
@@ -272,9 +271,7 @@ export function serverSafety(obs: Observation, server: ServerInfo): Safety {
     exact = true;
   }
   const income = [...(obs.view.runner?.rig?.resource ?? []), ...(obs.view.runner?.rig?.hardware ?? [])].filter((c: any) => /(gain|take|place) \d+\s*\[credits?\]/i.test(plain(obs.info(c).text ?? ""))).length;
-  const runnerDeck = knownDeck(String(obs.opp.identity?.title ?? ""));
-  const runCredits = (globalThis as any).process?.env?.NO_OVERCLOCK_PURSE !== "1" && runnerDeck?.cards.some((c) => /place (\d+)\s*\[credits?\] on this event, then run/i.test(obs.info({ title: c.title }).text ?? "")) && Number(obs.opp["hand-count"] ?? 0) >= 1 ? 4 : 0;
-  const expected = runnerCredits + 4 + Math.min(4, income * 1.5) + runCredits;
+  const expected = runnerCredits + 4 + Math.min(4, income * 1.5);
   const safe = server.ices.length > 0 && (blocked || runnerCost > expected + 2);
   return { blocked, runnerCost, rezCost, exact, safe, margin: blocked ? Infinity : runnerCost - expected };
 }
