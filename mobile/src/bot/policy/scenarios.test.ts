@@ -717,3 +717,27 @@ describe("nbn keeps its last credits (replay BNDST9RP)", () => {
     expect(best(s, "corp", (w) => /Send a Message/.test(w) && /install|Server 1/.test(w))).toBeLessThan(25);
   });
 });
+
+describe("the action list respects the turn structure (replay 82YJDZAE)", () => {
+  it("offers no click action during the Corp's start-of-turn window, only rez and the mandatory draw", () => {
+    const s = new Scenario("core-jinteki", "core-anarch");
+    s.clearHand("corp");
+    s.summon("corp", "Clearinghouse", "Palisade");
+    s.credits("corp", 10);
+    s.install("corp", "Clearinghouse", "New remote");
+    s.clicks("corp", 3);
+    s.act("corp", "Clearinghouse: Advance");
+    s.clicks("corp", 0);
+    s.act("corp", "End turn");
+    s.act("runner", "Start turn");
+    s.clicks("runner", 0);
+    s.act("runner", "End turn");
+    s.act("corp", "Start turn");
+    const labels = s.actions("corp").map((a) => a.label);
+    expect(labels.some((l) => l.startsWith("Mandatory draw"))).toBe(true);
+    expect(labels.some((l) => l.includes("Rez"))).toBe(true);
+    expect(labels.some((l) => /Advance|Install|Gain 1|Draw$/.test(l))).toBe(false);
+    s.act("corp", "Mandatory draw");
+    expect(s.actions("corp").some((a) => a.label.includes("Advance"))).toBe(true);
+  });
+});
