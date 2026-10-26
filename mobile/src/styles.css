@@ -9101,14 +9101,11 @@ button.player-chip {
 .sheet-backdrop > .sheet {
   margin-bottom: -34px;
   padding-bottom: calc(50px + env(safe-area-inset-bottom));
-  translate: calc(var(--tx, 0) * 30px) calc(var(--ty, 0) * 24px);
-  box-shadow: calc(var(--tx, 0) * -24px) calc(var(--ty, 0) * -24px - 14px) 50px rgb(0 0 0 / 0.8);
+  box-shadow: 0 -14px 50px rgb(0 0 0 / 0.8);
 }
 
 .sheet .sheet-head .sheet-img {
-  translate: calc(var(--tx, 0) * 12px) calc(var(--ty, 0) * 14px);
-  transform: perspective(700px) rotateY(calc(var(--tx, 0) * 16deg)) rotateX(calc(var(--ty, 0) * -12deg));
-  filter: drop-shadow(calc(var(--tx, 0) * -18px) calc(var(--ty, 0) * -18px + 12px) 16px rgb(0 0 0 / 0.7));
+  filter: drop-shadow(0 12px 16px rgb(0 0 0 / 0.7));
 }
 
 .card-zoom img,
