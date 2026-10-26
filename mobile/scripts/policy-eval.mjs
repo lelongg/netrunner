@@ -5,6 +5,7 @@ import { HeuristicBot } from "../src/bot/heuristic.ts";
 import { PolicyBot } from "../src/bot/policy/bot.ts";
 import { engineSimulator } from "../src/bot/policy/simulate.ts";
 import { engineTrial } from "../src/bot/policy/trial.ts";
+import { positionFeatures } from "../src/bot/policy/features.ts";
 import { fingerprint, findPolicy, listPolicies } from "../src/bot/policy/registry.ts";
 import "../src/bot/policy/decks/index.ts";
 import { CORE_CORP_DECKS, CORE_RUNNER_DECKS, coreDeck } from "../src/bot/policy/decks/core.ts";
@@ -33,7 +34,10 @@ if (args.help) {
   --max-actions N    actions before a game is declared unfinished (default 3000)
   --out DIR          write games.jsonl, situations.jsonl and situations.md there
   --full             keep every decision record in games.jsonl (large)
-  --verbose          print one line per game`);
+  --verbose          print one line per game
+  --positions FILE   append one JSON line per Corp turn start (features and the game's outcome) for the learned evaluation
+  --weights FILE     learned evaluation weights (from scripts/fit-eval.mjs) used as the turn search's leaf value
+  --search KIND      turn search for the Corp: 1 | corp | both (default off)`);
   process.exit(0);
 }
 
@@ -177,7 +181,7 @@ function makePlayer(kind, side, precon, random, game) {
   const simulate = kind === "ref" || args.sim === "0" || (typeof args.sim === "string" && args.sim !== side && args.sim !== "both") ? undefined : engineSimulator(engine, game, side);
   const holder = {};
   const trial = simulate && args.trial !== "0" ? engineTrial(engine, game, side, (v, s) => holder.bot.trialMove(v, s)) : undefined;
-  const bot = new tree.PolicyBot(side, match?.policy ?? null, lookup, { random, render, record: true, rescue: false, deck: { identity: precon.identity, cards: precon.cards }, simulate, trial, simWeight: args["sim-weight"] != null ? Number(args["sim-weight"]) : undefined, search: args.search === "1" || args.search === side || args.search === "both", searchWeight: args["search-weight"] != null ? Number(args["search-weight"]) : undefined, searchCap: args["search-cap"] != null ? Number(args["search-cap"]) : undefined, measuredBase: args["measured-base"] != null ? Number(args["measured-base"]) : undefined });
+  const bot = new tree.PolicyBot(side, match?.policy ?? null, lookup, { random, render, record: true, rescue: false, deck: { identity: precon.identity, cards: precon.cards }, simulate, trial, simWeight: args["sim-weight"] != null ? Number(args["sim-weight"]) : undefined, search: args.search === "1" || args.search === side || args.search === "both", searchWeight: args["search-weight"] != null ? Number(args["search-weight"]) : undefined, searchCap: args["search-cap"] != null ? Number(args["search-cap"]) : undefined, measuredBase: args["measured-base"] != null ? Number(args["measured-base"]) : undefined, weights });
   holder.bot = bot;
   const id = `${kind === "ref" ? `ref@${ref.sha.slice(0, 7)}:` : ""}${bot.policyId}${match && !match.exact ? " (nearest deck)" : ""}`;
   return { kind, id, bot, fallback: !match };
@@ -239,6 +243,8 @@ function playGame({ seed, matchup, players, maxActions, full, m = matchups[match
   const planChanges = { corp: 0, runner: 0 };
   let planTurn = "";
   const idle = { corp: { turn: -1, kinds: [] }, runner: { turn: -1, kinds: [] } };
+  const positions = [];
+  let positionTurn = -1;
   while (n < maxActions && !engine.winner(game)) {
     const moves = {};
     const views = {};
@@ -250,6 +256,10 @@ function playGame({ seed, matchup, players, maxActions, full, m = matchups[match
       if (p.bot) decisionMs[side].push(performance.now() - t0);
       if (p.bot instanceof PolicyBot) {
         const rec = p.bot.records[p.bot.records.length - 1];
+        if (positionsFile && side === "corp" && rec?.stage === "click" && views.corp.turn !== positionTurn && Number(views.corp.corp?.click ?? 0) === 3) {
+          positionTurn = views.corp.turn;
+          positions.push({ seed, matchup: m.key ?? matchup, turn: views.corp.turn, features: positionFeatures(p.bot.observeView(views.corp)) });
+        }
         if (rec && rec.n === p.bot.records.length - 1 + (p.bot.records.length > 5000 ? 0 : 0)) {
           if (rec.refused) situations.push(snapshot(views[side], side, p.bot, rec, "refused", "the same move was repeated without effect and got banned"));
           if (rec.unhandled && moves[side] === null) situations.push(snapshot(views[side], side, p.bot, rec, "unhandled", rec.unhandled));
@@ -369,6 +379,7 @@ function playGame({ seed, matchup, players, maxActions, full, m = matchups[match
     log: actions,
     mistakes,
     records: full ? { corp: P.corp.bot?.records, runner: P.runner.bot?.records } : undefined,
+    positions,
   };
 }
 
@@ -378,6 +389,8 @@ const matchup = Number(args.matchup ?? 0);
 const split = String(args.split ?? "design");
 const base = Number(args.seed ?? 1);
 const maxActions = Number(args["max-actions"] ?? 3000);
+const weights = args.weights ? JSON.parse(readFileSync(String(args.weights), "utf8")) : null;
+const positionsFile = args.positions ? String(args.positions) : null;
 const outRoot = args.out ? String(args.out) : null;
 const splitBase = hash32(`split:${split}`) % 1_000_000;
 const pickDeck = (key, side) => {
@@ -408,6 +421,7 @@ async function series(m, out) {
     const seed = (splitBase * 1000 + base + g) >>> 0;
     const r = playGame({ seed, matchup, players, maxActions, full: !!args.full, m });
     results.push(r);
+    if (positionsFile && r.positions.length) await appendFile(positionsFile, r.positions.map((p) => JSON.stringify({ ...p, winner: r.winner, corpWon: r.winner === "corp" ? 1 : 0, players })).join("\n") + "\n");
     if (args.verbose) console.log(JSON.stringify({ seed: r.seed, winner: r.winner, reason: r.reason, turn: r.turn, points: r.points, stuck: r.stuck, errors: r.errors, situations: r.situations.map((s) => s.kind).join(","), ...r.stats }));
     if (out) {
       const { situations, ...rest } = r;

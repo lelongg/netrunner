@@ -10,6 +10,7 @@ import { breakSubChoice, corpRun, runnerRun } from "./runs.ts";
 import { isEconomy, isIcebreaker } from "./tactics.ts";
 import { CLICK_VALUE, evaluate } from "./evaluate.ts";
 import { threat } from "./threat.ts";
+import { positionFeatures, winProbability, type Weights } from "./features.ts";
 import { type AsyncSimulator, type SimOutcome, type SimReport, type Simulator, simulatable, viewSignature } from "./simulate.ts";
 import type { AsyncTrial, RunTrial, Trial } from "./trial.ts";
 import type { DecisionRecord, DeckList, DeckPolicy, Lookup, Memory, Move, Observation, Plan, Proposal } from "./types.ts";
@@ -34,6 +35,7 @@ export interface BotOptions {
   searchBeam?: number;
   searchWeight?: number;
   searchCap?: number;
+  weights?: Weights | null;
 }
 
 interface SearchNode {
@@ -118,6 +120,7 @@ export class PolicyBot {
   private searchBeam: number;
   private searchWeight: number;
   private searchCap: number;
+  private weights: Weights | null;
   private trials = new Map<string, { key: string; trial: RunTrial | null }>();
 
   constructor(side: Side, policy: DeckPolicy | null, lookup: Lookup, options: BotOptions = {}) {
@@ -140,6 +143,11 @@ export class PolicyBot {
     this.searchBeam = options.searchBeam ?? 4;
     this.searchWeight = options.searchWeight ?? 1;
     this.searchCap = options.searchCap ?? 20;
+    this.weights = options.weights ?? null;
+  }
+
+  observeView(view: any): Observation {
+    return observe(view, this.side, this.memory, this.lookup, this.render, this.random, this.deck);
   }
 
   private ownDeck(list: DeckList): DeckList {
@@ -281,6 +289,7 @@ export class PolicyBot {
   }
 
   private leafValue(obs: Observation): number {
+    if (this.weights) return winProbability(positionFeatures(obs), this.weights) * 100;
     const t = threat(obs);
     return evaluate(obs.view, this.side) - t.loss + t.gain;
   }
@@ -325,7 +334,7 @@ export class PolicyBot {
 
   private *turnSearch(ctx: Context): Generator<Move[], SearchReport, SimOutcome> {
     const report: SearchReport = { deltas: new Map(), refused: new Set(), nodes: 0 };
-    const base = this.leafValue(ctx.obs) - ctx.obs.clicks * CLICK_VALUE;
+    const base = this.leafValue(ctx.obs) - (this.weights ? 0 : ctx.obs.clicks * CLICK_VALUE);
     const plan = this.plan;
     let frontier: SearchNode[] = [{ moves: [], root: "", value: base, clicks: ctx.obs.clicks, obs: ctx.obs }];
     const best = (root: string, value: number, moves: Move[]) => {
