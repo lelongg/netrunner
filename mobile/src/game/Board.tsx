@@ -440,12 +440,12 @@ function ScrollHints() {
     <>
       {more[0] && (
         <button class="more-hint up" style={{ top: `${head + 4}px` }} onClick={() => go(-1)} aria-label="Scroll the board up">
-          <span>‹</span>
+          <Icon name="chevron-left" />
         </button>
       )}
       {more[1] && (
         <button class="more-hint down" onClick={() => go(1)} aria-label="Scroll the board down">
-          <span>›</span>
+          <Icon name="chevron-left" />
         </button>
       )}
     </>

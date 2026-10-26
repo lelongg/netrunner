@@ -3627,11 +3627,13 @@ button:active:not(:disabled) {
 .more-hint.up,
 .more-hint.down {
   top: auto;
-  left: 50%;
-  translate: -50% 0;
-  padding: 2px 14px;
-  font-size: 16px;
-  line-height: 1;
+  left: 0;
+  translate: none;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 26px;
+  padding: 0;
 }
 
 .more-hint.up {
@@ -3642,10 +3644,18 @@ button:active:not(:disabled) {
   bottom: 4px;
 }
 
-.more-hint.up span,
-.more-hint.down span {
-  display: inline-block;
+.more-hint.up .icon,
+.more-hint.down .icon {
+  height: 12px;
+  overflow: visible;
+}
+
+.more-hint.up .icon {
   rotate: 90deg;
+}
+
+.more-hint.down .icon {
+  rotate: -90deg;
 }
 
 .stat {
