@@ -2,7 +2,7 @@ import { byCommand, installedThisTurn } from "../observe.ts";
 import { cardAction, playOf, proposal } from "../generic.ts";
 import { cardWorth, choiceMove, choices, findChoice, promptFrom, selectMove, selectable } from "../prompts.ts";
 import { registerPolicy } from "../registry.ts";
-import { corpRun, fromCandidate } from "../runs.ts";
+import { corpRun, fromCandidate, wastefulRez } from "../runs.ts";
 import { agendaProgress, coverage, iceThreat, isTrap, rezCostOf, serverSafety } from "../tactics.ts";
 import type { DeckPolicy, Observation, Plan, Proposal } from "../types.ts";
 import { GATEWAY_CORP_BEGINNER, GATEWAY_CORP_INTERMEDIATE } from "./gateway.ts";
@@ -88,7 +88,7 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[], extra?: (out:
   const drawsSoFar = ((obs.memory.notes.kinds as string[] | undefined) ?? []).filter((k) => k === "draw").length;
   const hqThin = agendasHeld >= 2 && (obs.servers.find((s) => s.key === "hq")?.ices.length ?? 0) <= 1;
   const noIce = !obs.hand.some((c) => c.type === "ICE");
-  if (noIce && !openCentral && !hqThin && deckLeft > 0 && drawsSoFar < 2 && (obs.credits >= 10 || agendasHeld >= 2)) {
+  if (noIce && !openCentral && !hqThin && deckLeft > 0 && drawsSoFar < 1 && obs.hand.length <= 3 && (obs.credits >= 10 || agendasHeld >= 2)) {
     const draw = byCommand(obs, "draw")[0];
     if (draw) push(proposal(draw, agendasHeld >= 2 ? 46 : 40, `draw: no ice in hand${agendasHeld >= 2 ? ` and ${agendasHeld} agendas waiting` : ""}`, "draw"));
   }
@@ -220,7 +220,7 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[], extra?: (out:
   }
   const sprint = inHand(obs, "Sprint");
   if (sprint && agendasHeld === 0 && obs.hand.length <= 5 && Number(obs.me["deck-count"] ?? 0) > 5) push(proposal(playOf(obs, sprint), obs.credits >= 10 ? 56 : 46, "Sprint: three cards to find an agenda, two back into R&D", "draw"));
-  if (sprint && agendasHeld >= 2 && !installed && Number(obs.me["deck-count"] ?? 0) > 5 && !out.some((p) => p.kind === "install-agenda" && p.score > 40)) push(proposal(playOf(obs, sprint), 68, `Sprint: three cards, and two of ${agendasHeld} agendas back into R&D`, "draw"));
+  if (sprint && agendasHeld >= 2 && !installed && Number(obs.me["deck-count"] ?? 0) > 5 && !out.some((p) => p.kind === "install-agenda" && p.score > 40)) push(proposal(playOf(obs, sprint), (obs.servers.find((s) => s.key === "hq")?.ices.length ?? 0) >= 2 ? 56 : 44, `Sprint: three cards, and two of ${agendasHeld} agendas back into R&D`, "draw"));
   const subsidy = inHand(obs, "Government Subsidy");
   if (subsidy && obs.credits >= 10) push(proposal(playOf(obs, subsidy), 68, "Government Subsidy: +5 net, keeps the scoring budget high", "economy"));
   const planogram = inHand(obs, "Predictive Planogram");
@@ -295,9 +295,11 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[], extra?: (out:
         const breached = stolenTurn !== undefined && stolenTurn >= changedTurn;
         const holdable = agendasInHand <= 2 && Number(obs.me["deck-count"] ?? 0) >= 10;
         const taxRace = !contestable && ((rich && fortress) || desperate);
+        const flooded = agendasInHand >= 3;
+        const jam = !contestable && !taxRace && flooded && fortress && canRezOne && !cheapEntry && safety.runnerCost >= 7;
         const slow = card ? agendaProgress(card).need >= 5 : false;
-        p.score = (breached && holdable && !desperate) || (cheapEntry && !desperate) ? Math.min(p.score, 12) : contestable ? Math.min(p.score, racing ? 58 : 48) - (points >= 3 ? 10 : 0) - (slow ? 8 : 0) : taxRace ? Math.min(p.score, 55) - (points >= 3 ? 8 : 0) - (slow ? 8 : 0) : Math.min(p.score, 15);
-        p.why += ` (the Runner can get in: margin ${safety.margin}${breached ? ", and stole from there since the ice last changed" : ""}${cheapEntry ? ", and the run there is nearly free" : ""}${racing ? ", racing" : ""}${taxRace ? (desperate ? ", R&D is running out" : ", rich enough to make every run expensive") : ""}${canRezOne ? "" : ", no ice can be rezzed"}${hqSafer ? ", HQ is safer" : ""})`;
+        p.score = (breached && holdable && !desperate) || (cheapEntry && !desperate) ? Math.min(p.score, 12) : contestable ? Math.min(p.score, racing ? 58 : 48) - (points >= 3 ? 10 : 0) - (slow ? 8 : 0) : taxRace ? Math.min(p.score, 55) - (points >= 3 ? 8 : 0) - (slow ? 8 : 0) : jam ? Math.min(p.score, 44) - (points >= 3 ? 8 : 0) - (slow ? 6 : 0) : Math.min(p.score, 15);
+        p.why += ` (the Runner can get in: margin ${safety.margin}${breached ? ", and stole from there since the ice last changed" : ""}${cheapEntry ? ", and the run there is nearly free" : ""}${racing ? ", racing" : ""}${taxRace ? (desperate ? ", R&D is running out" : ", rich enough to make every run expensive") : ""}${jam ? ", jamming: too many agendas in hand to wait" : ""}${canRezOne ? "" : ", no ice can be rezzed"}${hqSafer ? ", HQ is safer" : ""})`;
       } else if (card && target && safety?.safe && obs.clicks < 3 && canScoreNextTurn(obs, card, !!seamless)) p.score = Math.max(p.score, 72);
       if (safety && !safety.safe && card && target && target.ices.length >= 2 && Number(card.agendapoints ?? 0) <= 1 && agendasHeld >= 2 && Number(obs.opp.credit ?? 0) - safety.runnerCost < safety.runnerCost && obs.credits >= safety.rezCost + 3) {
         p.score = Math.max(p.score, 52);
@@ -398,6 +400,8 @@ function run(obs: Observation, plan: Plan): Proposal | null {
       const next = byCommand(obs, "continue")[0];
       if (next) return fromCandidate(next, 30, `leave ${ice.title} unrezzed: the Runner has the clicks to walk through it`, "pass");
     }
+    const waste = server ? wastefulRez(obs, ice, server) : null;
+    if (waste?.wasteful) return fromCandidate(byCommand(obs, "continue")[0] ?? rez, 30, waste.why, "pass");
     if (cost <= obs.credits - reserve && (worth || (!breakable && threat.etr && cost <= 3))) return fromCandidate(rez, 80, `rez ${ice.title} (${cost}): ${breakable ? "taxes the Runner" : "the Runner cannot break it"}`, "rez");
     if (cost <= obs.credits && !breakable && threat.etr && server?.remote && server.content.length) return fromCandidate(rez, 82, `rez ${ice.title}: it ends the run`, "rez");
   }

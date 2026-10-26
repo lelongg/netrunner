@@ -14,14 +14,15 @@ const advanceableIce = (obs: Observation) => obs.servers.flatMap((s) => s.ices).
 function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
   return glacier.proposals(obs, plan, base, (out, push) => {
   const installed = glacier.agendaIn(obs);
-  const freshAdvance = (card: any, score: number, why: string) => {
-    if (advancement(card) === 0 && obs.credits >= 1) push(proposal(cardAction(obs, card, "advance"), score, why, "advance"));
+  const advancedIce = ((obs.memory.notes.kinds as string[] | undefined) ?? []).includes("advance-ice");
+  const freshAdvance = (card: any, score: number, why: string, kind = "advance") => {
+    if (advancement(card) === 0 && obs.credits >= 1) push(proposal(cardAction(obs, card, "advance"), score, why, kind));
   };
   for (const ice of advanceableIce(obs)) {
-    if (!ice.rezzed) continue;
+    if (!ice.rezzed || advancedIce) continue;
     const have = advancement(ice);
-    if (have === 0) freshAdvance(ice, obs.credits <= 6 ? 50 : 38, `advance ${ice.title}: Built to Last pays two credits back`);
-    else if (ice.title === "Pharos" && have < 3 && obs.credits >= 6 && !installed) push(proposal(cardAction(obs, ice, "advance"), 36, `advance Pharos towards strength ten (${have}/3)`, "advance"));
+    if (have === 0) freshAdvance(ice, obs.credits <= 6 ? 50 : 38, `advance ${ice.title}: Built to Last pays two credits back`, "advance-ice");
+    else if (ice.title === "Pharos" && have < 3 && obs.credits >= 10 && !installed) push(proposal(cardAction(obs, ice, "advance"), 36, `advance Pharos towards strength ten (${have}/3)`, "advance-ice"));
   }
   const bait = glacier.remotes(obs).find((s) => s.ices.length > 0 && !s.content.length);
   for (const s of glacier.remotes(obs)) {
