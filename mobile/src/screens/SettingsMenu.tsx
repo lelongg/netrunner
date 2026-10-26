@@ -184,6 +184,7 @@ export function SettingsSections() {
         <Toggle label="Animations" on={settings.animations} onChange={(v) => setSetting("animations", v)} />
         <Toggle label="Parallax" on={settings.parallax} onChange={(v) => setSetting("parallax", v)} />
         <Toggle label="Keyword glossary" on={settings.glossary} onChange={(v) => setSetting("glossary", v)} />
+        <Toggle label="Card text in French" on={settings.frenchCards} onChange={(v) => setSetting("frenchCards", v)} />
       </MenuSection>
       {pushSupported() && (
         <MenuSection title="Notifications">

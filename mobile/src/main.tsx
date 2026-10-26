@@ -37,6 +37,7 @@ import { type Role, type SavedGame, Session, clearSave, listSaves, loadSave, new
 import "./styles.css";
 import "./fx/fx.css";
 import { applySettings, motionOff, onSettings, settings } from "./settings";
+import { useCardText } from "./cardtext";
 import { MotionGlobalConfig } from "motion";
 
 const joinParam = new URLSearchParams(location.search).get("join")?.toUpperCase() ?? undefined;
@@ -127,6 +128,7 @@ function playerName() {
 }
 
 function App() {
+  useCardText();
   const [loaded, setLoaded] = useState<{ engine: EngineApi; db: CardDb; matchups: Matchup[] }>();
   const [error, setError] = useState<string>();
   const [session, setSession] = useState<Session | null>(null);

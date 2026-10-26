@@ -18,6 +18,7 @@ import { Cta, Picker, Ticker, ask, tell } from "../ui";
 import { motionOff, settings } from "../settings";
 import { DeckBrowser } from "./DeckBrowser";
 import { uiSound } from "../uisound";
+import { cardText } from "../cardtext";
 import { Swipe } from "../swipe";
 
 const SIDE_NAME: Record<Side, "Corp" | "Runner"> = { corp: "Corp", runner: "Runner" };
@@ -508,7 +509,7 @@ function IdentityInfo({ card }: { card: Card }) {
           </span>
         )}
       </div>
-      {card.text && <RichText class="card-text" text={card.text} />}
+      {card.text && <RichText class="card-text" text={cardText(card) ?? card.text} />}
     </div>
   );
 }
@@ -1420,7 +1421,7 @@ function CardInfo({ card, identity, format }: { card: Card; identity: Card; form
         {inf ? ` · ${inf} inf` : ""} · {card.setname as string}
       </span>
       <span class={`legal-line ${l}`}>{l === "legal" ? `Legal in ${FORMATS.find((f) => f.key === format)!.label}` : l === "restricted" ? "Restricted" : l === "banned" ? "Banned" : "Not in this format"}</span>
-      {card.text && <RichText class="card-text" text={card.text} />}
+      {card.text && <RichText class="card-text" text={cardText(card) ?? card.text} />}
     </div>
   );
 }

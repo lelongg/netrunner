@@ -10,6 +10,7 @@ import { RichText } from "./RichText";
 import { useSheetPager } from "./swipe";
 import { iconize, serverLabel, serverName, serverRank } from "./text";
 import { Icon, type IconName } from "../icons";
+import { cardText } from "../cardtext";
 import { glyphs } from "./Glyphs";
 
 interface Chip {
@@ -159,7 +160,7 @@ function SheetInfo({ card, code, full, side, view }: { card: any; code?: string;
           </>
         );
       })()}
-      {full?.text && <RichText class="card-text" text={full.text} />}
+      {full?.text && <RichText class="card-text" text={full.faced ? full.text : (cardText(full) ?? full.text)} />}
       {(card.subroutines ?? []).length > 0 && side === "runner" && !full?.text && (
         <ul class="subs">
           {card.subroutines.map((s: any) => (
@@ -175,7 +176,7 @@ function SheetInfo({ card, code, full, side, view }: { card: any; code?: string;
 
 function withFace(full: any, card: any) {
   const face = full?.["face-texts"]?.[faceIndex(card) ?? -1];
-  return face ? { ...full, title: face.title, text: face.text } : full;
+  return face ? { ...full, title: face.title, text: face.text, faced: true } : full;
 }
 
 export function CardSheet({ confirm, card, view, stamp, probe, side, db, send, onClose, disabled, index = 0, count = 1, slide, onStep, readOnly, neighbors, siblings, onJump }: Props) {

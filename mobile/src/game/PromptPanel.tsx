@@ -10,6 +10,7 @@ import { returnAccessed } from "../fx/access";
 import { Icon } from "../icons";
 import { RichText } from "./RichText";
 import { byServerOrder, iconize } from "./text";
+import { cardText } from "../cardtext";
 import { glyphs } from "./Glyphs";
 
 interface Props {
@@ -63,7 +64,7 @@ function ChoiceSheet({ items, index, disabled, onGo, onPick, onClose }: { items:
         {Array.isArray(card.subtypes) && card.subtypes.length ? ` · ${card.subtypes.join(" · ")}` : ""}
       </span>
       <h2>{card.title}</h2>
-      {card.text && <RichText class="card-text" text={card.text} />}
+      {card.text && <RichText class="card-text" text={cardText(card) ?? card.text} />}
     </div>
   );
   return createPortal(
@@ -363,7 +364,7 @@ export function PromptPanel({ view, side, prompt, render, send, closePrompt, dis
               </span>
             )}
             <span class="prompt-card">{source.title}</span>
-            {full?.text ? <RichText class="card-text" text={full.text} /> : msgLine}
+            {full?.text ? <RichText class="card-text" text={cardText(full) ?? full.text} /> : msgLine}
           </div>
         </div>
       ) : (
