@@ -134,6 +134,9 @@ jobs:
         working-directory: mobile
         env:
           FLAGS: ${{ matrix.flags }}
+          CONFIG: ${{ matrix.config }}
+          CORP: ${{ matrix.corp }}
+          RUNNER: ${{ matrix.runner }}
         run: |
           mkdir -p results
           for split in ${{ needs.plan.outputs.splits }}; do
@@ -151,10 +154,6 @@ jobs:
               fs.writeFileSync(`results/${split}/cell.json`, JSON.stringify({ config: process.env.CONFIG, flags: process.env.FLAGS, corp: process.env.CORP, runner: process.env.RUNNER, split, games: summary.games, wins: summary.wins, reasons: summary.reasons, mistakes: summary.mistakes, decisionMs: ms ? Number(ms[1]) : null, decisionMaxMs: ms ? Number(ms[2]) : null }));
             ' $split
           done
-        env:
-          CONFIG: ${{ matrix.config }}
-          CORP: ${{ matrix.corp }}
-          RUNNER: ${{ matrix.runner }}
 
       - uses: actions/upload-artifact@v4
         with:
