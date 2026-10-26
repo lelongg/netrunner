@@ -4221,9 +4221,14 @@ button.armed {
   gap: 8px;
 }
 
-.history-list li {
+.history-list > li {
   display: flex;
   gap: 6px;
+}
+
+.history-list > li {
+  display: flex;
+  flex-direction: column;
 }
 
 .history-row {
@@ -9822,4 +9827,135 @@ button.player-chip {
 
 .identity-tile .card-image img {
   height: auto;
+}
+
+.editor-subtitle {
+  margin: -4px 0 0;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.editor-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  margin: 0 -16px;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  background: var(--bg);
+  border-top: 1px solid var(--line-2);
+}
+
+.preview-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.preview-note {
+  margin: 0;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.preview-note b {
+  color: var(--text);
+}
+
+.preview-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.preview-buttons button {
+  flex: 1;
+  min-height: 48px;
+}
+
+.deck-diff {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 11px;
+}
+
+.deck-diff li {
+  display: block;
+  text-transform: none;
+  letter-spacing: 0.04em;
+}
+
+.deck-diff b {
+  display: inline-block;
+  min-width: 2.4em;
+}
+
+.deck-diff .add b {
+  color: var(--cyan);
+}
+
+.deck-diff .cut b,
+.deck-diff .id {
+  color: var(--red);
+}
+
+.history-source {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--line-2);
+  font-size: 11px;
+}
+
+.history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 55vh;
+  overflow-y: auto;
+}
+
+.history-list > li {
+  display: flex;
+  flex-direction: column;
+}
+
+.history-row {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 10px 4px;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  text-align: left;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.history-row.on {
+  box-shadow: inset 2px 0 0 var(--cyan);
+}
+
+.history-when {
+  font-size: 12px;
+  color: var(--text);
+}
+
+.history-what {
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.history-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 4px 12px;
 }

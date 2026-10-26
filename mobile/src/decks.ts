@@ -57,6 +57,10 @@ export function parseDecklist(text: string, side: Side, db: CardDb, name = "Impo
 }
 
 export async function importNrdb(url: string, side: Side, db: CardDb): Promise<Deck> {
+  return (await fetchNrdb(url, side, db)).deck;
+}
+
+export async function fetchNrdb(url: string, side: Side, db: CardDb): Promise<{ deck: Deck; source?: DeckSource }> {
   const id = url.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|\b\d{3,}\b)/i)?.[1];
   if (!id) throw new Error("Unrecognized NetrunnerDB link");
   const kinds = url.includes("/deck/") ? ["deck", "decklist"] : ["decklist", "deck"];
@@ -71,7 +75,9 @@ export async function importNrdb(url: string, side: Side, db: CardDb): Promise<D
       const card = db.byCode.get(code);
       if (card) found.set(card, (found.get(card) ?? 0) + qty);
     }
-    return build(data.name ?? "Deck NetrunnerDB", side, found);
+    const deck = build(data.name ?? "Deck NetrunnerDB", side, found);
+    const sourceId = String(data.uuid ?? data.id ?? id);
+    return { deck, source: kind === "decklist" ? { kind: "nrdb", id: sourceId, author: data.user_name ?? undefined, updated: data.date_update ?? data.date_creation } : undefined };
   }
   throw new Error("Deck not found on NetrunnerDB (is it published or shared?)");
 }
@@ -127,13 +133,55 @@ const EARLIER_CORE_NAMES = new Set([
 ]);
 const MAX_DECKS = 80;
 
+export interface DeckSource {
+  kind: "nrdb";
+  id: string;
+  author?: string;
+  updated?: string;
+}
+
+export interface DeckVersion {
+  at: number;
+  reason: "edit" | "update" | "restore";
+  name: string;
+  identity: string;
+  cards: [string, number][];
+}
+
 export interface StoredDeck extends WireDeck {
   side: Side;
   id: string;
   format?: string;
   updatedAt?: number;
   cover?: string;
+  source?: DeckSource;
+  versions?: DeckVersion[];
 }
+
+const MAX_VERSIONS = 12;
+
+export const sameList = (a: Pick<WireDeck, "identity" | "cards">, b: Pick<WireDeck, "identity" | "cards">) => a.identity === b.identity && cardKey(a.cards) === cardKey(b.cards);
+
+export function cardDiff(from: WireDeck["cards"], to: WireDeck["cards"]): { title: string; delta: number }[] {
+  const was = new Map(from);
+  const now = new Map(to);
+  return [...new Set([...was.keys(), ...now.keys()])]
+    .map((title) => ({ title, delta: (now.get(title) ?? 0) - (was.get(title) ?? 0) }))
+    .filter((d) => d.delta)
+    .sort((a, b) => b.delta - a.delta || a.title.localeCompare(b.title));
+}
+
+export function recordVersion(id: string, before: WireDeck, reason: DeckVersion["reason"]) {
+  const all = savedDecks();
+  const deck = all.find((d) => d.id === id);
+  if (!deck) return;
+  const versions = deck.versions ?? [];
+  if (versions[0] && sameList(versions[0], before) && versions[0].name === before.name) return;
+  const version: DeckVersion = { at: Date.now(), reason, name: before.name, identity: before.identity, cards: before.cards };
+  writeDecks(all.map((d) => (d.id === id ? { ...d, versions: [version, ...versions].slice(0, MAX_VERSIONS) } : d)));
+}
+
+export const deckBySource = (sourceId: string) => savedDecks().find((d) => d.source?.id === sourceId);
 
 const newDeckId = () => Array.from(crypto.getRandomValues(new Uint32Array(2)), (n) => n.toString(36)).join("");
 
@@ -161,7 +209,8 @@ export function saveDeck(deck: Deck, side: Side) {
 }
 
 export function putDeck(deck: Omit<StoredDeck, "id"> & { id?: string }): StoredDeck {
-  const stored: StoredDeck = { ...deck, id: deck.id ?? newDeckId(), updatedAt: Date.now() };
+  const prev = deck.id ? savedDecks().find((d) => d.id === deck.id) : undefined;
+  const stored: StoredDeck = { ...prev, ...deck, id: deck.id ?? newDeckId(), updatedAt: Date.now() };
   writeDecks([stored, ...savedDecks().filter((d) => d.id !== stored.id)]);
   return stored;
 }
