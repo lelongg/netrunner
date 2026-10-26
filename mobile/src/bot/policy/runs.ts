@@ -60,6 +60,7 @@ export function encounterPlan(obs: Observation): { proposal: Proposal; threat: R
   if (!live) return null;
   const worth = threat.etr || threat.damage > 0 || threat.creditLoss > 0 || threat.tag;
   if (!worth) return null;
+  const facing = threat.etr || threat.tag || threat.damage >= obs.hand.length - 1 ? Infinity : threat.damage * 2 + threat.creditLoss;
   const hosted = hostedBreaker(obs, ice);
   if (hosted) {
     const use = byCommand(obs, "ability", (c) => (c.args as any)?.card?.cid === hosted.cid)[0] ?? byCommand(obs, "runner-ability", (c) => (c.args as any)?.card?.cid === hosted.cid)[0];
@@ -68,9 +69,9 @@ export function encounterPlan(obs: Observation): { proposal: Proposal; threat: R
   const full = byCommand(obs, "dynamic-ability", (c) => /fully break/i.test(c.label))
     .map((c) => ({ c, cost: labelCost(c.label) }))
     .sort((a, b) => a.cost - b.cost)[0];
-  if (full && full.cost <= obs.credits) return { proposal: fromCandidate(full.c, 85, `fully break ${ice.title} for ${full.cost}`, "break"), threat };
+  if (full && full.cost <= obs.credits && full.cost <= facing) return { proposal: fromCandidate(full.c, 85, `fully break ${ice.title} for ${full.cost}`, "break"), threat };
   const option = bestBreak(obs, ice);
-  if (!option) return null;
+  if (!option || option.cost.value > facing) return null;
   const breaker = option.profile.card;
   if (option.profile.strength < strengthOf(ice)) {
     const pump = byCommand(obs, "dynamic-ability", (c) => /match strength/i.test(c.label) && (c.args as any)?.card?.cid === breaker.cid)[0];

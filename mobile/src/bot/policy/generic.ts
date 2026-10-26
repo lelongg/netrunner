@@ -160,18 +160,21 @@ export function serverValue(obs: Observation, server: Observation["servers"][num
 export function runProposals(obs: Observation, limit = 2): Proposal[] {
   const out: Proposal[] = [];
   if (obs.memory.runsThisTurn >= limit || obs.hand.length < 2) return out;
+  const corpPoints = Number(obs.opp["agenda-point"] ?? 0);
   for (const server of obs.servers) {
     const value = serverValue(obs, server);
     if (value <= 0) continue;
-    const est = runTrialOf(obs, server) ?? estimateRun(obs, server);
-    if (est.blocked || est.credits > obs.credits) continue;
-    if (est.damage >= obs.hand.length) continue;
     const adv = Math.max(0, ...server.content.map((c: any) => agendaProgress(c).have));
+    const decisive = server.remote && corpPoints >= 5 && adv >= 1 && server.content.some((c: any) => !c.rezzed || c.type === "Agenda");
+    const est = runTrialOf(obs, server) ?? estimateRun(obs, server, 3, obs.credits + (decisive ? 3 : 0));
+    if (est.blocked || est.credits > obs.credits + (decisive ? 3 : 0)) continue;
+    if (est.damage >= obs.hand.length) continue;
     if (adv > 1 && obs.hand.length < 1 + adv) continue;
     const run = byCommand(obs, "run", (c) => (c.args as any)?.server === server.label)[0];
     if (!run) continue;
-    const score = Math.min(40 + (value - est.credits * 0.3 - est.damage * 1.5) * 4, value < 2 ? 32 : 200);
-    out.push(fromCandidate(run, score, `run ${server.label}: value ${value.toFixed(1)}, ${est.exact ? "costs" : "about"} ${est.credits}${est.damage ? `, ${est.damage} damage` : ""}`, "run", est.exact));
+    const base = Math.min(40 + (value - est.credits * 0.3 - est.damage * 1.5) * 4, value < 2 ? 32 : 200);
+    const score = decisive ? Math.max(base, 72) : base;
+    out.push(fromCandidate(run, score, `run ${server.label}: value ${value.toFixed(1)}, ${est.exact ? "costs" : "about"} ${est.credits}${est.damage ? `, ${est.damage} damage` : ""}${decisive ? " (decisive: the Corp scores out of there next turn)" : ""}`, "run", est.exact));
   }
   return out;
 }

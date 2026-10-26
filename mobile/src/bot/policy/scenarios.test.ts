@@ -844,3 +844,42 @@ describe("runner installs the breaker it needs before saving for the remote (rep
     expect(best(s, "runner", (w) => w.startsWith("run Archives"))).toBeLessThan(35);
   });
 });
+
+describe("runner contests the winning agenda", () => {
+  it("runs the remote at ten credits when the Corp sits at six points with an advanced card behind two rezzed ice", () => {
+    const s = new Scenario("core-weyland", "core-criminal");
+    s.clearHand("corp");
+    s.summon("corp", "Kessleroid", "Pharos", "Palisade", "Syailendra", "Orbital Superiority", "Send a Message", "Send a Message");
+    s.credits("corp", 40);
+    for (const [c, srv] of [["Kessleroid", "R&D"], ["Pharos", "HQ"], ["Palisade", "New remote"], ["Syailendra", "Server 1"], ["Orbital Superiority", "Server 1"]] as [string, string][]) {
+      s.clicks("corp", 3);
+      s.credits("corp", 40);
+      s.install("corp", c, srv);
+    }
+    s.rez("Palisade");
+    s.rez("Syailendra");
+    s.clicks("corp", 3);
+    s.act("corp", "Orbital Superiority: Advance");
+    for (let i = 0; i < 2; i++) {
+      s.say("corp", "/score");
+      s.act("corp", "Select Send a Message");
+      s.act("corp", "Done");
+    }
+    expect(Number(s.view("corp").corp["agenda-point"])).toBe(6);
+    s.credits("corp", 15);
+    s.endTurn("corp");
+    s.clearHand("runner");
+    s.summon("runner", "Buzzsaw", "Marjanah", "Carmen", "Docklands Pass", "Smartware Distributor");
+    s.credits("runner", 30);
+    for (const c of ["Buzzsaw", "Marjanah", "Carmen", "Docklands Pass", "Smartware Distributor"]) {
+      s.clicks("runner", 4);
+      s.install("runner", c);
+    }
+    s.clicks("runner", 4);
+    s.summon("runner", "T400 Memory Diamond", "VRcation", "Mutual Favor", "Buzzsaw");
+    s.credits("runner", 10);
+    const move = s.decide("runner");
+    expect(move?.command).toBe("run");
+    expect(s.last("runner").chosen?.why).toMatch(/run Server 1.*decisive/);
+  });
+});
