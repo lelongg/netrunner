@@ -3624,6 +3624,30 @@ button:active:not(:disabled) {
   left: 0;
 }
 
+.more-hint.up,
+.more-hint.down {
+  top: auto;
+  left: 50%;
+  translate: -50% 0;
+  padding: 2px 14px;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.more-hint.up {
+  top: 4px;
+}
+
+.more-hint.down {
+  bottom: 4px;
+}
+
+.more-hint.up span,
+.more-hint.down span {
+  display: inline-block;
+  rotate: 90deg;
+}
+
 .stat {
   white-space: nowrap;
   letter-spacing: 0.08em;
