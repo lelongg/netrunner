@@ -741,3 +741,71 @@ describe("the action list respects the turn structure (replay 82YJDZAE)", () => 
     expect(s.actions("corp").some((a) => a.label.includes("Advance"))).toBe(true);
   });
 });
+
+describe("runner respects its grip and its hand (replay 82YJDZAE)", () => {
+  it("does not run a two-ice Jinteki remote with no breakers and a grip of five", () => {
+    const s = new Scenario("core-jinteki", "core-anarch");
+    s.clearHand("corp");
+    s.summon("corp", "Tithe", "Whitespace", "Karunā", "Tithe", "Offworld Office");
+    s.credits("corp", 40);
+    for (const [c, srv] of [["Tithe", "HQ"], ["Whitespace", "R&D"], ["Karunā", "New remote"], ["Tithe", "Server 1"], ["Offworld Office", "Server 1"]] as [string, string][]) {
+      s.clicks("corp", 3);
+      s.install("corp", c, srv);
+    }
+    s.clicks("corp", 3);
+    s.act("corp", "Offworld Office: Advance");
+    s.act("corp", "Offworld Office: Advance");
+    s.credits("corp", 7);
+    s.endTurn("corp");
+    s.clearHand("runner");
+    s.summon("runner", "Smartware Distributor", "Smartware Distributor", "DZMZ Optimizer");
+    s.credits("runner", 20);
+    s.install("runner", "Smartware Distributor");
+    s.install("runner", "Smartware Distributor");
+    s.install("runner", "DZMZ Optimizer");
+    s.clicks("runner", 4);
+    s.summon("runner", "Overclock", "Botulus", "Verbal Plasticity", "Wildcat Strike", "Sure Gamble");
+    s.credits("runner", 9);
+    s.decide("runner");
+    expect(best(s, "runner", (w) => w.startsWith("run Server 1"))).toBeLessThan(20);
+  });
+
+  it("installs its hand instead of drawing on a full grip when rich", () => {
+    const s = new Scenario("core-jinteki", "core-anarch");
+    s.clearHand("corp");
+    s.summon("corp", "Tithe", "Palisade", "Whitespace", "Karunā", "Tithe", "Diviner", "Urtica Cipher");
+    s.credits("corp", 40);
+    for (const [c, srv] of [["Tithe", "HQ"], ["Palisade", "HQ"], ["Whitespace", "R&D"], ["Karunā", "New remote"], ["Tithe", "Server 1"], ["Diviner", "Server 1"], ["Urtica Cipher", "Server 1"]] as [string, string][]) {
+      s.clicks("corp", 3);
+      s.credits("corp", 40);
+      s.install("corp", c, srv);
+    }
+    s.rez("Karunā");
+    s.credits("corp", 9);
+    s.endTurn("corp");
+    s.clearHand("runner");
+    s.summon("runner", "Smartware Distributor", "Smartware Distributor", "DZMZ Optimizer", "Buzzsaw", "Leech", "Cookbook");
+    s.credits("runner", 30);
+    for (const c of ["Smartware Distributor", "Smartware Distributor", "DZMZ Optimizer", "Buzzsaw", "Leech", "Cookbook"]) {
+      s.clicks("runner", 4);
+      s.install("runner", c);
+    }
+    s.clicks("runner", 4);
+    s.summon("runner", "Carnivore", "Docklands Pass", "Docklands Pass", "Fermenter", "Wildcat Strike");
+    s.credits("runner", 14);
+    const chosen: string[] = [];
+    for (let i = 0; i < 10 && Number(s.view("runner").runner.click) > 0; i++) {
+      const move = s.decide("runner");
+      if (!move) {
+        const corp = s.decide("corp");
+        if (corp) s.play("corp", corp);
+        continue;
+      }
+      if (move.command !== "toast") chosen.push(`${move.command}: ${s.last("runner").chosen?.why ?? ""}`);
+      s.play("runner", move);
+    }
+    expect(chosen.join(" | ")).toMatch(/Fermenter/);
+    expect(chosen.join(" | ")).toMatch(/Carnivore/);
+    expect(chosen.filter((c) => c.startsWith("draw")).length).toBeLessThan(2);
+  });
+});
