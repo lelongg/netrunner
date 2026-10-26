@@ -112,7 +112,7 @@ export class GameRunner {
     if (probe.k === "run-trial") return { ok: true, trial: this.trialStep ? runTrial(this.engine, game, side, probe.server, this.trialStep(side, probe.deck), probe.prelude ?? []) : null };
     if (probe.k === "moves") {
       for (const [i, m] of probe.moves.entries()) {
-        if (!this.tryOn(game, side, m.command, m.args ?? null, true)) return { ok: false };
+        if (!this.tryOn(game, side, m.command, m.args ?? null, false)) return { ok: false };
         if (i === 0 && this.engine.unchanged(game, snapshot)) return { ok: false };
       }
       return { ok: true, view: this.engine.view(game, side) };

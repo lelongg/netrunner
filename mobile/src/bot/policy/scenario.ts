@@ -40,7 +40,7 @@ export class Scenario {
   readonly game: any;
   readonly bots: Record<Side, PolicyBot>;
 
-  constructor(corpKey: string, runnerKey: string, seed = 1) {
+  constructor(corpKey: string, runnerKey: string, seed = 1, options: { search?: boolean } = {}) {
     load();
     const lists = { corp: coreDeck(corpKey)!, runner: coreDeck(runnerKey)! };
     const deck = (p: { identity: string; cards: { qty: number; title: string }[] }) => ({ identity: byTitle.get(p.identity), cards: p.cards.map(({ qty, title }) => ({ qty, card: byTitle.get(title) })) });
@@ -61,6 +61,7 @@ export class Scenario {
         deck: list,
         simulate: engineSimulator(engine, this.game, side),
         trial: engineTrial(engine, this.game, side, (v, s) => holder.bot!.trialMove(v, s)),
+        search: options.search ?? false,
       });
       holder.bot = bot;
       return bot;

@@ -131,4 +131,5 @@ export interface DecisionRecord {
   ms: number;
   signature: string;
   prompt?: string;
+  searched?: number;
 }

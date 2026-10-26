@@ -276,7 +276,8 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[], extra?: (out:
       const agendasInHand = obs.hand.filter((c) => c.type === "Agenda").length;
       const racing = Number(obs.me["deck-count"] ?? 0) < 12 || agendasInHand >= 2 || obs.hand.length >= 5;
       const points = Number(card?.agendapoints ?? 0);
-      const runnerReady = Number(obs.opp.credit ?? 0) >= 4 && Number(obs.opp["hand-count"] ?? 0) >= 1;
+      const runnerIncome = [...(obs.opp.rig?.resource ?? []), ...(obs.opp.rig?.hardware ?? [])].filter((c: any) => /(gain|take|place) \d+\s*\[credits?\]/i.test(obs.info(c).text ?? "")).length;
+      const runnerReady = Number(obs.opp.credit ?? 0) + 4 + Math.min(4, runnerIncome * 1.5) >= 7 && Number(obs.opp["hand-count"] ?? 0) >= 1;
       const thinAndSlow = !!card && !!target && target.ices.length < 2 && agendaProgress(card).need >= 4 && runnerReady && !canScoreNextTurn(obs, card, !!seamless);
       if (safety && !safety.safe) {
         const canRezOne = target!.ices.some((i) => i.rezzed || rezCostOf(i) <= obs.credits - 1);

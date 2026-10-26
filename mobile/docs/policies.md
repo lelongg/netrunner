@@ -253,6 +253,41 @@ test split and 33 of 72 on the design split, both within noise of the previous p
 Background grids die when the container sleeps between turns, so validation now runs
 as 24 single cells, four at a time, from foreground calls (about 20 minutes per split).
 
+## Turn search (experimental, off by default)
+
+`PolicyBot` can plan the Corp's whole turn instead of scoring one move at a time
+(`search: true`, `--search 1` in `policy-eval.mjs`): a beam over click sequences
+(five candidates per node from the policy's own proposals, four kept per depth, up to
+the clicks left) played through the simulator, with each leaf valued by the static
+evaluation (`evaluate.ts`) minus a threat term (`threat.ts`: expected agenda points the
+Runner takes next turn from every server, from the server safety margin, the agendas in
+hand and the deck's agenda density, plus the scoring chance of installed agendas and the
+credits a check costs the Runner). The first move of the best line gets its search delta
+added to its rule score, capped at ±20. Prompts opened by a move are answered with the
+policy's own prompt handler; draws and other hidden moves keep their rule score.
+
+To make it affordable the engine gained `mark` (a snapshot without the settled copy
+`unchanged?` needs) and `attempt` now drops the cached views so that `view` rebuilds
+them once: a simulated move costs 8 ms on the release engine build instead of 23, and a
+31-node search 0.7 to 1.5 seconds. Refused moves are detected by comparing a signature
+of the own view before and after instead of `unchanged?`.
+
+Measured on the test split with 6 games per cell: no search 44 of 72; search 39 (NBN
+fell from 5 to 2 of 18, Weyland rose from 12 to 16); with a concave credit curve and
+unfunded ice valued at 0.5 instead of 1.5: 36; as a nudge only (weight 0.6, cap 8): 40.
+Three cells read before the full split (Weyland/Criminal 6 of 6, Jinteki/Shaper 4 of 6,
+HB/Anarch 4 of 6) looked better than the whole. The leaf evaluation is the bottleneck:
+the Corp hoards credits when every install reads as a loss and spreads unpaid ice when
+rezzed ice reads as value, and NBN's tag plan is invisible to it. The search stays
+available for experiments and the rules keep deciding until a leaf evaluation beats
+them, most likely one fitted on recorded positions rather than written by hand.
+
+Replay K6CCE5LT (Weyland 5-8 against Tāo) added three rules on top: a thin install is
+"slow" against a Runner whose next-turn purse (credits plus four plus income) reaches
+seven, not only against one already holding four; a credit click that makes a big
+economy operation playable this turn scores 48; and a purge is capped at 28 under four
+credits, when the clicks are worth more as rez money.
+
 ## Scenario tests
 
 `src/bot/policy/scenarios.test.ts` (`npm run scenarios`, also run by CI) asks the bot for

@@ -503,3 +503,62 @@ describe("weyland advances ice at most once per turn", () => {
     expect(second?.command).not.toBe("advance");
   });
 });
+
+describe("corp economy before thin installs", () => {
+  it("clicks for the credits that make Government Subsidy playable rather than installing behind one ice", () => {
+    const s = new Scenario("core-weyland", "core-shaper");
+    s.clearHand("corp");
+    s.summon("corp", "Palisade", "Palisade", "Palisade");
+    s.credits("corp", 10);
+    s.install("corp", "Palisade", "New remote");
+    s.install("corp", "Palisade", "HQ");
+    s.install("corp", "Palisade", "R&D");
+    s.rez("Palisade");
+    s.endTurn("corp");
+    s.clearHand("runner");
+    s.summon("runner", "Echelon", "Unity", "Smartware Distributor", "Sure Gamble", "Sure Gamble");
+    s.credits("runner", 12);
+    s.install("runner", "Echelon");
+    s.install("runner", "Unity");
+    s.install("runner", "Smartware Distributor");
+    s.credits("runner", 3);
+    s.endTurn("runner");
+    s.clearHand("corp");
+    s.summon("corp", "Offworld Office", "Government Subsidy", "Retribution");
+    s.credits("corp", 7);
+    const move = s.decide("corp");
+    expect(move?.command).toBe("credit");
+    expect(s.last("corp").chosen?.why).toContain("playable this turn");
+    expect(best(s, "corp", (w) => w.startsWith("install Offworld Office"))).toBeLessThan(40);
+  });
+});
+
+describe("corp does not purge when it cannot rez the ice it has", () => {
+  it("takes credits instead of purging three Conduit counters at three credits", () => {
+    const s = new Scenario("core-weyland", "core-shaper");
+    s.clearHand("corp");
+    s.summon("corp", "Palisade", "Funhouse");
+    s.credits("corp", 10);
+    s.install("corp", "Palisade", "R&D");
+    s.clicks("corp", 3);
+    s.install("corp", "Funhouse", "R&D");
+    s.endTurn("corp");
+    s.clearHand("runner");
+    s.summon("runner", "Conduit", "Cleaver", "Unity", "Sure Gamble", "Sure Gamble");
+    s.credits("runner", 20);
+    s.install("runner", "Conduit");
+    s.install("runner", "Cleaver");
+    s.install("runner", "Unity");
+    for (let i = 0; i < 3; i++) {
+      s.clicks("runner", 3);
+      s.act("runner", "Conduit: [Click]");
+      settleRun(s, "runner");
+    }
+    s.endTurn("runner");
+    s.clearHand("corp");
+    s.summon("corp", "Retribution");
+    s.credits("corp", 3);
+    const move = s.decide("corp");
+    expect(move?.command).not.toBe("purge");
+  });
+});

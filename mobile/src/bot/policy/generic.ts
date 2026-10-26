@@ -62,7 +62,7 @@ export function corpProposals(obs: Observation): Proposal[] {
   const purge = byCommand(obs, "purge")[0];
   if (purge && obs.clicks >= 3 && (digging.length || virusCounters >= 6)) {
     const worst = digging.sort((a: any, b: any) => b.counters - a.counters)[0];
-    push(proposal(purge, worst ? 52 + Math.min(30, worst.counters * 6) : 46, worst ? `purge: ${worst.title} holds ${worst.counters} virus counters` : `purge ${virusCounters} virus counters`, "purge"));
+    push(proposal(purge, Math.min(worst ? 52 + Math.min(30, worst.counters * 6) : 46, obs.credits < 4 ? 28 : 99), worst ? `purge: ${worst.title} holds ${worst.counters} virus counters` : `purge ${virusCounters} virus counters`, "purge"));
   }
   const openRemotes = obs.servers.filter((s) => s.remote && !s.content.length);
   const runnerCredits = Number(obs.view.runner?.credit ?? 0);
@@ -129,12 +129,14 @@ export function corpProposals(obs: Observation): Proposal[] {
   if (trap && obs.servers.filter((s) => s.remote).length < 4 && obs.credits >= 3) push(proposal(playOf(obs, trap, "New remote"), 38, `install ${trap.title} as a bait`, "install-trap"));
   if (tagged(obs.view) && obs.credits >= 4 && (obs.view.runner?.rig?.resource ?? []).length) push(proposal(byCommand(obs, "trash-resource")[0], 45, "trash a resource while the Runner is tagged", "trash-resource"));
   const wantCredits = obs.hand.some((c) => c.type === "Operation" && gainOf(obs.info(c).text) > playCostOf(c) && playCostOf(c) > obs.credits);
+  const nearly = obs.hand.some((c) => c.type === "Operation" && gainOf(obs.info(c).text) > playCostOf(c) + 3 && playCostOf(c) > obs.credits && playCostOf(c) <= obs.credits + obs.clicks);
   const deckLeft = Number(obs.me["deck-count"] ?? 0);
   const broke = obs.credits < 3 && obs.servers.some((s) => s.ices.some((i) => !i.rezzed && rezCostOf(i) > obs.credits));
   const rich = obs.credits >= 12 && obs.hand.length <= 2 && !ice.length;
   if (obs.hand.length < 4 && deckLeft > 8) push(proposal(byCommand(obs, "draw")[0], broke ? 29 : rich ? 50 : 35, rich ? "draw: rich but nothing to spend on" : "draw: the hand is thin", "draw"));
   if (obs.credits >= 15 && deckLeft > 8 && obs.hand.length < 5) push(proposal(byCommand(obs, "draw")[0], 40, "draw: credits are plentiful, cards are not", "draw"));
-  push(proposal(byCommand(obs, "credit")[0], 30 + (wantCredits ? 10 : 0) + (obs.credits < 3 ? 4 : 0) + (broke ? 8 : 0), broke ? "take a credit: unrezzed ice cannot be rezzed" : wantCredits ? "take a credit towards an economy operation in hand" : "take a credit", "credit"));
+  if (obs.credits >= 12 && deckLeft > 8 && !ice.length && obs.hand.length <= 5 && ((obs.memory.notes.kinds as string[] | undefined) ?? []).filter((k) => k === "draw").length < 2) push(proposal(byCommand(obs, "draw")[0], 42, "draw: rich with no ice in hand", "draw"));
+  push(proposal(byCommand(obs, "credit")[0], 30 + (nearly ? 18 : wantCredits ? 10 : 0) + (obs.credits < 3 ? 4 : 0) + (broke ? 8 : 0), broke ? "take a credit: unrezzed ice cannot be rezzed" : nearly ? "take a credit: an economy operation in hand is playable this turn" : wantCredits ? "take a credit towards an economy operation in hand" : "take a credit", "credit"));
   if (deckLeft > 8) push(proposal(byCommand(obs, "draw")[0], 28, "draw a card", "draw"));
   return out;
 }
