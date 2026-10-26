@@ -944,7 +944,7 @@ function HistorySheet({ db, deckId, deck, side, onRestore, onClose }: { db: Card
   };
   return (
     <div class="sheet-backdrop" onClick={onClose}>
-      <div class="sheet panel history-sheet" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Deck history">
+      <div class="sheet panel versions-sheet" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Deck history">
         <div class="row">
           <span class="label">History · {deck.name}</span>
           <button class="ghost" onClick={onClose} aria-label="Close">
@@ -952,7 +952,7 @@ function HistorySheet({ db, deckId, deck, side, onRestore, onClose }: { db: Card
           </button>
         </div>
         {source && (
-          <section class="history-source">
+          <section class="versions-source">
             <span>
               From NetrunnerDB{source.author ? ` · by ${source.author}` : ""}
               {source.updated ? ` · ${shortDate(source.updated)}` : ""}
@@ -984,19 +984,19 @@ function HistorySheet({ db, deckId, deck, side, onRestore, onClose }: { db: Card
         {versions.length === 0 ? (
           <p class="hint">No earlier version yet. Each editing session that changes the list keeps the list it started from here.</p>
         ) : (
-          <ul class="history-list">
+          <ul class="versions-list">
             {versions.map((v, i) => {
               const diff = cardDiff(now.cards, v.cards);
               return (
                 <li>
-                  <button class={`history-row ${open === i ? "on" : ""}`} onClick={() => setOpen(open === i ? null : i)} aria-expanded={open === i}>
-                    <span class="history-when">{new Date(v.at).toLocaleString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
-                    <span class="history-what">
+                  <button class={`versions-row ${open === i ? "on" : ""}`} onClick={() => setOpen(open === i ? null : i)} aria-expanded={open === i}>
+                    <span class="versions-when">{new Date(v.at).toLocaleString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
+                    <span class="versions-what">
                       {VERSION_LABEL[v.reason]} · {diff.length ? `${diff.length} card${diff.length > 1 ? "s" : ""} differ` : v.identity !== now.identity ? "other identity" : "same list"}
                     </span>
                   </button>
                   {open === i && (
-                    <div class="history-detail">
+                    <div class="versions-detail">
                       <span class="hint">Restoring it changes your list by:</span>
                       <DiffList from={now} to={v} />
                       <button
