@@ -19,6 +19,13 @@ export const FACTIONS: Record<Side, [string, string][]> = {
   ],
 };
 
+export interface DeckResult {
+  place: number;
+  players: number;
+  date: string;
+  title: string;
+}
+
 export interface Decklist {
   id: string;
   name: string;
@@ -27,6 +34,8 @@ export interface Decklist {
   deck?: Deck;
   missing: string[];
   standard: boolean;
+  result?: DeckResult;
+  similarity?: number;
 }
 
 export { cardId } from "./cardid";
@@ -88,6 +97,8 @@ function fromIndex(row: any, db: CardDb): Decklist {
     deck,
     missing,
     standard: !!deck && standardLegal(deck.identity) && deck.cards.every((e) => standardLegal(e.card)),
+    result: row.result ? (typeof row.result === "string" ? JSON.parse(row.result) : row.result) : undefined,
+    similarity: row.similarity ?? undefined,
   };
 }
 
@@ -95,6 +106,34 @@ export interface DeckSearch {
   q?: string;
   identities?: string[];
   cards?: string[];
+  identity?: string;
+  sort?: "new" | "results";
+  top?: number;
+}
+
+async function relayJson(path: string, params: URLSearchParams) {
+  const base = relayUrl();
+  if (!base) return null;
+  try {
+    const res = await fetch(`${base}${path}?${params}`);
+    return res.ok ? await res.json() : null;
+  } catch {
+    return null;
+  }
+}
+
+export const fetchStats = (k: string) => relayJson("/decklists/stats", new URLSearchParams({ k }));
+
+export async function fetchSimilar(db: CardDb, of: { id: string } | Deck, format = "casual") {
+  const params = new URLSearchParams({ format });
+  if ("id" in of) params.set("id", of.id);
+  else {
+    params.set("identity", String(of.identity.code));
+    params.set("cards", of.cards.map((e) => `${e.card.code}:${e.qty}`).join(","));
+  }
+  const json = await relayJson("/decklists/similar", params);
+  if (!json) throw new Error("The deck index is unreachable right now.");
+  return (json.items as any[]).map((row) => fromIndex(row, db));
 }
 
 async function fromRelay(db: CardDb, side: Side, faction: string | null, page: number, format?: string, search: DeckSearch = {}) {
@@ -106,6 +145,9 @@ async function fromRelay(db: CardDb, side: Side, faction: string | null, page: n
   if (search.q) params.set("q", search.q);
   if (search.q) for (const id of search.identities ?? []) params.append("id", id);
   if (search.cards?.length) params.set("cards", search.cards.join(","));
+  if (search.identity) params.set("identity", search.identity);
+  if (search.sort && search.sort !== "new") params.set("sort", search.sort);
+  if (search.top) params.set("top", String(search.top));
   try {
     const res = await fetch(`${base}/decklists?${params}`);
     if (!res.ok) return null;
@@ -119,7 +161,7 @@ async function fromRelay(db: CardDb, side: Side, faction: string | null, page: n
 export async function fetchDecklists(db: CardDb, side: Side, faction: string | null, page: number, format?: string, search: DeckSearch = {}) {
   const indexed = await fromRelay(db, side, faction, page, format, search);
   if (indexed) return indexed;
-  if (search.q || search.cards?.length) throw new Error("Search needs the deck index, which is unreachable right now.");
+  if (search.q || search.cards?.length || search.identity || search.top || (search.sort && search.sort !== "new")) throw new Error("Search needs the deck index, which is unreachable right now.");
   const params = new URLSearchParams({ "filter[side_id]": side, sort: "-created_at", "page[size]": String(PAGE), "page[number]": String(page) });
   if (faction) params.set("filter[faction_id]", faction);
   const res = await fetch(`${API}?${params}`);

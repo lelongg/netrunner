@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "update reads new and edited decklists and continues the first fill; prune drops decklists deleted from NetrunnerDB"
+        description: "update reads new and edited decklists, tournament results and stats; results skips NetrunnerDB decklists; stats only rebuilds the stats; prune drops decklists deleted from NetrunnerDB"
         type: choice
-        options: [update, prune]
+        options: [update, results, stats, prune]
         default: update
 
 concurrency: decklist-index

@@ -25,35 +25,112 @@ export interface Env {
 const DECK_FORMATS = new Set(["standard", "startup", "core", "eternal", "system-gateway", "throwback"]);
 const DECK_PAGE = 20;
 
+const FORMAT_KEY = "casual|standard|startup|core|eternal|system-gateway|throwback";
+const STATS_KEY = new RegExp(`^(?:(?:identities|meta):(?:${FORMAT_KEY}):(?:corp|runner)|identity:(?:${FORMAT_KEY}):\\d{5,6})$`);
+const DECK_COLUMNS = "d.id, d.name, d.user, d.side, d.faction, d.identity, d.created, d.cards";
+const BEST_RESULT = "(SELECT json_object('place', r.place, 'players', t.players, 'date', t.date, 'title', t.title) FROM results r JOIN tournaments t ON t.id = r.tournament WHERE r.deck = d.id ORDER BY r.place * 1.0 / t.players, t.date DESC LIMIT 1) AS result";
+
+const ftsWord = (w: string) => `"${w.replace(/"/g, '""')}"*`;
+
 async function listDecklists(env: Env, url: URL) {
   const side = url.searchParams.get("side");
   const format = url.searchParams.get("format") ?? "casual";
   const faction = url.searchParams.get("faction");
+  const identity = url.searchParams.get("identity");
   const q = (url.searchParams.get("q") ?? "").trim().slice(0, 60);
   const cards = (url.searchParams.get("cards") ?? "").split(",").filter(Boolean);
+  const sort = url.searchParams.get("sort") ?? "new";
+  const top = Number(url.searchParams.get("top")) || 0;
   const page = Math.max(1, Math.min(50, Number(url.searchParams.get("page")) || 1));
   if (side !== "corp" && side !== "runner") return null;
   if (format !== "casual" && !DECK_FORMATS.has(format)) return null;
   if (faction && !/^[a-z_]{1,40}$/.test(faction)) return null;
-  if (cards.length > 3 || cards.some((c) => !/^\d{5,6}$/.test(c))) return null;
+  if (identity && !/^\d{5,6}$/.test(identity)) return null;
+  if (sort !== "new" && sort !== "results") return null;
+  if (cards.length > 5 || cards.some((c) => !/^-?\d{5,6}(x[23])?$/.test(c))) return null;
   const binds: unknown[] = [side];
   const bind = (v: unknown) => `?${binds.push(v)}`;
   const t = format === "casual" ? "d" : "f";
   const where = [`${t}.side = ?1`];
   if (format !== "casual") where.push(`f.format = ${bind(format)}`);
   if (faction) where.push(`${t}.faction = ${bind(faction)}`);
-  if (q) {
-    const like = bind(`%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`);
-    const ids = url.searchParams.getAll("id").filter((c) => /^\d{5,6}$/.test(c)).slice(0, 20);
-    where.push(`(d.name LIKE ${like} ESCAPE '\\' OR d.user LIKE ${like} ESCAPE '\\'${ids.length ? ` OR d.identity IN (${ids.map(bind).join(", ")})` : ""})`);
+  if (identity) where.push(`d.identity = ${bind(identity)}`);
+  const wanted = cards.filter((c) => !c.startsWith("-"));
+  const fts = (await env.DECKS!.prepare("SELECT v FROM index_meta WHERE k = 'search'").first<{ v: string }>())?.v === "done";
+  const words = q.split(/\s+/).filter((w) => w.length > 1).slice(0, 6);
+  if (fts && (words.length || wanted.length)) {
+    const match = [...words.map((w) => `words : ${ftsWord(w)}`), ...wanted.map((c) => `cards : c${c}`)].join(" AND ");
+    where.push(`d.id IN (SELECT id FROM deck_search WHERE deck_search MATCH ${bind(match)})`);
+  } else {
+    if (q) {
+      const like = bind(`%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`);
+      const ids = url.searchParams.getAll("id").filter((c) => /^\d{5,6}$/.test(c)).slice(0, 20);
+      where.push(`(d.name LIKE ${like} ESCAPE '\\' OR d.user LIKE ${like} ESCAPE '\\'${ids.length ? ` OR d.identity IN (${ids.map(bind).join(", ")})` : ""})`);
+    }
+    for (const c of wanted) {
+      const [code, qty] = c.split("x");
+      where.push(`(${(qty === "3" ? ["3"] : qty === "2" ? ["2", "3"] : [""]).map((n) => `(',' || d.cards) LIKE ${bind(`%,${code}:${n}%`)}`).join(" OR ")})`);
+    }
   }
-  for (const c of cards) where.push(`(',' || d.cards) LIKE ${bind(`%,${c}:%`)}`);
-  const from = format === "casual" ? "decklists d" : "deck_formats f JOIN decklists d ON d.id = f.id";
+  for (const c of cards.filter((c) => c.startsWith("-"))) where.push(`(',' || d.cards) NOT LIKE ${bind(`%,${c.slice(1)}:%`)}`);
+  let from = format === "casual" ? "decklists d" : "deck_formats f JOIN decklists d ON d.id = f.id";
+  let order = `${t}.created DESC`;
+  if (sort === "results" || top) {
+    from += ` JOIN (SELECT r.deck, MIN(r.place) AS place, MAX(t.date) AS date FROM results r JOIN tournaments t ON t.id = r.tournament WHERE r.deck IS NOT NULL${top ? ` AND r.place <= ${bind(top)}` : ""} GROUP BY r.deck) rr ON rr.deck = d.id`;
+    if (sort === "results") order = "rr.date DESC, rr.place";
+  }
   const offset = (page - 1) * DECK_PAGE;
-  const columns = "d.id, d.name, d.user, d.side, d.faction, d.identity, d.created, d.cards";
-  const sql = `SELECT ${columns} FROM ${from} WHERE ${where.join(" AND ")} ORDER BY ${t}.created DESC LIMIT ${DECK_PAGE + 1} OFFSET ${offset}`;
+  const sql = `SELECT ${DECK_COLUMNS}, ${BEST_RESULT} FROM ${from} WHERE ${where.join(" AND ")} ORDER BY ${order} LIMIT ${DECK_PAGE + 1} OFFSET ${offset}`;
   const { results } = await env.DECKS!.prepare(sql).bind(...binds).all();
   return { items: results.slice(0, DECK_PAGE), hasMore: results.length > DECK_PAGE };
+}
+
+async function deckStats(env: Env, url: URL) {
+  const k = url.searchParams.get("k") ?? "";
+  if (!STATS_KEY.test(k)) return null;
+  const row = await env.DECKS!.prepare("SELECT v FROM stats WHERE k = ?1").bind(k).first<{ v: string }>();
+  return row ? JSON.parse(row.v) : {};
+}
+
+const slots = (cards: string) => new Map(cards.split(",").filter(Boolean).map((s) => { const [c, q] = s.split(":"); return [c, Number(q) || 1] as [string, number]; }));
+
+async function similarDecklists(env: Env, url: URL) {
+  const format = url.searchParams.get("format") ?? "casual";
+  const id = url.searchParams.get("id");
+  let identity = url.searchParams.get("identity");
+  let cards = url.searchParams.get("cards") ?? "";
+  if (format !== "casual" && !DECK_FORMATS.has(format)) return null;
+  if (id) {
+    const own = await env.DECKS!.prepare("SELECT identity, cards FROM decklists WHERE id = ?1").bind(id).first<{ identity: string; cards: string }>();
+    if (!own) return { items: [] };
+    identity = own.identity;
+    cards = own.cards;
+  }
+  if (!identity || !/^\d{5,6}$/.test(identity) || !/^(\d{5,6}:\d{1,2},?){1,80}$/.test(cards)) return null;
+  const mine = slots(cards);
+  const sql =
+    format === "casual"
+      ? `SELECT ${DECK_COLUMNS} FROM decklists d WHERE d.identity = ?1 ORDER BY d.created DESC LIMIT 1500`
+      : `SELECT ${DECK_COLUMNS} FROM deck_formats f JOIN decklists d ON d.id = f.id WHERE d.identity = ?1 AND f.format = ?2 ORDER BY f.created DESC LIMIT 1500`;
+  const { results } = await env.DECKS!.prepare(sql).bind(...(format === "casual" ? [identity] : [identity, format])).all<Record<string, string>>();
+  const scored = results
+    .filter((r) => r.id !== id && r.cards !== cards)
+    .map((r) => {
+      const theirs = slots(r.cards);
+      let common = 0;
+      let total = 0;
+      for (const code of new Set([...mine.keys(), ...theirs.keys()])) {
+        common += Math.min(mine.get(code) ?? 0, theirs.get(code) ?? 0);
+        total += Math.max(mine.get(code) ?? 0, theirs.get(code) ?? 0);
+      }
+      return { row: r, similarity: total ? common / total : 0 };
+    })
+    .sort((a, b) => b.similarity - a.similarity)
+    .slice(0, 20);
+  if (!scored.length) return { items: [] };
+  const best = await env.DECKS!.prepare(`SELECT d.id, ${BEST_RESULT} FROM decklists d WHERE d.id IN (${scored.map((_, i) => `?${i + 1}`).join(", ")})`).bind(...scored.map((s) => s.row.id)).all<{ id: string; result: string | null }>();
+  const resultOf = new Map(best.results.map((r) => [r.id, r.result]));
+  return { items: scored.map((s) => ({ ...s.row, result: resultOf.get(s.row.id) ?? null, similarity: Math.round(s.similarity * 100) })) };
 }
 
 type Seat = 0 | 1;
@@ -123,11 +200,12 @@ export default {
       return json({ error: "Could not allocate a game code" }, 503, origin);
     }
 
-    if (request.method === "GET" && url.pathname === "/decklists") {
+    const deckRoute = { "/decklists": listDecklists, "/decklists/stats": deckStats, "/decklists/similar": similarDecklists }[url.pathname];
+    if (request.method === "GET" && deckRoute) {
       if (!env.DECKS) return json({ error: "The decklist index is not configured on this relay" }, 404, origin);
       if (await limited(env.DECK_LIMIT, request)) return json({ error: "Too many requests, try again in a minute" }, 429, origin);
-      const found = await listDecklists(env, url);
-      if (!found) return json({ error: "Expected side=corp|runner and an optional format, faction and page" }, 400, origin);
+      const found = await deckRoute(env, url);
+      if (!found) return json({ error: "Malformed decklist query" }, 400, origin);
       const res = json(found, 200, origin);
       res.headers.set("Cache-Control", "public, max-age=600");
       return res;
