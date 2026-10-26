@@ -133,8 +133,15 @@ const cardWords = (cards: string) =>
       return Array.from({ length: Math.min(3, Number(qty) || 1) }, (_, i) => (i ? `c${code}x${i + 1}` : `c${code}`));
     })
     .join(" ");
-const searchRow = (id: string, name: string, user: string, identity: string, cards: string) => [`DELETE FROM deck_search WHERE id = ${quote(id)};`, `INSERT INTO deck_search (id, words, cards) VALUES (${[id, words(name, user, identity), cardWords(cards)].map(quote).join(", ")});`];
-const dropRow = (id: string) => [`DELETE FROM decklists WHERE id = ${quote(id)};`, `DELETE FROM deck_formats WHERE id = ${quote(id)};`, `DELETE FROM deck_search WHERE id = ${quote(id)};`];
+const searchKey = (id: string) => {
+  const hex = id.replace(/-/g, "");
+  if (/^[0-9a-f]{13}/i.test(hex)) return parseInt(hex.slice(0, 13), 16);
+  let h = 2166136261;
+  for (const ch of id) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0;
+  return h;
+};
+const searchRow = (id: string, name: string, user: string, identity: string, cards: string) => [`DELETE FROM deck_search WHERE rowid = ${searchKey(id)};`, `INSERT INTO deck_search (rowid, id, words, cards) VALUES (${searchKey(id)}, ${[id, words(name, user, identity), cardWords(cards)].map(quote).join(", ")});`];
+const dropRow = (id: string) => [`DELETE FROM decklists WHERE id = ${quote(id)};`, `DELETE FROM deck_formats WHERE id = ${quote(id)};`, `DELETE FROM deck_search WHERE rowid = ${searchKey(id)};`];
 
 function writeRow(r: Row) {
   return [
@@ -225,6 +232,7 @@ async function prune() {
 }
 
 async function searchIndex() {
+  if (meta("search-keys") !== "rowid") d1Write(["DELETE FROM deck_search;", "DELETE FROM index_meta WHERE k = 'search';", setMeta("search-keys", "rowid")]);
   if (meta("search") === "done") return;
   const after = Number(meta("search") ?? 0);
   const rows = d1(`SELECT rowid AS n, id, name, user, identity, cards FROM decklists WHERE rowid > ${after} ORDER BY rowid LIMIT ${SEARCH_ROWS_PER_RUN}`);
