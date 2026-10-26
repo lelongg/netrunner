@@ -87,10 +87,12 @@ jobs:
           JOBS: ${{ inputs.jobs }}
           GAMES: ${{ inputs.games }}
           FLAGS: ${{ inputs.flags }}
+          RUN_NUMBER: ${{ github.run_number }}
         run: |
           node -e '
             const jobs = Number(process.env.JOBS || 24);
             const games = Number(process.env.GAMES || 50);
+            const offset = Number(process.env.RUN_NUMBER || 0) * 100000;
             const corps = ["core-hb", "core-jinteki", "core-nbn", "core-weyland"];
             const runners = ["core-anarch", "core-criminal", "core-shaper"];
             const include = [];
@@ -98,7 +100,7 @@ jobs:
               const corp = corps[j % corps.length];
               const runner = runners[Math.floor(j / corps.length) % runners.length];
               const round = Math.floor(j / (corps.length * runners.length));
-              include.push({ job: j, corp, runner, opponent: round % 2 === 0 ? "ref" : "policy", seed: 1 + round * games });
+              include.push({ job: j, corp, runner, opponent: round % 2 === 0 ? "ref" : "policy", seed: 1 + round * games + offset });
             }
             console.log("matrix=" + JSON.stringify({ include }));
             console.log("games=" + games);
