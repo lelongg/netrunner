@@ -68,6 +68,8 @@ export function labelText(label: string, command?: string): string {
   return shown(label);
 }
 
+export const typeLine = (types: string[]) => types.map((x) => t(x)).join(" · ");
+
 export const shown = (text: string) => (french() && typeof text === "string" ? engineFr(text) : text);
 
 let textEngine: { renderMessage: (m: unknown) => string; setLanguage?: (lang: string) => void } | null = null;

@@ -6,7 +6,7 @@ import { CardImage } from "./CardImage";
 import { glyphs } from "./Glyphs";
 import { iconize } from "./text";
 import { t } from "../i18n";
-import { labelText, shown } from "./labels";
+import { labelText, shown, typeLine } from "./labels";
 import type { Side } from "../engine";
 
 function installed(view: any): any[] {
@@ -131,7 +131,7 @@ export function Breakers({ view, stamp, probe, side, ice, send, onTap, disabled,
               <span class="brk-head-line">
                 <span class="brk-name">{card.title}</span>
                 <span class="brk-meta">
-                  {(card.subtypes ?? []).join(" · ")}
+                  {typeLine(card.subtypes ?? [])}
                   {card.counter?.virus != null && (
                     <>
                       {" · "}
@@ -172,7 +172,7 @@ export function Breakers({ view, stamp, probe, side, ice, send, onTap, disabled,
               <span class="brk-head-line">
                 <span class="brk-name">{card.title}</span>
                 <span class="brk-meta">
-                  {(card.subtypes ?? []).filter((t: string) => t !== "Icebreaker").join(" · ")}
+                  {typeLine((card.subtypes ?? []).filter((t: string) => t !== "Icebreaker"))}
                   {extraOf(card) > 0 && (
                     <>
                       {" · "}

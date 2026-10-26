@@ -27,6 +27,13 @@ export function cardText(card: { code?: unknown; text?: string } | null | undefi
   return card.text;
 }
 
+export function frenchSubroutines(card: { code?: unknown } | null | undefined): string[] | undefined {
+  if (settings.language !== "fr" || card?.code == null) return undefined;
+  if (!french) load();
+  const fr = french?.[String(card.code)];
+  return fr ? fr.split("\n").filter((l) => l.startsWith("[subroutine]")).map((l) => l.replace(/^\[subroutine\]\s*/, "")) : undefined;
+}
+
 export function useLanguage() {
   const [, setTick] = useState(0);
   useEffect(() => {

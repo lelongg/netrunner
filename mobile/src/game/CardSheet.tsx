@@ -146,7 +146,7 @@ function SheetInfo({ card, code, full, side, view }: { card: any; code?: string;
         const facts = cardFacts(card, side, view, !!code);
         return (
           <>
-            <span class="label">{[code ? card.type : card.side, ...(code && card.subtypes?.length ? card.subtypes : []), ...facts.where].join(" · ")}</span>
+            <span class="label">{[t(code ? card.type : card.side), ...(code && card.subtypes?.length ? card.subtypes.map((x: string) => t(x)) : []), ...facts.where].join(" · ")}</span>
             <h2>{code ? (full?.title ?? card.title) : t("Classified")}</h2>
             {facts.chips.length > 0 && (
               <div class="fact-chips">

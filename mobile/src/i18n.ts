@@ -1,12 +1,13 @@
 import { settings } from "./settings";
 
 import app from "./i18n/fr/app";
+import cards from "./i18n/fr/cards";
 import board from "./i18n/fr/board";
 import decks from "./i18n/fr/decks";
 import game from "./i18n/fr/game";
 import screens from "./i18n/fr/screens";
 
-const FR: Record<string, string> = { ...app, ...board, ...decks, ...game, ...screens };
+const FR: Record<string, string> = { ...cards, ...app, ...board, ...decks, ...game, ...screens };
 
 export const french = () => settings.language === "fr";
 

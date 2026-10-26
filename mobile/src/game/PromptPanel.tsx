@@ -12,7 +12,7 @@ import { RichText } from "./RichText";
 import { byServerOrder, iconize } from "./text";
 import { cardText } from "../cardtext";
 import { glyphs } from "./Glyphs";
-import { shown, showMsg } from "./labels";
+import { shown, showMsg, typeLine } from "./labels";
 import { t } from "../i18n";
 
 interface Props {
@@ -63,7 +63,7 @@ function ChoiceSheet({ items, index, disabled, onGo, onPick, onClose }: { items:
     <div class="sheet-info">
       <span class="label">
         {card.type}
-        {Array.isArray(card.subtypes) && card.subtypes.length ? ` · ${card.subtypes.join(" · ")}` : ""}
+        {Array.isArray(card.subtypes) && card.subtypes.length ? ` · ${typeLine(card.subtypes)}` : ""}
       </span>
       <h2>{card.title}</h2>
       {card.text && <RichText class="card-text" text={cardText(card) ?? card.text} />}
@@ -363,7 +363,7 @@ export function PromptPanel({ view, side, prompt, render, send, closePrompt, dis
             {full && (
               <span class="label">
                 {full.type}
-                {Array.isArray(full.subtypes) && full.subtypes.length ? ` · ${full.subtypes.join(" · ")}` : ""}
+                {Array.isArray(full.subtypes) && full.subtypes.length ? ` · ${typeLine(full.subtypes)}` : ""}
               </span>
             )}
             <span class="prompt-card">{source.title}</span>

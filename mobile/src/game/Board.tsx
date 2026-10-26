@@ -28,7 +28,8 @@ import { motionOff, onSettings, setSetting, settings } from "../settings";
 import { uiSound } from "../uisound";
 import { useTilt } from "../tilt";
 import { warmGl } from "../fx/gl";
-import { labelText, setTextEngine, shown, showMsg } from "./labels";
+import { labelText, setTextEngine, shown, showMsg, typeLine } from "./labels";
+import { frenchSubroutines } from "../cardtext";
 import { engineHasFrench } from "../engine";
 import { MenuDrawer, MenuItem, MenuSection, MenuTile, SettingsSections } from "../screens/SettingsMenu";
 
@@ -737,7 +738,9 @@ function Encounter({ view, ice, passed, render, onTap, skip, onToggle }: { view:
   const subs: any[] = (ice.subroutines ?? []).map((sub: any) => (allBy && !sub.broken && !sub.fired ? { ...sub, broken: true, breakerTitle: allBy } : sub));
   const encountering = !passed && (!!view.encounters || view.run?.phase === "encounter-ice");
   const strength = ice["current-strength"] ?? ice.strength;
-  const types = (ice.subtypes ?? []).join(" · ");
+  const types = typeLine(ice.subtypes ?? []);
+  const frSubs = frenchSubroutines(ice);
+  const subText = (sub: any, i: number) => (frSubs && frSubs.length === subs.length ? frSubs[i] : sub.label ? shown(sub.label) : t("Subroutine"));
   const states = subs.map((sub) => (sub.broken ? "broken" : sub.fired ? "fired" : sub.resolve === false ? "skipped" : "live"));
   const list = useRef<HTMLOListElement>(null);
   const seen = useRef<{ cid: unknown; states: string[] }>({ cid: ice.cid, states });
@@ -793,7 +796,7 @@ function Encounter({ view, ice, passed, render, onTap, skip, onToggle }: { view:
                 <li class={`enc-sub ${state} ${pickable ? "pickable" : ""} ${left ? "left" : ""}`} onClick={pickable ? () => onToggle!(i) : undefined} role={pickable ? "checkbox" : undefined} aria-checked={pickable ? !left : undefined}>
                   <Icon name="sub" />
                   <span class="enc-label">
-                    <span class="enc-text">{state === "broken" ? <Decrypt text={sub.label ? shown(sub.label) : t("Subroutine")} /> : withTerms(iconize(sub.label ? shown(sub.label) : t("Subroutine")))}</span>
+                    <span class="enc-text">{state === "broken" ? <Decrypt text={subText(sub, i)} /> : withTerms(iconize(subText(sub, i)))}</span>
                   </span>
                   <span class="enc-state">{state === "broken" ? (breaker ? t("Broken · {card}", { card: breaker }) : t("Broken")) : state === "fired" ? t("Fired") : state === "skipped" ? t("Won't fire") : left ? t("Let it fire") : pickable ? t("Break") : encountering ? t("Unbroken") : ""}</span>
                 </li>
