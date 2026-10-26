@@ -436,3 +436,70 @@ describe("corp jams agendas when the hand is flooded", () => {
     expect(s.last("corp").chosen?.why).toMatch(/install (Offworld Office|Orbital Superiority) behind 4 ice in Server 1 .*jamming/);
   });
 });
+
+describe("corp does not pay to rez ice the Runner breaks anyway", () => {
+  function overclockRun(runnerCredits: number, overclock: boolean) {
+    const s = new Scenario("core-weyland", "core-anarch");
+    s.clearHand("corp");
+    s.summon("corp", "Palisade", "Pharos", "Pharos", "Offworld Office");
+    for (const [card, server] of [["Palisade", "New remote"], ["Pharos", "Server 1"], ["Pharos", "Server 1"], ["Offworld Office", "Server 1"]] as [string, string][]) {
+      s.clicks("corp", 3);
+      s.credits("corp", 40);
+      s.install("corp", card, server);
+    }
+    s.rez("Palisade");
+    s.credits("corp", 14);
+    s.endTurn("corp");
+    s.clearHand("runner");
+    s.summon("runner", "Cleaver", "Overclock", "Sure Gamble", "Sure Gamble");
+    s.credits("runner", 20);
+    s.install("runner", "Cleaver");
+    s.credits("runner", runnerCredits);
+    if (overclock) {
+      s.act("runner", "Overclock: Play");
+      s.act("runner", "Choose: Server 1");
+    } else s.act("runner", "Run on Server 1");
+    for (let i = 0; i < 12; i++) {
+      if (s.actions("corp").some((x) => x.command === "rez")) break;
+      if (s.actions("runner").some((x) => x.command === "continue" || x.command === "start-next-phase")) s.runStep("runner");
+      else if (s.actions("corp").some((x) => x.command === "continue")) s.pass("corp");
+      else break;
+    }
+    expect(s.actions("corp").some((x) => x.command === "rez")).toBe(true);
+    return s;
+  }
+
+  it("keeps its credits when Overclock pays for the whole run", () => {
+    const s = overclockRun(12, true);
+    const move = s.decide("corp");
+    expect(move?.command).not.toBe("rez");
+    expect(s.last("corp").chosen?.why).toContain("gets through Server 1 anyway");
+  });
+
+  it("rezzes the outer Pharos when the Runner cannot afford both", () => {
+    const s = overclockRun(7, false);
+    expect(s.decide("corp")?.command).toBe("rez");
+  });
+});
+
+describe("weyland advances ice at most once per turn", () => {
+  it("does not advance a second piece of ice after Built to Last paid once", () => {
+    const s = new Scenario("core-weyland", "core-anarch");
+    s.clearHand("corp");
+    s.summon("corp", "Pharos", "Pharos");
+    s.credits("corp", 40);
+    s.install("corp", "Pharos", "HQ");
+    s.install("corp", "Pharos", "R&D");
+    s.rez("Pharos");
+    s.rez("Pharos");
+    s.endTurn("corp");
+    s.endTurn("runner");
+    s.clearHand("corp");
+    s.credits("corp", 6);
+    const first = s.decide("corp");
+    expect(first?.command).toBe("advance");
+    s.play("corp", first!);
+    const second = s.decide("corp");
+    expect(second?.command).not.toBe("advance");
+  });
+});

@@ -2,7 +2,7 @@ import { byCommand, installedThisTurn } from "../observe.ts";
 import { cardAction, playOf, proposal } from "../generic.ts";
 import { cardWorth, choiceMove, choices, findChoice, promptFrom, selectMove, selectable } from "../prompts.ts";
 import { registerPolicy } from "../registry.ts";
-import { corpRun, fromCandidate } from "../runs.ts";
+import { corpRun, fromCandidate, wastefulRez } from "../runs.ts";
 import { agendaProgress, coverage, iceThreat, isTrap, rezCostOf, serverSafety } from "../tactics.ts";
 import type { DeckPolicy, Observation, Plan, Proposal } from "../types.ts";
 import { GATEWAY_CORP_BEGINNER, GATEWAY_CORP_INTERMEDIATE } from "./gateway.ts";
@@ -400,6 +400,8 @@ function run(obs: Observation, plan: Plan): Proposal | null {
       const next = byCommand(obs, "continue")[0];
       if (next) return fromCandidate(next, 30, `leave ${ice.title} unrezzed: the Runner has the clicks to walk through it`, "pass");
     }
+    const waste = server ? wastefulRez(obs, ice, server) : null;
+    if (waste?.wasteful) return fromCandidate(byCommand(obs, "continue")[0] ?? rez, 30, waste.why, "pass");
     if (cost <= obs.credits - reserve && (worth || (!breakable && threat.etr && cost <= 3))) return fromCandidate(rez, 80, `rez ${ice.title} (${cost}): ${breakable ? "taxes the Runner" : "the Runner cannot break it"}`, "rez");
     if (cost <= obs.credits && !breakable && threat.etr && server?.remote && server.content.length) return fromCandidate(rez, 82, `rez ${ice.title}: it ends the run`, "rez");
   }

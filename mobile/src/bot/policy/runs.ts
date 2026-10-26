@@ -6,6 +6,23 @@ import type { Observation, Proposal } from "./types.ts";
 export const labelCost = (label: string) => Number(label.match(/(\d+)\s*\[credits?\]/i)?.[1] ?? 0);
 export const fromCandidate = (c: Candidate, score: number, why: string, kind: string, exact = true): Proposal => ({ move: { command: c.command, args: c.args }, score, why, kind, exact });
 
+export const runCredits = (obs: Observation) => Number(obs.view.runner?.["run-credit"] ?? 0) + (obs.view.runner?.["play-area"] ?? []).reduce((n: number, c: any) => n + Number(c?.counter?.credit ?? 0), 0);
+export const leechCounters = (obs: Observation) => (obs.view.runner?.rig?.program ?? []).filter((c: any) => /give -1 strength/i.test(obs.info(c).text ?? "")).reduce((n: number, c: any) => n + Number(c?.counter?.virus ?? 0), 0);
+
+export function wastefulRez(obs: Observation, ice: any, server: Observation["servers"][number]): { wasteful: boolean; why: string } {
+  const cost = rezCostOf(ice);
+  const grip = Number(obs.view.runner?.["hand-count"] ?? obs.view.runner?.hand?.length ?? 5);
+  const purse = Number(obs.view.runner?.credit ?? 0) + runCredits(obs);
+  const position = Number(obs.run?.position ?? 0);
+  if (position <= 0) return { wasteful: false, why: "" };
+  const ahead = { ...server, ices: server.ices.slice(0, position).map((i: any) => (i.rezzed ? i : { ...i, rezzed: true, subroutines: i.subroutines ?? [] })) };
+  const est = estimateRun(obs, ahead, 0, purse);
+  const getsIn = est.exact && !est.blocked && est.damage < grip && est.credits - leechCounters(obs) <= purse;
+  const tax = bestBreak(obs, { ...ice, rezzed: true, subroutines: ice.subroutines ?? [] })?.cost.value ?? 0;
+  const wasteful = getsIn && cost >= tax && obs.credits - cost < 8;
+  return { wasteful, why: `${ice.title} costs ${cost} to rez and ${tax} to break: the Runner gets through ${server.label} anyway with ${purse} for the run, keep the credits` };
+}
+
 export function runServer(obs: Observation) {
   const key = obs.run?.server?.[0];
   return obs.servers.find((s) => s.key === key) ?? null;
@@ -26,7 +43,9 @@ export function corpRun(obs: Observation, reserve = 0): Proposal | null {
     const agendaBehind = !!server && (server.content.some((c: any) => c.type === "Agenda") || (server.key === "hq" && obs.hand.some((c) => c.type === "Agenda")));
     const bites = threat.etr || threat.damage > 0 || threat.tag || threat.encounterTags > 0 || threat.creditLoss >= Math.max(2, cost - 1) || !threat.exact;
     const affordable = cost <= obs.credits - reserve && (obs.credits - cost >= 2 || threat.etr || agendaBehind);
-    if (affordable && protects && bites) return fromCandidate(rez, 80, `rez ${ice.title} for ${cost} to protect ${server?.label}`, "rez");
+    const waste = server ? wastefulRez(obs, ice, server) : null;
+    if (affordable && protects && bites && !waste?.wasteful) return fromCandidate(rez, 80, `rez ${ice.title} for ${cost} to protect ${server?.label}`, "rez");
+    if (protects && waste?.wasteful) return fromCandidate(byCommand(obs, "continue")[0] ?? rez, 14, waste.why, "pass");
     if (protects && cost <= obs.credits - reserve && !bites) return fromCandidate(byCommand(obs, "continue")[0] ?? rez, 12, `${ice.title} would not stop or hurt the Runner at ${runnerCredits} credits: keep ${cost} credits`, "pass");
   }
   const next = byCommand(obs, "continue")[0];

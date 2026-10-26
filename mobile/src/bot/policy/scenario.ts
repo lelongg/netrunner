@@ -139,6 +139,10 @@ export class Scenario {
     engine.act(this.game, side, c.command, c.args ?? null);
   }
 
+  play(side: Side, move: Move) {
+    engine.act(this.game, side, move.command, move.args ?? null);
+  }
+
   decide(side: Side): Move | null {
     return this.bots[side].decide(this.view(side));
   }
