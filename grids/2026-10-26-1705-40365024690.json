@@ -1,0 +1,268 @@
+{
+  "configs": {
+    "base": {
+      "flags": "",
+      "splits": {
+        "test": {
+          "games": 1,
+          "total": 9,
+          "played": 12,
+          "decisionMs": 41.62500000000001,
+          "mistakes": {
+            "Discretion Advised rich-credit-click": 6,
+            "Advanced Yomi rich-credit-click": 23,
+            "Hyper Velocity stolen-from-remote": 3,
+            "Quick and Dirty unrezzable-install": 1
+          }
+        }
+      }
+    }
+  },
+  "cells": [
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-hb",
+      "runner": "core-anarch",
+      "split": "test",
+      "games": 1,
+      "wins": {
+        "corp": 0,
+        "runner": 1,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 1
+      },
+      "mistakes": {
+        "corp:rich-credit-click": 2
+      },
+      "decisionMs": 65.6,
+      "decisionMaxMs": 1243.8
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-hb",
+      "runner": "core-criminal",
+      "split": "test",
+      "games": 1,
+      "wins": {
+        "corp": 1,
+        "runner": 0,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 1
+      },
+      "mistakes": {},
+      "decisionMs": 34.6,
+      "decisionMaxMs": 472.4
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-hb",
+      "runner": "core-shaper",
+      "split": "test",
+      "games": 1,
+      "wins": {
+        "corp": 1,
+        "runner": 0,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 1
+      },
+      "mistakes": {
+        "corp:rich-credit-click": 4
+      },
+      "decisionMs": 62.8,
+      "decisionMaxMs": 1262.9
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-jinteki",
+      "runner": "core-anarch",
+      "split": "test",
+      "games": 1,
+      "wins": {
+        "corp": 1,
+        "runner": 0,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 1
+      },
+      "mistakes": {
+        "runner:rich-credit-click": 23,
+        "corp:rich-credit-click": 13
+      },
+      "decisionMs": 91,
+      "decisionMaxMs": 1980.9
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-jinteki",
+      "runner": "core-criminal",
+      "split": "test",
+      "games": 1,
+      "wins": {
+        "corp": 1,
+        "runner": 0,
+        "none": 0
+      },
+      "reasons": {
+        "Flatline": 1
+      },
+      "mistakes": {},
+      "decisionMs": 12.6,
+      "decisionMaxMs": 370
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-jinteki",
+      "runner": "core-shaper",
+      "split": "test",
+      "games": 1,
+      "wins": {
+        "corp": 1,
+        "runner": 0,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 1
+      },
+      "mistakes": {
+        "corp:rich-credit-click": 10
+      },
+      "decisionMs": 67.9,
+      "decisionMaxMs": 1843.3
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-nbn",
+      "runner": "core-anarch",
+      "split": "test",
+      "games": 1,
+      "wins": {
+        "corp": 0,
+        "runner": 1,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 1
+      },
+      "mistakes": {
+        "corp:stolen-from-remote": 2
+      },
+      "decisionMs": 36.6,
+      "decisionMaxMs": 572.5
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-nbn",
+      "runner": "core-criminal",
+      "split": "test",
+      "games": 1,
+      "wins": {
+        "corp": 1,
+        "runner": 0,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 1
+      },
+      "mistakes": {
+        "corp:stolen-from-remote": 1
+      },
+      "decisionMs": 26.2,
+      "decisionMaxMs": 429.5
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-nbn",
+      "runner": "core-shaper",
+      "split": "test",
+      "games": 1,
+      "wins": {
+        "corp": 0,
+        "runner": 1,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 1
+      },
+      "mistakes": {},
+      "decisionMs": 14.8,
+      "decisionMaxMs": 238.3
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-weyland",
+      "runner": "core-anarch",
+      "split": "test",
+      "games": 1,
+      "wins": {
+        "corp": 1,
+        "runner": 0,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 1
+      },
+      "mistakes": {},
+      "decisionMs": 18.3,
+      "decisionMaxMs": 342.6
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-weyland",
+      "runner": "core-criminal",
+      "split": "test",
+      "games": 1,
+      "wins": {
+        "corp": 1,
+        "runner": 0,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 1
+      },
+      "mistakes": {
+        "runner:rich-credit-click": 2
+      },
+      "decisionMs": 26.3,
+      "decisionMaxMs": 561.7
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-weyland",
+      "runner": "core-shaper",
+      "split": "test",
+      "games": 1,
+      "wins": {
+        "corp": 1,
+        "runner": 0,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 1
+      },
+      "mistakes": {
+        "corp:unrezzable-install": 1
+      },
+      "decisionMs": 42.8,
+      "decisionMaxMs": 436.5
+    }
+  ]
+}
