@@ -127,7 +127,7 @@ export function corpProposals(obs: Observation): Proposal[] {
   if (agendas.length && obs.hand.length > 5) push(proposal(playOf(obs, agendas[0], "New remote"), 25, `install ${agendas[0].title} naked to avoid discarding it`, "install-naked"));
   const trap = obs.hand.find((c) => c.type === "Asset" && isTrap(obs.info(c).text));
   if (trap && obs.servers.filter((s) => s.remote).length < 4 && obs.credits >= 3) push(proposal(playOf(obs, trap, "New remote"), 38, `install ${trap.title} as a bait`, "install-trap"));
-  if (tagged(obs.view) && obs.credits >= 4 && (obs.view.runner?.rig?.resource ?? []).length) push(proposal(byCommand(obs, "trash-resource")[0], 45, "trash a resource while the Runner is tagged", "trash-resource"));
+  if (tagged(obs.view) && obs.credits >= (obs.hand.some((c) => c.type === "Agenda") ? 7 : 4) && (obs.view.runner?.rig?.resource ?? []).length) push(proposal(byCommand(obs, "trash-resource")[0], 45, "trash a resource while the Runner is tagged", "trash-resource"));
   const wantCredits = obs.hand.some((c) => c.type === "Operation" && gainOf(obs.info(c).text) > playCostOf(c) && playCostOf(c) > obs.credits);
   const nearly = obs.hand.some((c) => c.type === "Operation" && gainOf(obs.info(c).text) > playCostOf(c) + 3 && playCostOf(c) > obs.credits && playCostOf(c) <= obs.credits + obs.clicks);
   const deckLeft = Number(obs.me["deck-count"] ?? 0);
@@ -170,7 +170,7 @@ export function runProposals(obs: Observation, limit = 2): Proposal[] {
     if (adv > 1 && obs.hand.length < 1 + adv) continue;
     const run = byCommand(obs, "run", (c) => (c.args as any)?.server === server.label)[0];
     if (!run) continue;
-    const score = 40 + (value - est.credits * 0.3 - est.damage * 1.5) * 4;
+    const score = Math.min(40 + (value - est.credits * 0.3 - est.damage * 1.5) * 4, value < 2 ? 32 : 200);
     out.push(fromCandidate(run, score, `run ${server.label}: value ${value.toFixed(1)}, ${est.exact ? "costs" : "about"} ${est.credits}${est.damage ? `, ${est.damage} damage` : ""}`, "run", est.exact));
   }
   return out;

@@ -345,9 +345,10 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
   }
   const coversNewType = (c: any) => isIcebreaker(c) && c.title !== "Mayfly" && playCostOf(c) <= obs.credits && (breakerProfile(c, obs.info(c))?.breaks === "AI" || ((breakerProfile(c, obs.info(c))?.breaks as string[] | undefined) ?? []).some((t) => !cov.has(t as any)));
   const richNoRig = cov.size < 2 && obs.credits >= 12 && !obs.hand.some(coversNewType);
+  const installable = obs.hand.some((c) => c.type !== "Event" && !isIcebreaker(c) && playCostOf(c) <= obs.credits - 2);
   if ((obs.credits >= 12 || richNoRig) && drawsThisTurn < 3 && obs.hand.length <= 5 && (obs.me["deck-count"] ?? 0) > 0) {
     const draw = byCommand(obs, "draw")[0];
-    if (draw) push(proposal(draw, richNoRig ? 60 : obs.credits >= 20 ? 44 : 36, richNoRig ? "draw: rich with no rig, the breakers are the bottleneck" : "draw: credits are not the problem", "draw"));
+    if (draw) push(proposal(draw, richNoRig && !installable ? 60 : richNoRig ? 45 : obs.credits >= 20 ? 44 : 36, richNoRig ? `draw: rich with no rig, the breakers are the bottleneck${installable ? " (after what the hand can install)" : ""}` : "draw: credits are not the problem", "draw"));
   }
   if (obs.credits <= 3 && obs.hand.length <= 3 && drawsThisTurn < 2 && !obs.hand.some((c) => isEconomyCard(obs, c) && playCostOf(c) <= obs.credits) && (obs.me["deck-count"] ?? 0) > 0) {
     const draw = byCommand(obs, "draw")[0];
@@ -395,7 +396,7 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
   for (const p of out) {
     const cost = spend(p);
     const cheapRun = (p.kind === "run" || p.kind === "run-event") && cost <= 3;
-    if (cost > 0 && !cheapRun && floorNear && obs.credits - cost < floor && !(plan.kind === "contest" && p.why.includes(String(plan.detail?.server))) && !(plan.kind === "closing" && (p.kind === "run" || p.kind === "run-event")) && !p.why.startsWith("install Cleaver") && !p.why.startsWith("install Unity") && !p.why.startsWith("install Carmen")) {
+    if (cost > 0 && !cheapRun && floorNear && obs.credits - cost < floor && !(plan.kind === "contest" && p.why.includes(String(plan.detail?.server))) && !(plan.kind === "closing" && (p.kind === "run" || p.kind === "run-event")) && p.kind !== "install-breaker") {
       p.score -= 15;
       p.why += ` (would drop below the ${floor} needed for the remote)`;
     }
@@ -447,6 +448,18 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
         p.score -= 10;
         p.why += " (still setting up)";
       }
+      if (t && !safeHand(obs, t)) p.score = Math.min(p.score, 12);
+    }
+    if (p.kind === "run-event") {
+      const t = ts.find((x) => p.why.includes(` into ${x.server.label}`));
+      if (t && !safeHand(obs, t)) {
+        p.score = Math.min(p.score, 12);
+        p.why += ` (the grip cannot survive the access: ${requiredHand(obs, t)} cards needed)`;
+      }
+    }
+    if (p.kind === "draw" && obs.hand.length >= Number(obs.me["hand-size"]?.total ?? obs.me["hand-size"] ?? 5) && p.score > 30) {
+      p.score = 30;
+      p.why += " (the grip is already full)";
     }
     if (plan.kind === "setup" && (p.kind === "economy" || p.kind === "install-economy")) p.score += 6;
     if (p.kind === "install" && plan.kind === "contest") p.score -= 10;

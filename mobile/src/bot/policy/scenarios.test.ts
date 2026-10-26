@@ -562,3 +562,285 @@ describe("corp does not purge when it cannot rez the ice it has", () => {
     expect(move?.command).not.toBe("purge");
   });
 });
+
+describe("jinteki plays its threats (replay 2L7UEEVY)", () => {
+  it("rezzes an advanced Clearinghouse so that it can fire, and fires it against a thin grip", () => {
+    const s = new Scenario("core-jinteki", "core-shaper");
+    s.clearHand("corp");
+    s.summon("corp", "Clearinghouse");
+    s.credits("corp", 10);
+    s.install("corp", "Clearinghouse", "New remote");
+    const card = () => s.view("corp").corp.servers.remote1.content[0];
+    for (let i = 0; i < 3; i++) {
+      s.clicks("corp", 3);
+      s.act("corp", "Clearinghouse: Advance");
+    }
+    expect(Number(card()["advance-counter"])).toBe(3);
+    s.clicks("corp", 0);
+    s.clearHand("runner");
+    s.summon("runner", "Sure Gamble", "Sure Gamble", "Sure Gamble");
+    const move = s.decide("corp");
+    expect(move?.command).toBe("rez");
+    expect(s.last("corp").chosen?.why).toMatch(/rez Clearinghouse/);
+    s.play("corp", move!);
+    expect(card().rezzed).toBeTruthy();
+    s.act("corp", "End turn");
+    s.act("runner", "Start turn");
+    s.clearHand("runner");
+    s.summon("runner", "Sure Gamble", "Sure Gamble");
+    s.clicks("runner", 0);
+    s.act("runner", "End turn");
+    s.act("corp", "Start turn");
+    let answer = s.decide("corp");
+    for (let i = 0; i < 5 && answer && answer.command !== "choice"; i++) {
+      s.play("corp", answer);
+      answer = s.decide("corp");
+    }
+    expect(answer?.command).toBe("choice");
+    expect(s.last("corp").chosen?.why).toMatch(/3 meat damage against a grip of 2/);
+  });
+
+  it("does not play Hansei Review when every other card in hand is an agenda", () => {
+    const s = new Scenario("core-jinteki", "core-shaper");
+    s.clearHand("corp");
+    s.summon("corp", "Hansei Review", "Orbital Superiority", "Send a Message");
+    s.credits("corp", 12);
+    s.decide("corp");
+    expect(best(s, "corp", (w) => w.startsWith("play Hansei Review"))).toBeLessThan(20);
+  });
+
+  it("does not rez Karunā for a kill the Runner can break with Echelon", () => {
+    const s = new Scenario("core-jinteki", "core-shaper");
+    s.clearHand("corp");
+    s.summon("corp", "Karunā", "Send a Message");
+    s.credits("corp", 10);
+    s.install("corp", "Karunā", "HQ");
+    s.endTurn("corp");
+    s.clearHand("runner");
+    s.summon("runner", "Echelon", "Unity", "Cleaver", "Tread Lightly", "Sure Gamble", "Sure Gamble");
+    s.credits("runner", 20);
+    s.install("runner", "Echelon");
+    s.install("runner", "Unity");
+    s.install("runner", "Cleaver");
+    s.credits("runner", 4);
+    s.act("runner", "Tread Lightly: Play");
+    s.act("runner", "Choose: HQ");
+    for (let i = 0; i < 8; i++) {
+      if (s.actions("corp").some((x) => x.command === "rez")) break;
+      if (s.actions("runner").some((x) => x.command === "continue" || x.command === "start-next-phase")) s.runStep("runner");
+      else if (s.actions("corp").some((x) => x.command === "continue")) s.pass("corp");
+      else break;
+    }
+    expect(s.actions("corp").some((x) => x.command === "rez")).toBe(true);
+    s.credits("corp", 7);
+    const move = s.decide("corp");
+    expect(s.last("corp").chosen?.why ?? "").not.toMatch(/net damage against/);
+    expect(move?.command).not.toBe("rez");
+  });
+
+  it("installs an agenda behind a rezzed Palisade when the Runner has no fracter and no credits", () => {
+    const s = new Scenario("core-jinteki", "core-shaper");
+    s.clearHand("corp");
+    s.summon("corp", "Palisade", "Diviner", "Karunā");
+    s.credits("corp", 40);
+    s.install("corp", "Diviner", "R&D");
+    s.rez("Diviner");
+    s.install("corp", "Karunā", "HQ");
+    s.rez("Karunā");
+    s.clicks("corp", 3);
+    s.install("corp", "Palisade", "New remote");
+    s.rez("Palisade");
+    s.endTurn("corp");
+    s.clearHand("runner");
+    s.summon("runner", "Unity", "Echelon", "Sure Gamble", "Sure Gamble", "Sure Gamble", "Sure Gamble", "Sure Gamble");
+    s.credits("runner", 10);
+    s.install("runner", "Unity");
+    s.install("runner", "Echelon");
+    s.credits("runner", 2);
+    s.endTurn("runner");
+    s.clearHand("corp");
+    s.summon("corp", "Diviner", "Offworld Office", "Spin Doctor");
+    s.credits("corp", 18);
+    const chosen: string[] = [];
+    for (let i = 0; i < 6 && Number(s.view("corp").corp.click) > 0; i++) {
+      const move = s.decide("corp");
+      if (!move) break;
+      chosen.push(`${move.command}: ${s.last("corp").chosen?.why ?? ""}`);
+      s.play("corp", move);
+    }
+    expect(chosen.join(" | ")).toMatch(/Offworld Office in Server 1|install Offworld Office/);
+    expect(s.server("Server 1")?.content.some((c: any) => c.title === "Offworld Office")).toBe(true);
+  });
+});
+
+describe("nbn keeps its last credits (replay BNDST9RP)", () => {
+  function brokeCorp() {
+    const s = new Scenario("core-nbn", "core-criminal");
+    s.clearHand("corp");
+    s.summon("corp", "Palisade", "Funhouse", "Tithe", "Manegarm Skunkworks");
+    s.credits("corp", 40);
+    for (const [card, server] of [["Funhouse", "HQ"], ["Palisade", "New remote"], ["Manegarm Skunkworks", "Server 1"], ["Tithe", "New remote"]] as [string, string][]) {
+      s.clicks("corp", 3);
+      s.install("corp", card, server);
+    }
+    s.rez("Funhouse");
+    s.rez("Palisade");
+    s.endTurn("corp");
+    s.clearHand("runner");
+    s.summon("runner", "Buzzsaw", "Smartware Distributor", "Smartware Distributor", "Pennyshaver", "Sure Gamble", "Sure Gamble");
+    s.credits("runner", 20);
+    s.install("runner", "Buzzsaw");
+    s.install("runner", "Smartware Distributor");
+    s.install("runner", "Smartware Distributor");
+    s.clicks("runner", 3);
+    s.install("runner", "Pennyshaver");
+    s.credits("runner", 5);
+    s.say("runner", "/tag 1");
+    s.endTurn("runner");
+    s.clearHand("corp");
+    s.summon("corp", "Send a Message", "Palisade", "Ping", "Tithe");
+    return s;
+  }
+
+  it("does not spend its last credits trashing resources with an agenda to score", () => {
+    const s = brokeCorp();
+    s.credits("corp", 4);
+    const move = s.decide("corp");
+    expect(move?.command).not.toBe("trash-resource");
+    expect(best(s, "corp", (w) => w.startsWith("trash a resource"))).toBeLessThan(0);
+  });
+
+  it("does not install a five-advancement agenda behind one ice with three credits", () => {
+    const s = brokeCorp();
+    s.credits("corp", 3);
+    s.decide("corp");
+    expect(best(s, "corp", (w) => /Send a Message/.test(w) && /install|Server 1/.test(w))).toBeLessThan(25);
+  });
+});
+
+describe("the action list respects the turn structure (replay 82YJDZAE)", () => {
+  it("offers no click action during the Corp's start-of-turn window, only rez and the mandatory draw", () => {
+    const s = new Scenario("core-jinteki", "core-anarch");
+    s.clearHand("corp");
+    s.summon("corp", "Clearinghouse", "Palisade");
+    s.credits("corp", 10);
+    s.install("corp", "Clearinghouse", "New remote");
+    s.clicks("corp", 3);
+    s.act("corp", "Clearinghouse: Advance");
+    s.clicks("corp", 0);
+    s.act("corp", "End turn");
+    s.act("runner", "Start turn");
+    s.clicks("runner", 0);
+    s.act("runner", "End turn");
+    s.act("corp", "Start turn");
+    const labels = s.actions("corp").map((a) => a.label);
+    expect(labels.some((l) => l.startsWith("Mandatory draw"))).toBe(true);
+    expect(labels.some((l) => l.includes("Rez"))).toBe(true);
+    expect(labels.some((l) => /Advance|Install|Gain 1|Draw$/.test(l))).toBe(false);
+    s.act("corp", "Mandatory draw");
+    expect(s.actions("corp").some((a) => a.label.includes("Advance"))).toBe(true);
+  });
+});
+
+describe("runner respects its grip and its hand (replay 82YJDZAE)", () => {
+  it("does not run a two-ice Jinteki remote with no breakers and a grip of five", () => {
+    const s = new Scenario("core-jinteki", "core-anarch");
+    s.clearHand("corp");
+    s.summon("corp", "Tithe", "Whitespace", "Karunā", "Tithe", "Offworld Office");
+    s.credits("corp", 40);
+    for (const [c, srv] of [["Tithe", "HQ"], ["Whitespace", "R&D"], ["Karunā", "New remote"], ["Tithe", "Server 1"], ["Offworld Office", "Server 1"]] as [string, string][]) {
+      s.clicks("corp", 3);
+      s.install("corp", c, srv);
+    }
+    s.clicks("corp", 3);
+    s.act("corp", "Offworld Office: Advance");
+    s.act("corp", "Offworld Office: Advance");
+    s.credits("corp", 7);
+    s.endTurn("corp");
+    s.clearHand("runner");
+    s.summon("runner", "Smartware Distributor", "Smartware Distributor", "DZMZ Optimizer");
+    s.credits("runner", 20);
+    s.install("runner", "Smartware Distributor");
+    s.install("runner", "Smartware Distributor");
+    s.install("runner", "DZMZ Optimizer");
+    s.clicks("runner", 4);
+    s.summon("runner", "Overclock", "Botulus", "Verbal Plasticity", "Wildcat Strike", "Sure Gamble");
+    s.credits("runner", 9);
+    s.decide("runner");
+    expect(best(s, "runner", (w) => w.startsWith("run Server 1"))).toBeLessThan(20);
+  });
+
+  it("installs its hand instead of drawing on a full grip when rich", () => {
+    const s = new Scenario("core-jinteki", "core-anarch");
+    s.clearHand("corp");
+    s.summon("corp", "Tithe", "Palisade", "Whitespace", "Karunā", "Tithe", "Diviner", "Urtica Cipher");
+    s.credits("corp", 40);
+    for (const [c, srv] of [["Tithe", "HQ"], ["Palisade", "HQ"], ["Whitespace", "R&D"], ["Karunā", "New remote"], ["Tithe", "Server 1"], ["Diviner", "Server 1"], ["Urtica Cipher", "Server 1"]] as [string, string][]) {
+      s.clicks("corp", 3);
+      s.credits("corp", 40);
+      s.install("corp", c, srv);
+    }
+    s.rez("Karunā");
+    s.credits("corp", 9);
+    s.endTurn("corp");
+    s.clearHand("runner");
+    s.summon("runner", "Smartware Distributor", "Smartware Distributor", "DZMZ Optimizer", "Buzzsaw", "Leech", "Cookbook");
+    s.credits("runner", 30);
+    for (const c of ["Smartware Distributor", "Smartware Distributor", "DZMZ Optimizer", "Buzzsaw", "Leech", "Cookbook"]) {
+      s.clicks("runner", 4);
+      s.install("runner", c);
+    }
+    s.clicks("runner", 4);
+    s.summon("runner", "Carnivore", "Docklands Pass", "Docklands Pass", "Fermenter", "Wildcat Strike");
+    s.credits("runner", 14);
+    const chosen: string[] = [];
+    for (let i = 0; i < 10 && Number(s.view("runner").runner.click) > 0; i++) {
+      const move = s.decide("runner");
+      if (!move) {
+        const corp = s.decide("corp");
+        if (corp) s.play("corp", corp);
+        continue;
+      }
+      if (move.command !== "toast") chosen.push(`${move.command}: ${s.last("runner").chosen?.why ?? ""}`);
+      s.play("runner", move);
+    }
+    expect(chosen.join(" | ")).toMatch(/Fermenter/);
+    expect(chosen.join(" | ")).toMatch(/Carnivore/);
+    expect(chosen.filter((c) => c.startsWith("draw")).length).toBeLessThan(2);
+  });
+});
+
+describe("runner installs the breaker it needs before saving for the remote (replay 6TFAXBF3)", () => {
+  it("installs Buzzsaw at four credits with Funhouse and Whitespace rezzed on the centrals", () => {
+    const s = new Scenario("core-nbn", "core-criminal");
+    s.clearHand("corp");
+    s.summon("corp", "Funhouse", "Tithe", "Whitespace", "Tithe", "Whitespace", "Ping", "Palisade", "Tomorrow's Headline");
+    s.credits("corp", 40);
+    for (const [c, srv] of [["Funhouse", "R&D"], ["Tithe", "R&D"], ["Whitespace", "HQ"], ["Tithe", "HQ"], ["Whitespace", "New remote"], ["Ping", "Server 1"], ["Palisade", "Server 1"], ["Tomorrow's Headline", "Server 1"]] as [string, string][]) {
+      s.clicks("corp", 3);
+      s.credits("corp", 40);
+      s.install("corp", c, srv);
+    }
+    s.rez("Funhouse");
+    s.say("corp", "/rez-free");
+    s.act("corp", "Select Tithe");
+    s.say("corp", "/rez-free");
+    s.act("corp", "Select Whitespace");
+    s.credits("corp", 18);
+    s.endTurn("corp");
+    s.clearHand("runner");
+    s.summon("runner", "Pennyshaver", "Smartware Distributor", "Smartware Distributor");
+    s.credits("runner", 20);
+    for (const c of ["Pennyshaver", "Smartware Distributor", "Smartware Distributor"]) {
+      s.clicks("runner", 4);
+      s.install("runner", c);
+    }
+    s.clicks("runner", 4);
+    s.summon("runner", "Buzzsaw", "Carmen", "Verbal Plasticity", "Red Team", "Overclock");
+    s.credits("runner", 4);
+    const move = s.decide("runner");
+    expect(move?.command).toBe("play");
+    expect(s.last("runner").chosen?.why).toMatch(/install Buzzsaw/);
+    expect(best(s, "runner", (w) => w.startsWith("run Archives"))).toBeLessThan(35);
+  });
+});

@@ -1,8 +1,8 @@
 import { byCommand } from "../observe.ts";
 import { cardAction, playOf, proposal } from "../generic.ts";
 import { registerPolicy } from "../registry.ts";
-import { fromCandidate } from "../runs.ts";
-import { agendaProgress, iceThreat, rezCostOf } from "../tactics.ts";
+import { fromCandidate, runCredits } from "../runs.ts";
+import { agendaProgress, bestBreak, iceThreat, rezCostOf } from "../tactics.ts";
 import type { DeckPolicy, Observation, Plan, Proposal } from "../types.ts";
 import { CORE_JINTEKI } from "./core.ts";
 import { glacier } from "./gateway-corp.ts";
@@ -33,10 +33,13 @@ function run(obs: Observation, plan: Plan): Proposal | null {
   const ice = obs.currentIce;
   const rez = ice ? byCommand(obs, "rez", (c) => (c.args as any)?.card?.cid === ice.cid)[0] : undefined;
   if (rez && ice && !ice.rezzed) {
-    const threat = iceThreat({ ...ice, subroutines: ice.subroutines ?? [] }, obs.info(ice), Number(obs.opp.credit ?? 0));
+    const asRezzed = { ...ice, subroutines: ice.subroutines ?? [], rezzed: true };
+    const threat = iceThreat(asRezzed, obs.info(ice), Number(obs.opp.credit ?? 0));
     const cost = rezCostOf(ice);
     const grip = runnerGrip(obs);
-    if (threat.damage > 0 && grip <= threat.damage && cost <= obs.credits) return fromCandidate(rez, 95, `rez ${ice.title}: ${threat.damage} net damage against ${grip} cards in the grip`, "rez");
+    const option = bestBreak(obs, asRezzed);
+    const breakable = !!option && option.cost.value <= Number(obs.opp.credit ?? 0) + runCredits(obs);
+    if (threat.damage > 0 && grip <= threat.damage && cost <= obs.credits && !breakable) return fromCandidate(rez, 95, `rez ${ice.title}: ${threat.damage} net damage against ${grip} cards in the grip`, "rez");
   }
   return glacier.run(obs, plan);
 }

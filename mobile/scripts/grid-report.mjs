@@ -42,24 +42,26 @@ for (const config of configs) {
     const mine = cells.filter((c) => c.config === config && c.split === split);
     if (!mine.length) continue;
     const games = mine[0].games;
+    const side = mine[0].side === "runner" ? "runner" : "corp";
+    const who = side === "runner" ? "Runner" : "Corp";
     const cell = (corp, runner) => mine.find((c) => c.corp === corp && c.runner === runner);
     let total = 0;
     let played = 0;
     const rows = CORPS.map((corp) => {
-      const wins = RUNNERS.map((runner) => cell(corp, runner)?.wins?.corp);
+      const wins = RUNNERS.map((runner) => cell(corp, runner)?.wins?.[side]);
       const sum = wins.reduce((n, w) => n + (w ?? 0), 0);
       total += sum;
       played += wins.filter((w) => w !== undefined).length * games;
       return `| ${label(corp)} | ${wins.map((w) => (w === undefined ? "–" : String(w))).join(" | ")} | ${sum} |`;
     });
     const ms = mine.map((c) => c.decisionMs).filter((x) => x != null);
-    lines.push(`### ${split} split · Corp ${total} of ${played}${ms.length ? ` · decision ${(ms.reduce((a, b) => a + b, 0) / ms.length).toFixed(0)} ms` : ""}`, "");
+    lines.push(`### ${split} split · ${who} ${total} of ${played}${ms.length ? ` · decision ${(ms.reduce((a, b) => a + b, 0) / ms.length).toFixed(0)} ms` : ""}`, "");
     lines.push(`| Corp \\ Runner | ${RUNNERS.map(label).join(" | ")} | total |`, `|---|${RUNNERS.map(() => "---").join("|")}|---|`, ...rows, "");
     const mistakes = {};
-    for (const c of mine) for (const [k, v] of Object.entries(c.mistakes ?? {})) if (k.startsWith("corp:")) mistakes[`${label(c.corp)} ${k.slice(5)}`] = (mistakes[`${label(c.corp)} ${k.slice(5)}`] ?? 0) + v;
+    for (const c of mine) for (const [k, v] of Object.entries(c.mistakes ?? {})) if (k.startsWith(`${side}:`)) mistakes[`${label(side === "runner" ? c.runner : c.corp)} ${k.slice(side.length + 1)}`] = (mistakes[`${label(side === "runner" ? c.runner : c.corp)} ${k.slice(side.length + 1)}`] ?? 0) + v;
     const top = Object.entries(mistakes).sort((a, b) => b[1] - a[1]).slice(0, 8);
-    if (top.length) lines.push(`Corp mistakes: ${top.map(([k, v]) => `${k} ${v}`).join(", ")}`, "");
-    report.configs[config].splits[split] = { games, total, played, decisionMs: ms.length ? ms.reduce((a, b) => a + b, 0) / ms.length : null, mistakes };
+    if (top.length) lines.push(`${who} mistakes: ${top.map(([k, v]) => `${k} ${v}`).join(", ")}`, "");
+    report.configs[config].splits[split] = { side, games, total, played, decisionMs: ms.length ? ms.reduce((a, b) => a + b, 0) / ms.length : null, mistakes };
   }
 }
 

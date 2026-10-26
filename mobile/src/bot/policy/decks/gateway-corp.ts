@@ -208,6 +208,7 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[], extra?: (out:
       const have = agendaProgress(card).have;
       if (have === 0 && obs.credits >= 1) push(proposal(cardAction(obs, card, "advance"), 50, "advance Clearinghouse: a threat the Runner has to respect", "advance"));
       else if (have > 0 && have < runnerGrip && obs.credits >= 2 && !installed) push(proposal(cardAction(obs, card, "advance"), 34 + have * 4, `advance Clearinghouse (${have}) towards the Runner's grip of ${runnerGrip}`, "advance"));
+      if (!card.rezzed && have >= 3 && have >= runnerGrip - 1 && rezCostOf(card) <= obs.credits) push(proposal(cardAction(obs, card, "rez"), 72, `rez Clearinghouse: ${have} meat damage hangs over a grip of ${runnerGrip}`, "rez"));
     }
   }
   const ambush = obs.hand.find((c) => c.type === "Asset" && /you can advance this asset/i.test(obs.info(c).text ?? "") && /net damage/i.test(obs.info(c).text ?? ""));
@@ -245,6 +246,10 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[], extra?: (out:
       if (card && card.title === "Brân 1.0" && obs.credits < 8) p.score -= 6;
     }
     if (plan.kind === "defend" && p.kind === "install-ice" && /(HQ|R&D)/.test(p.why)) p.score += 15;
+    if (p.kind === "economy" && /Hansei Review/.test(p.why) && !obs.hand.some((c) => c.type !== "Agenda" && c.title !== "Hansei Review")) {
+      p.score = 5;
+      p.why += " (it would trash an agenda)";
+    }
     if (plan.kind === "economy" && (p.kind === "economy" || p.kind === "install-economy" || p.kind === "rez-economy" || p.kind === "click-economy")) p.score += 8;
     if (plan.kind === "economy" && p.kind === "install-ice" && !/is open/.test(p.why)) p.score -= 10;
     if (plan.kind === "window" && p.kind === "install-agenda") p.score += 5;
@@ -318,6 +323,10 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[], extra?: (out:
       if (thinAndSlow) {
         p.score = Math.min(p.score, 38);
         p.why += " (one ice is thin for an agenda that takes two turns)";
+      }
+      if (card && target && target.ices.length < 2 && obs.credits < Math.max(3, scoringCost(card) - 1)) {
+        p.score = Math.min(p.score, 20);
+        p.why += ` (too poor to advance it behind one ice: ${scoringCost(card)} needed)`;
       }
       const enders = target ? target.ices.filter((i: any) => !i.rezzed && iceThreat({ ...i, subroutines: [] }, obs.info(i), 99).etr).map((i: any) => rezCostOf(i)) : [];
       const cheapestEnder = enders.length ? Math.min(...enders) : target && target.ices.some((i: any) => !i.rezzed) ? safety?.rezCost ?? 0 : 0;

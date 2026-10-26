@@ -110,6 +110,12 @@ function idlePump(ab: any, card: any, view: any): boolean {
 
 const ACTIVE_ZONES = new Set(["current", "onhost", "play-area", "scored", "servers", "rig"]);
 
+export function clickLocked(view: any, side: Side): boolean {
+  return !!(view["corp-phase-12"] || view["runner-phase-12"] || view["corp-post-discard"] || view["runner-post-discard"] || view["end-turn"]) || view["active-player"] !== side;
+}
+
+const clickAbility = (ab: any) => /\[click\]/i.test(String(ab?.["cost-label"] ?? ab?.label ?? ""));
+
 export function cardCommands(card: any, view: any, side: Side): Command[] {
   const out: Command[] = [];
   if (!card || !view) return out;
@@ -118,6 +124,7 @@ export function cardCommands(card: any, view: any, side: Side): Command[] {
   const prompt = promptOf(view, side);
   const ptype = prompt?.["prompt-type"];
   const ref = cardRef(card);
+  const locked = clickLocked(view, side);
 
   if (ptype === "select") {
     const selectable = (prompt.selectable ?? []).includes(card.cid);
@@ -137,7 +144,7 @@ export function cardCommands(card: any, view: any, side: Side): Command[] {
     if (choice) out.push({ label: "Choose this card", command: "choice", args: { eid: prompt.eid, choice: { uuid: choice.uuid } }, kind: "primary" });
   }
 
-  if (mine && !prompt) {
+  if (mine && !prompt && !locked) {
     const fromHand = (z === "hand" && card.playable) || card["playable-as-if-in-hand"];
     const flashback = z === "discard" && card["flashback-playable"];
     if (fromHand || flashback) {
@@ -156,6 +163,7 @@ export function cardCommands(card: any, view: any, side: Side): Command[] {
   if (mine && active) {
     if (side === "corp") {
       for (const a of actionList(card, view, side)) {
+        if (a === "advance" && locked) continue;
         const me = view[side] ?? {};
         const rezCost = card["current-rez-cost"] ?? card.cost;
         const guess = a === "advance" ? me.click > 0 && me.credit > 0 : a === "rez" ? (me.credit ?? 0) >= Number(rezCost ?? 0) : undefined;
@@ -166,6 +174,7 @@ export function cardCommands(card: any, view: any, side: Side): Command[] {
       out.push({ label: ACTION_LABELS.trash, command: "trash", args: { card: ref }, kind: "danger" });
     }
     (card.abilities ?? []).forEach((ab: any, i: number) => {
+      if (locked && clickAbility(ab)) return;
       out.push(ab.dynamic ? { label: abilityLabel(ab, card), command: "dynamic-ability", args: { card: ref, dynamic: ab.dynamic, source: ab.source, index: ab.index }, enabled: !!ab.playable && !idlePump(ab, card, view), check: "disable" } : { label: abilityLabel(ab, card), command: "ability", args: { card: ref, ability: i }, enabled: !!ab.playable && !idlePump(ab, card, view), check: "disable", choose: typeof ab.label === "string" && ab.label.startsWith("Toggle auto-resolve") ? CYCLE[autoSetting(card)] : undefined });
     });
   }

@@ -12,6 +12,9 @@ on:
       configs:
         description: 'JSON list of {name, flags} to compare'
         default: '[{"name":"base","flags":""},{"name":"search","flags":"--search 1"}]'
+      side:
+        description: 'Which side plays the current policy against the frozen reference: corp or runner'
+        default: 'corp'
   schedule:
     - cron: '23 2 * * *'
 
@@ -81,12 +84,14 @@ jobs:
       matrix: ${{ steps.plan.outputs.matrix }}
       games: ${{ steps.plan.outputs.games }}
       splits: ${{ steps.plan.outputs.splits }}
+      side: ${{ steps.plan.outputs.side }}
     steps:
       - id: plan
         env:
           CONFIGS: ${{ inputs.configs }}
           GAMES: ${{ inputs.games }}
           SPLITS: ${{ inputs.splits }}
+          SIDE: ${{ inputs.side }}
         run: |
           node -e '
             const configs = JSON.parse(process.env.CONFIGS || "[{\"name\":\"base\",\"flags\":\"\"},{\"name\":\"search\",\"flags\":\"--search 1\"}]");
@@ -97,6 +102,7 @@ jobs:
             console.log("matrix=" + JSON.stringify({ include }));
             console.log("games=" + (process.env.GAMES || "6"));
             console.log("splits=" + (process.env.SPLITS || "design test"));
+            console.log("side=" + (process.env.SIDE === "runner" ? "runner" : "corp"));
           ' >> "$GITHUB_OUTPUT"
 
   cells:
@@ -145,10 +151,12 @@ jobs:
           CONFIG: ${{ matrix.config }}
           CORP: ${{ matrix.corp }}
           RUNNER: ${{ matrix.runner }}
+          SIDE: ${{ needs.plan.outputs.side }}
         run: |
           mkdir -p results
+          if [ "$SIDE" = "runner" ]; then players="--corp ref --runner policy"; else players="--corp policy --runner ref"; fi
           for split in ${{ needs.plan.outputs.splits }}; do
-            node --experimental-strip-types scripts/policy-eval.mjs --games ${{ needs.plan.outputs.games }} --corp policy --runner ref --split $split --corp-deck ${{ matrix.corp }} --runner-deck ${{ matrix.runner }} $FLAGS --out results/$split > results/$split.log 2>&1 &
+            node --experimental-strip-types scripts/policy-eval.mjs --games ${{ needs.plan.outputs.games }} $players --split $split --corp-deck ${{ matrix.corp }} --runner-deck ${{ matrix.runner }} $FLAGS --out results/$split > results/$split.log 2>&1 &
           done
           wait
           for split in ${{ needs.plan.outputs.splits }}; do
@@ -160,8 +168,9 @@ jobs:
               const split = process.argv[1];
               const log = fs.readFileSync(`results/${split}.log`, "utf8");
               const summary = JSON.parse(fs.readFileSync(`results/${split}/summary.json`, "utf8"));
-              const ms = log.match(/corp: decision avg ([0-9.]+)ms max ([0-9.]+)ms/);
-              fs.writeFileSync(`results/${split}/cell.json`, JSON.stringify({ config: process.env.CONFIG, flags: process.env.FLAGS, corp: process.env.CORP, runner: process.env.RUNNER, split, games: summary.games, wins: summary.wins, reasons: summary.reasons, mistakes: summary.mistakes, decisionMs: ms ? Number(ms[1]) : null, decisionMaxMs: ms ? Number(ms[2]) : null }));
+              const side = process.env.SIDE === "runner" ? "runner" : "corp";
+              const ms = log.match(new RegExp(side + ": decision avg ([0-9.]+)ms max ([0-9.]+)ms"));
+              fs.writeFileSync(`results/${split}/cell.json`, JSON.stringify({ config: process.env.CONFIG, flags: process.env.FLAGS, corp: process.env.CORP, runner: process.env.RUNNER, side, split, games: summary.games, wins: summary.wins, reasons: summary.reasons, mistakes: summary.mistakes, decisionMs: ms ? Number(ms[1]) : null, decisionMaxMs: ms ? Number(ms[2]) : null }));
             ' $split
           done
 
