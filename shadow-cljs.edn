@@ -18,6 +18,7 @@
                                         checkpoint engine.api/checkpoint
                                         attempt engine.api/attempt
                                         restore engine.api/restore
+                                        mark engine.api/mark
                                         unchanged engine.api/unchanged?
                                         say engine.api/say
                                         notify engine.api/notify

@@ -177,7 +177,7 @@ function makePlayer(kind, side, precon, random, game) {
   const simulate = kind === "ref" || args.sim === "0" || (typeof args.sim === "string" && args.sim !== side && args.sim !== "both") ? undefined : engineSimulator(engine, game, side);
   const holder = {};
   const trial = simulate && args.trial !== "0" ? engineTrial(engine, game, side, (v, s) => holder.bot.trialMove(v, s)) : undefined;
-  const bot = new tree.PolicyBot(side, match?.policy ?? null, lookup, { random, render, record: true, rescue: false, deck: { identity: precon.identity, cards: precon.cards }, simulate, trial, simWeight: args["sim-weight"] != null ? Number(args["sim-weight"]) : undefined, measuredBase: args["measured-base"] != null ? Number(args["measured-base"]) : undefined });
+  const bot = new tree.PolicyBot(side, match?.policy ?? null, lookup, { random, render, record: true, rescue: false, deck: { identity: precon.identity, cards: precon.cards }, simulate, trial, simWeight: args["sim-weight"] != null ? Number(args["sim-weight"]) : undefined, search: args.search === "1" || args.search === side || args.search === "both", searchWeight: args["search-weight"] != null ? Number(args["search-weight"]) : undefined, searchCap: args["search-cap"] != null ? Number(args["search-cap"]) : undefined, measuredBase: args["measured-base"] != null ? Number(args["measured-base"]) : undefined });
   holder.bot = bot;
   const id = `${kind === "ref" ? `ref@${ref.sha.slice(0, 7)}:` : ""}${bot.policyId}${match && !match.exact ? " (nearest deck)" : ""}`;
   return { kind, id, bot, fallback: !match };

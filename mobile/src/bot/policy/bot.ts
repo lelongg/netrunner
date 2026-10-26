@@ -8,8 +8,9 @@ import { cardPrompt } from "./cards.ts";
 import { genericPrompt, mulliganProposal, selectMove, selectable } from "./prompts.ts";
 import { breakSubChoice, corpRun, runnerRun } from "./runs.ts";
 import { isEconomy, isIcebreaker } from "./tactics.ts";
-import { evaluate } from "./evaluate.ts";
-import { type AsyncSimulator, type SimOutcome, type SimReport, type Simulator, simulatable } from "./simulate.ts";
+import { CLICK_VALUE, evaluate } from "./evaluate.ts";
+import { threat } from "./threat.ts";
+import { type AsyncSimulator, type SimOutcome, type SimReport, type Simulator, simulatable, viewSignature } from "./simulate.ts";
 import type { AsyncTrial, RunTrial, Trial } from "./trial.ts";
 import type { DecisionRecord, DeckList, DeckPolicy, Lookup, Memory, Move, Observation, Plan, Proposal } from "./types.ts";
 
@@ -28,6 +29,25 @@ export interface BotOptions {
   simWeight?: number;
   simulated?: number;
   measuredBase?: number;
+  search?: boolean;
+  searchWidth?: number;
+  searchBeam?: number;
+  searchWeight?: number;
+  searchCap?: number;
+}
+
+interface SearchNode {
+  moves: Move[];
+  root: string;
+  value: number;
+  clicks: number;
+  obs: Observation;
+}
+
+export interface SearchReport {
+  deltas: Map<string, { delta: number; line: string }>;
+  refused: Set<string>;
+  nodes: number;
 }
 
 export interface AsyncTools {
@@ -42,23 +62,26 @@ interface Context {
   unhandled?: string;
   signature: string;
   started: number;
+  searched?: number;
 }
 
-function cloneMemory(m: Memory): Memory {
+export function cloneMemory(m: Memory): Memory {
   return { seen: new Map(m.seen), firstSeen: new Map(m.firstSeen), installedAt: new Map(m.installedAt), opponentTitles: new Set(m.opponentTitles), duds: new Set(m.duds), runs: [...m.runs], runsThisTurn: m.runsThisTurn, turnKey: m.turnKey, notes: structuredClone(m.notes) };
 }
 
-function driveSync(gen: Generator<Move[], SimReport | null, SimOutcome>, simulate: Simulator): SimReport | null {
+function driveSync<T>(gen: Generator<Move[], T, SimOutcome>, simulate: Simulator): T {
   let step = gen.next();
   while (!step.done) step = gen.next(simulate(step.value));
   return step.value;
 }
 
-async function driveAsync(gen: Generator<Move[], SimReport | null, SimOutcome>, simulate: AsyncSimulator): Promise<SimReport | null> {
+async function driveAsync<T>(gen: Generator<Move[], T, SimOutcome>, simulate: AsyncSimulator): Promise<T> {
   let step = gen.next();
   while (!step.done) step = gen.next(await simulate(step.value));
   return step.value;
 }
+
+const SEARCH_SKIP = new Set(["draw", "end", "turn", "toast", "rescue"]);
 
 const moveKey = (m: Move) => `${m.command}:${m.say ?? ""}:${JSON.stringify(m.args ?? null)}`;
 
@@ -90,6 +113,11 @@ export class PolicyBot {
   private simWeight: number;
   private simulated: number;
   private measuredBase: number;
+  private search: boolean;
+  private searchWidth: number;
+  private searchBeam: number;
+  private searchWeight: number;
+  private searchCap: number;
   private trials = new Map<string, { key: string; trial: RunTrial | null }>();
 
   constructor(side: Side, policy: DeckPolicy | null, lookup: Lookup, options: BotOptions = {}) {
@@ -107,6 +135,11 @@ export class PolicyBot {
     this.simWeight = options.simWeight ?? 1;
     this.simulated = options.simulated ?? 6;
     this.measuredBase = options.measuredBase ?? 24;
+    this.search = options.search ?? false;
+    this.searchWidth = options.searchWidth ?? 5;
+    this.searchBeam = options.searchBeam ?? 4;
+    this.searchWeight = options.searchWeight ?? 1;
+    this.searchCap = options.searchCap ?? 20;
   }
 
   private ownDeck(list: DeckList): DeckList {
@@ -122,7 +155,8 @@ export class PolicyBot {
     if (this.trial) for (const [label, key, prelude] of this.trialsWanted(view)) this.storeTrial(label, key, this.trial(label, prelude));
     const ctx = this.rank(view);
     if (!ctx) return null;
-    if (this.simulate) for (const p of this.toSimulate(ctx)) this.applyReport(p, driveSync(this.simulation(p, ctx.obs), this.simulate));
+    if (this.simulate && this.searching(ctx)) this.applySearch(ctx, driveSync(this.turnSearch(ctx), this.simulate));
+    else if (this.simulate) for (const p of this.toSimulate(ctx)) this.applyReport(p, driveSync(this.simulation(p, ctx.obs), this.simulate));
     return this.choose(ctx);
   }
 
@@ -130,7 +164,8 @@ export class PolicyBot {
     if (tools.trial) for (const [label, key, prelude] of this.trialsWanted(view)) this.storeTrial(label, key, await tools.trial(label, prelude));
     const ctx = this.rank(view);
     if (!ctx) return null;
-    if (tools.simulate) for (const p of this.toSimulate(ctx)) this.applyReport(p, await driveAsync(this.simulation(p, ctx.obs), tools.simulate));
+    if (tools.simulate && this.searching(ctx)) this.applySearch(ctx, await driveAsync(this.turnSearch(ctx), tools.simulate));
+    else if (tools.simulate) for (const p of this.toSimulate(ctx)) this.applyReport(p, await driveAsync(this.simulation(p, ctx.obs), tools.simulate));
     return this.choose(ctx);
   }
 
@@ -241,6 +276,119 @@ export class PolicyBot {
     p.why += ` [${report.delta >= 0 ? "+" : ""}${report.delta.toFixed(1)}${report.unresolved ? " unresolved" : ""}]`;
   }
 
+  private searching(ctx: Context): boolean {
+    return this.search && this.side === "corp" && ctx.stage === "click" && ctx.obs.clicks > 0;
+  }
+
+  private leafValue(obs: Observation): number {
+    const t = threat(obs);
+    return evaluate(obs.view, this.side) - t.loss + t.gain;
+  }
+
+  private searchCandidates(obs: Observation, ranked: Proposal[]): Proposal[] {
+    const out: Proposal[] = [];
+    let credit = false;
+    for (const p of ranked) {
+      if (SEARCH_SKIP.has(p.kind) || p.score <= -100 || !simulatable(p, obs)) continue;
+      if (p.kind === "credit") {
+        if (credit) continue;
+        credit = true;
+      }
+      out.push(p);
+      if (out.length >= this.searchWidth) break;
+    }
+    return out;
+  }
+
+  private *resolve(moves: Move[], memory: Memory): Generator<Move[], { obs: Observation | null; refused: boolean; settled: boolean }, SimOutcome> {
+    const plan = this.plan;
+    let lastPrompt = "";
+    let last: Observation | null = null;
+    for (let step = 0; step < 5; step++) {
+      const out = yield moves;
+      if (out.refused || !out.view) return { obs: null, refused: step === 0, settled: false };
+      const prompt = promptOf(out.view, this.side);
+      const type = prompt?.["prompt-type"];
+      const next = observe(out.view, this.side, memory, this.lookup, this.render, this.random, this.deck);
+      if (!prompt || type === "waiting" || type === "run") return { obs: next, refused: false, settled: true };
+      last = next;
+      const key = `${prompt.eid?.eid ?? ""}:${this.render(prompt.msg)}`;
+      if (key === lastPrompt) break;
+      lastPrompt = key;
+      const answers = this.answerPrompt(next).sort((a, b) => b.score - a.score);
+      this.plan = plan;
+      if (!answers.length) break;
+      moves = [...moves, answers[0].move];
+    }
+    return { obs: last, refused: false, settled: false };
+  }
+
+  private *turnSearch(ctx: Context): Generator<Move[], SearchReport, SimOutcome> {
+    const report: SearchReport = { deltas: new Map(), refused: new Set(), nodes: 0 };
+    const base = this.leafValue(ctx.obs) - ctx.obs.clicks * CLICK_VALUE;
+    const plan = this.plan;
+    let frontier: SearchNode[] = [{ moves: [], root: "", value: base, clicks: ctx.obs.clicks, obs: ctx.obs }];
+    const best = (root: string, value: number, moves: Move[]) => {
+      const cur = report.deltas.get(root);
+      if (!cur || value - base > cur.delta) report.deltas.set(root, { delta: value - base, line: moves.map((m) => m.command).join(" > ") });
+    };
+    for (let depth = 0; depth < 4 && frontier.length; depth++) {
+      const next: SearchNode[] = [];
+      for (const node of frontier) {
+        const ranked = depth === 0 ? ctx.ranked : [...this.consider(node.obs).proposals].sort((a, b) => b.score - a.score);
+        this.plan = plan;
+        const cands = this.searchCandidates(node.obs, ranked);
+        if (!cands.length && node.root) best(node.root, node.value, node.moves);
+        for (const c of cands) {
+          const moves = [...node.moves, c.move];
+          const root = node.root || moveKey(c.move);
+          const memory = cloneMemory(this.memory);
+          const { obs: leaf, refused, settled } = yield* this.resolve(moves, memory);
+          report.nodes++;
+          if (refused || (leaf && viewSignature(leaf.view, this.side) === viewSignature(node.obs.view, this.side))) {
+            if (depth === 0) report.refused.add(root);
+            continue;
+          }
+          if (!leaf) continue;
+          const value = this.leafValue(leaf);
+          const clicks = leaf.myTurn ? leaf.clicks : 0;
+          if (clicks <= 0 || depth === 3 || !settled) best(root, value, moves);
+          else next.push({ moves, root, value, clicks, obs: leaf });
+        }
+      }
+      next.sort((a, b) => b.value - a.value);
+      const kept: SearchNode[] = [];
+      const perRoot = new Map<string, number>();
+      for (const n of next) {
+        const k = perRoot.get(n.root) ?? 0;
+        if (kept.length >= this.searchBeam * 2 || k >= this.searchBeam) continue;
+        perRoot.set(n.root, k + 1);
+        kept.push(n);
+      }
+      for (const n of next) if (!kept.includes(n)) best(n.root, n.value, n.moves);
+      frontier = kept;
+    }
+    this.plan = plan;
+    return report;
+  }
+
+  private applySearch(ctx: Context, report: SearchReport) {
+    ctx.searched = report.nodes;
+    for (const p of ctx.ranked) {
+      const key = moveKey(p.move);
+      if (report.refused.has(key)) {
+        p.score = -500;
+        p.why += " (the engine refused it)";
+        continue;
+      }
+      const hit = report.deltas.get(key);
+      if (!hit) continue;
+      const delta = Math.max(-this.searchCap, Math.min(this.searchCap, hit.delta * this.searchWeight));
+      p.score += delta;
+      p.why += ` {${hit.delta >= 0 ? "+" : ""}${hit.delta.toFixed(1)} via ${hit.line}}`;
+    }
+  }
+
   private *simulation(p: Proposal, obs: Observation): Generator<Move[], SimReport | null, SimOutcome> {
     const before = evaluate(obs.view, this.side);
     const moves = [p.move];
@@ -291,7 +439,7 @@ export class PolicyBot {
     this.pendingKind = chosen && stage === "click" ? { key: moveKey(chosen.move), kind: chosen.kind } : null;
     const ms = (typeof performance !== "undefined" ? performance.now() : Date.now()) - started;
     if (this.record) {
-      this.records.push({ n: this.n, turn: obs.turn, side: this.side, active: obs.active, stage, plan: this.plan, chosen, considered: ranked.slice(0, 12), refused: refused || undefined, unhandled: note, ms, signature, prompt: obs.prompt ? `${obs.prompt.card?.title ?? "?"} [${obs.promptType}]: ${obs.promptText}` : undefined });
+      this.records.push({ n: this.n, turn: obs.turn, side: this.side, active: obs.active, stage, plan: this.plan, chosen, considered: ranked.slice(0, 12), refused: refused || undefined, unhandled: note, ms, signature, searched: ctx.searched, prompt: obs.prompt ? `${obs.prompt.card?.title ?? "?"} [${obs.promptType}]: ${obs.promptText}` : undefined });
       if (this.records.length > this.maxRecords) this.records.shift();
     }
     this.n++;

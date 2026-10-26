@@ -41,18 +41,29 @@ export function simulatable(p: Proposal, obs: Observation): boolean {
   return !HIDDEN.test(text);
 }
 
+export function viewSignature(view: any, side: Side): string {
+  const me = view?.[side] ?? {};
+  const servers = Object.values<any>(view?.corp?.servers ?? {});
+  const rig = view?.runner?.rig ?? {};
+  const prompt = me["prompt-state"] ?? me.prompt?.[0];
+  return [me.click, me.credit, me["agenda-point"], Array.isArray(me.hand) ? me.hand.length : me["hand-count"], view?.log?.length, servers.map((s) => `${(s.ices ?? []).map((i: any) => `${i.rezzed ? 1 : 0}${i["advance-counter"] ?? 0}`).join("")}/${(s.content ?? []).map((c: any) => `${c.rezzed ? 1 : 0}${c["advance-counter"] ?? 0}`).join("")}`).join("|"), ["program", "hardware", "resource"].map((z) => (rig[z] ?? []).length).join(","), prompt?.["prompt-type"], prompt?.eid?.eid, view?.run?.phase, view?.run?.position, view?.["active-player"], view?.turn].join(":");
+}
+
 export function applyMoves(engine: EngineApi, game: GameHandle, side: Side, moves: Move[]): SimOutcome {
-  const snapshot = engine.checkpoint(game);
+  const snapshot = engine.mark(game);
+  const before = viewSignature(engine.view(game, side), side);
   try {
     for (const [i, m] of moves.entries()) {
       try {
-        engine.act(game, side, m.command, m.args ?? null);
+        engine.attempt(game, side, m.command, m.args ?? null);
       } catch {
         return { refused: true, view: null };
       }
-      if (i === 0 && engine.unchanged(game, snapshot)) return { refused: true, view: null };
+      if (i === 0 && moves.length === 1 && viewSignature(engine.view(game, side), side) === before) return { refused: true, view: null };
     }
-    return { refused: false, view: engine.view(game, side) };
+    const view = engine.view(game, side);
+    if (moves.length > 1 && viewSignature(view, side) === before) return { refused: true, view: null };
+    return { refused: false, view };
   } finally {
     engine.restore(game, snapshot);
   }

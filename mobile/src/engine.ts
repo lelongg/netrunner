@@ -59,6 +59,7 @@ export interface EngineApi {
   checkpoint(game: GameHandle): Snapshot;
   attempt(game: GameHandle, side: Side, command: string, args: unknown): void;
   restore(game: GameHandle, snapshot: Snapshot): void;
+  mark(game: GameHandle): Snapshot;
   unchanged(game: GameHandle, snapshot: Snapshot): boolean;
   say(game: GameHandle, side: Side, user: unknown, text: string): ActResult;
   notify(game: GameHandle, text: string): ActResult;

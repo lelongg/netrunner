@@ -109,10 +109,14 @@
    :spectator (:spect-state states)})
 
 (defn view
-  "Full privatized state for a side: \"corp\", \"runner\" or \"spectator\"."
+  "Full privatized state for a side: \"corp\", \"runner\" or \"spectator\".
+  After an attempt the cached views are gone and are rebuilt once here."
   [game side]
   (let [state (.-state game)
-        states (or (:public-states @state) (diffs/public-states state))]
+        states (or (:public-states @state)
+                   (let [states (diffs/public-states state true false false)]
+                     (swap! state assoc :public-states states)
+                     states))]
     (->js (get (views states) (side-kw side)))))
 
 (defn- apply-and-diff
@@ -169,10 +173,19 @@
 
 (defn attempt
   "Applies a command like act without refreshing the views, for a try that
-  restore rolls back."
+  restore rolls back. The cached views are dropped so that the next view
+  rebuilds them."
   [game side command args]
-  (process-action command (.-state game) (side-kw side) (normalize-args command (->clj args)))
+  (let [state (.-state game)]
+    (process-action command state (side-kw side) (normalize-args command (->clj args)))
+    (swap! state dissoc :public-states))
   nil)
+
+(defn mark
+  "A cheap snapshot for restore: the game as it is, without the settled copy
+  that unchanged? needs."
+  [game]
+  #js {:state @(.-state game)})
 
 (defn restore [game ^js snapshot]
   (reset! (.-state game) (.-state snapshot))
