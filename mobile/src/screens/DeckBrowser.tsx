@@ -1,7 +1,8 @@
-import { useEffect, useState } from "preact/hooks";
+import { useEffect, useMemo, useState } from "preact/hooks";
 import type { CardDb, Side } from "../engine";
 import { type Decklist, FACTIONS, fetchDecklists } from "../nrdb";
-import { type FormatKey, FORMATS, analyze } from "../deckrules";
+import { type FormatKey, analyze } from "../deckrules";
+import { Icon } from "../icons";
 import { IdentityThumb } from "./IdentityThumb";
 import { FactionLogo } from "../FactionLogo";
 
@@ -13,6 +14,8 @@ interface Props {
   format?: FormatKey;
 }
 
+const plain = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
 const day = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
 
 export function DeckBrowser({ side, db, selected, onPick, format }: Props) {
@@ -23,12 +26,33 @@ export function DeckBrowser({ side, db, selected, onPick, format }: Props) {
   const [hasMore, setHasMore] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
+  const [text, setText] = useState("");
+  const [q, setQ] = useState("");
+  const [cards, setCards] = useState<{ code: string; title: string }[]>([]);
+  useEffect(() => {
+    const t = setTimeout(() => setQ(text.trim()), 350);
+    return () => clearTimeout(t);
+  }, [text]);
+  const sideName = side === "corp" ? "Corp" : "Runner";
+  const term = plain(q);
+  const identities = useMemo(() => (term.length >= 2 ? db.all.filter((c) => c.side === sideName && c.type === "Identity" && plain(c.title).includes(term)).map((c) => String(c.code)) : []), [term, side]);
+  const suggestions = useMemo(() => {
+    const t = plain(text.trim());
+    if (t.length < 3) return [];
+    const seen = new Set(cards.map((c) => c.title));
+    return db.all.filter((c) => c.side === sideName && c.type !== "Identity" && !seen.has(c.title) && plain(c.title).includes(t)).slice(0, 4);
+  }, [text, side, cards]);
+  const addCard = (c: { code: unknown; title: string }) => {
+    setCards((prev) => [...prev, { code: String(c.code), title: c.title }].slice(0, 3));
+    setText("");
+    setQ("");
+  };
 
   const load = async (next: number, reset: boolean) => {
     setBusy(true);
     setError(undefined);
     try {
-      const res = await fetchDecklists(db, side, faction, next, format);
+      const res = await fetchDecklists(db, side, faction, next, format, { q, identities, cards: cards.map((c) => c.code) });
       setLists((prev) => (reset ? res.items : [...prev, ...res.items]));
       setHasMore(res.hasMore);
       setPage(next);
@@ -43,7 +67,7 @@ export function DeckBrowser({ side, db, selected, onPick, format }: Props) {
     setLists([]);
     setWant(10);
     load(1, true);
-  }, [side, faction, format]);
+  }, [side, faction, format, q, cards.map((c) => c.code).join()]);
 
   const shown = lists.filter((l) => l.deck && (format ? format === "casual" || analyze(l.deck, format).legal : !standard || l.standard));
   const filtering = !!format && format !== "casual";
@@ -55,7 +79,25 @@ export function DeckBrowser({ side, db, selected, onPick, format }: Props) {
 
   return (
     <div class="deck-browser">
-      <div class="chips">
+      <label class="search">
+        <Icon name="search" />
+        <input type="search" value={text} placeholder="Deck, player, identity or card" onInput={(e) => setText((e.target as HTMLInputElement).value)} />
+      </label>
+      {(suggestions.length > 0 || cards.length > 0) && (
+        <div class="chips scroll-chips deck-search-cards">
+          {cards.map((c) => (
+            <button class="on" onClick={() => setCards((prev) => prev.filter((x) => x.code !== c.code))} aria-label={`Remove ${c.title}`}>
+              {c.title} ×
+            </button>
+          ))}
+          {suggestions.map((c) => (
+            <button onClick={() => addCard(c)} aria-label={`Only decks with ${c.title}`}>
+              + {c.title}
+            </button>
+          ))}
+        </div>
+      )}
+      <div class="chips scroll-chips">
         <button class={faction === null ? "on" : ""} onClick={() => setFaction(null)}>
           All
         </button>
@@ -65,9 +107,7 @@ export function DeckBrowser({ side, db, selected, onPick, format }: Props) {
             {label}
           </button>
         ))}
-        {format ? (
-          <span class="chip-note">{FORMATS.find((f) => f.key === format)!.label} legal only</span>
-        ) : (
+        {!format && (
           <button class={`toggle ${standard ? "on" : ""}`} onClick={() => setStandard(!standard)} aria-pressed={standard}>
             Standard only
           </button>
@@ -85,7 +125,7 @@ export function DeckBrowser({ side, db, selected, onPick, format }: Props) {
             </button>
           </li>
         ))}
-        {!busy && !error && shown.length === 0 && <li class="hint">{format && format !== "casual" ? `No legal decklist in the last ${page * 20} published.` : "No playable decklist on this page."}</li>}
+        {!busy && !error && shown.length === 0 && <li class="hint">{q || cards.length ? "No decklist matches." : format && format !== "casual" ? `No legal decklist in the last ${page * 20} published.` : "No playable decklist on this page."}</li>}
         {hasMore && (
           <li>
             <button class="more" disabled={busy} onClick={() => (filtering ? setWant(shown.length + 10) : load(page + 1, false))}>

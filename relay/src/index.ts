@@ -29,18 +29,30 @@ async function listDecklists(env: Env, url: URL) {
   const side = url.searchParams.get("side");
   const format = url.searchParams.get("format") ?? "casual";
   const faction = url.searchParams.get("faction");
+  const q = (url.searchParams.get("q") ?? "").trim().slice(0, 60);
+  const cards = (url.searchParams.get("cards") ?? "").split(",").filter(Boolean);
   const page = Math.max(1, Math.min(50, Number(url.searchParams.get("page")) || 1));
   if (side !== "corp" && side !== "runner") return null;
   if (format !== "casual" && !DECK_FORMATS.has(format)) return null;
   if (faction && !/^[a-z_]{1,40}$/.test(faction)) return null;
+  if (cards.length > 3 || cards.some((c) => !/^\d{5,6}$/.test(c))) return null;
+  const binds: unknown[] = [side];
+  const bind = (v: unknown) => `?${binds.push(v)}`;
+  const t = format === "casual" ? "d" : "f";
+  const where = [`${t}.side = ?1`];
+  if (format !== "casual") where.push(`f.format = ${bind(format)}`);
+  if (faction) where.push(`${t}.faction = ${bind(faction)}`);
+  if (q) {
+    const like = bind(`%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`);
+    const ids = url.searchParams.getAll("id").filter((c) => /^\d{5,6}$/.test(c)).slice(0, 20);
+    where.push(`(d.name LIKE ${like} ESCAPE '\\' OR d.user LIKE ${like} ESCAPE '\\'${ids.length ? ` OR d.identity IN (${ids.map(bind).join(", ")})` : ""})`);
+  }
+  for (const c of cards) where.push(`(',' || d.cards) LIKE ${bind(`%,${c}:%`)}`);
+  const from = format === "casual" ? "decklists d" : "deck_formats f JOIN decklists d ON d.id = f.id";
   const offset = (page - 1) * DECK_PAGE;
   const columns = "d.id, d.name, d.user, d.side, d.faction, d.identity, d.created, d.cards";
-  const query =
-    format === "casual"
-      ? env.DECKS!.prepare(`SELECT ${columns} FROM decklists d WHERE d.side = ?1 ${faction ? "AND d.faction = ?2" : ""} ORDER BY d.created DESC LIMIT ${DECK_PAGE + 1} OFFSET ${offset}`)
-      : env.DECKS!.prepare(`SELECT ${columns} FROM deck_formats f JOIN decklists d ON d.id = f.id WHERE f.format = ?3 AND f.side = ?1 ${faction ? "AND f.faction = ?2" : ""} ORDER BY f.created DESC LIMIT ${DECK_PAGE + 1} OFFSET ${offset}`);
-  const params = format === "casual" ? (faction ? [side, faction] : [side]) : faction ? [side, faction, format] : [side, null, format];
-  const { results } = await query.bind(...params).all();
+  const sql = `SELECT ${columns} FROM ${from} WHERE ${where.join(" AND ")} ORDER BY ${t}.created DESC LIMIT ${DECK_PAGE + 1} OFFSET ${offset}`;
+  const { results } = await env.DECKS!.prepare(sql).bind(...binds).all();
   return { items: results.slice(0, DECK_PAGE), hasMore: results.length > DECK_PAGE };
 }
 

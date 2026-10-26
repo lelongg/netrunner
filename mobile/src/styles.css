@@ -9531,3 +9531,17 @@ button.player-chip {
   height: 1px;
   background: var(--line-2);
 }
+
+.deck-browser > .search {
+  flex: none;
+  min-height: 44px;
+}
+
+.deck-browser .scroll-chips button {
+  padding: 4px 8px;
+  letter-spacing: 0.12em;
+}
+
+.deck-browser .scroll-chips .faction-chip {
+  gap: 6px;
+}
