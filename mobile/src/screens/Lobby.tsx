@@ -14,22 +14,24 @@ import { useBackClose } from "../back";
 import { Icon } from "../icons";
 import { type GameFormat, FORMAT_DESC, GAME_FORMATS, analyze, dealtFormat, deckFormat } from "../deckrules";
 import { uiSound } from "../uisound";
+import { t } from "../i18n";
 
 const FORMAT_HINT: Partial<Record<GameFormat, string>> = {
   preconstructed: "Preconstructed decks only.",
 };
 
 function FormatPicker({ value, onChange }: { value: GameFormat; onChange?: (f: GameFormat) => void }) {
-  const label = GAME_FORMATS.find((f) => f.key === value)?.label;
+  const found = GAME_FORMATS.find((f) => f.key === value)?.label;
+  const label = found && t(found);
   return (
     <section class="format-pick">
-      <span class="label">Format</span>
+      <span class="label">{t("Format")}</span>
       {onChange ? (
-        <Picker title="Game format" value={value} onChange={onChange} options={GAME_FORMATS.map((f) => ({ key: f.key as GameFormat, label: f.label, hint: FORMAT_DESC[f.key as GameFormat] }))} />
+        <Picker title={t("Game format")} value={value} onChange={onChange} options={GAME_FORMATS.map((f) => ({ key: f.key as GameFormat, label: t(f.label), hint: FORMAT_DESC[f.key as GameFormat] }))} />
       ) : (
         <span class="label cyan">{label}</span>
       )}
-      {FORMAT_HINT[value] && <p class="hint">{FORMAT_HINT[value]}</p>}
+      {FORMAT_HINT[value] && <p class="hint">{t(FORMAT_HINT[value]!)}</p>}
     </section>
   );
 }
@@ -60,32 +62,32 @@ const STEPS: { key: "relay" | "host"; label: string }[] = [
 function JoinStatus({ lobby }: { lobby: Session["lobby"] }) {
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(t);
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
   }, []);
   const current = STEPS.findIndex((s) => s.key === (lobby.step ?? "relay"));
   const seconds = lobby.since ? Math.max(0, Math.round((now - lobby.since) / 1000)) : 0;
   return (
     <section class="panel section join-status">
       <div class="row">
-        <span class="label">Joining</span>
-        <span class="label">{seconds}s</span>
+        <span class="label">{t("Joining")}</span>
+        <span class="label">{t("{n}s", { n: seconds })}</span>
       </div>
       <ol class="steps">
         {STEPS.map((s, i) => (
           <li class={i < current ? "done" : i === current ? "active" : ""}>
             {i === current ? <BlinkMark /> : <span class="step-mark" aria-hidden="true" />}
-            {s.label}
+            {t(s.label)}
           </li>
         ))}
       </ol>
       {lobby.hint === "unreachable" && (
         <>
-          <p class="hint">Can't reach the host yet. Check the code, and ask the host to keep the game on screen: switching apps on their phone pauses it.</p>
-          <p class="hint">If it still fails, your networks may block direct links between phones (some mobile carriers do): try with both phones on Wi-Fi, or one on Wi-Fi and the other on mobile data.</p>
+          <p class="hint">{t("Can't reach the host yet. Check the code, and ask the host to keep the game on screen: switching apps on their phone pauses it.")}</p>
+          <p class="hint">{t("If it still fails, your networks may block direct links between phones (some mobile carriers do): try with both phones on Wi-Fi, or one on Wi-Fi and the other on mobile data.")}</p>
         </>
       )}
-      {!lobby.hint && seconds >= 10 && <p class="hint">Still trying. Check your connection.</p>}
+      {!lobby.hint && seconds >= 10 && <p class="hint">{t("Still trying. Check your connection.")}</p>}
     </section>
   );
 }
@@ -126,13 +128,13 @@ export function QrZoom({ value, code, from, onClose }: { value: string; code: st
   };
   useBackClose(true, close);
   return (
-    <div ref={root} class="qr-zoom" onClick={close} role="dialog" aria-label={`Join game ${code}`}>
+    <div ref={root} class="qr-zoom" onClick={close} role="dialog" aria-label={t("Join game {code}", { code })}>
       <div ref={qr} class="qr-zoom-code">
-        <QrCode value={value} label={`QR code to join game ${code}`} />
+        <QrCode value={value} label={t("QR code to join game {code}", { code })} />
       </div>
       <div ref={extra} class="qr-zoom-extra">
         <span class="code">{code}</span>
-        <span class="hint">Tap to close</span>
+        <span class="hint">{t("Tap to close")}</span>
       </div>
     </div>
   );
@@ -142,15 +144,15 @@ export function DeckSheet({ side, db, matchups, value, onPick, onClose, onEditDe
   useBackClose(true, onClose);
   return (
     <div class="sheet-backdrop" onClick={onClose}>
-      <div class="sheet panel deck-choose" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={`Choose a ${SIDE_LABEL[side]} deck`}>
+      <div class="sheet panel deck-choose" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={side === "corp" ? t("Choose a Corp deck") : t("Choose a Runner deck")}>
         <div class="row">
-          <span class={`label who-${side}`}>Choose a {SIDE_LABEL[side]} deck</span>
+          <span class={`label who-${side}`}>{side === "corp" ? t("Choose a Corp deck") : t("Choose a Runner deck")}</span>
           {onView && (
             <button class="ghost sheet-view-list" onClick={onView}>
-              View list
+              {t("View list")}
             </button>
           )}
-          <button class="ghost" onClick={onClose} aria-label="Close">
+          <button class="ghost" onClick={onClose} aria-label={t("Close")}>
             <Icon name="close" />
           </button>
         </div>
@@ -190,7 +192,7 @@ function NameField({ name, onSave }: { name: string; onSave: (name: string) => v
           setValue(name);
           setEditing(true);
         }}
-        aria-label={`Change your name, currently ${name}`}
+        aria-label={t("Change your name, currently {name}", { name })}
       >
         {name}
         <Icon name="edit" />
@@ -208,7 +210,7 @@ function NameField({ name, onSave }: { name: string; onSave: (name: string) => v
         save();
       }}
     >
-      <input value={value} maxLength={24} autoFocus onInput={(e) => setValue((e.target as HTMLInputElement).value)} onBlur={save} aria-label="Your name" />
+      <input value={value} maxLength={24} autoFocus onInput={(e) => setValue((e.target as HTMLInputElement).value)} onBlur={save} aria-label={t("Your name")} />
     </form>
   );
 }
@@ -231,23 +233,23 @@ function Seat({ label, side, deck, db, matchups, onPick, onSide, locked, name, o
     <section class="panel section seat">
       <div class="row">
         <span class="label seat-label">
-          {label}
+          {t(label)}
           {name && onName && <NameField name={name} onSave={onName} />}
         </span>
         {onSide ? (
-          <div class="side-switch" role="radiogroup" aria-label="Your side">
+          <div class="side-switch" role="radiogroup" aria-label={t("Your side")}>
             {(["corp", "runner"] as Side[]).map((s) => (
               <button role="radio" aria-checked={side === s} class={`who-${s} ${side === s ? "on" : ""}`} onClick={() => s !== side && onSide(s)}>
-                {SIDE_LABEL[s]}
+                {t(SIDE_LABEL[s])}
               </button>
             ))}
           </div>
         ) : (
-          <span class={`label who-${side}`}>{SIDE_LABEL[side]}</span>
+          <span class={`label who-${side}`}>{t(SIDE_LABEL[side])}</span>
         )}
       </div>
       {dealt ? (
-        <p class="status seat-dealt">{format === "chimera" ? "A random deck is dealt when the game starts." : "The deck is drafted when the game starts."}</p>
+        <p class="status seat-dealt">{format === "chimera" ? t("A random deck is dealt when the game starts.") : t("The deck is drafted when the game starts.")}</p>
       ) : current ? (
         <>
           <ul class="deck-library">
@@ -257,11 +259,11 @@ function Seat({ label, side, deck, db, matchups, onPick, onSide, locked, name, o
             <div class="seat-issues" role="alert">
               <span class="seat-issues-head">
                 <Icon name="warning" />
-                Not legal in {GAME_FORMATS.find((f) => f.key === format)?.label}
+                {t("Not legal in {format}", { format: t(GAME_FORMATS.find((f) => f.key === format)?.label ?? format) })}
               </span>
               <ul>
-                {(issues.length ? issues : [problem]).map((t) => (
-                  <li>{t}</li>
+                {(issues.length ? issues : [problem]).map((text) => (
+                  <li>{text}</li>
                 ))}
               </ul>
             </div>
@@ -269,7 +271,7 @@ function Seat({ label, side, deck, db, matchups, onPick, onSide, locked, name, o
         </>
       ) : (
         <button class="primary" onClick={() => setChoosing(true)}>
-          Choose a deck
+          {t("Choose a deck")}
         </button>
       )}
       {choosing && <DeckSheet onView={current ? () => setViewing(true) : undefined} side={side} db={db} matchups={matchups} value={deck} format={format} bot={label === "Bot"} onPick={onPick} onEditDecks={onEditDecks && (() => onEditDecks(side))} onClose={() => setChoosing(false)} />}
@@ -285,7 +287,7 @@ export function Lobby({ session, db, matchups, onLeave, onWatch }: Props) {
   const [qrBig, setQrBig] = useState(false);
   const qrSmall = useRef<HTMLButtonElement>(null);
   const link = shareLink(lobby.code);
-  const opponent = lobby.opponentName ?? "your opponent";
+  const opponent = lobby.opponentName ?? t("your opponent");
   const inviting = lobby.role === "host" && !lobby.opponentName && lobby.status !== "connected";
   const reached = useRef(false);
   if (lobby.status !== "connecting" && lobby.status !== "closed") reached.current = true;
@@ -310,7 +312,7 @@ export function Lobby({ session, db, matchups, onLeave, onWatch }: Props) {
 
   const share = async () => {
     try {
-      if (navigator.share) await navigator.share({ title: "Netrunner game", text: `Code: ${lobby.code}`, url: link });
+      if (navigator.share) await navigator.share({ title: t("Netrunner game"), text: t("Code: {code}", { code: lobby.code }), url: link });
       else {
         await navigator.clipboard.writeText(link);
         uiSound("ui_copy");
@@ -326,24 +328,24 @@ export function Lobby({ session, db, matchups, onLeave, onWatch }: Props) {
     return (
       <>
         <Ticker>
-          Watching <span class="cyan">{lobby.code}</span> <span class={lobby.status === "connecting" ? "yellow" : "cyan"}>{lobby.status === "connecting" ? "connecting" : "linked"}</span>
+          {t("Watching")} <span class="cyan">{lobby.code}</span> <span class={lobby.status === "connecting" ? "yellow" : "cyan"}>{lobby.status === "connecting" ? t("connecting") : t("linked")}</span>
         </Ticker>
         <div class="screen lobby">
           <header class="screen-head">
-            <button class="ghost" onClick={onLeave} aria-label="Back to home">
+            <button class="ghost" onClick={onLeave} aria-label={t("Back to home")}>
               <Icon name="arrow-left" />
             </button>
-            <h1>WATCH</h1>
+            <h1>{t("WATCH")}</h1>
           </header>
           <section class="panel section lobby-link">
             <span class="label">
               Game <span class="cyan">{lobby.code}</span>
             </span>
             <span class="label">
-              {names[0] ?? "Corp seat open"} <span class="cyan">vs</span> {names[1] ?? "Runner seat open"}
+              {names[0] ?? t("Corp seat open")} <span class="cyan">vs</span> {names[1] ?? t("Runner seat open")}
             </span>
           </section>
-          {lobby.error ? <p class="error">{lobby.error}</p> : <p class="status">{lobby.status === "connecting" ? "Reaching the game…" : "Waiting for the players to start. The board appears as soon as they do."}</p>}
+          {lobby.error ? <p class="error">{t(lobby.error)}</p> : <p class="status">{lobby.status === "connecting" ? t("Reaching the game…") : t("Waiting for the players to start. The board appears as soon as they do.")}</p>}
         </div>
       </>
     );
@@ -367,33 +369,33 @@ export function Lobby({ session, db, matchups, onLeave, onWatch }: Props) {
       <Ticker>
         {lobby.role === "local" ? (
           <>
-            Lobby <span class="cyan">{lobby.vsBot ? "solo" : "local"}</span>
+            {t("Lobby")} <span class="cyan">{lobby.vsBot ? t("solo") : t("local")}</span>
           </>
         ) : (
           <>
-            Lobby <span class="cyan">{lobby.code}</span> <span class={lobby.status === "connected" ? "cyan" : "yellow"}>{lobby.status}</span>
+            {t("Lobby")} <span class="cyan">{lobby.code}</span> <span class={lobby.status === "connected" ? "cyan" : "yellow"}>{t(lobby.status)}</span>
           </>
         )}
       </Ticker>
       <div class="screen lobby">
         <header class="screen-head">
-          <button class="ghost" onClick={onLeave} aria-label="Back to home">
+          <button class="ghost" onClick={onLeave} aria-label={t("Back to home")}>
             <Icon name="arrow-left" />
           </button>
-          <h1>SETUP</h1>
+          <h1>{t("SETUP")}</h1>
         </header>
 
         {qrBig && lobby.code && <QrZoom value={link} code={lobby.code} from={qrSmall.current} onClose={() => setQrBig(false)} />}
         {inviting && (
           <section class="panel section invite">
             <div class="row">
-              <span class="label">Game code</span>
-              <span class="label">{lobby.status === "waiting" ? "Waiting for opponent" : "Connecting"}</span>
+              <span class="label">{t("Game code")}</span>
+              <span class="label">{lobby.status === "waiting" ? t("Waiting for opponent") : t("Connecting")}</span>
             </div>
             <div class="invite-body">
               {lobby.code ? (
-                <button ref={qrSmall} class="qr-button" onClick={() => setQrBig(true)} aria-label="Enlarge the QR code">
-                  <QrCode value={link} label={`QR code to join game ${lobby.code}`} />
+                <button ref={qrSmall} class="qr-button" onClick={() => setQrBig(true)} aria-label={t("Enlarge the QR code")}>
+                  <QrCode value={link} label={t("QR code to join game {code}", { code: lobby.code })} />
                 </button>
               ) : (
                 <div class="qr qr-pending" />
@@ -401,11 +403,11 @@ export function Lobby({ session, db, matchups, onLeave, onWatch }: Props) {
               <div class="invite-side">
                 <span class="code">{lobby.code || "·····"}</span>
                 <button class="primary" disabled={!lobby.code} onClick={share}>
-                  {copied ? "Link copied" : "Share link"}
+                  {copied ? t("Link copied") : t("Share link")}
                 </button>
               </div>
             </div>
-            {!relayUrl() && <p class="hint">Keep this screen open until your opponent joins: switching apps pauses the game.</p>}
+            {!relayUrl() && <p class="hint">{t("Keep this screen open until your opponent joins: switching apps pauses the game.")}</p>}
           </section>
         )}
 
@@ -414,19 +416,19 @@ export function Lobby({ session, db, matchups, onLeave, onWatch }: Props) {
             <span class="label">
               Game <span class="cyan">{lobby.code}</span>
             </span>
-            <span class="label">{lobby.status === "connected" ? `Linked with ${opponent}` : lobby.opponentName ? `${opponent} is offline` : "Waiting for the other player"}</span>
+            <span class="label">{lobby.status === "connected" ? t("Linked with {name}", { name: opponent }) : lobby.opponentName ? t("{name} is offline", { name: opponent }) : t("Waiting for the other player")}</span>
           </section>
         )}
 
-        {lobby.role === "local" && <p class="status">{lobby.vsBot ? "Solo game · you against the bot" : "Local game · both sides on this device"}</p>}
+        {lobby.role === "local" && <p class="status">{lobby.vsBot ? t("Solo game · you against the bot") : t("Local game · both sides on this device")}</p>}
         {lobby.role === "guest" && !inLobby && lobby.status !== "closed" && <JoinStatus lobby={lobby} />}
-        {lobby.error && <p class="error">{lobby.error}</p>}
+        {lobby.error && <p class="error">{t(lobby.error)}</p>}
         {lobby.role === "guest" && /two players/i.test(lobby.error ?? "") && lobby.code && (
           <button
             class="primary"
             onClick={onWatch}
           >
-            Watch this game
+            {t("Watch this game")}
           </button>
         )}
 
@@ -443,26 +445,26 @@ export function Lobby({ session, db, matchups, onLeave, onWatch }: Props) {
         {lobby.role === "local" && <Seat format={lobby.format} problem={session.deckProblem(session.localOpponentDeck)} label={lobby.vsBot ? "Bot" : "Player 2"} side={other(lobby.mySide)} deck={session.localOpponentDeck} db={db} matchups={matchups} onEditDecks={setEditor} onPick={(d) => session.setDeck(d, other(lobby.mySide))} />}
 
         <div class="lobby-footer">
-          {lobby.role === "host" && !inviting && <p class={`status ${lobby.opponentDeckReady ? "connected" : ""}`}>{lobby.opponentDeckReady ? `${opponent} is ready` : `Waiting for ${opponent} to pick a deck…`}</p>}
+          {lobby.role === "host" && !inviting && <p class={`status ${lobby.opponentDeckReady ? "connected" : ""}`}>{lobby.opponentDeckReady ? t("{name} is ready", { name: opponent }) : t("Waiting for {name} to pick a deck…", { name: opponent })}</p>}
           {lobby.role === "guest" ? (
             inLobby &&
             (lobby.ready ? (
               <>
-                <p class="status connected">Ready · waiting for {opponent} to start</p>
+                <p class="status connected">{t("Ready · waiting for {name} to start", { name: opponent })}</p>
                 <button class="ghost" onClick={() => session.setReady(false)}>
-                  Not ready
+                  {t("Not ready")}
                 </button>
               </>
             ) : (
               <Cta disabled={(!lobby.myDeck && !dealtFormat(lobby.format)) || !!session.deckProblem(lobby.myDeck)} onClick={() => session.setReady(true)}>
-                Ready
+                {t("Ready")}
               </Cta>
             ))
           ) : (
             <>
-              {!session.canStart && (session.deckProblem(lobby.myDeck) || session.deckProblem(session.localOpponentDeck)) && <p class="status">Decks must be {GAME_FORMATS.find((f) => f.key === lobby.format)?.label} legal.</p>}
+              {!session.canStart && (session.deckProblem(lobby.myDeck) || session.deckProblem(session.localOpponentDeck)) && <p class="status">{t("Decks must be {format} legal.", { format: t(GAME_FORMATS.find((f) => f.key === lobby.format)?.label ?? lobby.format) })}</p>}
               <Cta disabled={!session.canStart} onClick={() => session.start()}>
-                Start game
+                {t("Start game")}
               </Cta>
             </>
           )}

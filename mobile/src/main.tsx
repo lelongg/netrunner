@@ -37,8 +37,9 @@ import { type Role, type SavedGame, Session, clearSave, listSaves, loadSave, new
 import "./styles.css";
 import "./fx/fx.css";
 import { applySettings, motionOff, onSettings, settings } from "./settings";
-import { useCardText } from "./cardtext";
+import { useLanguage } from "./cardtext";
 import { MotionGlobalConfig } from "motion";
+import { t } from "./i18n";
 
 const joinParam = new URLSearchParams(location.search).get("join")?.toUpperCase() ?? undefined;
 const gameParam = new URLSearchParams(location.search).get("game") ?? undefined;
@@ -128,7 +129,7 @@ function playerName() {
 }
 
 function App() {
-  useCardText();
+  useLanguage();
   const [loaded, setLoaded] = useState<{ engine: EngineApi; db: CardDb; matchups: Matchup[] }>();
   const [error, setError] = useState<string>();
   const [session, setSession] = useState<Session | null>(null);
@@ -246,7 +247,7 @@ function App() {
       try {
         open(from);
       } catch (e) {
-        setError(`Could not open this game: ${e instanceof Error ? e.message : e}`);
+        setError(t("Could not open this game: {error}", { error: e instanceof Error ? e.message : String(e) }));
       }
       setOpening(null);
     });
@@ -297,7 +298,7 @@ function App() {
         seedStarters(db, matchups);
         setLoaded({ engine, db, matchups });
       })
-      .catch((e) => setError(`Could not load the engine: ${e}`));
+      .catch((e) => setError(t("Could not load the engine: {error}", { error: String(e) })));
   }, []);
 
   const leave = () => {
@@ -483,7 +484,6 @@ function App() {
       );
     const view = session.views[localSide];
     if (!view) return <Opening label={lobby.vsBot ? "solo game" : "local game"} ready />;
-    const sideName = (x: Side) => (x === "corp" ? "Corp" : "Runner");
     return (
       <Board
         session={session}
@@ -497,7 +497,7 @@ function App() {
         respond={
           responding?.by === localSide
             ? {
-                done: `Done · back to the ${sideName(responding.back)}`,
+                done: responding.back === "corp" ? t("Done · back to the Corp") : t("Done · back to the Runner"),
                 onClick: () => {
                   const back = responding.back;
                   setResponding(null);
@@ -506,7 +506,7 @@ function App() {
               }
             : responder
               ? {
-                  offer: `${sideName(responder)} may respond`,
+                  offer: responder === "corp" ? t("Corp may respond") : t("Runner may respond"),
                   onClick: () => {
                     setResponding({ by: responder, back: localSide });
                     setHandoff(responder);
@@ -547,9 +547,9 @@ function Opening({ label, ready }: { label: string; ready: boolean }) {
   return (
     <div class="opening" role="status" aria-live="polite" ref={root}>
       <canvas class="opening-dive" ref={tunnel} aria-hidden="true" />
-      <span class="label">{ready ? "Jacking in" : "Loading engine"}</span>
-      <span class="opening-title" ref={title} data-text={label}>
-        {label}
+      <span class="label">{ready ? t("Jacking in") : t("Loading engine")}</span>
+      <span class="opening-title" ref={title} data-text={t(label)}>
+        {t(label)}
       </span>
       <span class="opening-bar">
         <i ref={bar} />
@@ -591,9 +591,9 @@ function UpdateBanner() {
   if (!ready) return null;
   return (
     <div class="update-banner" role="status">
-      <span>New version available</span>
+      <span>{t("New version available")}</span>
       <button class="primary" onClick={() => location.reload()}>
-        Reload
+        {t("Reload")}
       </button>
     </div>
   );

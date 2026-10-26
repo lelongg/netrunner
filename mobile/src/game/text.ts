@@ -1,4 +1,5 @@
 import type { IconName } from "../icons";
+import { t } from "../i18n";
 
 export const GLYPHS: Record<string, IconName> = {
   "\uE001": "click",
@@ -46,6 +47,15 @@ export function serverName(key: string): string {
   if (key === "archives") return "Archives";
   const n = key.match(/^remote(\d+)$/);
   return n ? `Server ${n[1]}` : key;
+}
+
+/** Display-only (translated) server name; keep serverName() for comparisons. */
+export function serverTitle(key: string): string {
+  if (key === "hq") return t("HQ");
+  if (key === "rd") return t("R&D");
+  if (key === "archives") return t("Archives");
+  const n = key.match(/^remote(\d+)$/);
+  return n ? t("Server {n}", { n: n[1] }) : key;
 }
 
 export const PHASE_LABELS: Record<string, string> = {

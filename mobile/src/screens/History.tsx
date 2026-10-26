@@ -15,6 +15,7 @@ import { stagger } from "motion";
 import { animate } from "../fx/core";
 import { motionOff } from "../settings";
 import { uiSound } from "../uisound";
+import { t } from "../i18n";
 
 const SIDES: Side[] = ["corp", "runner"];
 const other = (side: Side): Side => (side === "corp" ? "runner" : "corp");
@@ -29,15 +30,15 @@ const REASONS: Record<string, string> = {
 
 function reasonText(reason: unknown) {
   const key = String(reason ?? "").toLowerCase();
-  return REASONS[key] ?? (key ? key : "");
+  return REASONS[key] ? t(REASONS[key]) : key;
 }
 
 function dateText(ms: number) {
   const d = new Date(ms);
   const days = Math.floor((Date.now() - ms) / 86400000);
-  if (days === 0) return `Today ${d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}`;
-  if (days === 1) return "Yesterday";
-  if (days < 7) return `${days} days ago`;
+  if (days === 0) return t("Today {time}", { time: d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }) });
+  if (days === 1) return t("Yesterday");
+  if (days < 7) return t("{n} days ago", { n: days });
   return d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: d.getFullYear() === new Date().getFullYear() ? undefined : "numeric" });
 }
 
@@ -88,7 +89,7 @@ function headFrom(script: Script | null, r: { id: string; endedAt: number; side?
   };
 }
 
-const outcomeWord = (h: { outcome: "won" | "lost" | "over"; winner?: Side }) => (h.outcome === "won" ? "Victory" : h.outcome === "lost" ? "Defeat" : h.winner ? `${h.winner === "corp" ? "Corp" : "Runner"} wins` : "Game over");
+const outcomeWord = (h: { outcome: "won" | "lost" | "over"; winner?: Side }) => (h.outcome === "won" ? t("Victory") : h.outcome === "lost" ? t("Defeat") : h.winner ? (h.winner === "corp" ? t("Corp wins") : t("Runner wins")) : t("Game over"));
 
 function sidePoints(head: Head, side: Side) {
   return side === head.mySide ? head.points[0] : head.points[1];
@@ -125,7 +126,7 @@ export function History({ engine, db, saves, initial, shared, onClose }: { engin
   if (shared && !failed)
     return (
       <div class="opening" role="status" aria-live="polite">
-        <span class="label">Loading replay</span>
+        <span class="label">{t("Loading replay")}</span>
         <span class="opening-title" data-text={shared.code}>
           {shared.code}
         </span>
@@ -136,33 +137,33 @@ export function History({ engine, db, saves, initial, shared, onClose }: { engin
   return (
     <>
       <Ticker>
-        History <span class="cyan">{heads.length} games</span>
+        {t("History")} <span class="cyan">{heads.length === 1 ? t("1 game") : t("{n} games", { n: heads.length })}</span>
       </Ticker>
       <div class="screen history">
         <header class="screen-head">
-          <button class="ghost" onClick={onClose} aria-label="Back to home">
+          <button class="ghost" onClick={onClose} aria-label={t("Back to home")}>
             <Icon name="arrow-left" />
           </button>
-          <h1>HISTORY</h1>
+          <h1>{t("HISTORY")}</h1>
         </header>
         {heads.length > 0 && (
           <section class="panel cyan history-record">
             <span class="record-num cyan">{won}</span>
-            <span class="label">won</span>
+            <span class="label">{t("won")}</span>
             <span class="record-sep" />
             <span class="record-num red">{lost}</span>
-            <span class="label">lost</span>
+            <span class="label">{t("lost")}</span>
           </section>
         )}
-        {failed && <p class="error">{failed}</p>}
-        {games && heads.length === 0 && <p class="hint history-empty">Finished games show up here, with their stats and a replay.</p>}
+        {failed && <p class="error">{t(failed)}</p>}
+        {games && heads.length === 0 && <p class="hint history-empty">{t("Finished games show up here, with their stats and a replay.")}</p>}
         <ul class="history-list">
           {heads.map((h) => (
             <li key={h.id}>
               <SwipeDelete
-                label="Remove"
+                label={t("Remove")}
                 confirm={async () => {
-                  if (!(await ask({ title: "Remove this game?", body: "It disappears from your history on this device.", ok: "Remove", danger: true }))) return false;
+                  if (!(await ask({ title: t("Remove this game?"), body: t("It disappears from your history on this device."), ok: t("Remove"), danger: true }))) return false;
                   await removeHistory(h.id);
                   setGames(await listHistory());
                   return true;
@@ -178,11 +179,11 @@ export function History({ engine, db, saves, initial, shared, onClose }: { engin
                   <span class="history-main">
                     <span class={`history-outcome ${h.outcome}`}>{outcomeWord(h)}</span>
                     <span class="history-title">
-                      {h.script ? (h.script.mode === "local" ? "Local game" : `vs ${h.script.names[other(h.mySide)]}`) : "Game"}
-                      <span class={`who-${h.mySide}`}> · {h.mySide}</span>
+                      {h.script ? (h.script.mode === "local" ? t("Local game") : t("vs {name}", { name: h.script.names[other(h.mySide)] })) : t("Game")}
+                      <span class={`who-${h.mySide}`}> · {t(h.mySide)}</span>
                     </span>
                     <span class="history-detail">
-                      {sidePoints(h, "corp")}–{sidePoints(h, "runner")} · turn {h.turn} · {dateText(h.endedAt)}
+                      {sidePoints(h, "corp")}–{sidePoints(h, "runner")} · {t("turn {n}", { n: h.turn })} · {dateText(h.endedAt)}
                     </span>
                   </span>
                   <Icon name="arrow-right" />
@@ -265,7 +266,7 @@ function StatRows({ stats }: { stats: Stat[] }) {
                 </span>
               </span>
             ))}
-            <span class="stat-label">{st.label}</span>
+            <span class="stat-label">{t(st.label)}</span>
           </div>
         );
       })}
@@ -308,14 +309,14 @@ function StatStrip({ only }: { only: Record<Side, Tile[]> }) {
     <div ref={strip} class="stat-strip" role="list">
       {[0, 1].flatMap((copy) =>
         Array.from({ length: Math.max(only.corp.length, only.runner.length) })
-          .flatMap((_, i) => SIDES.map((side) => ({ side, t: only[side][i] })))
-          .filter((x) => x.t)
-          .map(({ side, t }, i) => (
+          .flatMap((_, i) => SIDES.map((side) => ({ side, tile: only[side][i] })))
+          .filter((x) => x.tile)
+          .map(({ side, tile }, i) => (
             <div class={`stat-card ${side}`} role={copy ? undefined : "listitem"} aria-hidden={copy ? "true" : undefined} data-loop={copy && i === 0 ? "start" : undefined}>
-              <span class={`stat-card-side who-${side}`}>{t.label}</span>
+              <span class={`stat-card-side who-${side}`}>{t(tile.label)}</span>
               <span class="stat-card-num">
-                {t.value}
-                {t.detail && <small>{t.detail}</small>}
+                {tile.value}
+                {tile.detail && <small>{tile.detail}</small>}
               </span>
             </div>
           )),
@@ -339,8 +340,8 @@ function Chart({ frames, pick, label, max: fixedMax }: { frames: Frame[]; pick: 
       <figcaption>
         <span class="label">{label}</span>
         <span class="chart-legend">
-          <span class="corp">Corp {end ? pick(end).corp : 0}</span>
-          <span class="runner">Runner {end ? pick(end).runner : 0}</span>
+          <span class="corp">{t("Corp")} {end ? pick(end).corp : 0}</span>
+          <span class="runner">{t("Runner")} {end ? pick(end).runner : 0}</span>
         </span>
       </figcaption>
       <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label={label}>
@@ -390,23 +391,23 @@ function Report({ head, engine, db, onClose }: { head: Head; engine: EngineApi; 
       const relay = relayUrl();
       const url = `${location.origin}${location.pathname}?replay=${code}${relay && relay !== DEFAULT_RELAY ? `&relay=${encodeURIComponent(relay)}` : ""}`;
       const winner = head.winner && script.names[head.winner];
-      const text = `${winner ? `${winner} wins` : "Netrunner game"} ${sidePoints(head, "corp")}–${sidePoints(head, "runner")} · ${script.names.corp} vs ${script.names.runner}`;
+      const text = `${winner ? t("{name} wins", { name: winner }) : t("Netrunner game")} ${sidePoints(head, "corp")}–${sidePoints(head, "runner")} · ${script.names.corp} ${t("vs")} ${script.names.runner}`;
       try {
-        if (navigator.share) await navigator.share({ title: "Netrunner game replay", text, url });
+        if (navigator.share) await navigator.share({ title: t("Netrunner game replay"), text, url });
         else {
           await navigator.clipboard.writeText(url);
           uiSound("ui_copy");
-          tell("Link copied", "Anyone with the link can see the report and watch the replay.");
+          tell(t("Link copied"), t("Anyone with the link can see the report and watch the replay."));
         }
       } catch (e) {
         if ((e as Error)?.name !== "AbortError") {
           await navigator.clipboard?.writeText(url).catch(() => {});
           uiSound("ui_copy");
-          tell("Link copied", "Anyone with the link can see the report and watch the replay.");
+          tell(t("Link copied"), t("Anyone with the link can see the report and watch the replay."));
         }
       }
     } catch (e) {
-      tell("Could not share", e instanceof Error ? e.message : String(e));
+      tell(t("Could not share"), t(e instanceof Error ? e.message : String(e)));
     } finally {
       setSharing(false);
     }
@@ -417,7 +418,7 @@ function Report({ head, engine, db, onClose }: { head: Head; engine: EngineApi; 
   const script = head.script;
   useEffect(() => {
     if (!script) return;
-    const r = new Replay(engine, script, () => setTick((t) => t + 1));
+    const r = new Replay(engine, script, () => setTick((n) => n + 1));
     setReplay(r);
     return () => r.dispose();
   }, []);
@@ -439,7 +440,7 @@ function Report({ head, engine, db, onClose }: { head: Head; engine: EngineApi; 
   const stats = useMemo(() => (final ? statsOf(final.views.corp, render) : null), [final]);
   const deckOf = (side: Side): Deck | null => {
     const d = script?.setup?.[side]?.deck;
-    return d ? { name: script!.deckNames[side] ?? `${side === "corp" ? "Corp" : "Runner"} deck`, ...d } : null;
+    return d ? { name: script!.deckNames[side] ?? (side === "corp" ? t("Corp deck") : t("Runner deck")), ...d } : null;
   };
   if (watching && replay && script) return <ReplayPlayer replay={replay} engine={engine} db={db} script={script} onClose={() => setWatching(false)} />;
   const progress = replay ? replay.frames.length / replay.total : 0;
@@ -448,14 +449,14 @@ function Report({ head, engine, db, onClose }: { head: Head; engine: EngineApi; 
   return (
     <>
       <Ticker>
-        Report <span class="cyan">{script ? MODE[script.mode] : ""}</span>
+        {t("Report")} <span class="cyan">{script ? t(MODE[script.mode]) : ""}</span>
       </Ticker>
       <div class="screen report">
         <header class="screen-head">
-          <button class="ghost" onClick={onClose} aria-label="Back to history">
+          <button class="ghost" onClick={onClose} aria-label={t("Back to history")}>
             <Icon name="arrow-left" />
           </button>
-          <h1>GAME REPORT</h1>
+          <h1>{t("GAME REPORT")}</h1>
         </header>
 
         <section ref={hero} class={`panel report-hero ${head.outcome} win-${head.winner ?? "none"}`}>
@@ -468,7 +469,7 @@ function Report({ head, engine, db, onClose }: { head: Head; engine: EngineApi; 
             <span class="runner">{sidePoints(head, "runner")}</span>
           </span>
           <span class="report-sub">
-            {winnerName ? `${winnerName} wins${reason ? ` ${reason}` : ""}` : "Game over"} · turn {head.turn} · {dateText(head.endedAt)}
+            {winnerName ? t("{name} wins", { name: winnerName }) + (reason ? ` ${reason}` : "") : t("Game over")} · {t("turn {n}", { n: head.turn })} · {dateText(head.endedAt)}
           </span>
         </section>
 
@@ -481,15 +482,15 @@ function Report({ head, engine, db, onClose }: { head: Head; engine: EngineApi; 
                 <div class={`report-player panel ${side} ${head.winner === side ? "winner" : ""}`}>
                   {id &&
                     (d ? (
-                      <button class="report-id-open" onClick={() => setDeck(d)} aria-label={`Open the ${side} decklist`}>
+                      <button class="report-id-open" onClick={() => setDeck(d)} aria-label={side === "corp" ? t("Open the Corp decklist") : t("Open the Runner decklist")}>
                         <CardImage class="report-id" code={id.code} alt={id.title} size="medium" width="120px" />
                       </button>
                     ) : (
                       <ZoomableCardImage class="report-id" code={id.code} alt={id.title} size="medium" width="120px" />
                     ))}
                   <span class={`label who-${side}`}>
-                    {side}
-                    {side === head.mySide && script.mode !== "local" && !head.shared ? " · you" : ""}
+                    {t(side)}
+                    {side === head.mySide && script.mode !== "local" && !head.shared ? ` · ${t("you")}` : ""}
                   </span>
                   <span class="report-name">{script.names[side]}</span>
                   <span class="report-deck">{script.deckNames[side] ?? id?.title}</span>
@@ -497,7 +498,7 @@ function Report({ head, engine, db, onClose }: { head: Head; engine: EngineApi; 
               );
             })}
             <span class="versus report-vs" aria-hidden="true">
-              VS
+              {t("VS")}
             </span>
           </section>
         )}
@@ -505,18 +506,18 @@ function Report({ head, engine, db, onClose }: { head: Head; engine: EngineApi; 
         {script && (
           <div class="report-cta">
             <Cta onClick={() => setWatching(true)} disabled={!replay || replay.frames.length === 0}>
-              Watch replay
+              {t("Watch replay")}
             </Cta>
-            <button class="report-share" onClick={share} disabled={sharing} aria-label="Share this game">
+            <button class="report-share" onClick={share} disabled={sharing} aria-label={t("Share this game")}>
               <Icon name="share" />
-              <span>{sharing ? "…" : "Share"}</span>
+              <span>{sharing ? "…" : t("Share")}</span>
             </button>
           </div>
         )}
 
         {replay && !replay.done && (
           <section class="panel report-loading">
-            <span class="label">Rebuilding the game</span>
+            <span class="label">{t("Rebuilding the game")}</span>
             <span class="opening-bar report-bar">
               <i style={{ width: `${Math.round(progress * 100)}%`, transform: "none" }} />
             </span>
@@ -525,8 +526,8 @@ function Report({ head, engine, db, onClose }: { head: Head; engine: EngineApi; 
 
         {final && (
           <section class="panel section report-charts">
-            <Chart frames={replay!.frames} pick={(f) => f.points} label="Agenda points" max={7} />
-            <Chart frames={replay!.frames} pick={(f) => f.credits} label="Credits" />
+            <Chart frames={replay!.frames} pick={(f) => f.points} label={t("Agenda points")} max={7} />
+            <Chart frames={replay!.frames} pick={(f) => f.credits} label={t("Credits")} />
           </section>
         )}
 
@@ -534,7 +535,7 @@ function Report({ head, engine, db, onClose }: { head: Head; engine: EngineApi; 
           <section class="panel section report-stats">
             <div class="stat-head">
               <span class="who-corp">{script?.names.corp}</span>
-              <span class="label">Head to head</span>
+              <span class="label">{t("Head to head")}</span>
               <span class="who-runner">{script?.names.runner}</span>
             </div>
             <StatRows stats={stats.shared} />
@@ -546,8 +547,8 @@ function Report({ head, engine, db, onClose }: { head: Head; engine: EngineApi; 
         {final && (
           <section class="panel section report-log">
             <button class="report-log-toggle" onClick={() => setLogOpen(!logOpen)} aria-expanded={logOpen}>
-              <span class="label">Game log</span>
-              <span class="hint">{(final.views.corp?.log ?? []).length} lines</span>
+              <span class="label">{t("Game log")}</span>
+              <span class="hint">{t("{n} lines", { n: (final.views.corp?.log ?? []).length })}</span>
               <Icon name={logOpen ? "minus" : "plus"} />
             </button>
             {logOpen && (
@@ -558,7 +559,7 @@ function Report({ head, engine, db, onClose }: { head: Head; engine: EngineApi; 
           </section>
         )}
 
-        {!script && <p class="error">This game cannot be replayed: its start was not recorded on this device.</p>}
+        {!script && <p class="error">{t("This game cannot be replayed: its start was not recorded on this device.")}</p>}
       </div>
       {deck && <DeckView deck={deck} onClose={() => setDeck(null)} />}
     </>
@@ -615,7 +616,7 @@ function ReplayPlayer({ replay, engine, db, script, onClose }: { replay: Replay;
   }, [frames.length]);
   const deckFor = (s: Side): Deck | undefined => {
     const d = script.setup?.[s]?.deck;
-    return d ? { name: script.deckNames[s] ?? `${s} deck`, ...d } : undefined;
+    return d ? { name: script.deckNames[s] ?? (s === "corp" ? t("Corp deck") : t("Runner deck")), ...d } : undefined;
   };
   const fake: any = {
     lobby: { code: "", role: "spectator", status: "connected", myName: script.names[side], mySide: side, opponentDeckReady: true, started: true, players: script.names },
@@ -635,11 +636,11 @@ function ReplayPlayer({ replay, engine, db, script, onClose }: { replay: Replay;
     <div class="replay">
       <div class="replay-meta">
         <span class="label">
-          Replay · turn {frame?.turn ?? 0}
+          {t("Replay · turn {n}", { n: frame?.turn ?? 0 })}
         </span>
         <span class="replay-count">
           {index}/{last}
-          {!replay.done && <span class="yellow"> · loading</span>}
+          {!replay.done && <span class="yellow"> · {t("loading")}</span>}
         </span>
       </div>
       <div class="replay-track">
@@ -654,25 +655,25 @@ function ReplayPlayer({ replay, engine, db, script, onClose }: { replay: Replay;
           min={0}
           max={last}
           value={index}
-          aria-label="Replay position"
+          aria-label={t("Replay position")}
           onInput={(e) => go(Number((e.target as HTMLInputElement).value), false)}
         />
       </div>
       <div class="replay-buttons">
-        <button aria-label="Previous step" onClick={() => go(index - 1, false)} disabled={index === 0}>
+        <button aria-label={t("Previous step")} onClick={() => go(index - 1, false)} disabled={index === 0}>
           <Icon name="step-back" />
         </button>
-        <button class="primary replay-play" aria-label={playing ? "Pause" : "Play"} onClick={() => (index >= last && replay.done ? (go(0, false), setPlaying(true)) : setPlaying(!playing))}>
+        <button class="primary replay-play" aria-label={playing ? t("Pause") : t("Play")} onClick={() => (index >= last && replay.done ? (go(0, false), setPlaying(true)) : setPlaying(!playing))}>
           <Icon name={playing ? "pause" : "play"} />
         </button>
-        <button aria-label="Next step" onClick={() => go(index + 1, true)} disabled={index >= frames.length - 1}>
+        <button aria-label={t("Next step")} onClick={() => go(index + 1, true)} disabled={index >= frames.length - 1}>
           <Icon name="step-forward" />
         </button>
-        <button class="replay-chip" aria-label="Playback speed" onClick={() => setSpeed(SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length])}>
+        <button class="replay-chip" aria-label={t("Playback speed")} onClick={() => setSpeed(SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length])}>
           {speed}×
         </button>
         <button class={`replay-chip ${skipIdle ? "on" : ""}`} aria-pressed={skipIdle} onClick={() => setSkipIdle(!skipIdle)}>
-          Skip idle
+          {t("Skip idle")}
         </button>
       </div>
     </div>

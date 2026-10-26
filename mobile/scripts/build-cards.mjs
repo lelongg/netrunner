@@ -6,7 +6,7 @@ const BRANCH = process.env.CARDS_BRANCH ?? "master";
 const OUT = new URL("../public/data/", import.meta.url);
 const I18N_SRC = new URL("../../resources/public/i18n/", import.meta.url);
 const I18N_OUT = new URL("../public/i18n/", import.meta.url);
-const LANGS = ["en"];
+const LANGS = ["en", "fr"];
 
 const source = process.argv[2];
 const text = source

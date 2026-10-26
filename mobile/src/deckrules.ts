@@ -1,4 +1,5 @@
 import type { Card, Deck, DeckEntry } from "./engine";
+import { t } from "./i18n";
 
 export const FORMATS = [
   { key: "standard", label: "Standard" },
@@ -21,7 +22,7 @@ export const GAME_FORMATS = [
 
 export type GameFormat = (typeof GAME_FORMATS)[number]["key"];
 
-export const FORMAT_DESC: Record<GameFormat, string> = {
+const FORMAT_DESC_EN: Record<GameFormat, string> = {
   standard: "The current competitive pool and ban list.",
   startup: "System Gateway, Elevation and the newest set. Small and beginner friendly.",
   eternal: "Every card ever printed, with a short ban list.",
@@ -34,7 +35,21 @@ export const FORMAT_DESC: Record<GameFormat, string> = {
   "quick-draft": "Both players draft their deck at the start of the game.",
 };
 
-const listed = (names: string[]) => (names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}` : (names[0] ?? ""));
+const listed = (names: string[]) => (names.length > 1 ? t("{list} and {last}", { list: names.slice(0, -1).join(", "), last: names[names.length - 1] }) : (names[0] ?? ""));
+
+const FORMAT_POOLS: Partial<Record<GameFormat, { base?: GameFormat; cycles: string[] }>> = {};
+
+function describeFormat(f: GameFormat): string {
+  const pool = FORMAT_POOLS[f];
+  if (!pool) return t(FORMAT_DESC_EN[f]);
+  return pool.base ? t("{base} + {cycles}.", { base: t(GAME_FORMATS.find((g) => g.key === pool.base)!.label), cycles: listed(pool.cycles) }) : `${listed(pool.cycles)}.`;
+}
+
+/** Format descriptions, translated each time they are read. */
+export const FORMAT_DESC: Readonly<Record<GameFormat, string>> = Object.defineProperties(
+  {} as Record<GameFormat, string>,
+  Object.fromEntries(GAME_FORMATS.map((g) => [g.key, { get: () => describeFormat(g.key), enumerable: true }])),
+);
 
 export function applyFormatPools(pools: Partial<Record<GameFormat, { cycles: string[] }>>) {
   const cycles = (f: GameFormat) => pools[f]?.cycles ?? [];
@@ -43,7 +58,7 @@ export function applyFormatPools(pools: Partial<Record<GameFormat, { cycles: str
     if (!own.length) return;
     const from = base ? cycles(base) : [];
     const extra = own.filter((c) => !from.includes(c));
-    FORMAT_DESC[f] = base && from.length && from.every((c) => own.includes(c)) && extra.length ? `${GAME_FORMATS.find((g) => g.key === base)!.label} + ${listed(extra)}.` : `${listed(own)}.`;
+    FORMAT_POOLS[f] = base && from.length && from.every((c) => own.includes(c)) && extra.length ? { base, cycles: extra } : { cycles: own };
   };
   describe("core");
   describe("startup", "core");
@@ -117,28 +132,28 @@ export function analyze(deck: Deck, format: FormatKey): Analysis {
   const points = deck.cards.reduce((n, e) => n + Number(e.card.agendapoints ?? 0) * e.qty, 0);
   const pointsRange = corp ? agendaRange(Math.max(size, minimum)) : null;
   const problems: Problem[] = [];
-  if (size < minimum) problems.push({ level: "error", text: `${minimum - size} more card${minimum - size > 1 ? "s" : ""} needed (minimum ${minimum})` });
-  if (influenceLimit != null && influence > influenceLimit) problems.push({ level: "error", text: `${influence - influenceLimit} influence over the limit` });
-  if (pointsRange && (points < pointsRange[0] || points > pointsRange[1])) problems.push({ level: "error", text: `Agenda points must be ${pointsRange[0]} or ${pointsRange[1]} for ${Math.max(size, minimum)} cards (now ${points})` });
+  if (size < minimum) problems.push({ level: "error", text: minimum - size === 1 ? t("1 more card needed (minimum {min})", { min: minimum }) : t("{n} more cards needed (minimum {min})", { n: minimum - size, min: minimum }) });
+  if (influenceLimit != null && influence > influenceLimit) problems.push({ level: "error", text: t("{n} influence over the limit", { n: influence - influenceLimit }) });
+  if (pointsRange && (points < pointsRange[0] || points > pointsRange[1])) problems.push({ level: "error", text: t("Agenda points must be {a} or {b} for {size} cards (now {points})", { a: pointsRange[0], b: pointsRange[1], size: Math.max(size, minimum), points }) });
   for (const e of deck.cards) {
-    if (e.qty > deckLimit(e.card)) problems.push({ level: "error", text: `${e.card.title}: at most ${deckLimit(e.card)} ${deckLimit(e.card) > 1 ? "copies" : "copy"}` });
-    if (e.card.side !== identity.side) problems.push({ level: "error", text: `${e.card.title} is a ${e.card.side} card` });
-    if (corp && e.card.type === "Agenda" && !isNeutral(e.card) && e.card.faction !== identity.faction) problems.push({ level: "error", text: `${e.card.title}: agendas must be neutral or from your faction` });
+    if (e.qty > deckLimit(e.card)) problems.push({ level: "error", text: deckLimit(e.card) > 1 ? t("{card}: at most {n} copies", { card: e.card.title, n: deckLimit(e.card) }) : t("{card}: at most {n} copy", { card: e.card.title, n: deckLimit(e.card) }) });
+    if (e.card.side !== identity.side) problems.push({ level: "error", text: e.card.side === "Corp" ? t("{card} is a Corp card", { card: e.card.title }) : t("{card} is a Runner card", { card: e.card.title }) });
+    if (corp && e.card.type === "Agenda" && !isNeutral(e.card) && e.card.faction !== identity.faction) problems.push({ level: "error", text: t("{card}: agendas must be neutral or from your faction", { card: e.card.title }) });
   }
   let eternal = 0;
   if (format !== "casual") {
-    const name = FORMATS.find((f) => f.key === format)!.label;
+    const name = t(FORMATS.find((f) => f.key === format)!.label);
     for (const c of [identity, ...deck.cards.map((e) => e.card)]) {
       const l = legality(c, format);
-      if (starterOnly(c)) problems.push({ level: "error", text: `${c.title} is for starter games only` });
-      else if (l === "banned") problems.push({ level: "error", text: `${c.title} is banned in ${name}` });
-      else if (l === "rotated") problems.push({ level: "error", text: `${c.title} is not in ${name}` });
+      if (starterOnly(c)) problems.push({ level: "error", text: t("{card} is for starter games only", { card: c.title }) });
+      else if (l === "banned") problems.push({ level: "error", text: t("{card} is banned in {format}", { card: c.title, format: name }) });
+      else if (l === "rotated") problems.push({ level: "error", text: t("{card} is not in {format}", { card: c.title, format: name }) });
     }
     const restricted = deck.cards.filter((e) => legality(e.card, format) === "restricted");
-    if (restricted.length > 1) problems.push({ level: "error", text: `Only one restricted card allowed (${restricted.map((e) => e.card.title).join(", ")})` });
+    if (restricted.length > 1) problems.push({ level: "error", text: t("Only one restricted card allowed ({cards})", { cards: restricted.map((e) => e.card.title).join(", ") }) });
     if (format === "eternal") {
       eternal = [identity, ...deck.cards.map((e) => e.card)].reduce((n, c) => n + eternalPoints(c), 0);
-      if (eternal > ETERNAL_POINTS) problems.push({ level: "error", text: `${eternal} Eternal points, ${ETERNAL_POINTS} allowed` });
+      if (eternal > ETERNAL_POINTS) problems.push({ level: "error", text: t("{n} Eternal points, {max} allowed", { n: eternal, max: ETERNAL_POINTS }) });
     }
   }
   return { size, minimum, influence, influenceLimit, points, pointsRange, eternal, problems, legal: !problems.some((p) => p.level === "error") };

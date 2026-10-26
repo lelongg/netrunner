@@ -19,7 +19,7 @@ function load() {
 
 export function cardText(card: { code?: unknown; text?: string } | null | undefined): string | undefined {
   if (!card) return undefined;
-  if (settings.frenchCards && card.code != null) {
+  if (settings.language === "fr" && card.code != null) {
     if (!french) load();
     const fr = french?.[String(card.code)];
     if (fr) return fr;
@@ -27,13 +27,13 @@ export function cardText(card: { code?: unknown; text?: string } | null | undefi
   return card.text;
 }
 
-export function useCardText() {
+export function useLanguage() {
   const [, setTick] = useState(0);
   useEffect(() => {
     const bump = () => setTick((t) => t + 1);
     listeners.add(bump);
     const off = onSettings(bump);
-    if (settings.frenchCards && !french) load();
+    if (settings.language === "fr" && !french) load();
     return () => {
       listeners.delete(bump);
       off();

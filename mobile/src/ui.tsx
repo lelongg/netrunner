@@ -6,11 +6,12 @@ import { motionOff } from "./settings";
 import { useBackClose } from "./back";
 import { uiSound } from "./uisound";
 import { useHold } from "./hold";
+import { t } from "./i18n";
 
 export function Meter({ value, max, tone = "cyan", small, anchor }: { value: number; max: number; tone?: "cyan" | "red" | "yellow"; small?: boolean; anchor?: string }) {
   const count = Math.max(0, Math.min(max, 12));
   return (
-    <span class={`meter ${tone} ${small ? "sm" : ""}`} role="img" aria-label={`${value} of ${max}`} data-anchor={anchor}>
+    <span class={`meter ${tone} ${small ? "sm" : ""}`} role="img" aria-label={t("{value} of {max}", { value, max })} data-anchor={anchor}>
       {Array.from({ length: count }, (_, i) => (
         <i class={i < value ? "on" : ""} />
       ))}
@@ -40,9 +41,9 @@ export function useSettingsOpen() {
 function SettingsToggle() {
   const open = useSettingsOpen();
   return (
-    <button class="ticker-menu" onClick={() => setSettingsOpen(!open)} aria-label="Menu" aria-expanded={open}>
+    <button class="ticker-menu" onClick={() => setSettingsOpen(!open)} aria-label={t("Menu")} aria-expanded={open}>
       <Icon name={open ? "close" : "menu"} />
-      <span>{open ? "Close" : "Menu"}</span>
+      <span>{open ? t("Close") : t("Menu")}</span>
     </button>
   );
 }
@@ -96,7 +97,7 @@ export function Ticker({ children, action, onFeed, onFeedHold, feedKey }: { chil
   return (
     <div class="ticker">
       <span class={`live ${onFeed ? "tappable" : ""}`} onClick={tapFeed} aria-hidden="true" {...hold.handlers}>
-        LIVE
+        {t("LIVE")}
       </span>
       <span
         class={`feed ${width ? "scrolling" : ""} ${onFeed ? "tappable" : ""}`}
@@ -173,7 +174,7 @@ export function ask(a: Ask): Promise<boolean> {
   });
 }
 
-export const tell = (title: string, body?: string) => ask({ title, body, ok: "OK", cancel: null }).then(() => {});
+export const tell = (title: string, body?: string) => ask({ title, body, ok: t("OK"), cancel: null }).then(() => {});
 
 export function Dialogs() {
   const [current, setCurrent] = useState<(Ask & { resolve: (yes: boolean) => void }) | null>(queue[0] ?? null);
@@ -218,11 +219,11 @@ export function Dialogs() {
         <div class="dialog-actions">
           {current.cancel !== null && (
             <button class="ghost" onClick={() => close(false)}>
-              {current.cancel ?? "Cancel"}
+              {current.cancel ?? t("Cancel")}
             </button>
           )}
           <button class={`dialog-ok ${current.danger ? "danger" : "primary"}`} onClick={() => close(true)}>
-            {current.ok ?? "Confirm"}
+            {current.ok ?? t("Confirm")}
           </button>
         </div>
       </div>
@@ -236,7 +237,7 @@ export function Picker<T extends string>({ value, options, onChange, title, clas
   const current = options.find((o) => o.key === value);
   return (
     <>
-      <button type="button" class={`picker-btn ${className ?? ""}`} aria-haspopup="listbox" aria-expanded={open} aria-label={`${title}: ${current?.label ?? value}`} onClick={() => setOpen(true)}>
+      <button type="button" class={`picker-btn ${className ?? ""}`} aria-haspopup="listbox" aria-expanded={open} aria-label={t("{title}: {value}", { title, value: current?.label ?? value })} onClick={() => setOpen(true)}>
         <span>{current?.label ?? value}</span>
         <svg class="picker-chevron" viewBox="0 0 12 8" aria-hidden="true">
           <path d="M1 1.5 6 6.5 11 1.5" fill="none" stroke="currentColor" stroke-width="1.6" />
@@ -247,7 +248,7 @@ export function Picker<T extends string>({ value, options, onChange, title, clas
           <div class="sheet panel picker-sheet" role="listbox" aria-label={title} onClick={(e) => e.stopPropagation()}>
             <div class="row">
               <span class="label">{title}</span>
-              <button class="ghost" onClick={() => setOpen(false)} aria-label="Close">
+              <button class="ghost" onClick={() => setOpen(false)} aria-label={t("Close")}>
                 <Icon name="close" />
               </button>
             </div>

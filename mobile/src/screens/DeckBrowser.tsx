@@ -9,6 +9,7 @@ import { IdentityThumb } from "./IdentityThumb";
 import { FactionLogo } from "../FactionLogo";
 import { CardImage } from "../game/CardImage";
 import { useBackClose } from "../back";
+import { french, t } from "../i18n";
 
 interface Props {
   side: Side;
@@ -23,23 +24,23 @@ type Tab = "decks" | "identities" | "meta";
 type CardFilter = { code: string; title: string; mode: "any" | "x3" | "without" };
 type Similar = { label: string; of: { id: string } | Deck };
 
-const plain = (t: string) => t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+const plain = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
-const day = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+const day = (iso: string) => new Date(iso).toLocaleDateString(french() ? "fr" : undefined, { day: "numeric", month: "short", year: "numeric" });
 
-const ordinal = (n: number) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? "th" : (["th", "st", "nd", "rd"][n % 10] ?? "th")}`;
+export const ordinal = (n: number) => french() ? (n === 1 ? "1er" : `${n}e`) : `${n}${n % 100 >= 11 && n % 100 <= 13 ? "th" : (["th", "st", "nd", "rd"][n % 10] ?? "th")}`;
 
 const shortTitle = (title: string) => title.split(":")[0];
 
 const token = (c: CardFilter) => (c.mode === "without" ? `-${c.code}` : c.mode === "x3" ? `${c.code}x3` : c.code);
 
-const MODE_LABEL: Record<CardFilter["mode"], (t: string) => string> = { any: (t) => t, x3: (t) => `3× ${t}`, without: (t) => `No ${t}` };
+const MODE_LABEL: Record<CardFilter["mode"], (title: string) => string> = { any: (title) => title, x3: (title) => `3× ${title}`, without: (title) => t("No {card}", { card: title }) };
 const NEXT_MODE: Record<CardFilter["mode"], CardFilter["mode"]> = { any: "x3", x3: "without", without: "any" };
 
 function ResultBadge({ result }: { result: DeckResult }) {
   return (
     <span class={`deck-result ${result.place === 1 ? "win" : result.place <= 8 ? "top" : ""}`} title={`${result.title} · ${result.date}`}>
-      {ordinal(result.place)} of {result.players}
+      {t("{place} of {players}", { place: ordinal(result.place), players: result.players })}
     </span>
   );
 }
@@ -61,9 +62,9 @@ export function DeckBrowser({ side, db, selected, onPick, format, similarTo }: P
   return (
     <div class="deck-browser">
       <div class="tabs browse-tabs" role="tablist">
-        {(["decks", "identities", "meta"] as Tab[]).map((t) => (
-          <button role="tab" aria-selected={tab === t} class={tab === t ? "on" : ""} onClick={() => setTab(t)}>
-            {t === "decks" ? "Decks" : t === "identities" ? "Identities" : "Meta"}
+        {(["decks", "identities", "meta"] as Tab[]).map((k) => (
+          <button role="tab" aria-selected={tab === k} class={tab === k ? "on" : ""} onClick={() => setTab(k)}>
+            {k === "decks" ? t("Decks") : k === "identities" ? t("Identities") : t("Meta")}
           </button>
         ))}
       </div>
@@ -89,17 +90,17 @@ function DecksTab({ side, db, selected, onPick, format, identity, onIdentity, si
   const [q, setQ] = useState("");
   const [cards, setCards] = useState<CardFilter[]>([]);
   useEffect(() => {
-    const t = setTimeout(() => setQ(text.trim()), 350);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setQ(text.trim()), 350);
+    return () => clearTimeout(timer);
   }, [text]);
   const sideName = side === "corp" ? "Corp" : "Runner";
   const term = plain(q);
   const identities = useMemo(() => (term.length >= 2 ? db.all.filter((c) => c.side === sideName && c.type === "Identity" && plain(c.title).includes(term)).map((c) => String(c.code)) : []), [term, side]);
   const suggestions = useMemo(() => {
-    const t = plain(text.trim());
-    if (t.length < 3) return [];
+    const typed = plain(text.trim());
+    if (typed.length < 3) return [];
     const seen = new Set(cards.map((c) => c.title));
-    return db.all.filter((c) => c.side === sideName && c.type !== "Identity" && !seen.has(c.title) && plain(c.title).includes(t)).slice(0, 4);
+    return db.all.filter((c) => c.side === sideName && c.type !== "Identity" && !seen.has(c.title) && plain(c.title).includes(typed)).slice(0, 4);
   }, [text, side, cards]);
   const addCard = (c: { code: unknown; title: string }) => {
     setCards((prev) => [...prev, { code: String(c.code), title: c.title, mode: "any" as const }].slice(0, 5));
@@ -152,35 +153,35 @@ function DecksTab({ side, db, selected, onPick, format, identity, onIdentity, si
       {!similar && (
         <label class="search">
           <Icon name="search" />
-          <input type="search" value={text} placeholder="Deck, player, identity or card" onInput={(e) => setText((e.target as HTMLInputElement).value)} />
+          <input type="search" value={text} placeholder={t("Deck, player, identity or card")} onInput={(e) => setText((e.target as HTMLInputElement).value)} />
         </label>
       )}
       {(suggestions.length > 0 || cards.length > 0 || identityCard || similar) && (
         <div class="chips scroll-chips deck-search-cards">
           {similar && (
-            <button class="on" onClick={() => onSimilar(null)} aria-label="Stop showing similar decks">
-              Like {similar.label} ×
+            <button class="on" onClick={() => onSimilar(null)} aria-label={t("Stop showing similar decks")}>
+              {t("Like {deck}", { deck: similar.label })} ×
             </button>
           )}
           {identityCard && (
-            <button class="on" onClick={() => onIdentity(null)} aria-label={`Remove the ${identityCard.title} filter`}>
+            <button class="on" onClick={() => onIdentity(null)} aria-label={t("Remove the {identity} filter", { identity: identityCard.title })}>
               {shortTitle(identityCard.title)} ×
             </button>
           )}
           {!similar &&
             cards.map((c) => (
               <span class={`card-filter mode-${c.mode}`}>
-                <button class="on" onClick={() => setCards((prev) => prev.map((x) => (x.code === c.code ? { ...x, mode: NEXT_MODE[x.mode] } : x)))} aria-label={`${MODE_LABEL[c.mode](c.title)}, tap to change`}>
+                <button class="on" onClick={() => setCards((prev) => prev.map((x) => (x.code === c.code ? { ...x, mode: NEXT_MODE[x.mode] } : x)))} aria-label={t("{filter}, tap to change", { filter: MODE_LABEL[c.mode](c.title) })}>
                   {MODE_LABEL[c.mode](c.title)}
                 </button>
-                <button class="on card-filter-x" onClick={() => setCards((prev) => prev.filter((x) => x.code !== c.code))} aria-label={`Remove ${c.title}`}>
+                <button class="on card-filter-x" onClick={() => setCards((prev) => prev.filter((x) => x.code !== c.code))} aria-label={t("Remove {card}", { card: c.title })}>
                   ×
                 </button>
               </span>
             ))}
           {!similar &&
             suggestions.map((c) => (
-              <button onClick={() => addCard(c)} aria-label={`Only decks with ${c.title}`}>
+              <button onClick={() => addCard(c)} aria-label={t("Only decks with {card}", { card: c.title })}>
                 + {c.title}
               </button>
             ))}
@@ -189,7 +190,7 @@ function DecksTab({ side, db, selected, onPick, format, identity, onIdentity, si
       {!similar && (
         <div class="chips scroll-chips">
           <button class={faction === null ? "on" : ""} onClick={() => setFaction(null)}>
-            All
+            {t("All")}
           </button>
           {FACTIONS[side].map(([id, label]) => (
             <button class={`faction-chip ${faction === id ? "on" : ""}`} onClick={() => setFaction(id)}>
@@ -203,10 +204,10 @@ function DecksTab({ side, db, selected, onPick, format, identity, onIdentity, si
         {!similar && (
           <>
             <button class={sort === "new" ? "on" : ""} onClick={() => onSort("new")} aria-pressed={sort === "new"}>
-              Newest
+              {t("Newest")}
             </button>
             <button class={sort === "results" ? "on" : ""} onClick={() => onSort("results")} aria-pressed={sort === "results"}>
-              Tournaments
+              {t("Tournaments")}
             </button>
             <button class={`toggle ${top ? "on" : ""}`} onClick={() => setTop(!top)} aria-pressed={top}>
               Top 8
@@ -214,11 +215,11 @@ function DecksTab({ side, db, selected, onPick, format, identity, onIdentity, si
           </>
         )}
         <button class={`toggle ${botOnly ? "on" : ""}`} onClick={() => setBotOnly(!botOnly)} aria-pressed={botOnly}>
-          Bot knows it
+          {t("Bot knows it")}
         </button>
         {!format && (
           <button class={`toggle ${standard ? "on" : ""}`} onClick={() => setStandard(!standard)} aria-pressed={standard}>
-            Standard only
+            {t("Standard only")}
           </button>
         )}
       </div>
@@ -229,7 +230,7 @@ function DecksTab({ side, db, selected, onPick, format, identity, onIdentity, si
               <IdentityThumb title={l.deck!.identity.title} db={db} />
               <strong>{l.name}</strong>
               <span>
-                {l.similarity != null && <span class="deck-similar">{l.similarity}% alike · </span>}
+                {l.similarity != null && <span class="deck-similar">{t("{n}% alike", { n: l.similarity })} · </span>}
                 {l.result && (
                   <>
                     <ResultBadge result={l.result} />
@@ -240,24 +241,24 @@ function DecksTab({ side, db, selected, onPick, format, identity, onIdentity, si
               </span>
             </button>
             {!similar && (
-              <button class="ghost browse-like" onClick={() => onSimilar({ label: l.name, of: { id: l.id } })} aria-label={`Decks like ${l.name}`}>
-                Alike
+              <button class="ghost browse-like" onClick={() => onSimilar({ label: l.name, of: { id: l.id } })} aria-label={t("Decks like {deck}", { deck: l.name })}>
+                {t("Alike")}
               </button>
             )}
           </li>
         ))}
-        {!busy && !error && shown.length === 0 && <li class="hint">{searching || botOnly ? "No decklist matches." : format && format !== "casual" ? `No legal decklist in the last ${page * 20} published.` : "No playable decklist on this page."}</li>}
+        {!busy && !error && shown.length === 0 && <li class="hint">{searching || botOnly ? t("No decklist matches.") : format && format !== "casual" ? t("No legal decklist in the last {n} published.", { n: page * 20 }) : t("No playable decklist on this page.")}</li>}
         {hasMore && (
           <li>
             <button class="more" disabled={busy} onClick={() => (filtering ? setWant(shown.length + 10) : load(page + 1, false))}>
-              {busy ? "Loading…" : "Load more"}
+              {busy ? t("Loading…") : t("Load more")}
             </button>
           </li>
         )}
-        {busy && !hasMore && <li class="hint">Loading…</li>}
+        {busy && !hasMore && <li class="hint">{t("Loading…")}</li>}
       </ul>
       {error && <p class="error">{error}</p>}
-      <p class="hint">{similar ? "Decklists of the same identity, closest first." : "Decklists from NetrunnerDB, tournament results from AlwaysBeRunning."}</p>
+      <p class="hint">{similar ? t("Decklists of the same identity, closest first.") : t("Decklists from NetrunnerDB, tournament results from AlwaysBeRunning.")}</p>
     </>
   );
 }
@@ -279,8 +280,8 @@ function useStats<T>(k: string) {
 
 function IdentitiesTab({ side, db, format, onOpen }: { side: Side; db: CardDb; format: string; onOpen: (code: string) => void }) {
   const rows = useStats<IdentityRow[]>(`identities:${format}:${side}`);
-  if (rows === undefined) return <p class="hint">Loading…</p>;
-  if (!rows || !rows.length) return <p class="hint">No identity statistics yet for this format.</p>;
+  if (rows === undefined) return <p class="hint">{t("Loading…")}</p>;
+  if (!rows || !rows.length) return <p class="hint">{t("No identity statistics yet for this format.")}</p>;
   return (
     <>
       <ul class="identity-grid">
@@ -293,15 +294,16 @@ function IdentitiesTab({ side, db, format, onOpen }: { side: Side; db: CardDb; f
                 <CardImage code={card.code} alt={card.title} size="small" lazy />
                 <strong>{shortTitle(card.title)}</strong>
                 <span>
-                  {r.decks} decks{r.results ? ` · ${r.results} results` : ""}
-                  {r.wins ? ` · ${r.wins} ${r.wins === 1 ? "win" : "wins"}` : ""}
+                  {r.decks === 1 ? t("1 deck") : t("{n} decks", { n: r.decks })}
+                  {r.results ? ` · ${r.results === 1 ? t("1 result") : t("{n} results", { n: r.results })}` : ""}
+                  {r.wins ? ` · ${r.wins === 1 ? t("1 win") : t("{n} wins", { n: r.wins })}` : ""}
                 </span>
               </button>
             </li>
           );
         })}
       </ul>
-      <p class="hint">Sorted by recent decklists and tournament entries.</p>
+      <p class="hint">{t("Sorted by recent decklists and tournament entries.")}</p>
     </>
   );
 }
@@ -315,23 +317,23 @@ function IdentityDetail({ code, db, format, onDecks, onClose }: { code: string; 
       <div class="sheet panel identity-detail" role="dialog" aria-label={card?.title} onClick={(e) => e.stopPropagation()}>
         <div class="row">
           <span class="label">{card?.title}</span>
-          <button class="ghost" onClick={onClose} aria-label="Close">
+          <button class="ghost" onClick={onClose} aria-label={t("Close")}>
             <Icon name="close" />
           </button>
         </div>
         <div class="identity-detail-actions">
           <button class="primary" onClick={() => onDecks(code)}>
-            Its decks
+            {t("Its decks")}
           </button>
-          <button onClick={() => onDecks(code, "results")}>Tournament decks</button>
+          <button onClick={() => onDecks(code, "results")}>{t("Tournament decks")}</button>
         </div>
         {stats === undefined ? (
-          <p class="hint">Loading…</p>
+          <p class="hint">{t("Loading…")}</p>
         ) : !stats?.cards?.length ? (
-          <p class="hint">Not enough decklists to show a typical deck.</p>
+          <p class="hint">{t("Not enough decklists to show a typical deck.")}</p>
         ) : (
           <>
-            <span class="label">Typical deck · from {stats.decks} decklists</span>
+            <span class="label">{t("Typical deck · from {n} decklists", { n: stats.decks })}</span>
             <ul class="typical-deck">
               {stats.cards.map(([c, share, qty]) => {
                 const card = db.byCode.get(c);
@@ -357,13 +359,13 @@ function IdentityDetail({ code, db, format, onDecks, onClose }: { code: string; 
 type Meta = { months: string[]; totals: { decks: number[]; results: number[] }; rows: { identity: string; decks: number[]; results: number[] }[] };
 
 const sum = (a: number[]) => a.reduce((x, y) => x + y, 0);
-const monthName = (m: string) => new Date(`${m}-15`).toLocaleDateString(undefined, { month: "short" });
+const monthName = (m: string) => new Date(`${m}-15`).toLocaleDateString(french() ? "fr" : undefined, { month: "short" });
 
 function MetaTab({ side, db, format, onOpen }: { side: Side; db: CardDb; format: string; onOpen: (code: string) => void }) {
   const meta = useStats<Meta>(`meta:${format}:${side}`);
   const [by, setBy] = useState<"results" | "decks">("results");
-  if (meta === undefined) return <p class="hint">Loading…</p>;
-  if (!meta?.rows?.length) return <p class="hint">No meta statistics yet for this format.</p>;
+  if (meta === undefined) return <p class="hint">{t("Loading…")}</p>;
+  if (!meta?.rows?.length) return <p class="hint">{t("No meta statistics yet for this format.")}</p>;
   const recent = (a: number[]) => sum(a.slice(-3));
   const total = recent(meta.totals[by]);
   const rows = [...meta.rows].sort((a, b) => recent(b[by]) - recent(a[by])).filter((r) => recent(r[by]) > 0);
@@ -371,14 +373,14 @@ function MetaTab({ side, db, format, onOpen }: { side: Side; db: CardDb; format:
     <>
       <div class="chips browse-options">
         <button class={by === "results" ? "on" : ""} onClick={() => setBy("results")} aria-pressed={by === "results"}>
-          Tournament entries
+          {t("Tournament entries")}
         </button>
         <button class={by === "decks" ? "on" : ""} onClick={() => setBy("decks")} aria-pressed={by === "decks"}>
-          Published decks
+          {t("Published decks")}
         </button>
       </div>
       {!rows.length || !total ? (
-        <p class="hint">Nothing in the last three months.</p>
+        <p class="hint">{t("Nothing in the last three months.")}</p>
       ) : (
         <ul class="meta-list">
           {rows.map((r) => {
@@ -397,7 +399,7 @@ function MetaTab({ side, db, format, onOpen }: { side: Side; db: CardDb; format:
                     </span>
                   </span>
                   <span class="meta-share">{share}%</span>
-                  <span class="meta-spark" aria-label={`Monthly share over ${meta.months.length} months`}>
+                  <span class="meta-spark" aria-label={t("Monthly share over {n} months", { n: meta.months.length })}>
                     {r[by].map((n, i) => (
                       <i title={monthName(meta.months[i])} style={{ height: `${Math.round((100 * (meta.totals[by][i] ? n / meta.totals[by][i] : 0)) / peak)}%` }} />
                     ))}
@@ -409,7 +411,7 @@ function MetaTab({ side, db, format, onOpen }: { side: Side; db: CardDb; format:
         </ul>
       )}
       <p class="hint">
-        Share of the last three months ({monthName(meta.months[meta.months.length - 3])}–{monthName(meta.months[meta.months.length - 1])}), {total} {by === "results" ? "tournament entries" : "decklists"}.
+        {t(by === "results" ? "Share of the last three months ({from}–{to}), {n} tournament entries." : "Share of the last three months ({from}–{to}), {n} decklists.", { from: monthName(meta.months[meta.months.length - 3]), to: monthName(meta.months[meta.months.length - 1]), n: total })}
       </p>
     </>
   );

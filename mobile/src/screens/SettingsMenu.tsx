@@ -7,6 +7,7 @@ import { notifying, pushSupported, setNotify } from "../net/push";
 import { tell } from "../ui";
 import { play } from "../sound";
 import { Swipe } from "../swipe";
+import { t } from "../i18n";
 
 function Toggle({ label, on, onChange }: { label: string; on: boolean; onChange: (on: boolean) => void }) {
   return (
@@ -37,7 +38,7 @@ function Channel({ label, on, onToggle, value, onValue, onCommit }: { label: str
       <div
         class="channel-level"
         role="slider"
-        aria-label={`${label} volume`}
+        aria-label={t("{label} volume", { label })}
         aria-valuemin={10}
         aria-valuemax={100}
         aria-valuenow={level * 10}
@@ -104,9 +105,9 @@ export function MenuDrawer({ title, tabs, tab, onTab, onClose, children }: { tit
         {tabs && (
           <header class="menu-head">
             <div class="menu-tabs" role="tablist">
-              {tabs.map((t) => (
-                <button role="tab" aria-selected={t === tab} class={t === tab ? "on" : ""} onClick={() => onTab?.(t)}>
-                  {t}
+              {tabs.map((name) => (
+                <button role="tab" aria-selected={name === tab} class={name === tab ? "on" : ""} onClick={() => onTab?.(name)}>
+                  {t(name)}
                 </button>
               ))}
             </div>
@@ -139,15 +140,15 @@ export function EditField({ title, label, saved, fallback, placeholder, maxLengt
       <span class="field-box-row">
         <input value={value} placeholder={placeholder} maxLength={maxLength} spellcheck={!raw} autocapitalize={raw ? "off" : undefined} aria-label={label} onInput={(e) => setValue((e.target as HTMLInputElement).value)} onKeyDown={(e) => e.key === "Enter" && save()} />
         {dirty && (
-          <button class="ghost" aria-label={`Save ${label}`} title={`Save ${label}`} disabled={!ok} onClick={save}>
+          <button class="ghost" aria-label={t("Save {label}", { label })} title={t("Save {label}", { label })} disabled={!ok} onClick={save}>
             <Icon name="check" />
           </button>
         )}
         {!dirty && saved !== fallback && (
           <button
             class="ghost"
-            aria-label={`Reset ${label}`}
-            title={`Reset ${label}`}
+            aria-label={t("Reset {label}", { label })}
+            title={t("Reset {label}", { label })}
             onClick={() => {
               setValue(fallback);
               onSave(fallback);
@@ -166,9 +167,9 @@ export function SettingsSections() {
   useEffect(() => onSettings(() => setTick((t) => t + 1)), []);
   return (
     <>
-      <MenuSection title="Audio">
+      <MenuSection title={t("Audio")}>
         <Channel
-          label="Sound effects"
+          label={t("Sound effects")}
           on={settings.sound}
           onToggle={(v) => {
             setSetting("sound", v);
@@ -178,16 +179,16 @@ export function SettingsSections() {
           onValue={(v) => setSetting("volume", v)}
           onCommit={() => play("click-credit")}
         />
-        <Channel label="Music" on={settings.music} onToggle={(v) => setSetting("music", v)} value={settings.musicVolume} onValue={(v) => setSetting("musicVolume", v)} />
+        <Channel label={t("Music")} on={settings.music} onToggle={(v) => setSetting("music", v)} value={settings.musicVolume} onValue={(v) => setSetting("musicVolume", v)} />
       </MenuSection>
-      <MenuSection title="Display">
-        <Toggle label="Animations" on={settings.animations} onChange={(v) => setSetting("animations", v)} />
-        <Toggle label="Parallax" on={settings.parallax} onChange={(v) => setSetting("parallax", v)} />
-        <Toggle label="Keyword glossary" on={settings.glossary} onChange={(v) => setSetting("glossary", v)} />
-        <Toggle label="Card text in French" on={settings.frenchCards} onChange={(v) => setSetting("frenchCards", v)} />
+      <MenuSection title={t("Display")}>
+        <Toggle label={t("Animations")} on={settings.animations} onChange={(v) => setSetting("animations", v)} />
+        <Toggle label={t("Parallax")} on={settings.parallax} onChange={(v) => setSetting("parallax", v)} />
+        <Toggle label={t("Keyword glossary")} on={settings.glossary} onChange={(v) => setSetting("glossary", v)} />
+        <Toggle label="Français" on={settings.language === "fr"} onChange={(v) => setSetting("language", v ? "fr" : "en")} />
       </MenuSection>
       {pushSupported() && (
-        <MenuSection title="Notifications">
+        <MenuSection title={t("Notifications")}>
           {(
             [
               ["turn", "Your move in a game"],
@@ -195,19 +196,19 @@ export function SettingsSections() {
             ] as const
           ).map(([kind, label]) => (
             <Toggle
-              label={label}
+              label={t(label)}
               on={notifying(kind)}
               onChange={async (v) => {
                 const error = await setNotify(kind, v);
-                if (error) tell("Notifications are off", error);
+                if (error) tell(t("Notifications are off"), error);
               }}
             />
           ))}
         </MenuSection>
       )}
       <details class="menu-section menu-advanced">
-        <summary>Advanced</summary>
-        <EditField title="Relay server" label="relay" saved={settings.relay} fallback="" placeholder={DEFAULT_RELAY ?? "https://…"} valid={(v) => !v || /^https?:\/\/[^\s/]+/.test(v)} raw onSave={(v) => setSetting("relay", v)} />
+        <summary>{t("Advanced")}</summary>
+        <EditField title={t("Relay server")} label={t("relay")} saved={settings.relay} fallback="" placeholder={DEFAULT_RELAY ?? "https://…"} valid={(v) => !v || /^https?:\/\/[^\s/]+/.test(v)} raw onSave={(v) => setSetting("relay", v)} />
       </details>
     </>
   );
@@ -215,14 +216,14 @@ export function SettingsSections() {
 
 export function SettingsMenu({ onClose, onCredits }: { onClose: () => void; onCredits?: () => void }) {
   return (
-    <MenuDrawer title="Settings" onClose={onClose}>
+    <MenuDrawer title={t("Settings")} onClose={onClose}>
       <SettingsSections />
       {onCredits && (
-        <MenuSection title="About">
+        <MenuSection title={t("About")}>
           <MenuItem
             icon="book"
-            label="Credits"
-            hint="Sound, music and card data"
+            label={t("Credits")}
+            hint={t("Sound, music and card data")}
             onClick={() => {
               onClose();
               onCredits();

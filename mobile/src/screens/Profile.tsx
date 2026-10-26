@@ -10,14 +10,15 @@ import { listHistory } from "../history";
 import { DeckRow, DeckView } from "./Decks";
 import { EditField } from "./SettingsMenu";
 import { type Head, headOf } from "./History";
+import { t } from "../i18n";
 
 const SIDE_NAME: Record<Side, string> = { corp: "Corp", runner: "Runner" };
 
 function storedName() {
   try {
-    return localStorage.getItem("nsg.name") ?? "Player";
+    return localStorage.getItem("nsg.name") ?? t("Player");
   } catch {
-    return "Player";
+    return t("Player");
   }
 }
 
@@ -81,7 +82,7 @@ function DefaultDeck({ side, db }: { side: Side; db: CardDb }) {
   return (
     <div class="profile-deck">
       <div class="profile-deck-head">
-        <span class={`label who-${side}`}>{SIDE_NAME[side]}</span>
+        <span class={`label who-${side}`}>{t(SIDE_NAME[side])}</span>
       </div>
       {current ? (
         <ul class="deck-library">
@@ -89,20 +90,20 @@ function DefaultDeck({ side, db }: { side: Side; db: CardDb }) {
         </ul>
       ) : (
         <button class="match-deck-empty" onClick={() => setChoosing(true)} disabled={!mine.length}>
-          {mine.length ? `Choose a default ${SIDE_NAME[side]} deck` : `No ${SIDE_NAME[side]} deck yet`}
+          {mine.length ? (side === "corp" ? t("Choose a default Corp deck") : t("Choose a default Runner deck")) : side === "corp" ? t("No Corp deck yet") : t("No Runner deck yet")}
         </button>
       )}
       {choosing && (
         <div class="sheet-backdrop" onClick={() => setChoosing(false)}>
-          <div class="sheet panel deck-choose" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={`Default ${SIDE_NAME[side]} deck`}>
+          <div class="sheet panel deck-choose" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={side === "corp" ? t("Default Corp deck") : t("Default Runner deck")}>
             <div class="row">
-              <span class={`label who-${side}`}>Default {SIDE_NAME[side]} deck</span>
+              <span class={`label who-${side}`}>{side === "corp" ? t("Default Corp deck") : t("Default Runner deck")}</span>
               {current && (
                 <button class="ghost sheet-view-list" onClick={() => setViewing(true)}>
-                  View list
+                  {t("View list")}
                 </button>
               )}
-              <button class="ghost" onClick={() => setChoosing(false)} aria-label="Close">
+              <button class="ghost" onClick={() => setChoosing(false)} aria-label={t("Close")}>
                 <Icon name="close" />
               </button>
             </div>
@@ -113,7 +114,7 @@ function DefaultDeck({ side, db }: { side: Side; db: CardDb }) {
             </ul>
             {id && (
               <button class="ghost" onClick={() => pick(undefined)}>
-                No default
+                {t("No default")}
               </button>
             )}
           </div>
@@ -127,7 +128,7 @@ function DefaultDeck({ side, db }: { side: Side; db: CardDb }) {
 export function Profile({ db, onClose, onOpenDeck }: { db: CardDb; onClose: () => void; onOpenDeck: (id: string, side: Side) => void }) {
   useBackClose(true, onClose);
   const [, setTick] = useState(0);
-  useEffect(() => onSettings(() => setTick((t) => t + 1)), []);
+  useEffect(() => onSettings(() => setTick((n) => n + 1)), []);
   const [name, setName] = useState(storedName);
   const [heads, setHeads] = useState<Head[] | null>(null);
   useEffect(() => {
@@ -140,22 +141,22 @@ export function Profile({ db, onClose, onOpenDeck }: { db: CardDb; onClose: () =
   return (
     <>
       <Ticker>
-        Profile <span class="cyan">{name}</span>
+        {t("Profile")} <span class="cyan">{name}</span>
       </Ticker>
       <div class="screen profile">
         <header class="screen-head">
-          <button class="ghost" onClick={onClose} aria-label="Back">
+          <button class="ghost" onClick={onClose} aria-label={t("Back")}>
             <Icon name="arrow-left" />
           </button>
-          <h1>PROFILE</h1>
+          <h1>{t("PROFILE")}</h1>
         </header>
 
         <section class="panel section profile-id">
           <EditField
-            title="Handle"
-            label="handle"
+            title={t("Handle")}
+            label={t("handle")}
             saved={name}
-            fallback="Player"
+            fallback={t("Player")}
             maxLength={24}
             onSave={(v) => {
               try {
@@ -165,39 +166,39 @@ export function Profile({ db, onClose, onOpenDeck }: { db: CardDb; onClose: () =
             }}
           />
           <div class="field-box">
-            <span class="label">Default format</span>
-            <Picker title="Default format" value={settings.format} onChange={(f: GameFormat) => setSetting("format", f)} options={GAME_FORMATS.map((f) => ({ key: f.key as GameFormat, label: f.label, hint: FORMAT_DESC[f.key as GameFormat] }))} />
+            <span class="label">{t("Default format")}</span>
+            <Picker title={t("Default format")} value={settings.format} onChange={(f: GameFormat) => setSetting("format", f)} options={GAME_FORMATS.map((f) => ({ key: f.key as GameFormat, label: t(f.label), hint: FORMAT_DESC[f.key as GameFormat] }))} />
           </div>
         </section>
 
         <section class="panel section">
-          <span class="label">Default decks</span>
+          <span class="label">{t("Default decks")}</span>
           <DefaultDeck side="corp" db={db} />
           <DefaultDeck side="runner" db={db} />
         </section>
 
         <section class="panel cyan section profile-stats">
-          <span class="label cyan">Stats</span>
+          <span class="label cyan">{t("Stats")}</span>
           {!s ? (
-            <p class="hint">Loading…</p>
+            <p class="hint">{t("Loading…")}</p>
           ) : !s.played ? (
-            <p class="hint">Finish a game and your record shows up here.</p>
+            <p class="hint">{t("Finish a game and your record shows up here.")}</p>
           ) : (
             <>
               <div class="profile-hero">
                 <div class="profile-rate">
                   <strong>{pct(s.won, s.decided)}</strong>
-                  <span class="label">Win rate</span>
+                  <span class="label">{t("Win rate")}</span>
                 </div>
                 <div class="profile-record">
                   <span>
-                    <b class="cyan">{s.won}</b> won
+                    <b class="cyan">{s.won}</b> {t("won")}
                   </span>
                   <span>
-                    <b class="red">{s.lost}</b> lost
+                    <b class="red">{s.lost}</b> {t("lost")}
                   </span>
                   <span>
-                    <b>{s.played}</b> played
+                    <b>{s.played}</b> {t("played")}
                   </span>
                 </div>
               </div>
@@ -205,27 +206,27 @@ export function Profile({ db, onClose, onOpenDeck }: { db: CardDb; onClose: () =
                 <div class="profile-tile who-corp">
                   <strong>{pct(s.corp.won, s.corp.games)}</strong>
                   <span>
-                    As Corp · {s.corp.won}/{s.corp.games}
+                    {t("As Corp")} · {s.corp.won}/{s.corp.games}
                   </span>
                 </div>
                 <div class="profile-tile who-runner">
                   <strong>{pct(s.runner.won, s.runner.games)}</strong>
                   <span>
-                    As Runner · {s.runner.won}/{s.runner.games}
+                    {t("As Runner")} · {s.runner.won}/{s.runner.games}
                   </span>
                 </div>
                 <div class="profile-tile">
                   <strong>{s.streak}</strong>
-                  <span>Win streak · best {s.best}</span>
+                  <span>{t("Win streak · best {n}", { n: s.best })}</span>
                 </div>
                 <div class="profile-tile">
                   <strong>{s.avgTurns || "—"}</strong>
-                  <span>Turns per game</span>
+                  <span>{t("Turns per game")}</span>
                 </div>
               </div>
               {s.decks.length > 0 && (
                 <>
-                  <span class="label">Most played decks</span>
+                  <span class="label">{t("Most played decks")}</span>
                   <ul class="deck-library">
                     {s.decks.map(({ wire, games, won }) => (
                       <DeckRow

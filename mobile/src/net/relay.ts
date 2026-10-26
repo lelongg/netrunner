@@ -1,4 +1,5 @@
 import { settings } from "../settings";
+import { t } from "../i18n";
 import { type Store, browserStore } from "../store";
 import { currentSub } from "./push";
 import { type Entry, type LinkStatus, Outbox, type Payload, type Seat, type Transport, type TransportHandlers } from "./types";
@@ -77,7 +78,7 @@ async function call(path: string, payload?: unknown): Promise<{ status: number; 
 
 export async function createGame(store: Store = browserStore()): Promise<SeatTicket> {
   const { status, body } = await call("/games");
-  if (status !== 201) throw new Error(body.error ?? `The relay answered ${status}`);
+  if (status !== 201) throw new Error(body.error ?? t("The relay answered {status}", { status }));
   const ticket = { code: body.code, seat: body.seat, token: body.token };
   storeTicket(ticket, store);
   return ticket;
@@ -89,7 +90,7 @@ export async function joinGame(code: string, store: Store = browserStore(), name
   const { status, body } = await call(`/games/${code}/join`, { name });
   if (status === 404) throw new Error("No game with this code. Check the code with the host.");
   if (status === 409) throw new Error("This game already has two players.");
-  if (status !== 200) throw new Error(body.error ?? `The relay answered ${status}`);
+  if (status !== 200) throw new Error(body.error ?? t("The relay answered {status}", { status }));
   const ticket = { code, seat: body.seat, token: body.token };
   storeTicket(ticket, store);
   return ticket;
