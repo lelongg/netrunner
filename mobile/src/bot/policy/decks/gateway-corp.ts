@@ -295,8 +295,8 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[], extra?: (out:
         const breached = stolenTurn !== undefined && stolenTurn >= changedTurn;
         const holdable = agendasInHand <= 2 && Number(obs.me["deck-count"] ?? 0) >= 10;
         const taxRace = !contestable && ((rich && fortress) || desperate);
-        const flooded = agendasInHand >= 3 || (agendasInHand >= 2 && obs.hand.length >= 5);
-        const jam = !contestable && !taxRace && flooded && fortress && canRezOne && !cheapEntry && safety.runnerCost >= 5;
+        const flooded = agendasInHand >= 3;
+        const jam = !contestable && !taxRace && flooded && fortress && canRezOne && !cheapEntry && safety.runnerCost >= 7;
         const slow = card ? agendaProgress(card).need >= 5 : false;
         p.score = (breached && holdable && !desperate) || (cheapEntry && !desperate) ? Math.min(p.score, 12) : contestable ? Math.min(p.score, racing ? 58 : 48) - (points >= 3 ? 10 : 0) - (slow ? 8 : 0) : taxRace ? Math.min(p.score, 55) - (points >= 3 ? 8 : 0) - (slow ? 8 : 0) : jam ? Math.min(p.score, 44) - (points >= 3 ? 8 : 0) - (slow ? 6 : 0) : Math.min(p.score, 15);
         p.why += ` (the Runner can get in: margin ${safety.margin}${breached ? ", and stole from there since the ice last changed" : ""}${cheapEntry ? ", and the run there is nearly free" : ""}${racing ? ", racing" : ""}${taxRace ? (desperate ? ", R&D is running out" : ", rich enough to make every run expensive") : ""}${jam ? ", jamming: too many agendas in hand to wait" : ""}${canRezOne ? "" : ", no ice can be rezzed"}${hqSafer ? ", HQ is safer" : ""})`;

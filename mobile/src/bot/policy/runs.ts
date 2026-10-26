@@ -19,7 +19,7 @@ export function wastefulRez(obs: Observation, ice: any, server: Observation["ser
   const est = estimateRun(obs, ahead, 0, purse);
   const getsIn = est.exact && !est.blocked && est.damage < grip && est.credits - leechCounters(obs) <= purse;
   const tax = bestBreak(obs, { ...ice, rezzed: true, subroutines: ice.subroutines ?? [] })?.cost.value ?? 0;
-  const wasteful = getsIn && cost >= tax && obs.credits - cost < 8;
+  const wasteful = getsIn && cost >= 5 && cost > tax && obs.credits - cost < 3;
   return { wasteful, why: `${ice.title} costs ${cost} to rez and ${tax} to break: the Runner gets through ${server.label} anyway with ${purse} for the run, keep the credits` };
 }
 

@@ -448,7 +448,7 @@ describe("corp does not pay to rez ice the Runner breaks anyway", () => {
       s.install("corp", card, server);
     }
     s.rez("Palisade");
-    s.credits("corp", 14);
+    s.credits("corp", 9);
     s.endTurn("corp");
     s.clearHand("runner");
     s.summon("runner", "Cleaver", "Overclock", "Sure Gamble", "Sure Gamble");
