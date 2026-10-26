@@ -9471,3 +9471,63 @@ button.player-chip {
 .stat.alert .icon {
   color: var(--red);
 }
+
+.side-switch {
+  display: inline-flex;
+  border: 1px solid var(--line-2);
+}
+
+.side-switch button {
+  min-height: 30px;
+  padding: 0 12px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: 0.28em;
+}
+
+.side-switch button.on.who-corp {
+  color: var(--corp);
+}
+
+.side-switch button.on.who-runner {
+  color: var(--runner);
+}
+
+.side-switch button.on {
+  background: var(--panel-2);
+  box-shadow: inset 0 -2px 0 currentColor;
+}
+
+.deck-row-go {
+  flex: none;
+  height: 16px;
+  color: var(--cyan);
+}
+
+.ghost.sheet-view-list {
+  margin-left: auto;
+  white-space: nowrap;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  color: var(--cyan);
+}
+
+.seat-vs {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: -6px 0;
+  color: var(--muted);
+  font-family: var(--display);
+  font-size: 18px;
+}
+
+.seat-vs::before,
+.seat-vs::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line-2);
+}
