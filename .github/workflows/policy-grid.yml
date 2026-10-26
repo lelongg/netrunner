@@ -144,7 +144,9 @@ jobs:
           done
           wait
           for split in ${{ needs.plan.outputs.splits }}; do
-            grep -E "games in|decision avg|mistakes over" results/$split.log
+            echo "== $split"
+            tail -n 30 results/$split.log
+            test -f results/$split/summary.json
             node -e '
               const fs = require("fs");
               const split = process.argv[1];
@@ -184,6 +186,7 @@ jobs:
 
       - name: Build the report
         run: |
+          mkdir -p cells
           node mobile/scripts/grid-report.mjs cells report.md report.json
           cat report.md >> "$GITHUB_STEP_SUMMARY"
 

@@ -143,8 +143,8 @@ jobs:
         run: |
           mkdir -p selfplay
           node --experimental-strip-types scripts/policy-eval.mjs --games ${{ needs.plan.outputs.games }} --corp policy --runner ${{ matrix.opponent }} --split tune --seed ${{ matrix.seed }} --corp-deck ${{ matrix.corp }} --runner-deck ${{ matrix.runner }} $FLAGS --positions selfplay/positions-${{ matrix.job }}.jsonl > selfplay/job-${{ matrix.job }}.log 2>&1
-          grep -E "games in|decision avg" selfplay/job-${{ matrix.job }}.log
-          wc -l selfplay/positions-${{ matrix.job }}.jsonl
+          tail -n 30 selfplay/job-${{ matrix.job }}.log
+          test -f selfplay/positions-${{ matrix.job }}.jsonl && wc -l selfplay/positions-${{ matrix.job }}.jsonl
 
       - uses: actions/upload-artifact@v4
         with:
