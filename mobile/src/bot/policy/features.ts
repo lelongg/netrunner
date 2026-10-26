@@ -1,7 +1,13 @@
 import { evaluate } from "./evaluate.ts";
 import { agendaProgress, coverage, isIcebreaker, rezCostOf } from "./tactics.ts";
 import { stealOdds, threat } from "./threat.ts";
+import { CORE_DECKS } from "./decks/core.ts";
 import type { Observation } from "./types.ts";
+
+export function deckKeys(obs: Observation): string[] {
+  const titles = [obs.me.identity?.title, obs.opp.identity?.title].filter(Boolean);
+  return CORE_DECKS.filter((d) => titles.includes(d.identity)).map((d) => d.key);
+}
 
 export const FEATURES = [
   "turn",
@@ -118,10 +124,11 @@ export interface Weights {
   bias: number;
 }
 
-export function winProbability(features: Features, w: Weights): number {
+export function winProbability(features: Features, w: Weights, decks: string[] = []): number {
   let z = w.bias;
   for (let i = 0; i < w.features.length; i++) {
-    const x = num((features as any)[w.features[i]]);
+    const f = w.features[i];
+    const x = f.startsWith("deck:") ? (decks.includes(f.slice(5)) ? 1 : 0) : num((features as any)[f]);
     z += ((x - w.mean[i]) / (w.scale[i] || 1)) * w.weights[i];
   }
   return 1 / (1 + Math.exp(-z));

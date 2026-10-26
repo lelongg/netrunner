@@ -135,6 +135,9 @@ jobs:
           ref=$(node -e 'console.log(require("./mobile/scripts/policy-reference.json").commit)')
           git worktree add --detach "mobile/.policy-ref/${ref:0:12}" "$ref"
 
+      - name: Fetch the latest learned weights
+        run: curl -sSf -o mobile/weights.json "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/eval-results/selfplay/latest/weights.json" || echo "no weights published yet"
+
       - name: Play the cell
         working-directory: mobile
         env:

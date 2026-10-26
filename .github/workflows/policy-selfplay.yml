@@ -178,6 +178,8 @@ jobs:
         run: |
           cat selfplay/*/positions-*.jsonl > positions.jsonl
           wc -l positions.jsonl
+          if curl -sSf -o previous.jsonl.gz "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/eval-results/selfplay/latest/all-positions.jsonl.gz"; then gzip -dc previous.jsonl.gz >> positions.jsonl; fi
+          wc -l positions.jsonl
           node mobile/scripts/fit-eval.mjs positions.jsonl weights.json fit.md
           cat fit.md >> "$GITHUB_STEP_SUMMARY"
           grep -h "games in" selfplay/*/job-*.log > games.txt || true
@@ -195,6 +197,7 @@ jobs:
           cp ../weights.json ../fit.md ../games.txt "selfplay/${stamp}-${GITHUB_RUN_ID}/"
           gzip -c ../positions.jsonl > "selfplay/${stamp}-${GITHUB_RUN_ID}/positions.jsonl.gz"
           cp ../weights.json ../fit.md selfplay/latest/
+          tail -n 60000 ../positions.jsonl | gzip -c > selfplay/latest/all-positions.jsonl.gz
           git add -A
           git -c user.name='policy-selfplay' -c user.email='policy-selfplay@users.noreply.github.com' commit -q -m "Self-play ${stamp} (run ${GITHUB_RUN_ID}, ${GITHUB_SHA:0:9})"
           git push -q origin eval-results

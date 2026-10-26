@@ -14,6 +14,8 @@ if (rows.length < 50) {
   console.error(`only ${rows.length} positions`);
   process.exit(1);
 }
+const decks = [...new Set(rows.flatMap((r) => String(r.matchup ?? "").split("+")))].filter(Boolean).sort();
+for (const r of rows) for (const d of decks) r.features[`deck:${d}`] = String(r.matchup ?? "").split("+").includes(d) ? 1 : 0;
 const features = Object.keys(rows[0].features);
 const gameOf = (r) => `${r.matchup}:${r.seed}:${r.players?.runner ?? ""}`;
 const seeds = [...new Set(rows.map(gameOf))];
