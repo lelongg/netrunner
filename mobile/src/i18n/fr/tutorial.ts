@@ -1,5 +1,6 @@
 export default {
   Tip: "Astuce",
+  "The Runner starts a run on Server 1! It must get past your ice first. Tap Let Runner approach ice.": "Lae Runner lance un piratage sur le serveur 1 ! Iel doit d'abord passer votre glace. Touchez Laisser lae Runner approcher la glace.",
   "The Corp rezzed it: it's Palisade. Tap Encounter ice to face it.": "La Corpo l'a activée : c'est Palisade. Touchez Rencontrer la glace pour l'affronter.",
   "The run begins. You pass the ice protecting the server one at a time, from the outermost in. Tap Approach ice.": "Le piratage commence. Vous passez les glaces qui protègent le serveur une par une, de l'extérieur vers l'intérieur. Touchez Approcher la glace.",
   "The Corp has ended its turn. Tap Start turn to begin yours.": "La Corpo a fini son tour. Touchez Commencer le tour pour jouer le vôtre.",
@@ -39,7 +40,7 @@ export default {
   "Rezzing ice costs credits. Play Hedge Fund: this operation costs 5[credit] and gives you 9[credit].": "Activer des glaces coûte des crédits. Jouez Hedge Fund : cette opération coûte 5[credit] et vous rapporte 9[credit].",
   "No clicks left: end your turn. Your hand size is 5; extra cards are discarded at the end of your turn.": "Plus de clics : finissez votre tour. Votre taille de main est de 5 ; les cartes en trop sont défaussées à la fin de votre tour.",
   "The Runner has 4 clicks. Watch its moves here; tap this line anytime to read the whole log.": "Lae Runner a 4 clics. Suivez ses actions ici ; touchez cette ligne à tout moment pour lire tout le journal.",
-  "The Runner runs Server 1 and approaches your ice! Rez Palisade now for 3[credit] to turn it face up. Unrezzed, it would let the Runner through.": "Lae Runner pirate le serveur 1 et approche votre glace ! Activez Palisade maintenant pour 3[credit] pour la retourner face visible. Inactive, elle laisserait passer lae Runner.",
+  "The Runner approaches your ice! Rez Palisade now for 3[credit] to turn it face up. Unrezzed, it would let the Runner through.": "Lae Runner approche votre glace ! Activez Palisade maintenant pour 3[credit] pour la retourner face visible. Inactive, elle laisserait passer lae Runner.",
   "The Runner has no icebreaker to break the subroutine. When it lets it through, fire it: End the run. Your agenda is safe.": "Lae Runner n'a pas de brise-glace pour neutraliser la routine. Quand iel la laisse passer, déclenchez-la : Fin du piratage. Votre projet est en sécurité.",
   "To score an agenda, you advance it: Offworld Office needs 4 advancement counters. Play Seamless Launch to place 2 at once on it, since you installed it last turn.": "Pour finaliser un projet, vous l'avancez : Offworld Office demande 4 pions avancement. Jouez Seamless Launch pour en placer 2 d'un coup dessus, puisque vous l'avez installé au tour précédent.",
   "Now tap the agenda and advance it twice: 1[click] and 1[credit] per counter.": "Touchez maintenant le projet et avancez-le deux fois : 1[click] et 1[credit] par pion.",

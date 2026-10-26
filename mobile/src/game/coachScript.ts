@@ -306,12 +306,20 @@ const CORP: TutorialScript = {
     },
     { id: "runner-turn", anchor: ".ticker .feed", when: (v) => v["active-player"] === "runner", text: "The Runner has 4 clicks. Watch its moves here; tap this line anytime to read the whole log." },
     {
+      id: "run-start",
+      anchor: ".actions .buttons",
+      when: (v) => !!v.run && v.run.phase !== "approach-ice" && !v.encounters,
+      done: (v) => !v.run || v.run.phase === "approach-ice" || !!v.encounters,
+      allow: continuing,
+      text: "The Runner starts a run on Server 1! It must get past your ice first. Tap Let Runner approach ice.",
+    },
+    {
       id: "rez",
       anchor: ".actions .buttons",
       when: (v) => v.run?.phase === "approach-ice" && !currentIce(v)?.rezzed,
       done: (v) => !!corpCard(v, "Palisade")?.rezzed || !v.run,
       allow: (command, card) => (command === "rez" ? card?.title === "Palisade" : command === "continue" ? false : undefined),
-      text: "The Runner runs Server 1 and approaches your ice! Rez Palisade now for 3[credit] to turn it face up. Unrezzed, it would let the Runner through.",
+      text: "The Runner approaches your ice! Rez Palisade now for 3[credit] to turn it face up. Unrezzed, it would let the Runner through.",
     },
     {
       id: "fire",
