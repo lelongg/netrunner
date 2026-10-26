@@ -1,11 +1,11 @@
 import { useEffect, useState } from "preact/hooks";
 import type { CardDb, Matchup, Side } from "../engine";
-import { type WireDeck, defaultStored, latest } from "../decks";
+import { type WireDeck, defaultStored, fromWire, latest } from "../decks";
 import { lastDeck, setLastDeck } from "../session";
 import { DeckSheet } from "./Lobby";
 import { WaitRoom } from "./WaitRoom";
 import { defaultDeck, problemIn } from "./DeckPicker";
-import { DeckRow } from "./Decks";
+import { DeckRow, DeckView } from "./Decks";
 import { Cta, Picker, Ticker } from "../ui";
 import { Icon } from "../icons";
 import { useBackClose } from "../back";
@@ -62,6 +62,8 @@ export function Match({ name, db, matchups, onMatched, onJoin, onWatch, onClose,
     return { corp: pick("corp"), runner: pick("runner") };
   });
   const [choosing, setChoosing] = useState<Side | null>(null);
+  const [viewing, setViewing] = useState<WireDeck | null>(null);
+  useBackClose(!!viewing, () => setViewing(null));
   const choose = (s: Side, d: WireDeck) => {
     setLastDeck(s, d);
     setDecks((was) => ({ ...was, [s]: d }));
@@ -288,7 +290,7 @@ export function Match({ name, db, matchups, onMatched, onJoin, onWatch, onClose,
                   <span class="label">{`${s === "corp" ? "Corp" : "Runner"} deck`}</span>
                   {decks[s] ? (
                     <ul class="deck-library match-deck">
-                      <DeckRow db={db} stored={decks[s]!} format={deckFormat(format) ?? "casual"} onOpen={() => setChoosing(s)} issuesOnly />
+                      <DeckRow db={db} stored={decks[s]!} format={deckFormat(format) ?? "casual"} onOpen={() => setChoosing(s)} issuesOnly extra={<Icon name="chevron-right" class="deck-row-go" />} />
                     </ul>
                   ) : (
                     <button class="match-deck-empty" onClick={() => setChoosing(s)}>
@@ -303,7 +305,8 @@ export function Match({ name, db, matchups, onMatched, onJoin, onWatch, onClose,
           </section>
         )}
         {error && <p class="error">{error}</p>}
-        {choosing && <DeckSheet side={choosing} db={db} matchups={matchups} value={decks[choosing]} format={format} onPick={(d) => choose(choosing, d)} onEditDecks={onEditDecks && (() => onEditDecks(choosing))} onClose={() => setChoosing(null)} />}
+        {choosing && <DeckSheet onView={decks[choosing] ? () => setViewing(decks[choosing]!) : undefined} side={choosing} db={db} matchups={matchups} value={decks[choosing]} format={format} onPick={(d) => choose(choosing, d)} onEditDecks={onEditDecks && (() => onEditDecks(choosing))} onClose={() => setChoosing(null)} />}
+        {viewing && <DeckView deck={fromWire(viewing, db)} format={deckFormat(format) ?? "casual"} onClose={() => setViewing(null)} />}
       </div>
     </>
   );

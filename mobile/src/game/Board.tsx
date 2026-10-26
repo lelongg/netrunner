@@ -408,6 +408,50 @@ function Overflow({ class: cls, children }: { class: string; children: preact.Co
   );
 }
 
+function ScrollHints() {
+  const [more, setMore] = useState<[boolean, boolean]>([false, false]);
+  const [head, setHead] = useState(0);
+  const field = () => document.querySelector<HTMLElement>(".board .playfield");
+  useEffect(() => {
+    const el = field();
+    if (!el) return;
+    const measure = () => {
+      const up = el.scrollTop > 8;
+      const down = el.scrollTop + el.clientHeight < el.scrollHeight - 8;
+      setMore((m) => (m[0] === up && m[1] === down ? m : [up, down]));
+      const first = el.firstElementChild as HTMLElement | null;
+      setHead(first && getComputedStyle(first).position === "sticky" ? first.offsetHeight : 0);
+    };
+    measure();
+    el.addEventListener("scroll", measure, { passive: true });
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    for (const child of el.children) observer.observe(child);
+    return () => {
+      el.removeEventListener("scroll", measure);
+      observer.disconnect();
+    };
+  }, []);
+  const go = (dir: -1 | 1) => {
+    const el = field();
+    el?.scrollBy({ top: dir * el.clientHeight * 0.7, behavior: "smooth" });
+  };
+  return (
+    <>
+      {more[0] && (
+        <button class="more-hint up" style={{ top: `${head + 4}px` }} onClick={() => go(-1)} aria-label="Scroll the board up">
+          <Icon name="chevron-left" />
+        </button>
+      )}
+      {more[1] && (
+        <button class="more-hint down" onClick={() => go(1)} aria-label="Scroll the board down">
+          <Icon name="chevron-left" />
+        </button>
+      )}
+    </>
+  );
+}
+
 function CorpArea({ view, side, mine, onTap, onZone, selectable, runServer }: { view: any; side: Side; mine: boolean; onTap: (c: any) => void; onZone: (z: ZoneRef) => void; selectable: Set<unknown>; runServer?: string }) {
   const corp = view.corp ?? {};
   const servers = corp.servers ?? {};
@@ -1407,6 +1451,7 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
           <div class="divider" />
           {myArea}
         </main>
+        <ScrollHints />
       </div>
       <footer class="dock">
         <div class="enc-zone">

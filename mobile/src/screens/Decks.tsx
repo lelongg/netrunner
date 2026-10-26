@@ -319,8 +319,8 @@ export function DeckRow({ db, stored, onOpen, format, selected, disabled, issues
   );
 }
 
-function BrowseSheet({ db, side, onClose, onDone }: { db: CardDb; side: Side; onClose: () => void; onDone: (deck: Deck, format: FormatKey) => void }) {
-  const [format, setFormat] = useState<FormatKey>(defaultDeckFormat);
+export function BrowseSheet({ db, side, onClose, onDone, similarTo, initialFormat }: { db: CardDb; side: Side; onClose: () => void; onDone: (deck: Deck, format: FormatKey) => void; similarTo?: Deck; initialFormat?: FormatKey }) {
+  const [format, setFormat] = useState<FormatKey>(initialFormat ?? defaultDeckFormat);
   return (
     <div class="sheet-backdrop" onClick={onClose}>
       <div class="sheet panel deck-choose" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Browse NetrunnerDB decklists">
@@ -334,7 +334,7 @@ function BrowseSheet({ db, side, onClose, onDone }: { db: CardDb; side: Side; on
           <span class="label">Format</span>
           <Picker title="Format" value={format} onChange={setFormat} options={FORMATS.map((f) => ({ key: f.key, label: f.label, hint: FORMAT_DESC[f.key] }))} />
         </section>
-        <DeckBrowser side={side} db={db} format={format} onPick={(l) => l.deck && onDone(l.deck, format)} />
+        <DeckBrowser side={side} db={db} format={format} similarTo={similarTo} onPick={(l) => l.deck && onDone(l.deck, format)} />
       </div>
     </div>
   );
@@ -563,6 +563,7 @@ function DeckEditor({ db, initial, deck0, onClose, onOpen, readOnly }: { db?: Ca
   const [menu, setMenu] = useState(false);
   const [issues, setIssues] = useState(false);
   const [changingId, setChangingId] = useState(false);
+  const [alike, setAlike] = useState(false);
   const side: Side = deck.identity.side === "Corp" ? "corp" : "runner";
   useBackClose(!!detail, () => setDetail(null));
   useBackClose(menu, () => setMenu(false));
@@ -594,6 +595,21 @@ function DeckEditor({ db, initial, deck0, onClose, onOpen, readOnly }: { db?: Ca
     uiSound("ui_copy");
     tell("Decklist copied", "Paste it anywhere, or import it on NetrunnerDB.");
   };
+
+  if (alike && db)
+    return (
+      <BrowseSheet
+        db={db}
+        side={side}
+        similarTo={deck}
+        initialFormat={format}
+        onClose={() => setAlike(false)}
+        onDone={(found, f) => {
+          setAlike(false);
+          onOpen?.(putDeck({ ...toWire(found), side, format: f }));
+        }}
+      />
+    );
 
   if (changingId && db)
     return (
@@ -671,6 +687,16 @@ function DeckEditor({ db, initial, deck0, onClose, onOpen, readOnly }: { db?: Ca
               >
                 <Icon name="swap" /> Change identity
               </button>
+              {db && (
+                <button
+                  onClick={() => {
+                    setMenu(false);
+                    setAlike(true);
+                  }}
+                >
+                  <Icon name="search" /> Similar decks
+                </button>
+              )}
               <button
                 class="danger"
                 onClick={async () => {

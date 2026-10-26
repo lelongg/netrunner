@@ -138,13 +138,18 @@ export function QrZoom({ value, code, from, onClose }: { value: string; code: st
   );
 }
 
-export function DeckSheet({ side, db, matchups, value, onPick, onClose, onEditDecks, format, bot }: { side: Side; db: CardDb; matchups: Matchup[]; value?: WireDeck; onPick: (d: WireDeck) => void; onClose: () => void; onEditDecks?: () => void; format?: GameFormat; bot?: boolean }) {
+export function DeckSheet({ side, db, matchups, value, onPick, onClose, onEditDecks, onView, format, bot }: { onView?: () => void; side: Side; db: CardDb; matchups: Matchup[]; value?: WireDeck; onPick: (d: WireDeck) => void; onClose: () => void; onEditDecks?: () => void; format?: GameFormat; bot?: boolean }) {
   useBackClose(true, onClose);
   return (
     <div class="sheet-backdrop" onClick={onClose}>
       <div class="sheet panel deck-choose" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={`Choose a ${SIDE_LABEL[side]} deck`}>
         <div class="row">
           <span class={`label who-${side}`}>Choose a {SIDE_LABEL[side]} deck</span>
+          {onView && (
+            <button class="ghost sheet-view-list" onClick={onView}>
+              View list
+            </button>
+          )}
           <button class="ghost" onClick={onClose} aria-label="Close">
             <Icon name="close" />
           </button>
@@ -229,23 +234,24 @@ function Seat({ label, side, deck, db, matchups, onPick, onSide, locked, name, o
           {label}
           {name && onName && <NameField name={name} onSave={onName} />}
         </span>
-        <span class={`label who-${side}`}>{SIDE_LABEL[side]}</span>
+        {onSide ? (
+          <div class="side-switch" role="radiogroup" aria-label="Your side">
+            {(["corp", "runner"] as Side[]).map((s) => (
+              <button role="radio" aria-checked={side === s} class={`who-${s} ${side === s ? "on" : ""}`} onClick={() => s !== side && onSide(s)}>
+                {SIDE_LABEL[s]}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <span class={`label who-${side}`}>{SIDE_LABEL[side]}</span>
+        )}
       </div>
-      {onSide && (
-        <div class="tabs">
-          {(["corp", "runner"] as Side[]).map((s) => (
-            <button class={side === s ? "on" : ""} onClick={() => s !== side && onSide(s)}>
-              {SIDE_LABEL[s]}
-            </button>
-          ))}
-        </div>
-      )}
       {dealt ? (
         <p class="status seat-dealt">{format === "chimera" ? "A random deck is dealt when the game starts." : "The deck is drafted when the game starts."}</p>
       ) : current ? (
         <>
           <ul class="deck-library">
-            <DeckRow db={db} stored={deck!} format={deckFormat(format) ?? "casual"} onOpen={() => setViewing(true)} issuesOnly />
+            <DeckRow db={db} stored={deck!} format={deckFormat(format) ?? "casual"} onOpen={() => (locked ? setViewing(true) : setChoosing(true))} issuesOnly extra={locked ? undefined : <Icon name="chevron-right" class="deck-row-go" />} />
           </ul>
           {problem && (
             <div class="seat-issues" role="alert">
@@ -260,21 +266,13 @@ function Seat({ label, side, deck, db, matchups, onPick, onSide, locked, name, o
               </ul>
             </div>
           )}
-          <div class="seat-actions">
-              <button onClick={() => setViewing(true)}>View list</button>
-              {!locked && (
-                <button class="primary" onClick={() => setChoosing(true)}>
-                  Change deck
-                </button>
-              )}
-          </div>
         </>
       ) : (
         <button class="primary" onClick={() => setChoosing(true)}>
           Choose a deck
         </button>
       )}
-      {choosing && <DeckSheet side={side} db={db} matchups={matchups} value={deck} format={format} bot={label === "Bot"} onPick={onPick} onEditDecks={onEditDecks && (() => onEditDecks(side))} onClose={() => setChoosing(false)} />}
+      {choosing && <DeckSheet onView={current ? () => setViewing(true) : undefined} side={side} db={db} matchups={matchups} value={deck} format={format} bot={label === "Bot"} onPick={onPick} onEditDecks={onEditDecks && (() => onEditDecks(side))} onClose={() => setChoosing(false)} />}
       {viewing && current && <DeckView deck={current} format={deckFormat(format) ?? "casual"} onClose={() => setViewing(false)} />}
     </section>
   );
@@ -435,6 +433,12 @@ export function Lobby({ session, db, matchups, onLeave, onWatch }: Props) {
         {inLobby && <FormatPicker value={lobby.format} onChange={lobby.role !== "guest" ? (f) => session.setFormat(f) : undefined} />}
 
         {inLobby && <Seat format={lobby.format} problem={session.deckProblem(lobby.myDeck)} label={lobby.role === "local" && !lobby.vsBot ? "Player 1" : "You"} name={lobby.myName} onName={(n) => session.setName(n)} side={lobby.mySide} deck={lobby.myDeck} db={db} matchups={matchups} onEditDecks={setEditor} onPick={(d) => session.setDeck(d)} onSide={lobby.role !== "guest" ? (s) => session.setSide(s) : undefined} />}
+
+        {lobby.role === "local" && (
+          <div class="seat-vs" aria-hidden="true">
+            <span>VS</span>
+          </div>
+        )}
 
         {lobby.role === "local" && <Seat format={lobby.format} problem={session.deckProblem(session.localOpponentDeck)} label={lobby.vsBot ? "Bot" : "Player 2"} side={other(lobby.mySide)} deck={session.localOpponentDeck} db={db} matchups={matchups} onEditDecks={setEditor} onPick={(d) => session.setDeck(d, other(lobby.mySide))} />}
 

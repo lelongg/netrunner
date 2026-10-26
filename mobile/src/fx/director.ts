@@ -454,7 +454,7 @@ export interface Hit {
   power?: number;
 }
 
-let accessing: { title: string; unseen: boolean; stop: () => void; resolve: (verb: string, title?: string) => void } | null = null;
+let accessing: { title: string; unseen: boolean; stop: () => void; resolve: (verb: string, title?: string) => void; away: (where: "stolen" | "trashed") => void } | null = null;
 let stageFreeAt = 0;
 let accessLog: { seq: number; lines: string[]; run: boolean }[] = [];
 let accessSeq = 0;
@@ -507,8 +507,9 @@ function readLog(view: any, from: number, render: (m: unknown) => string, before
     if (line) {
       const stolen = /\bsteals?\b/i.test(line);
       const named = line.match(/\b(?:steals?|trash(?:es)?)\s+(.+?)(?:\s+from\b.*)?\.?$/i)?.[1];
-      if (stolen || /\btrash/i.test(line)) pending.resolve(stolen ? "Stolen" : "Trashed", pending.unseen ? named : undefined);
-      setTimeout(() => accessing === pending && pending.stop(), stolen ? 2500 : 1600);
+      const trashed = !stolen && /\btrash/i.test(line);
+      if (stolen || trashed) pending.resolve(stolen ? "Stolen" : "Trashed", pending.unseen ? named : undefined);
+      setTimeout(() => accessing === pending && (stolen ? pending.away("stolen") : trashed ? pending.away("trashed") : pending.stop()), stolen ? 2500 : 1600);
     } else if (!view.run || (texts.length && (pending.unseen || !texts.some((t) => t.includes(pending.title))))) pending.stop();
   }
   const kept = hits.filter((h) => h.kind !== "access" || !texts.some((t) => movesCard(t, h.text ?? "")));
@@ -1102,20 +1103,22 @@ function accessShow(view: any, title: string, zone: string) {
   animate(t2, { opacity: [0, 1], y: [12, 0] }, { duration: 0.35, delay: 0.15 });
   buzz(30);
   let ended = false;
-  const end = (fast: boolean) => {
+  const toward = (target: DOMRect | null) => (visible(target) ? { x: target!.left - big.left + target!.width / 2 - big.width / 2, y: target!.top - big.top + target!.height / 2 - big.height / 2 } : null);
+  const end = (to: { x: number; y: number } | null) => {
     if (ended) return;
     ended = true;
     clearTimeout(timer);
     if (accessing?.stop === stop) accessing = null;
     if (accessStage.current?.title === title) accessStage.current = null;
     animate(label, { opacity: 0 }, { duration: 0.2 });
-    animate(ghost, fast ? { opacity: 0 } : { x: from.x, y: from.y, scale: 0.35, opacity: 0 }, { duration: fast ? 0.15 : 0.35, ease: [0.5, 0, 0.3, 1] }).finished.then(
+    animate(ghost, to ? { x: to.x, y: to.y, scale: 0.35, opacity: [1, 1, 0] } : { opacity: 0 }, { duration: to ? 0.45 : 0.15, ease: [0.5, 0, 0.3, 1] }).finished.then(
       () => stageEl.remove(),
       () => stageEl.remove(),
     );
-    animate(stageEl, { backgroundColor: ["rgba(0,0,0,0.55)", "rgba(0,0,0,0)"] }, { duration: fast ? 0.15 : 0.35 });
+    animate(stageEl, { backgroundColor: ["rgba(0,0,0,0.55)", "rgba(0,0,0,0)"] }, { duration: to ? 0.35 : 0.15 });
   };
-  const stop = () => end(true);
+  const stop = () => end(toward(rectOf(accessSource(view, title, zone).el)) ?? from);
+  const away = (where: "stolen" | "trashed") => end(toward(rectOf(anchor(where === "stolen" ? "runner-points" : "corp-discard"))));
   const resolve = (verb: string, revealed?: string) => {
     t1.textContent = verb;
     t1.classList.add("resolved");
@@ -1134,8 +1137,8 @@ function accessShow(view: any, title: string, zone: string) {
       animate(ghost, { rotateY: [-90, 0] }, { duration: 0.22, ease: "easeOut" });
     });
   };
-  const timer = setTimeout(() => end(false), 45000);
-  accessing = { title, unseen, stop, resolve };
+  const timer = setTimeout(stop, 45000);
+  accessing = { title, unseen, stop, resolve, away };
   accessStage.current = { title, at: [big.left + big.width / 2, big.top + big.height / 2], end: stop };
 }
 

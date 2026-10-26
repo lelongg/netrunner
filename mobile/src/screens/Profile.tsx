@@ -65,10 +65,12 @@ function stats(heads: Head[]) {
   };
 }
 
-function DefaultDeck({ side, db, onOpen }: { side: Side; db: CardDb; onOpen: (id: string, side: Side) => void }) {
+function DefaultDeck({ side, db }: { side: Side; db: CardDb }) {
   const [id, setId] = useState(() => defaultDeckId(side));
   const [choosing, setChoosing] = useState(false);
+  const [viewing, setViewing] = useState(false);
   useBackClose(choosing, () => setChoosing(false));
+  useBackClose(viewing, () => setViewing(false));
   const mine = useMemo(() => savedDecks().filter((d) => d.side === side), [choosing]);
   const current = mine.find((d) => d.id === id);
   const pick = (d?: StoredDeck) => {
@@ -80,15 +82,10 @@ function DefaultDeck({ side, db, onOpen }: { side: Side; db: CardDb; onOpen: (id
     <div class="profile-deck">
       <div class="profile-deck-head">
         <span class={`label who-${side}`}>{SIDE_NAME[side]}</span>
-        {mine.length > 0 && (
-          <button class="ghost profile-change" onClick={() => setChoosing(true)}>
-            <Icon name="swap" /> Change
-          </button>
-        )}
       </div>
       {current ? (
         <ul class="deck-library">
-          <DeckRow db={db} stored={current} onOpen={() => onOpen(current.id, side)} issuesOnly />
+          <DeckRow db={db} stored={current} onOpen={() => setChoosing(true)} issuesOnly extra={<Icon name="chevron-right" class="deck-row-go" />} />
         </ul>
       ) : (
         <button class="match-deck-empty" onClick={() => setChoosing(true)} disabled={!mine.length}>
@@ -100,6 +97,11 @@ function DefaultDeck({ side, db, onOpen }: { side: Side; db: CardDb; onOpen: (id
           <div class="sheet panel deck-choose" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={`Default ${SIDE_NAME[side]} deck`}>
             <div class="row">
               <span class={`label who-${side}`}>Default {SIDE_NAME[side]} deck</span>
+              {current && (
+                <button class="ghost sheet-view-list" onClick={() => setViewing(true)}>
+                  View list
+                </button>
+              )}
               <button class="ghost" onClick={() => setChoosing(false)} aria-label="Close">
                 <Icon name="close" />
               </button>
@@ -117,6 +119,7 @@ function DefaultDeck({ side, db, onOpen }: { side: Side; db: CardDb; onOpen: (id
           </div>
         </div>
       )}
+      {viewing && current && <DeckView deck={fromWire(current, db)} onClose={() => setViewing(false)} />}
     </div>
   );
 }
@@ -169,8 +172,8 @@ export function Profile({ db, onClose, onOpenDeck }: { db: CardDb; onClose: () =
 
         <section class="panel section">
           <span class="label">Default decks</span>
-          <DefaultDeck side="corp" db={db} onOpen={onOpenDeck} />
-          <DefaultDeck side="runner" db={db} onOpen={onOpenDeck} />
+          <DefaultDeck side="corp" db={db} />
+          <DefaultDeck side="runner" db={db} />
         </section>
 
         <section class="panel cyan section profile-stats">

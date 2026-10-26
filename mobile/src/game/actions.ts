@@ -102,6 +102,12 @@ export function abilityLabel(ab: any, card?: any): string {
   return ab["cost-label"] ? `${ab["cost-label"]} : ${base}` : base;
 }
 
+function idlePump(ab: any, card: any, view: any): boolean {
+  const label = typeof ab.label === "string" ? ab.label : "";
+  if (!(card.subtypes ?? []).includes("Icebreaker") || !/strength/i.test(label) || /break/i.test(label) || /remainder of the turn/i.test(label)) return false;
+  return /remainder of the run/i.test(label) ? !view.run : !view.encounters;
+}
+
 const ACTIVE_ZONES = new Set(["current", "onhost", "play-area", "scored", "servers", "rig"]);
 
 export function cardCommands(card: any, view: any, side: Side): Command[] {
@@ -160,7 +166,7 @@ export function cardCommands(card: any, view: any, side: Side): Command[] {
       out.push({ label: ACTION_LABELS.trash, command: "trash", args: { card: ref }, kind: "danger" });
     }
     (card.abilities ?? []).forEach((ab: any, i: number) => {
-      out.push(ab.dynamic ? { label: abilityLabel(ab, card), command: "dynamic-ability", args: { card: ref, dynamic: ab.dynamic, source: ab.source, index: ab.index }, enabled: !!ab.playable, check: "disable" } : { label: abilityLabel(ab, card), command: "ability", args: { card: ref, ability: i }, enabled: !!ab.playable, check: "disable", choose: typeof ab.label === "string" && ab.label.startsWith("Toggle auto-resolve") ? CYCLE[autoSetting(card)] : undefined });
+      out.push(ab.dynamic ? { label: abilityLabel(ab, card), command: "dynamic-ability", args: { card: ref, dynamic: ab.dynamic, source: ab.source, index: ab.index }, enabled: !!ab.playable && !idlePump(ab, card, view), check: "disable" } : { label: abilityLabel(ab, card), command: "ability", args: { card: ref, ability: i }, enabled: !!ab.playable && !idlePump(ab, card, view), check: "disable", choose: typeof ab.label === "string" && ab.label.startsWith("Toggle auto-resolve") ? CYCLE[autoSetting(card)] : undefined });
     });
   }
 
