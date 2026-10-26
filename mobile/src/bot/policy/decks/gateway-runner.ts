@@ -396,7 +396,7 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
   for (const p of out) {
     const cost = spend(p);
     const cheapRun = (p.kind === "run" || p.kind === "run-event") && cost <= 3;
-    if (cost > 0 && !cheapRun && floorNear && obs.credits - cost < floor && !(plan.kind === "contest" && p.why.includes(String(plan.detail?.server))) && !(plan.kind === "closing" && (p.kind === "run" || p.kind === "run-event")) && !p.why.startsWith("install Cleaver") && !p.why.startsWith("install Unity") && !p.why.startsWith("install Carmen")) {
+    if (cost > 0 && !cheapRun && floorNear && obs.credits - cost < floor && !(plan.kind === "contest" && p.why.includes(String(plan.detail?.server))) && !(plan.kind === "closing" && (p.kind === "run" || p.kind === "run-event")) && p.kind !== "install-breaker") {
       p.score -= 15;
       p.why += ` (would drop below the ${floor} needed for the remote)`;
     }

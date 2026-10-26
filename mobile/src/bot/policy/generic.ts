@@ -170,7 +170,7 @@ export function runProposals(obs: Observation, limit = 2): Proposal[] {
     if (adv > 1 && obs.hand.length < 1 + adv) continue;
     const run = byCommand(obs, "run", (c) => (c.args as any)?.server === server.label)[0];
     if (!run) continue;
-    const score = 40 + (value - est.credits * 0.3 - est.damage * 1.5) * 4;
+    const score = Math.min(40 + (value - est.credits * 0.3 - est.damage * 1.5) * 4, value < 2 ? 32 : 200);
     out.push(fromCandidate(run, score, `run ${server.label}: value ${value.toFixed(1)}, ${est.exact ? "costs" : "about"} ${est.credits}${est.damage ? `, ${est.damage} damage` : ""}`, "run", est.exact));
   }
   return out;

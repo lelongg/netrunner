@@ -809,3 +809,38 @@ describe("runner respects its grip and its hand (replay 82YJDZAE)", () => {
     expect(chosen.filter((c) => c.startsWith("draw")).length).toBeLessThan(2);
   });
 });
+
+describe("runner installs the breaker it needs before saving for the remote (replay 6TFAXBF3)", () => {
+  it("installs Buzzsaw at four credits with Funhouse and Whitespace rezzed on the centrals", () => {
+    const s = new Scenario("core-nbn", "core-criminal");
+    s.clearHand("corp");
+    s.summon("corp", "Funhouse", "Tithe", "Whitespace", "Tithe", "Whitespace", "Ping", "Palisade", "Tomorrow's Headline");
+    s.credits("corp", 40);
+    for (const [c, srv] of [["Funhouse", "R&D"], ["Tithe", "R&D"], ["Whitespace", "HQ"], ["Tithe", "HQ"], ["Whitespace", "New remote"], ["Ping", "Server 1"], ["Palisade", "Server 1"], ["Tomorrow's Headline", "Server 1"]] as [string, string][]) {
+      s.clicks("corp", 3);
+      s.credits("corp", 40);
+      s.install("corp", c, srv);
+    }
+    s.rez("Funhouse");
+    s.say("corp", "/rez-free");
+    s.act("corp", "Select Tithe");
+    s.say("corp", "/rez-free");
+    s.act("corp", "Select Whitespace");
+    s.credits("corp", 18);
+    s.endTurn("corp");
+    s.clearHand("runner");
+    s.summon("runner", "Pennyshaver", "Smartware Distributor", "Smartware Distributor");
+    s.credits("runner", 20);
+    for (const c of ["Pennyshaver", "Smartware Distributor", "Smartware Distributor"]) {
+      s.clicks("runner", 4);
+      s.install("runner", c);
+    }
+    s.clicks("runner", 4);
+    s.summon("runner", "Buzzsaw", "Carmen", "Verbal Plasticity", "Red Team", "Overclock");
+    s.credits("runner", 4);
+    const move = s.decide("runner");
+    expect(move?.command).toBe("play");
+    expect(s.last("runner").chosen?.why).toMatch(/install Buzzsaw/);
+    expect(best(s, "runner", (w) => w.startsWith("run Archives"))).toBeLessThan(35);
+  });
+});
