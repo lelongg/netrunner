@@ -1,7 +1,11 @@
 import type { ComponentChildren } from "preact";
+import { createPortal } from "preact/compat";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { Card, CardDb, Deck, Matchup, Side } from "../engine";
-import { type StoredDeck, type WireDeck, defaultDeckId, setDefaultDeckId, fromPrecon, fromWire, importNrdb, parseDecklist, putDeck, removeDeck, savedDecks, toWire } from "../decks";
+import { type DeckSource, type DeckVersion, type StoredDeck, type WireDeck, cardDiff, deckBySource, defaultDeckId, setDefaultDeckId, fetchNrdb, fromPrecon, fromWire, parseDecklist, putDeck, recordVersion, removeDeck, sameList, savedDecks, toWire } from "../decks";
+import type { DeckResult, Decklist } from "../nrdb";
+
+export const listSource = (l: Decklist): DeckSource => ({ kind: "nrdb", id: l.id, author: l.user, updated: l.created });
 import { type FormatKey, FORMAT_DESC, FORMATS, deckFormat, TYPE_ORDER, analyze, costCurve, deckLimit, groupByType, influenceByFaction, influenceOf, isNeutral, legality, subtypeSpread, toText } from "../deckrules";
 import { CardImage, ZoomableCardImage, useCardPeek } from "../game/CardImage";
 import { RichText } from "../game/RichText";
@@ -68,6 +72,7 @@ export function Decks({ db, matchups, onClose, initialSide, initialDeck }: { db:
   const [editing, setEditing] = useState<StoredDeck | null>(() => (initialDeck ? (savedDecks().find((d) => d.id === initialDeck) ?? null) : null));
   const [creating, setCreating] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [pending, setPending] = useState<{ deck: Deck; source?: DeckSource } | null>(null);
   const [browsing, setBrowsing] = useState(false);
   useBackClose(browsing, () => setBrowsing(false));
   useBackClose(true, onClose);
@@ -176,8 +181,7 @@ export function Decks({ db, matchups, onClose, initialSide, initialDeck }: { db:
           db={db}
           side={side}
           onClose={() => setBrowsing(false)}
-          onDone={(deck, format) => {
-            const stored = putDeck({ ...toWire(deck), side, format });
+          onDone={(stored) => {
             setBrowsing(false);
             refresh();
             setEditing(stored);
@@ -189,10 +193,21 @@ export function Decks({ db, matchups, onClose, initialSide, initialDeck }: { db:
           db={db}
           side={side}
           onClose={() => setImporting(false)}
-          onDone={(deck) => {
-            const deckSide: Side = deck.identity.side === "Corp" ? "corp" : "runner";
-            setSide(deckSide);
-            const stored = putDeck({ ...toWire(deck), side: deckSide, format: defaultDeckFormat() });
+          onDone={(deck, source) => {
+            setSide(deck.identity.side === "Corp" ? "corp" : "runner");
+            setPending({ deck, source });
+          }}
+        />
+      )}
+      {pending && (
+        <DeckPreview
+          deck={pending.deck}
+          source={pending.source}
+          format={defaultDeckFormat()}
+          mode="save"
+          onClose={() => setPending(null)}
+          onSaved={(stored) => {
+            setPending(null);
             setImporting(false);
             refresh();
             setEditing(stored);
@@ -319,8 +334,9 @@ export function DeckRow({ db, stored, onOpen, format, selected, disabled, issues
   );
 }
 
-export function BrowseSheet({ db, side, onClose, onDone, similarTo, initialFormat }: { db: CardDb; side: Side; onClose: () => void; onDone: (deck: Deck, format: FormatKey) => void; similarTo?: Deck; initialFormat?: FormatKey }) {
+export function BrowseSheet({ db, side, onClose, onDone, similarTo, initialFormat }: { db: CardDb; side: Side; onClose: () => void; onDone: (stored: StoredDeck) => void; similarTo?: Deck; initialFormat?: FormatKey }) {
   const [format, setFormat] = useState<FormatKey>(initialFormat ?? defaultDeckFormat);
+  const [picked, setPicked] = useState<Decklist | null>(null);
   return (
     <div class="sheet-backdrop" onClick={onClose}>
       <div class="sheet panel deck-choose" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Browse NetrunnerDB decklists">
@@ -334,13 +350,14 @@ export function BrowseSheet({ db, side, onClose, onDone, similarTo, initialForma
           <span class="label">Format</span>
           <Picker title="Format" value={format} onChange={setFormat} options={FORMATS.map((f) => ({ key: f.key, label: f.label, hint: FORMAT_DESC[f.key] }))} />
         </section>
-        <DeckBrowser side={side} db={db} format={format} similarTo={similarTo} onPick={(l) => l.deck && onDone(l.deck, format)} />
+        <DeckBrowser side={side} db={db} format={format} similarTo={similarTo} onPick={(l) => l.deck && setPicked(l)} />
+        {picked?.deck && <DeckPreview deck={picked.deck} format={format} source={listSource(picked)} result={picked.result} mode="save" onClose={() => setPicked(null)} onSaved={onDone} />}
       </div>
     </div>
   );
 }
 
-function ImportSheet({ db, side, onClose, onDone }: { db: CardDb; side: Side; onClose: () => void; onDone: (deck: Deck) => void }) {
+function ImportSheet({ db, side, onClose, onDone }: { db: CardDb; side: Side; onClose: () => void; onDone: (deck: Deck, source?: DeckSource) => void }) {
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
@@ -349,7 +366,10 @@ function ImportSheet({ db, side, onClose, onDone }: { db: CardDb; side: Side; on
     setError(undefined);
     try {
       const t = text.trim();
-      onDone(/^\S+$/.test(t) && /netrunnerdb\.com|^[0-9a-f-]{36}$/i.test(t) ? await importNrdb(t, side, db) : parseDecklist(t, side, db));
+      if (/^\S+$/.test(t) && /netrunnerdb\.com|^[0-9a-f-]{36}$/i.test(t)) {
+        const found = await fetchNrdb(t, side, db);
+        onDone(found.deck, found.source);
+      } else onDone(parseDecklist(t, side, db));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -368,7 +388,7 @@ function ImportSheet({ db, side, onClose, onDone }: { db: CardDb; side: Side; on
         <textarea rows={8} value={text} onInput={(e) => setText((e.target as HTMLTextAreaElement).value)} placeholder={"NetrunnerDB link\nor a text decklist:\nHaas-Bioroid: Precision Design\n3x Hedge Fund\n…"} />
         {error && <p class="error">{error}</p>}
         <button class="primary" disabled={busy || !text.trim()} onClick={go}>
-          {busy ? "Importing…" : "Import"}
+          {busy ? "Reading…" : "Preview"}
         </button>
       </div>
     </div>
@@ -541,17 +561,81 @@ function FormatSelect({ value, onChange }: { value: FormatKey; onChange: (f: For
 
 type Tab = "deck" | "cards" | "stats";
 
-export function DeckView({ deck, format = "casual", onClose }: { deck: Deck; format?: FormatKey; onClose: () => void }) {
+export function DeckView({ deck, format = "casual", onClose, footer, subtitle }: { deck: Deck; format?: FormatKey; onClose: () => void; footer?: ComponentChildren; subtitle?: ComponentChildren }) {
   const side: Side = deck.identity.side === "Corp" ? "corp" : "runner";
   useBackClose(true, onClose);
-  return (
+  return createPortal(
     <div class="deck-view-overlay">
-      <DeckEditor initial={{ ...toWire(deck), side, id: "", format }} deck0={deck} onClose={onClose} readOnly />
-    </div>
+      <DeckEditor initial={{ ...toWire(deck), side, id: "", format }} deck0={deck} onClose={onClose} readOnly footer={footer} subtitle={subtitle} />
+    </div>,
+    document.body,
   );
 }
 
-function DeckEditor({ db, initial, deck0, onClose, onOpen, readOnly }: { db?: CardDb; initial: StoredDeck; deck0?: Deck; onClose: () => void; onOpen?: (d: StoredDeck) => void; readOnly?: boolean }) {
+const shortDate = (iso?: string | number) => (iso ? new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }) : "");
+
+export function DeckPreview({ deck, format, source, result, mode, onClose, onSaved, onPlay }: { deck: Deck; format: FormatKey; source?: DeckSource; result?: DeckResult; mode: "save" | "play"; onClose: () => void; onSaved: (stored: StoredDeck) => void; onPlay?: (wire: WireDeck) => void }) {
+  const side: Side = deck.identity.side === "Corp" ? "corp" : "runner";
+  const existing = source ? deckBySource(source.id) : undefined;
+  const wire = toWire(deck);
+  const differs = !!existing && !sameList(existing, wire);
+  const save = () => onSaved(putDeck({ ...wire, side, format, source }));
+  const update = () => {
+    recordVersion(existing!.id, existing!, "update");
+    return putDeck({ ...existing!, ...wire, name: existing!.name, source });
+  };
+  const ref = (d: StoredDeck): WireDeck => ({ name: d.name, identity: d.identity, cards: d.cards, ref: d.id });
+  const subtitle = (
+    <span class="preview-source">
+      {source ? "NetrunnerDB" : "Imported list"}
+      {source?.author && ` · by ${source.author}`}
+      {source?.updated && ` · ${shortDate(source.updated)}`}
+      {result && ` · ${result.place === 1 ? "won" : `${result.place}${["th", "st", "nd", "rd"][result.place % 10 > 3 || [11, 12, 13].includes(result.place % 100) ? 0 : result.place % 10]} of ${result.players}`} at ${result.title}`}
+    </span>
+  );
+  const footer = (
+    <div class="preview-actions">
+      {existing && (
+        <p class="preview-note">
+          In your decks as <b>{existing.name}</b>
+          {differs ? ", with a different list." : "."}
+        </p>
+      )}
+      <div class="preview-buttons">
+        {existing ? (
+          <>
+            {mode === "play" ? <button onClick={() => onPlay?.(ref(existing))}>Play my copy</button> : <button onClick={() => onSaved(existing)}>Open my copy</button>}
+            {differs && (
+              <button class="primary" onClick={() => (mode === "play" ? onPlay?.(ref(update())) : onSaved(update()))}>
+                Update my copy
+              </button>
+            )}
+          </>
+        ) : mode === "play" ? (
+          <>
+            <button onClick={() => onPlay?.(wire)}>Play it once</button>
+            <button
+              class="primary"
+              onClick={() => {
+                const stored = putDeck({ ...wire, side, format, source });
+                onPlay?.(ref(stored));
+              }}
+            >
+              Save and play
+            </button>
+          </>
+        ) : (
+          <button class="primary" onClick={save}>
+            Save to my decks
+          </button>
+        )}
+      </div>
+    </div>
+  );
+  return <DeckView deck={deck} format={format} onClose={onClose} footer={footer} subtitle={subtitle} />;
+}
+
+function DeckEditor({ db, initial, deck0, onClose, onOpen, readOnly, footer, subtitle }: { db?: CardDb; initial: StoredDeck; deck0?: Deck; onClose: () => void; onOpen?: (d: StoredDeck) => void; readOnly?: boolean; footer?: ComponentChildren; subtitle?: ComponentChildren }) {
   const [deck, setDeck] = useState<Deck>(() => deck0 ?? fromWire(initial, db!));
   const [format, setFormat] = useState<FormatKey>(formatOf(initial));
   const [pinned, setPinned] = useState(() => !!initial.id && defaultDeckId(initial.side) === initial.id);
@@ -574,6 +658,23 @@ function DeckEditor({ db, initial, deck0, onClose, onOpen, readOnly }: { db?: Ca
     if (readOnly) return;
     putDeck({ ...toWire(deck), side, id: initial.id, format, cover });
   }, [deck, format, cover]);
+  const [history, setHistory] = useState(false);
+  useBackClose(history, () => setHistory(false));
+  const sessionStart = useRef<WireDeck>(toWire(deck));
+  const current = useRef(deck);
+  current.current = deck;
+  const closeSession = () => {
+    if (readOnly || !initial.id) return;
+    if (!sameList(sessionStart.current, toWire(current.current))) recordVersion(initial.id, sessionStart.current, "edit");
+    sessionStart.current = toWire(current.current);
+  };
+  useEffect(() => closeSession, []);
+  const replaceList = (next: Deck, reason: DeckVersion["reason"]) => {
+    closeSession();
+    recordVersion(initial.id, toWire(deck), reason);
+    sessionStart.current = toWire(next);
+    setDeck(next);
+  };
   const a = useMemo(() => analyze(deck, format), [deck, format]);
   const qtyOf = useMemo(() => new Map(deck.cards.map((e) => [e.card.title, e.qty])), [deck]);
   const setQty = (card: Card, qty: number) => {
@@ -604,9 +705,9 @@ function DeckEditor({ db, initial, deck0, onClose, onOpen, readOnly }: { db?: Ca
         similarTo={deck}
         initialFormat={format}
         onClose={() => setAlike(false)}
-        onDone={(found, f) => {
+        onDone={(stored) => {
           setAlike(false);
-          onOpen?.(putDeck({ ...toWire(found), side, format: f }));
+          onOpen?.(stored);
         }}
       />
     );
@@ -698,6 +799,14 @@ function DeckEditor({ db, initial, deck0, onClose, onOpen, readOnly }: { db?: Ca
                 </button>
               )}
               <button
+                onClick={() => {
+                  setMenu(false);
+                  setHistory(true);
+                }}
+              >
+                <Icon name="history" /> History
+              </button>
+              <button
                 class="danger"
                 onClick={async () => {
                   setMenu(false);
@@ -712,6 +821,7 @@ function DeckEditor({ db, initial, deck0, onClose, onOpen, readOnly }: { db?: Ca
           </>
         )}
 
+        {subtitle && <p class="editor-subtitle">{subtitle}</p>}
         <section class={`panel deck-summary faction-${factionKey(deck.identity.faction)}`}>
           <span class="summary-mark" aria-hidden="true">
             {(FACTION_SHORT[deck.identity.faction ?? "Neutral"] ?? deck.identity.faction ?? "").toUpperCase()}
@@ -764,7 +874,21 @@ function DeckEditor({ db, initial, deck0, onClose, onOpen, readOnly }: { db?: Ca
           {tab === "cards" && db && <CardBrowser db={db} deck={deck} format={format} qtyOf={qtyOf} onQty={setQty} onOpen={open} />}
           {tab === "stats" && <DeckStats deck={deck} onOpen={open} />}
         </Swipe>
+        {footer && <div class="editor-footer">{footer}</div>}
       </div>
+      {history && db && (
+        <HistorySheet
+          db={db}
+          deckId={initial.id}
+          deck={deck}
+          side={side}
+          onRestore={(next, reason) => {
+            replaceList(next, reason);
+            setHistory(false);
+          }}
+          onClose={() => setHistory(false)}
+        />
+      )}
       {detail && (
         <CardSheet
           cover={readOnly ? undefined : { code: cover, set: setCover }}
@@ -779,6 +903,124 @@ function DeckEditor({ db, initial, deck0, onClose, onOpen, readOnly }: { db?: Ca
         />
       )}
     </>
+  );
+}
+
+const VERSION_LABEL: Record<DeckVersion["reason"], string> = { edit: "Before your edits", update: "Before a NetrunnerDB update", restore: "Before a restore" };
+
+function DiffList({ from, to }: { from: WireDeck; to: WireDeck }) {
+  const diff = cardDiff(from.cards, to.cards);
+  return (
+    <ul class="deck-diff">
+      {from.identity !== to.identity && <li class="id">Identity: {from.identity}</li>}
+      {diff.map((d) => (
+        <li class={d.delta > 0 ? "add" : "cut"}>
+          <b>{d.delta > 0 ? `+${d.delta}` : `−${-d.delta}`}</b> {d.title}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function HistorySheet({ db, deckId, deck, side, onRestore, onClose }: { db: CardDb; deckId: string; deck: Deck; side: Side; onRestore: (next: Deck, reason: DeckVersion["reason"]) => void; onClose: () => void }) {
+  const stored = savedDecks().find((d) => d.id === deckId);
+  const versions = stored?.versions ?? [];
+  const now = toWire(deck);
+  const [open, setOpen] = useState<number | null>(null);
+  const [remote, setRemote] = useState<{ deck: Deck; source?: DeckSource } | null | "same" | "busy">(null);
+  const [error, setError] = useState<string>();
+  const source = stored?.source;
+  const check = async () => {
+    if (!source) return;
+    setRemote("busy");
+    setError(undefined);
+    try {
+      const found = await fetchNrdb(`https://netrunnerdb.com/en/decklist/${source.id}`, side, db);
+      setRemote(sameList(toWire(found.deck), now) ? "same" : found);
+    } catch (e) {
+      setRemote(null);
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
+  return (
+    <div class="sheet-backdrop" onClick={onClose}>
+      <div class="sheet panel versions-sheet" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Deck history">
+        <div class="row">
+          <span class="label">History · {deck.name}</span>
+          <button class="ghost" onClick={onClose} aria-label="Close">
+            <Icon name="close" />
+          </button>
+        </div>
+        {source && (
+          <section class="versions-source">
+            <span>
+              From NetrunnerDB{source.author ? ` · by ${source.author}` : ""}
+              {source.updated ? ` · ${shortDate(source.updated)}` : ""}
+            </span>
+            {remote === "busy" ? (
+              <span class="hint">Checking…</span>
+            ) : remote === "same" ? (
+              <span class="hint">Your list matches the published one.</span>
+            ) : remote ? (
+              <>
+                <span class="hint">The published list differs from yours:</span>
+                <DiffList from={now} to={toWire(remote.deck)} />
+                <button
+                  class="primary"
+                  onClick={() => {
+                    putDeck({ ...stored!, source: remote.source ?? source });
+                    onRestore({ ...remote.deck, name: deck.name }, "update");
+                  }}
+                >
+                  Take the published list
+                </button>
+              </>
+            ) : (
+              <button onClick={check}>Check NetrunnerDB for updates</button>
+            )}
+            {error && <p class="error">{error}</p>}
+          </section>
+        )}
+        {versions.length === 0 ? (
+          <p class="hint">No earlier version yet. Each editing session that changes the list keeps the list it started from here.</p>
+        ) : (
+          <ul class="versions-list">
+            {versions.map((v, i) => {
+              const diff = cardDiff(now.cards, v.cards);
+              return (
+                <li>
+                  <button class={`versions-row ${open === i ? "on" : ""}`} onClick={() => setOpen(open === i ? null : i)} aria-expanded={open === i}>
+                    <span class="versions-when">{new Date(v.at).toLocaleString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
+                    <span class="versions-what">
+                      {VERSION_LABEL[v.reason]} · {diff.length ? `${diff.length} card${diff.length > 1 ? "s" : ""} differ` : v.identity !== now.identity ? "other identity" : "same list"}
+                    </span>
+                  </button>
+                  {open === i && (
+                    <div class="versions-detail">
+                      <span class="hint">Restoring it changes your list by:</span>
+                      <DiffList from={now} to={v} />
+                      <button
+                        class="primary"
+                        disabled={sameList(v, now)}
+                        onClick={() => {
+                          try {
+                            onRestore(fromWire({ ...v, name: deck.name }, db), "restore");
+                          } catch {
+                            tell("Cannot restore", "This version uses cards that are no longer known.");
+                          }
+                        }}
+                      >
+                        Restore this version
+                      </button>
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+    </div>
   );
 }
 

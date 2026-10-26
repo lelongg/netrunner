@@ -2,7 +2,8 @@ import { useMemo, useState } from "preact/hooks";
 import type { CardDb, Matchup, Side } from "../engine";
 import { CardImage } from "../game/CardImage";
 import { useBackClose } from "../back";
-import { DeckRow, DeckView } from "./Decks";
+import { DeckPreview, DeckRow, DeckView, listSource } from "./Decks";
+import type { Decklist } from "../nrdb";
 import { type WireDeck, defaultStored, deckSize, fromPrecon, fromWire, putDeck, savedDecks, toWire } from "../decks";
 import { DeckBrowser } from "./DeckBrowser";
 import { Icon } from "../icons";
@@ -83,6 +84,7 @@ export function DeckPicker({ side, db, matchups, value, onChange, onEditDecks, s
   );
   const precons = useMemo(() => preconChoices(side, db, matchups, format), [matchups, side, format]);
   const [browsing, setBrowsing] = useState(false);
+  const [picked, setPicked] = useState<Decklist | null>(null);
   const current = useMemo(() => (value ? fromWire(value, db) : undefined), [value]);
   useBackClose(viewing, () => setViewing(false));
   useBackClose(browsing, () => setBrowsing(false));
@@ -150,13 +152,24 @@ export function DeckPicker({ side, db, matchups, value, onChange, onEditDecks, s
               side={side}
               db={db}
               format={rules}
-              onPick={(l) => {
-                if (!l.deck) return;
-                const stored = putDeck({ ...toWire(l.deck), side, format: rules });
-                setBrowsing(false);
-                onChange({ name: stored.name, identity: stored.identity, cards: stored.cards, ref: stored.id });
-              }}
+              onPick={(l) => l.deck && setPicked(l)}
             />
+            {picked?.deck && (
+              <DeckPreview
+                deck={picked.deck}
+                format={rules}
+                source={listSource(picked)}
+                result={picked.result}
+                mode="play"
+                onClose={() => setPicked(null)}
+                onSaved={() => {}}
+                onPlay={(wire) => {
+                  setPicked(null);
+                  setBrowsing(false);
+                  onChange(wire);
+                }}
+              />
+            )}
           </div>
         </div>
       )}
