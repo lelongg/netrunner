@@ -103,7 +103,9 @@ export function abilityLabel(ab: any, card?: any): string {
 }
 
 function idlePump(ab: any, card: any, view: any): boolean {
-  return !view.encounters && (card.subtypes ?? []).includes("Icebreaker") && typeof ab.label === "string" && /strength/i.test(ab.label) && !/break/i.test(ab.label);
+  const label = typeof ab.label === "string" ? ab.label : "";
+  if (!(card.subtypes ?? []).includes("Icebreaker") || !/strength/i.test(label) || /break/i.test(label) || /remainder of the turn/i.test(label)) return false;
+  return /remainder of the run/i.test(label) ? !view.run : !view.encounters;
 }
 
 const ACTIVE_ZONES = new Set(["current", "onhost", "play-area", "scored", "servers", "rig"]);
