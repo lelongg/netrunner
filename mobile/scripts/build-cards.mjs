@@ -66,6 +66,7 @@ try {
   console.warn(`format pools unavailable: ${e.message}`);
 }
 await writeFile(new URL("formats.json", OUT), JSON.stringify(pools));
+await copyFile(new URL("../i18n/cards.fr.json", import.meta.url), new URL("cards.fr.json", OUT));
 
 for (const lang of LANGS) {
   const dir = new URL(`${lang}/`, I18N_OUT);
