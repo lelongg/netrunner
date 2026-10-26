@@ -1,6 +1,7 @@
 import type { Card, CardDb, Deck, Side } from "./engine";
 import { relayUrl } from "./net/relay";
 import { cardId } from "./cardid";
+import { t } from "./i18n";
 
 const API = "https://api.netrunnerdb.com/api/v3/public/decklists";
 const PAGE = 20;
@@ -132,7 +133,7 @@ export async function fetchSimilar(db: CardDb, of: { id: string } | Deck, format
     params.set("cards", of.cards.map((e) => `${e.card.code}:${e.qty}`).join(","));
   }
   const json = await relayJson("/decklists/similar", params);
-  if (!json) throw new Error("The deck index is unreachable right now.");
+  if (!json) throw new Error(t("The deck index is unreachable right now."));
   return (json.items as any[]).map((row) => fromIndex(row, db));
 }
 
@@ -161,11 +162,11 @@ async function fromRelay(db: CardDb, side: Side, faction: string | null, page: n
 export async function fetchDecklists(db: CardDb, side: Side, faction: string | null, page: number, format?: string, search: DeckSearch = {}) {
   const indexed = await fromRelay(db, side, faction, page, format, search);
   if (indexed) return indexed;
-  if (search.q || search.cards?.length || search.identity || search.top || (search.sort && search.sort !== "new")) throw new Error("Search needs the deck index, which is unreachable right now.");
+  if (search.q || search.cards?.length || search.identity || search.top || (search.sort && search.sort !== "new")) throw new Error(t("Search needs the deck index, which is unreachable right now."));
   const params = new URLSearchParams({ "filter[side_id]": side, sort: "-created_at", "page[size]": String(PAGE), "page[number]": String(page) });
   if (faction) params.set("filter[faction_id]", faction);
   const res = await fetch(`${API}?${params}`);
-  if (!res.ok) throw new Error(`NetrunnerDB answered ${res.status}`);
+  if (!res.ok) throw new Error(t("NetrunnerDB answered {status}", { status: res.status }));
   const json = await res.json();
   return {
     items: (json.data ?? []).filter((d: any) => d.attributes.follows_basic_deckbuilding_rules).map((d: any) => toDecklist(d, db)) as Decklist[],

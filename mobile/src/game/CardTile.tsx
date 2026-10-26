@@ -4,6 +4,7 @@ import { Verified } from "./legal";
 import { advancement, isFaceup, zone0 } from "./actions";
 import { ICON_SET, Icon, type IconName } from "../icons";
 import { faceCode } from "../engine";
+import { t } from "../i18n";
 
 export function visibleCode(card: any, viewerIsOwner: boolean): string | undefined {
   if (!card?.code) return undefined;
@@ -76,8 +77,8 @@ export function CardTile({
   };
   return (
     <div class="tile-wrap">
-      <button key={`${card.cid}:${code ?? ""}:${card.rezzed ? 1 : 0}`} class={classes} data-cid={card.cid} onClick={tap} {...peek.handlers} aria-label={card.title ?? "Hidden card"}>
-        {code ? <CardImage code={code} alt={card.title} size={size === "lg" ? "large" : "small"} lazy /> : <span class="back-label">{card.side === "Corp" ? "CORP" : "RUN"}</span>}
+      <button key={`${card.cid}:${code ?? ""}:${card.rezzed ? 1 : 0}`} class={classes} data-cid={card.cid} onClick={tap} {...peek.handlers} aria-label={card.title ?? t("Hidden card")}>
+        {code ? <CardImage code={code} alt={card.title} size={size === "lg" ? "large" : "small"} lazy /> : <span class="back-label">{card.side === "Corp" ? t("CORP") : t("RUN")}</span>}
         <div class="badges">
           {counters(card).map(([icon, n]) => (
             <span class="badge">
@@ -97,7 +98,7 @@ export function CardTile({
             {strDelta}
           </span>}
         {code && shownCost != null && (
-          <span class="badge corner cost" aria-label={`cost ${shownCost}${card.cost != null && shownCost !== card.cost ? `, printed ${card.cost}` : ""}`}>
+          <span class="badge corner cost" aria-label={card.cost != null && shownCost !== card.cost ? t("cost {n}, printed {printed}", { n: shownCost, printed: card.cost }) : t("cost {n}", { n: shownCost })}>
             <Icon name="credit" class="glyph" />
             {shownCost}
             {card.cost != null && shownCost < card.cost && <span class="cost-delta down">▾</span>}
@@ -114,9 +115,9 @@ export function CardTile({
             <Icon name="advance" />
           </span>
         )}
-        {card.new && <span class="new-tag">New</span>}
-        {dim && <span class="state">unrezzed</span>}
-        {scorable ? <span class="state">score</span> : owner && card.side === "Corp" && zone0(card) === "servers" && !isFaceup(card) && card.type === "Agenda" && <span class="state">facedown</span>}
+        {card.new && <span class="new-tag">{t("New")}</span>}
+        {dim && <span class="state">{t("unrezzed")}</span>}
+        {scorable ? <span class="state">{t("score")}</span> : owner && card.side === "Corp" && zone0(card) === "servers" && !isFaceup(card) && card.type === "Agenda" && <span class="state">{t("facedown")}</span>}
       </button>
       {hosted.length > 0 && (
         <div class="hosted">

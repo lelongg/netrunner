@@ -10,7 +10,10 @@ import { RichText } from "./RichText";
 import { useSheetPager } from "./swipe";
 import { iconize, serverLabel, serverName, serverRank } from "./text";
 import { Icon, type IconName } from "../icons";
+import { cardText } from "../cardtext";
 import { glyphs } from "./Glyphs";
+import { t } from "../i18n";
+import { labelText, shown } from "./labels";
 
 interface Chip {
   text: string;
@@ -36,7 +39,7 @@ const COUNTER_TIPS: Record<string, string> = {
 };
 
 function ordinal(n: number) {
-  return `${n}${n === 1 ? "st" : n === 2 ? "nd" : n === 3 ? "rd" : "th"}`;
+  return n === 2 ? t("2nd") : n === 3 ? t("3rd") : t("{n}th", { n });
 }
 
 function cardFacts(card: any, viewer: Side, view: any, known: boolean): Facts {
@@ -51,21 +54,21 @@ function cardFacts(card: any, viewer: Side, view: any, known: boolean): Facts {
       const ices: any[] = view.corp?.servers?.[key]?.ices ?? [];
       const i = ices.findIndex((c) => c.cid === card.cid);
       const fromOutside = i < 0 ? 0 : ices.length - i;
-      if (ices.length > 1) facts.where.push(fromOutside === 1 ? "outermost" : i === 0 ? "innermost" : `${ordinal(fromOutside)} from outside`);
-      if (!known && viewer === "runner") facts.hint = "Revealed if the Corp rezzes it when you approach.";
+      if (ices.length > 1) facts.where.push(fromOutside === 1 ? t("outermost") : i === 0 ? t("innermost") : t("{nth} from outside", { nth: ordinal(fromOutside) }));
+      if (!known && viewer === "runner") facts.hint = t("Revealed if the Corp rezzes it when you approach.");
     } else {
-      facts.where.push("root");
-      if (!known && viewer === "runner") facts.hint = "Run the server and access it to find out what it is.";
+      facts.where.push(t("root"));
+      if (!known && viewer === "runner") facts.hint = t("Run the server and access it to find out what it is.");
     }
-    facts.where.push(card.rezzed ? "rezzed" : known && card.type === "Agenda" ? "facedown" : "unrezzed");
-  } else if (z[0] === "rig") facts.where.push(known ? (mine ? "your rig" : "Runner's rig") : "facedown in the rig");
-  else if (z[0] === "onhost") facts.where.push("hosted");
-  else if (z[0] === "hand") facts.where.push(corp ? "HQ" : "grip");
-  else if (z[0] === "deck") facts.where.push(corp ? "R&D" : "stack");
-  else if (z[0] === "discard") facts.where.push(corp ? "Archives" : "heap", ...(known ? [] : ["facedown"]));
-  else if (z[0] === "scored") facts.where.push(`scored · ${card.agendapoints ?? 0} pts`);
-  else if (z[0] === "current") facts.where.push("current");
-  if (card.new && (z[0] === "servers" || z[0] === "rig")) facts.chips.push({ text: "New", tone: "new", tip: "New · installed since its owner's turn began." });
+    facts.where.push(card.rezzed ? t("rezzed") : known && card.type === "Agenda" ? t("facedown") : t("unrezzed"));
+  } else if (z[0] === "rig") facts.where.push(known ? (mine ? t("your rig") : t("Runner's rig")) : t("facedown in the rig"));
+  else if (z[0] === "onhost") facts.where.push(t("hosted"));
+  else if (z[0] === "hand") facts.where.push(corp ? t("HQ") : t("grip"));
+  else if (z[0] === "deck") facts.where.push(corp ? t("R&D") : t("stack"));
+  else if (z[0] === "discard") facts.where.push(corp ? t("Archives") : t("heap"), ...(known ? [] : [t("facedown")]));
+  else if (z[0] === "scored") facts.where.push(t("scored · {n} pts", { n: card.agendapoints ?? 0 }));
+  else if (z[0] === "current") facts.where.push(t("current"));
+  if (card.new && (z[0] === "servers" || z[0] === "rig")) facts.chips.push({ text: t("New"), tone: "new", tip: t("New · installed since its owner's turn began.") });
   const adv = (card["advance-counter"] ?? 0) + (card["extra-advance-counter"] ?? 0);
   if (adv) {
     const req = card["current-advancement-requirement"] ?? card.advancementcost;
@@ -74,21 +77,21 @@ function cardFacts(card: any, viewer: Side, view: any, known: boolean): Facts {
       icon: "advance",
       text: agenda ? `${adv}/${req}` : String(adv),
       tip: agenda
-        ? `Advancement counters · ${adv} of the ${req} this agenda needs before the Corp can score it.`
-        : `Advancement counters · ${adv} on this card. Agendas need them to be scored, and some ice and assets get stronger with them. The Corp adds them for 1 click and 1 credit, or with card effects.`,
+        ? t("Advancement counters · {adv} of the {req} this agenda needs before the Corp can score it.", { adv, req })
+        : t("Advancement counters · {adv} on this card. Agendas need them to be scored, and some ice and assets get stronger with them. The Corp adds them for 1 click and 1 credit, or with card effects.", { adv }),
     });
   }
   for (const [k, v] of Object.entries<any>(card.counter ?? {})) {
     if (!v) continue;
-    const tip = COUNTER_TIPS[k] ?? `${k[0].toUpperCase()}${k.slice(1)} counters · used by this card's abilities.`;
+    const tip = COUNTER_TIPS[k] ? t(COUNTER_TIPS[k]) : t("{Kind} counters · used by this card's abilities.", { Kind: `${k[0].toUpperCase()}${k.slice(1)}` });
     facts.chips.push(COUNTER_ICONS[k] ? { icon: COUNTER_ICONS[k], text: String(v), tip } : { text: `${k} ${v}`, tip });
   }
-  if (card["rec-counter"]) facts.chips.push({ icon: "recurring", text: String(card["rec-counter"]), tip: "Recurring credits · placed on this card again each turn, and spent only the way the card says." });
+  if (card["rec-counter"]) facts.chips.push({ icon: "recurring", text: String(card["rec-counter"]), tip: t("Recurring credits · placed on this card again each turn, and spent only the way the card says.") });
   const now = card["current-strength"];
   if (known && now != null && card.strength != null && now !== card.strength)
-    facts.chips.push({ icon: "strength", text: `${now} (${card.strength})`, tone: "cyan", tip: `Strength ${now} · printed ${card.strength}, changed by effects in play. An icebreaker needs at least the ice's strength to break it.` });
+    facts.chips.push({ icon: "strength", text: `${now} (${card.strength})`, tone: "cyan", tip: t("Strength {now} · printed {printed}, changed by effects in play. An icebreaker needs at least the ice's strength to break it.", { now, printed: card.strength }) });
   const hosted: any[] = card.hosted ?? [];
-  if (hosted.length) facts.chips.push({ text: `hosting ${hosted.map((h) => (h.title && (h.seen || h.rezzed || h.side === "Runner" || mine) ? h.title : "facedown card")).join(", ")}`, tip: "Hosted cards · they sit on this card and are trashed if it leaves play." });
+  if (hosted.length) facts.chips.push({ text: t("hosting {cards}", { cards: hosted.map((h) => (h.title && (h.seen || h.rezzed || h.side === "Runner" || mine) ? h.title : t("facedown card"))).join(", ") }), tip: t("Hosted cards · they sit on this card and are trashed if it leaves play.") });
   return facts;
 }
 
@@ -99,12 +102,12 @@ function CardBack({ side }: { side: string }) {
   useLoop(scan, { transform: ["translateY(-30%)", "translateY(1100%)"] }, { duration: 3.2, ease: "linear" });
   useLoop(name, { x: [0, 0, -3, 4, 0, 0], opacity: [1, 1, 0.55, 1, 0.8, 1] }, { duration: 4, times: [0, 0.86, 0.88, 0.9, 0.93, 1], ease: "linear" });
   return (
-    <div class={`sheet-img card-back ${corp ? "corp" : "runner"}`} aria-label="Hidden card">
+    <div class={`sheet-img card-back ${corp ? "corp" : "runner"}`} aria-label={t("Hidden card")}>
       <span class="back-frame" />
       <span class="back-name" ref={name} data-text={corp ? "CORP" : "RUNNER"}>
         {corp ? "CORP" : "RUNNER"}
       </span>
-      <span class="back-stamp">Classified</span>
+      <span class="back-stamp">{t("Classified")}</span>
       <span class="back-redacted">
         <i />
         <i />
@@ -143,8 +146,8 @@ function SheetInfo({ card, code, full, side, view }: { card: any; code?: string;
         const facts = cardFacts(card, side, view, !!code);
         return (
           <>
-            <span class="label">{[code ? card.type : card.side, ...(code && card.subtypes?.length ? card.subtypes : []), ...facts.where].join(" · ")}</span>
-            <h2>{code ? (full?.title ?? card.title) : "Classified"}</h2>
+            <span class="label">{[t(code ? card.type : card.side), ...(code && card.subtypes?.length ? card.subtypes.map((x: string) => t(x)) : []), ...facts.where].join(" · ")}</span>
+            <h2>{code ? (full?.title ?? card.title) : t("Classified")}</h2>
             {facts.chips.length > 0 && (
               <div class="fact-chips">
                 {facts.chips.map((c) => (
@@ -159,12 +162,12 @@ function SheetInfo({ card, code, full, side, view }: { card: any; code?: string;
           </>
         );
       })()}
-      {full?.text && <RichText class="card-text" text={full.text} />}
+      {full?.text && <RichText class="card-text" text={full.faced ? full.text : (cardText(full) ?? full.text)} />}
       {(card.subroutines ?? []).length > 0 && side === "runner" && !full?.text && (
         <ul class="subs">
           {card.subroutines.map((s: any) => (
             <li class={s.broken ? "broken" : s.fired ? "fired" : ""}>
-              <Icon name="sub" /> {glyphs(iconize(s.label))}
+              <Icon name="sub" /> {glyphs(iconize(shown(s.label)))}
             </li>
           ))}
         </ul>
@@ -175,7 +178,7 @@ function SheetInfo({ card, code, full, side, view }: { card: any; code?: string;
 
 function withFace(full: any, card: any) {
   const face = full?.["face-texts"]?.[faceIndex(card) ?? -1];
-  return face ? { ...full, title: face.title, text: face.text } : full;
+  return face ? { ...full, title: face.title, text: face.text, faced: true } : full;
 }
 
 export function CardSheet({ confirm, card, view, stamp, probe, side, db, send, onClose, disabled, index = 0, count = 1, slide, onStep, readOnly, neighbors, siblings, onJump }: Props) {
@@ -212,7 +215,7 @@ export function CardSheet({ confirm, card, view, stamp, probe, side, db, send, o
 
   return (
     <div class="sheet-backdrop" onClick={onClose}>
-      <div ref={sheet} class="sheet panel swipeable" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={code ? card.title : "Hidden card"} {...swipe}>
+      <div ref={sheet} class="sheet panel swipeable" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={code ? card.title : t("Hidden card")} {...swipe}>
         {onStep && !installing && <Pager index={index} count={count} onStep={onStep} />}
         {(["prev", "next"] as const).map((k) => {
           const n = neighbors?.[k];
@@ -244,8 +247,8 @@ export function CardSheet({ confirm, card, view, stamp, probe, side, db, send, o
         </div>
         {installing ? (
           <div class="sheet-actions">
-            <span class="label">Install {card.title} in…</span>
-            {installList.length === 0 && <span class="status">Loading…</span>}
+            <span class="label">{t("Install {card} in…", { card: card.title })}</span>
+            {installList.length === 0 && <span class="status">{t("Loading…")}</span>}
             {[...installList].sort((a, b) => (serverRank(a) ?? 1e9) - (serverRank(b) ?? 1e9)).map((s) => (
               <button class={serverRank(s) === undefined ? "" : "primary"} disabled={disabled} onClick={() => install(s)}>
                 {serverLabel(s)}
@@ -258,7 +261,7 @@ export function CardSheet({ confirm, card, view, stamp, probe, side, db, send, o
                 onClose();
               }}
             >
-              Cancel
+              {t("Cancel")}
             </button>
           </div>
         ) : (
@@ -270,11 +273,11 @@ export function CardSheet({ confirm, card, view, stamp, probe, side, db, send, o
             )}
             {commands.map((c) => (
               <button class={c.kind === "danger" ? "danger" : c.kind === "primary" ? "primary" : ""} disabled={disabled || c.enabled === false} onClick={() => run(c)}>
-                {glyphs(iconize(c.label))}
+                {glyphs(iconize(labelText(c.label, c.command)))}
               </button>
             ))}
             <button class="ghost" onClick={onClose}>
-              Close
+              {t("Close")}
             </button>
           </div>
         )}

@@ -96,6 +96,8 @@ export function importEngine(): Promise<EngineApi> {
   return import("../engine/engine.js");
 }
 
+export let engineHasFrench = false;
+
 export function loadEngine() {
   loading ??= (async () => {
     const enginePromise = importEngine();
@@ -106,6 +108,13 @@ export function loadEngine() {
     engine.loadCards(cards);
     engine.loadDictionary("en", ftl[0] + "\n" + ftl[1]);
     engine.setLanguage("en");
+    Promise.all([fetchText("i18n/fr/messages.ftl"), fetchText("i18n/fr/ui.ftl")])
+      .then(([m, u]) => {
+        engine.loadDictionary("fr", m + "\n" + u);
+        engine.setLanguage("en");
+        engineHasFrench = true;
+      })
+      .catch(() => {});
     const byTitle = new Map(cards.map((c) => [c.title, c]));
     const byCode = new Map<string, Card>();
     for (const [code, title] of Object.entries(codes)) {

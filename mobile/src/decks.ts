@@ -1,5 +1,6 @@
 import type { Card, CardDb, Deck, DeckEntry, Matchup, PreconDeck, Side } from "./engine";
 import { CORE_DECKS } from "./bot/policy/decks/core.ts";
+import { t } from "./i18n";
 
 const normalize = (s: string) =>
   s
@@ -26,7 +27,7 @@ function build(name: string, side: Side, found: Map<Card, number>): Deck {
   const sideName = ids.some((c) => c.side === (side === "corp" ? "Corp" : "Runner")) || !ids.length ? (side === "corp" ? "Corp" : "Runner") : ids[0].side;
   const entries = [...found.entries()].filter(([c]) => c.side === sideName);
   const identity = entries.find(([c]) => c.type === "Identity")?.[0];
-  if (!identity) throw new Error("No identity found in this deck");
+  if (!identity) throw new Error(t("No identity found in this deck"));
   const cards: DeckEntry[] = entries
     .filter(([c]) => c.type !== "Identity")
     .map(([card, qty]) => ({ qty, card }))
@@ -34,7 +35,7 @@ function build(name: string, side: Side, found: Map<Card, number>): Deck {
   return { name, identity, cards };
 }
 
-export function parseDecklist(text: string, side: Side, db: CardDb, name = "Imported deck"): Deck {
+export function parseDecklist(text: string, side: Side, db: CardDb, name = t("Imported deck")): Deck {
   const find = finder(db);
   const found = new Map<Card, number>();
   const unknown: string[] = [];
@@ -62,7 +63,7 @@ export async function importNrdb(url: string, side: Side, db: CardDb): Promise<D
 
 export async function fetchNrdb(url: string, side: Side, db: CardDb): Promise<{ deck: Deck; source?: DeckSource }> {
   const id = url.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|\b\d{3,}\b)/i)?.[1];
-  if (!id) throw new Error("Unrecognized NetrunnerDB link");
+  if (!id) throw new Error(t("Unrecognized NetrunnerDB link"));
   const kinds = url.includes("/deck/") ? ["deck", "decklist"] : ["decklist", "deck"];
   for (const kind of kinds) {
     const res = await fetch(`https://netrunnerdb.com/api/2.0/public/${kind}/${id}`);
@@ -79,12 +80,12 @@ export async function fetchNrdb(url: string, side: Side, db: CardDb): Promise<{ 
     const sourceId = String(data.uuid ?? data.id ?? id);
     return { deck, source: kind === "decklist" ? { kind: "nrdb", id: sourceId, author: data.user_name ?? undefined, updated: data.date_update ?? data.date_creation } : undefined };
   }
-  throw new Error("Deck not found on NetrunnerDB (is it published or shared?)");
+  throw new Error(t("Deck not found on NetrunnerDB (is it published or shared?)"));
 }
 
 export function fromPrecon(p: PreconDeck, db: CardDb): Deck {
   const identity = db.byTitle.get(p.identity);
-  if (!identity) throw new Error(`Unknown identity: ${p.identity}`);
+  if (!identity) throw new Error(t("Unknown identity: {name}", { name: p.identity }));
   return {
     name: p.name,
     identity,

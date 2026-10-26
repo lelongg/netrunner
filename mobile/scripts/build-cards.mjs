@@ -6,7 +6,7 @@ const BRANCH = process.env.CARDS_BRANCH ?? "master";
 const OUT = new URL("../public/data/", import.meta.url);
 const I18N_SRC = new URL("../../resources/public/i18n/", import.meta.url);
 const I18N_OUT = new URL("../public/i18n/", import.meta.url);
-const LANGS = ["en"];
+const LANGS = ["en", "fr"];
 
 const source = process.argv[2];
 const text = source
@@ -66,6 +66,7 @@ try {
   console.warn(`format pools unavailable: ${e.message}`);
 }
 await writeFile(new URL("formats.json", OUT), JSON.stringify(pools));
+await copyFile(new URL("../i18n/cards.fr.json", import.meta.url), new URL("cards.fr.json", OUT));
 
 for (const lang of LANGS) {
   const dir = new URL(`${lang}/`, I18N_OUT);

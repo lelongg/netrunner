@@ -18,7 +18,10 @@ import { Cta, Picker, Ticker, ask, tell } from "../ui";
 import { motionOff, settings } from "../settings";
 import { DeckBrowser } from "./DeckBrowser";
 import { uiSound } from "../uisound";
+import { cardText } from "../cardtext";
 import { Swipe } from "../swipe";
+import { french, t } from "../i18n";
+import { ordinal } from "./DeckBrowser";
 
 const SIDE_NAME: Record<Side, "Corp" | "Runner"> = { corp: "Corp", runner: "Runner" };
 
@@ -50,7 +53,7 @@ const formatOf = (d: { format?: string }): FormatKey => (FORMATS.some((f) => f.k
 function Pips({ n, max = 5 }: { n: number; max?: number }) {
   if (!n) return null;
   return (
-    <span class="pips" aria-label={`${n} influence`}>
+    <span class="pips" aria-label={t("{n} influence", { n })}>
       {"●".repeat(Math.min(n, max))}
       {n > max ? `+${n - max}` : ""}
     </span>
@@ -114,7 +117,7 @@ export function Decks({ db, matchups, onClose, initialSide, initialDeck }: { db:
         matchups={matchups}
         onClose={() => setCreating(false)}
         onPick={(identity, from) => {
-          const base: Deck = from ?? { name: `New ${identity.title.split(":")[0]} deck`, identity, cards: [] };
+          const base: Deck = from ?? { name: t("New {identity} deck", { identity: identity.title.split(":")[0] }), identity, cards: [] };
           const stored = putDeck({ ...toWire({ ...base, identity }), side, format: from ? "casual" : defaultDeckFormat() });
           setCreating(false);
           refresh();
@@ -126,36 +129,36 @@ export function Decks({ db, matchups, onClose, initialSide, initialDeck }: { db:
   return (
     <>
       <Ticker>
-        Decks <span class="cyan">{decks.length}</span>
+        {t("Decks")} <span class="cyan">{decks.length}</span>
       </Ticker>
       <div class="screen decks">
         <header class="screen-head">
-          <button class="ghost" onClick={onClose} aria-label="Back to home">
+          <button class="ghost" onClick={onClose} aria-label={t("Back to home")}>
             <Icon name="arrow-left" />
           </button>
-          <h1>DECKS</h1>
+          <h1>{t("DECKS")}</h1>
         </header>
         <div class="side-switch" role="tablist">
           {(["corp", "runner"] as Side[]).map((s) => (
             <button role="tab" aria-selected={side === s} class={`${s} ${side === s ? "on" : ""}`} onClick={() => setSide(s)}>
-              {SIDE_NAME[s]}
+              {t(SIDE_NAME[s])}
               <span class="side-count">{decks.filter((d) => d.side === s).length}</span>
             </button>
           ))}
         </div>
         <div class="deck-actions">
-          <Cta onClick={() => setCreating(true)}>New deck</Cta>
+          <Cta onClick={() => setCreating(true)}>{t("New deck")}</Cta>
           <button class="deck-import-btn" onClick={() => setBrowsing(true)}>
             <Icon name="search" />
             <span>NRDB</span>
           </button>
           <button class="deck-import-btn" onClick={() => setImporting(true)}>
             <Icon name="plus" />
-            <span>Import</span>
+            <span>{t("Import")}</span>
           </button>
         </div>
         <Swipe index={side === "corp" ? 0 : 1} count={2} onIndex={(i) => setSide(i === 0 ? "corp" : "runner")}>
-          {mine.length === 0 && <p class="hint decks-empty">No {SIDE_NAME[side]} deck yet. Start from an identity, a precon or a NetrunnerDB list.</p>}
+          {mine.length === 0 && <p class="hint decks-empty">{side === "corp" ? t("No Corp deck yet. Start from an identity, a precon or a NetrunnerDB list.") : t("No Runner deck yet. Start from an identity, a precon or a NetrunnerDB list.")}</p>}
           <ul class="deck-library">
             {mine.map((w) => (
               <DeckRow
@@ -270,18 +273,18 @@ export function DeckRow({ db, stored, onOpen, format, selected, disabled, issues
             <b>{FACTION_SHORT[deck.identity.faction ?? "Neutral"] ?? deck.identity.faction}</b> · {deck.identity.title}
           </span>
           <span class="deck-row-meta">
-            <span class={a.size < a.minimum ? "red" : ""} aria-label={`${a.size} cards, minimum ${a.minimum}`}>
+            <span class={a.size < a.minimum ? "red" : ""} aria-label={t("{n} cards, minimum {min}", { n: a.size, min: a.minimum })}>
               <Icon name="deck" />
               {a.size}/{a.minimum}
             </span>
             {a.influenceLimit != null && (
-              <span class={a.influence > a.influenceLimit ? "red" : ""} aria-label={`${a.influence} of ${a.influenceLimit} influence`}>
+              <span class={a.influence > a.influenceLimit ? "red" : ""} aria-label={t("{n} of {max} influence", { n: a.influence, max: a.influenceLimit })}>
                 <i class="inf-pip" />
                 {a.influence}/{a.influenceLimit}
               </span>
             )}
             {a.pointsRange && (
-              <span aria-label={`${a.points} agenda points`}>
+              <span aria-label={t("{n} agenda points", { n: a.points })}>
                 <Icon name="agenda" />
                 {a.points}
               </span>
@@ -294,7 +297,7 @@ export function DeckRow({ db, stored, onOpen, format, selected, disabled, issues
           (a.legal ? (
             <span class="deck-badge ok">
               <Icon name="check" />
-              {FORMATS.find((f) => f.key === fmt)!.label}
+              {t(FORMATS.find((f) => f.key === fmt)!.label)}
             </span>
           ) : (
             <span
@@ -307,7 +310,7 @@ export function DeckRow({ db, stored, onOpen, format, selected, disabled, issues
               }}
             >
               <Icon name="warning" />
-              {`${a.problems.length} issue${a.problems.length > 1 ? "s" : ""}`}
+              {a.problems.length > 1 ? t("{n} issues", { n: a.problems.length }) : t("{n} issue", { n: a.problems.length })}
             </span>
           ))}
       </button>
@@ -315,7 +318,7 @@ export function DeckRow({ db, stored, onOpen, format, selected, disabled, issues
         <div class="seat-issues deck-row-issues" role="note">
           <span class="seat-issues-head">
             <Icon name="warning" />
-            Not legal in {FORMATS.find((f) => f.key === fmt)!.label}
+            {t("Not legal in {format}", { format: t(FORMATS.find((f) => f.key === fmt)!.label) })}
           </span>
           <ul>
             {a.problems.map((p) => (
@@ -325,7 +328,7 @@ export function DeckRow({ db, stored, onOpen, format, selected, disabled, issues
         </div>
       )}
       {star && (
-        <button class={`deck-star ${star.on ? "on" : ""}`} onClick={star.onToggle} aria-pressed={star.on} aria-label={star.on ? "Default deck, tap to unset" : "Make this the default deck"}>
+        <button class={`deck-star ${star.on ? "on" : ""}`} onClick={star.onToggle} aria-pressed={star.on} aria-label={star.on ? t("Default deck, tap to unset") : t("Make this the default deck")}>
           <Icon name="star" />
         </button>
       )}
@@ -339,16 +342,16 @@ export function BrowseSheet({ db, side, onClose, onDone, similarTo, initialForma
   const [picked, setPicked] = useState<Decklist | null>(null);
   return (
     <div class="sheet-backdrop" onClick={onClose}>
-      <div class="sheet panel deck-choose" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Browse NetrunnerDB decklists">
+      <div class="sheet panel deck-choose" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={t("Browse NetrunnerDB decklists")}>
         <div class="row">
-          <span class="label">NetrunnerDB · {SIDE_NAME[side]}</span>
-          <button class="ghost" onClick={onClose} aria-label="Close">
+          <span class="label">NetrunnerDB · {t(SIDE_NAME[side])}</span>
+          <button class="ghost" onClick={onClose} aria-label={t("Close")}>
             <Icon name="close" />
           </button>
         </div>
         <section class="format-pick">
-          <span class="label">Format</span>
-          <Picker title="Format" value={format} onChange={setFormat} options={FORMATS.map((f) => ({ key: f.key, label: f.label, hint: FORMAT_DESC[f.key] }))} />
+          <span class="label">{t("Format")}</span>
+          <Picker title={t("Format")} value={format} onChange={setFormat} options={FORMATS.map((f) => ({ key: f.key, label: t(f.label), hint: FORMAT_DESC[f.key] }))} />
         </section>
         <DeckBrowser side={side} db={db} format={format} similarTo={similarTo} onPick={(l) => l.deck && setPicked(l)} />
         {picked?.deck && <DeckPreview deck={picked.deck} format={format} source={listSource(picked)} result={picked.result} mode="save" onClose={() => setPicked(null)} onSaved={onDone} />}
@@ -365,11 +368,11 @@ function ImportSheet({ db, side, onClose, onDone }: { db: CardDb; side: Side; on
     setBusy(true);
     setError(undefined);
     try {
-      const t = text.trim();
-      if (/^\S+$/.test(t) && /netrunnerdb\.com|^[0-9a-f-]{36}$/i.test(t)) {
-        const found = await fetchNrdb(t, side, db);
+      const input = text.trim();
+      if (/^\S+$/.test(input) && /netrunnerdb\.com|^[0-9a-f-]{36}$/i.test(input)) {
+        const found = await fetchNrdb(input, side, db);
         onDone(found.deck, found.source);
-      } else onDone(parseDecklist(t, side, db));
+      } else onDone(parseDecklist(input, side, db));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -378,17 +381,17 @@ function ImportSheet({ db, side, onClose, onDone }: { db: CardDb; side: Side; on
   };
   return (
     <div class="sheet-backdrop" onClick={onClose}>
-      <div class="sheet panel" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Import a deck">
+      <div class="sheet panel" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={t("Import a deck")}>
         <div class="row">
-          <span class="label">Import a deck</span>
-          <button class="ghost" onClick={onClose} aria-label="Close">
+          <span class="label">{t("Import a deck")}</span>
+          <button class="ghost" onClick={onClose} aria-label={t("Close")}>
             <Icon name="close" />
           </button>
         </div>
-        <textarea rows={8} value={text} onInput={(e) => setText((e.target as HTMLTextAreaElement).value)} placeholder={"NetrunnerDB link\nor a text decklist:\nHaas-Bioroid: Precision Design\n3x Hedge Fund\n…"} />
+        <textarea rows={8} value={text} onInput={(e) => setText((e.target as HTMLTextAreaElement).value)} placeholder={t("NetrunnerDB link\nor a text decklist:\nHaas-Bioroid: Precision Design\n3x Hedge Fund\n…")} />
         {error && <p class="error">{error}</p>}
         <button class="primary" disabled={busy || !text.trim()} onClick={go}>
-          {busy ? "Reading…" : "Preview"}
+          {busy ? t("Reading…") : t("Preview")}
         </button>
       </div>
     </div>
@@ -417,23 +420,23 @@ function IdentityPicker({ db, side, format, matchups, onPick, onClose }: { db: C
   return (
     <>
       <Ticker>
-        New deck <span class="cyan">{SIDE_NAME[side]}</span>
+        {t("New deck")} <span class="cyan">{t(SIDE_NAME[side])}</span>
       </Ticker>
       <div class="screen identity-picker">
         <header class="screen-head">
-          <button class="ghost" onClick={onClose} aria-label="Back">
+          <button class="ghost" onClick={onClose} aria-label={t("Back")}>
             <Icon name="arrow-left" />
           </button>
-          <h1>IDENTITY</h1>
+          <h1>{t("IDENTITY")}</h1>
         </header>
         {precons.length > 0 && (
           <section class="panel section">
-            <span class="label">Start from a precon</span>
+            <span class="label">{t("Start from a precon")}</span>
             <div class="precon-strip">
               {precons.map((p) => {
                 const deck = fromPrecon(p, db);
                 return (
-                  <button class="precon-card" onClick={() => onPick(deck.identity, { ...deck, name: `${p.name} (copy)` })}>
+                  <button class="precon-card" onClick={() => onPick(deck.identity, { ...deck, name: t("{name} (copy)", { name: p.name }) })}>
                     <CardImage code={deck.identity.code} alt={deck.identity.title} size="small" width="80px" />
                     <span>{p.name}</span>
                   </button>
@@ -445,7 +448,7 @@ function IdentityPicker({ db, side, format, matchups, onPick, onClose }: { db: C
         <div class="search-row">
           <label class="search">
             <Icon name="search" />
-            <input value={query} placeholder="Search identities" onInput={(e) => setQuery((e.target as HTMLInputElement).value)} />
+            <input value={query} placeholder={t("Search identities")} onInput={(e) => setQuery((e.target as HTMLInputElement).value)} />
           </label>
           <FormatSelect value={fmt} onChange={setFmt} />
         </div>
@@ -469,7 +472,7 @@ function IdentityPicker({ db, side, format, matchups, onPick, onClose }: { db: C
             </div>
           </section>
         ))}
-        {ids.length === 0 && <p class="hint">No identity matches.</p>}
+        {ids.length === 0 && <p class="hint">{t("No identity matches.")}</p>}
       </div>
       {preview && (
         <IdentitySheet
@@ -488,7 +491,7 @@ function IdentityInfo({ card }: { card: Card }) {
   return (
     <div class="sheet-info">
       <span class="label">
-        Identity{Array.isArray(card.subtypes) && card.subtypes.length ? ` · ${(card.subtypes as string[]).join(" · ")}` : ""}
+        {t("Identity")}{Array.isArray(card.subtypes) && card.subtypes.length ? ` · ${(card.subtypes as string[]).join(" · ")}` : ""}
       </span>
       <h2>{card.title}</h2>
       <span class={`label faction-label faction-${factionKey(card.faction)}`}>
@@ -497,18 +500,18 @@ function IdentityInfo({ card }: { card: Card }) {
       </span>
       <div class="id-facts">
         <span>
-          <b>{String(card.minimumdecksize ?? "–")}</b> min cards
+          <b>{String(card.minimumdecksize ?? "–")}</b> {t("min cards")}
         </span>
         <span>
-          <b>{card.influencelimit == null ? "∞" : String(card.influencelimit)}</b> influence
+          <b>{card.influencelimit == null ? "∞" : String(card.influencelimit)}</b> {t("influence")}
         </span>
         {card.baselink != null && (
           <span>
-            <b>{String(card.baselink)}</b> <Icon name="link" /> link
+            <b>{String(card.baselink)}</b> <Icon name="link" /> {t("link")}
           </span>
         )}
       </div>
-      {card.text && <RichText class="card-text" text={card.text} />}
+      {card.text && <RichText class="card-text" text={cardText(card) ?? card.text} />}
     </div>
   );
 }
@@ -541,9 +544,9 @@ function IdentitySheet({ card, list, onGo, onPick, onClose }: { card: Card; list
           <ZoomableCardImage class="sheet-img" code={card.code} alt={card.title} size="large" gallery={list.map((c) => ({ code: c.code, alt: c.title }))} galleryStart={index} onGallery={(i) => onGo(list[i])} />
           <IdentityInfo card={card} />
         </div>
-        <Cta onClick={onPick}>Build with this identity</Cta>
+        <Cta onClick={onPick}>{t("Build with this identity")}</Cta>
         <button class="ghost" onClick={onClose}>
-          Close
+          {t("Close")}
         </button>
       </div>
     </div>
@@ -553,8 +556,8 @@ function IdentitySheet({ card, list, onGo, onPick, onClose }: { card: Card; list
 function FormatSelect({ value, onChange }: { value: FormatKey; onChange: (f: FormatKey) => void }) {
   return (
     <div class="format-select">
-      <span class="label">Format</span>
-      <Picker title="Format" value={value} onChange={onChange} options={FORMATS.map((f) => ({ key: f.key, label: f.label, hint: FORMAT_DESC[f.key] }))} />
+      <span class="label">{t("Format")}</span>
+      <Picker title={t("Format")} value={value} onChange={onChange} options={FORMATS.map((f) => ({ key: f.key, label: t(f.label), hint: FORMAT_DESC[f.key] }))} />
     </div>
   );
 }
@@ -572,7 +575,7 @@ export function DeckView({ deck, format = "casual", onClose, footer, subtitle }:
   );
 }
 
-const shortDate = (iso?: string | number) => (iso ? new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }) : "");
+const shortDate = (iso?: string | number) => (iso ? new Date(iso).toLocaleDateString(french() ? "fr" : undefined, { day: "numeric", month: "short", year: "numeric" }) : "");
 
 export function DeckPreview({ deck, format, source, result, mode, onClose, onSaved, onPlay }: { deck: Deck; format: FormatKey; source?: DeckSource; result?: DeckResult; mode: "save" | "play"; onClose: () => void; onSaved: (stored: StoredDeck) => void; onPlay?: (wire: WireDeck) => void }) {
   const side: Side = deck.identity.side === "Corp" ? "corp" : "runner";
@@ -587,33 +590,33 @@ export function DeckPreview({ deck, format, source, result, mode, onClose, onSav
   const ref = (d: StoredDeck): WireDeck => ({ name: d.name, identity: d.identity, cards: d.cards, ref: d.id });
   const subtitle = (
     <span class="preview-source">
-      {source ? "NetrunnerDB" : "Imported list"}
-      {source?.author && ` · by ${source.author}`}
+      {source ? "NetrunnerDB" : t("Imported list")}
+      {source?.author && ` · ${t("by {author}", { author: source.author })}`}
       {source?.updated && ` · ${shortDate(source.updated)}`}
-      {result && ` · ${result.place === 1 ? "won" : `${result.place}${["th", "st", "nd", "rd"][result.place % 10 > 3 || [11, 12, 13].includes(result.place % 100) ? 0 : result.place % 10]} of ${result.players}`} at ${result.title}`}
+      {result && ` · ${result.place === 1 ? t("won at {event}", { event: result.title }) : t("{place} of {players} at {event}", { place: ordinal(result.place), players: result.players, event: result.title })}`}
     </span>
   );
   const footer = (
     <div class="preview-actions">
       {existing && (
         <p class="preview-note">
-          In your decks as <b>{existing.name}</b>
-          {differs ? ", with a different list." : "."}
+          {t("In your decks as")} <b>{existing.name}</b>
+          {differs ? t(", with a different list.") : "."}
         </p>
       )}
       <div class="preview-buttons">
         {existing ? (
           <>
-            {mode === "play" ? <button onClick={() => onPlay?.(ref(existing))}>Play my copy</button> : <button onClick={() => onSaved(existing)}>Open my copy</button>}
+            {mode === "play" ? <button onClick={() => onPlay?.(ref(existing))}>{t("Play my copy")}</button> : <button onClick={() => onSaved(existing)}>{t("Open my copy")}</button>}
             {differs && (
               <button class="primary" onClick={() => (mode === "play" ? onPlay?.(ref(update())) : onSaved(update()))}>
-                Update my copy
+                {t("Update my copy")}
               </button>
             )}
           </>
         ) : mode === "play" ? (
           <>
-            <button onClick={() => onPlay?.(wire)}>Play it once</button>
+            <button onClick={() => onPlay?.(wire)}>{t("Play it once")}</button>
             <button
               class="primary"
               onClick={() => {
@@ -621,12 +624,12 @@ export function DeckPreview({ deck, format, source, result, mode, onClose, onSav
                 onPlay?.(ref(stored));
               }}
             >
-              Save and play
+              {t("Save and play")}
             </button>
           </>
         ) : (
           <button class="primary" onClick={save}>
-            Save to my decks
+            {t("Save to my decks")}
           </button>
         )}
       </div>
@@ -675,7 +678,7 @@ function DeckEditor({ db, initial, deck0, onClose, onOpen, readOnly, footer, sub
     sessionStart.current = toWire(next);
     setDeck(next);
   };
-  const a = useMemo(() => analyze(deck, format), [deck, format]);
+  const a = useMemo(() => analyze(deck, format), [deck, format, settings.language]);
   const qtyOf = useMemo(() => new Map(deck.cards.map((e) => [e.card.title, e.qty])), [deck]);
   const setQty = (card: Card, qty: number) => {
     const n = Math.max(0, Math.min(deckLimit(card), qty));
@@ -694,7 +697,7 @@ function DeckEditor({ db, initial, deck0, onClose, onOpen, readOnly, footer, sub
     }
     await navigator.clipboard?.writeText(text).catch(() => {});
     uiSound("ui_copy");
-    tell("Decklist copied", "Paste it anywhere, or import it on NetrunnerDB.");
+    tell(t("Decklist copied"), t("Paste it anywhere, or import it on NetrunnerDB."));
   };
 
   if (alike && db)
@@ -729,20 +732,20 @@ function DeckEditor({ db, initial, deck0, onClose, onOpen, readOnly, footer, sub
   return (
     <>
       <Ticker>
-        {readOnly ? "Deck list" : "Deck editor"} <span class={a.legal ? "cyan" : "yellow"}>{a.legal ? "legal" : `${a.problems.length} to fix`}</span>
+        {readOnly ? t("Deck list") : t("Deck editor")} <span class={a.legal ? "cyan" : "yellow"}>{a.legal ? t("legal") : t("{n} to fix", { n: a.problems.length })}</span>
       </Ticker>
       <div class={`screen deck-editor side-${side} faction-${factionKey(deck.identity.faction)}`}>
         <header class="editor-head">
-          <button class="ghost" onClick={onClose} aria-label="Back to decks">
+          <button class="ghost" onClick={onClose} aria-label={t("Back to decks")}>
             <Icon name="arrow-left" />
           </button>
           {readOnly ? (
             <h1 class={`deck-name ${deck.name.length > 22 ? "long" : ""}`}>{deck.name}</h1>
           ) : (
-            <input class="deck-name" value={deck.name} aria-label="Deck name" maxLength={60} onInput={(e) => setDeck((d) => ({ ...d, name: (e.target as HTMLInputElement).value }))} onBlur={() => !deck.name.trim() && setDeck((d) => ({ ...d, name: "Untitled deck" }))} />
+            <input class="deck-name" value={deck.name} aria-label={t("Deck name")} maxLength={60} onInput={(e) => setDeck((d) => ({ ...d, name: (e.target as HTMLInputElement).value }))} onBlur={() => !deck.name.trim() && setDeck((d) => ({ ...d, name: t("Untitled deck") }))} />
           )}
           {readOnly ? (
-            <button class="ghost" onClick={share} aria-label="Share decklist">
+            <button class="ghost" onClick={share} aria-label={t("Share decklist")}>
               <Icon name="share" />
             </button>
           ) : (
@@ -755,11 +758,11 @@ function DeckEditor({ db, initial, deck0, onClose, onOpen, readOnly, footer, sub
                   setPinned(!!next);
                 }}
                 aria-pressed={pinned}
-                aria-label={pinned ? "Default deck, tap to unset" : "Make this the default deck"}
+                aria-label={pinned ? t("Default deck, tap to unset") : t("Make this the default deck")}
               >
                 <Icon name="star" />
               </button>
-              <button class="ghost" onClick={() => setMenu(!menu)} aria-label="Deck menu" aria-expanded={menu}>
+              <button class="ghost" onClick={() => setMenu(!menu)} aria-label={t("Deck menu")} aria-expanded={menu}>
                 <Icon name={menu ? "close" : "menu"} />
               </button>
             </>
@@ -770,15 +773,15 @@ function DeckEditor({ db, initial, deck0, onClose, onOpen, readOnly, footer, sub
             <div class="menu-backdrop" onClick={() => setMenu(false)} />
             <nav class="menu panel editor-menu">
               <button onClick={share}>
-                <Icon name="share" /> Share decklist
+                <Icon name="share" /> {t("Share decklist")}
               </button>
               <button
                 onClick={() => {
                   setMenu(false);
-                  onOpen?.(putDeck({ ...toWire({ ...deck, name: `${deck.name} (copy)` }), side, format }));
+                  onOpen?.(putDeck({ ...toWire({ ...deck, name: t("{name} (copy)", { name: deck.name }) }), side, format }));
                 }}
               >
-                <Icon name="copy" /> Duplicate
+                <Icon name="copy" /> {t("Duplicate")}
               </button>
               <button
                 onClick={() => {
@@ -786,7 +789,7 @@ function DeckEditor({ db, initial, deck0, onClose, onOpen, readOnly, footer, sub
                   setChangingId(true);
                 }}
               >
-                <Icon name="swap" /> Change identity
+                <Icon name="swap" /> {t("Change identity")}
               </button>
               {db && (
                 <button
@@ -795,7 +798,7 @@ function DeckEditor({ db, initial, deck0, onClose, onOpen, readOnly, footer, sub
                     setAlike(true);
                   }}
                 >
-                  <Icon name="search" /> Similar decks
+                  <Icon name="search" /> {t("Similar decks")}
                 </button>
               )}
               <button
@@ -804,18 +807,18 @@ function DeckEditor({ db, initial, deck0, onClose, onOpen, readOnly, footer, sub
                   setHistory(true);
                 }}
               >
-                <Icon name="history" /> History
+                <Icon name="history" /> {t("History")}
               </button>
               <button
                 class="danger"
                 onClick={async () => {
                   setMenu(false);
-                  if (!(await ask({ title: "Delete this deck?", body: `"${deck.name}" is removed from this device.`, ok: "Delete", danger: true }))) return;
+                  if (!(await ask({ title: t("Delete this deck?"), body: t("\"{name}\" is removed from this device.", { name: deck.name }), ok: t("Delete"), danger: true }))) return;
                   removeDeck(initial.id);
                   onClose();
                 }}
               >
-                <Icon name="close" /> Delete deck
+                <Icon name="close" /> {t("Delete deck")}
               </button>
             </nav>
           </>
@@ -837,19 +840,19 @@ function DeckEditor({ db, initial, deck0, onClose, onOpen, readOnly, footer, sub
             <CardImage code={deck.identity.code} alt={deck.identity.title} size="small" width="64px" />
           </button>
           <div class="summary-meters">
-            <Meter label="Cards" value={a.size} goal={a.minimum} over={false} under={a.size < a.minimum} />
-            {a.influenceLimit != null && <Meter label="Influence" value={a.influence} goal={a.influenceLimit} over={a.influence > a.influenceLimit} pips />}
-            {a.pointsRange && <Meter label="Agenda pts" value={a.points} goal={a.pointsRange[0]} range={a.pointsRange} over={a.points > a.pointsRange[1]} under={a.points < a.pointsRange[0]} />}
+            <Meter label={t("Cards")} value={a.size} goal={a.minimum} over={false} under={a.size < a.minimum} />
+            {a.influenceLimit != null && <Meter label={t("Influence")} value={a.influence} goal={a.influenceLimit} over={a.influence > a.influenceLimit} pips />}
+            {a.pointsRange && <Meter label={t("Agenda pts")} value={a.points} goal={a.pointsRange[0]} range={a.pointsRange} over={a.points > a.pointsRange[1]} under={a.points < a.pointsRange[0]} />}
           </div>
           <div class="summary-side">
             {readOnly ? (
-              <span class="format-static">{FORMATS.find((f) => f.key === format)?.label}</span>
+              <span class="format-static">{t(FORMATS.find((f) => f.key === format)?.label ?? "")}</span>
             ) : (
               <FormatSelect value={format} onChange={setFormat} />
             )}
             <button class={`legal-chip ${a.legal ? "ok" : "bad"}`} onClick={() => setIssues(!issues)} aria-expanded={issues}>
               <Icon name={a.legal ? "check" : "warning"} />
-              {a.legal ? "Legal" : `${a.problems.length} issue${a.problems.length > 1 ? "s" : ""}`}
+              {a.legal ? t("Legal") : a.problems.length > 1 ? t("{n} issues", { n: a.problems.length }) : t("{n} issue", { n: a.problems.length })}
             </button>
           </div>
           {issues && a.problems.length > 0 && (
@@ -862,9 +865,9 @@ function DeckEditor({ db, initial, deck0, onClose, onOpen, readOnly, footer, sub
         </section>
 
         <div class="tabs editor-tabs" role="tablist">
-          {tabList.map((t) => (
-            <button role="tab" aria-selected={tab === t} class={tab === t ? "on" : ""} onClick={() => setTab(t)}>
-              {t === "deck" ? `Deck · ${a.size}` : t === "cards" ? "Add cards" : "Stats"}
+          {tabList.map((k) => (
+            <button role="tab" aria-selected={tab === k} class={tab === k ? "on" : ""} onClick={() => setTab(k)}>
+              {k === "deck" ? t("Deck · {n}", { n: a.size }) : k === "cards" ? t("Add cards") : t("Stats")}
             </button>
           ))}
         </div>
@@ -912,7 +915,7 @@ function DiffList({ from, to }: { from: WireDeck; to: WireDeck }) {
   const diff = cardDiff(from.cards, to.cards);
   return (
     <ul class="deck-diff">
-      {from.identity !== to.identity && <li class="id">Identity: {from.identity}</li>}
+      {from.identity !== to.identity && <li class="id">{t("Identity: {name}", { name: from.identity })}</li>}
       {diff.map((d) => (
         <li class={d.delta > 0 ? "add" : "cut"}>
           <b>{d.delta > 0 ? `+${d.delta}` : `−${-d.delta}`}</b> {d.title}
@@ -944,26 +947,26 @@ function HistorySheet({ db, deckId, deck, side, onRestore, onClose }: { db: Card
   };
   return (
     <div class="sheet-backdrop" onClick={onClose}>
-      <div class="sheet panel versions-sheet" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Deck history">
+      <div class="sheet panel versions-sheet" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={t("Deck history")}>
         <div class="row">
-          <span class="label">History · {deck.name}</span>
-          <button class="ghost" onClick={onClose} aria-label="Close">
+          <span class="label">{t("History")} · {deck.name}</span>
+          <button class="ghost" onClick={onClose} aria-label={t("Close")}>
             <Icon name="close" />
           </button>
         </div>
         {source && (
           <section class="versions-source">
             <span>
-              From NetrunnerDB{source.author ? ` · by ${source.author}` : ""}
+              {t("From NetrunnerDB")}{source.author ? ` · ${t("by {author}", { author: source.author })}` : ""}
               {source.updated ? ` · ${shortDate(source.updated)}` : ""}
             </span>
             {remote === "busy" ? (
-              <span class="hint">Checking…</span>
+              <span class="hint">{t("Checking…")}</span>
             ) : remote === "same" ? (
-              <span class="hint">Your list matches the published one.</span>
+              <span class="hint">{t("Your list matches the published one.")}</span>
             ) : remote ? (
               <>
-                <span class="hint">The published list differs from yours:</span>
+                <span class="hint">{t("The published list differs from yours:")}</span>
                 <DiffList from={now} to={toWire(remote.deck)} />
                 <button
                   class="primary"
@@ -972,17 +975,17 @@ function HistorySheet({ db, deckId, deck, side, onRestore, onClose }: { db: Card
                     onRestore({ ...remote.deck, name: deck.name }, "update");
                   }}
                 >
-                  Take the published list
+                  {t("Take the published list")}
                 </button>
               </>
             ) : (
-              <button onClick={check}>Check NetrunnerDB for updates</button>
+              <button onClick={check}>{t("Check NetrunnerDB for updates")}</button>
             )}
             {error && <p class="error">{error}</p>}
           </section>
         )}
         {versions.length === 0 ? (
-          <p class="hint">No earlier version yet. Each editing session that changes the list keeps the list it started from here.</p>
+          <p class="hint">{t("No earlier version yet. Each editing session that changes the list keeps the list it started from here.")}</p>
         ) : (
           <ul class="versions-list">
             {versions.map((v, i) => {
@@ -990,14 +993,14 @@ function HistorySheet({ db, deckId, deck, side, onRestore, onClose }: { db: Card
               return (
                 <li>
                   <button class={`versions-row ${open === i ? "on" : ""}`} onClick={() => setOpen(open === i ? null : i)} aria-expanded={open === i}>
-                    <span class="versions-when">{new Date(v.at).toLocaleString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
+                    <span class="versions-when">{new Date(v.at).toLocaleString(french() ? "fr" : undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
                     <span class="versions-what">
-                      {VERSION_LABEL[v.reason]} · {diff.length ? `${diff.length} card${diff.length > 1 ? "s" : ""} differ` : v.identity !== now.identity ? "other identity" : "same list"}
+                      {t(VERSION_LABEL[v.reason])} · {diff.length ? (diff.length > 1 ? t("{n} cards differ", { n: diff.length }) : t("{n} card differs", { n: diff.length })) : v.identity !== now.identity ? t("other identity") : t("same list")}
                     </span>
                   </button>
                   {open === i && (
                     <div class="versions-detail">
-                      <span class="hint">Restoring it changes your list by:</span>
+                      <span class="hint">{t("Restoring it changes your list by:")}</span>
                       <DiffList from={now} to={v} />
                       <button
                         class="primary"
@@ -1006,11 +1009,11 @@ function HistorySheet({ db, deckId, deck, side, onRestore, onClose }: { db: Card
                           try {
                             onRestore(fromWire({ ...v, name: deck.name }, db), "restore");
                           } catch {
-                            tell("Cannot restore", "This version uses cards that are no longer known.");
+                            tell(t("Cannot restore"), t("This version uses cards that are no longer known."));
                           }
                         }}
                       >
-                        Restore this version
+                        {t("Restore this version")}
                       </button>
                     </div>
                   )}
@@ -1050,11 +1053,11 @@ function Meter({ label, value, goal, range, over, under, pips }: { label: string
 function Stepper({ qty, max, onQty, title }: { qty: number; max: number; onQty: (n: number) => void; title: string }) {
   return (
     <span class="stepper">
-      <button aria-label={`Remove one ${title}`} disabled={qty === 0} onClick={(e) => (e.stopPropagation(), onQty(qty - 1))}>
+      <button aria-label={t("Remove one {card}", { card: title })} disabled={qty === 0} onClick={(e) => (e.stopPropagation(), onQty(qty - 1))}>
         <Icon name="minus" />
       </button>
       <b>{qty}</b>
-      <button aria-label={`Add one ${title}`} disabled={qty >= max} onClick={(e) => (e.stopPropagation(), onQty(qty + 1))}>
+      <button aria-label={t("Add one {card}", { card: title })} disabled={qty >= max} onClick={(e) => (e.stopPropagation(), onQty(qty + 1))}>
         <Icon name="plus" />
       </button>
     </span>
@@ -1064,7 +1067,7 @@ function Stepper({ qty, max, onQty, title }: { qty: number; max: number; onQty: 
 function CardCost({ card }: { card: Card }) {
   if (card.type === "Agenda")
     return (
-      <span class="row-cost" aria-label={`advance ${card.advancementcost}, ${card.agendapoints} points`}>
+      <span class="row-cost" aria-label={t("advance {cost}, {points} points", { cost: String(card.advancementcost), points: String(card.agendapoints) })}>
         {String(card.advancementcost)}
         <Icon name="advance" class="glyph" />
         <span class="row-cost-sep">/</span>
@@ -1087,9 +1090,9 @@ function DeckList({ deck, format, onQty, onOpen, onBrowse }: { deck: Deck; forma
   if (!sections.length)
     return (
       <div class="deck-empty">
-        <p class="hint">This deck is empty.</p>
+        <p class="hint">{t("This deck is empty.")}</p>
         <button class="primary" onClick={onBrowse}>
-          Add cards
+          {t("Add cards")}
         </button>
       </div>
     );
@@ -1098,7 +1101,7 @@ function DeckList({ deck, format, onQty, onOpen, onBrowse }: { deck: Deck; forma
       {sections.map((s) => (
         <section class="deck-section">
           <div class="deck-section-head">
-            <span class="label">{s.type}</span>
+            <span class="label">{t(s.type)}</span>
             <span class="label">{s.count}</span>
           </div>
           <ul class="edit-rows">
@@ -1116,9 +1119,9 @@ function DeckList({ deck, format, onQty, onOpen, onBrowse }: { deck: Deck; forma
                       <span class="edit-row-sub">
                         {Array.isArray(e.card.subtypes) && e.card.subtypes.length > 0 && <span class="edit-row-types">{e.card.subtypes.join(" · ")}</span>}
                         <Pips n={influenceOf(deck.identity, e.card) * e.qty} />
-                        {l === "banned" && <span class="red">banned</span>}
-                        {l === "rotated" && <span class="red">not in format</span>}
-                        {l === "restricted" && <span class="yellow">restricted</span>}
+                        {l === "banned" && <span class="red">{t("banned")}</span>}
+                        {l === "rotated" && <span class="red">{t("not in format")}</span>}
+                        {l === "restricted" && <span class="yellow">{t("restricted")}</span>}
                       </span>
                     </span>
                   </button>
@@ -1200,12 +1203,12 @@ function CardBrowser({ db, deck, format, qtyOf, onQty, onOpen }: { db: CardDb; d
       <div class="browser-controls">
         <label class="search">
           <Icon name="search" />
-          <input type="search" value={query} placeholder="Title, subtype or text" onInput={(e) => setQuery((e.target as HTMLInputElement).value)} />
+          <input type="search" value={query} placeholder={t("Title, subtype or text")} onInput={(e) => setQuery((e.target as HTMLInputElement).value)} />
         </label>
         <div class="chips scroll-chips">
-          {TYPE_ORDER[sideName].map((t) => (
-            <button class={types.includes(t) ? "on" : ""} onClick={() => toggle(types, setTypes, t)}>
-              {t}
+          {TYPE_ORDER[sideName].map((ty) => (
+            <button class={types.includes(ty) ? "on" : ""} onClick={() => toggle(types, setTypes, ty)}>
+              {t(ty)}
             </button>
           ))}
         </div>
@@ -1220,28 +1223,28 @@ function CardBrowser({ db, deck, format, qtyOf, onQty, onOpen }: { db: CardDb; d
         <div class="browser-row">
           {format !== "casual" && (
             <button class={`toggle ${inFormat ? "on" : ""}`} aria-pressed={inFormat} onClick={() => setInFormat(!inFormat)}>
-              In format
+              {t("In format")}
             </button>
           )}
           <button class={`toggle ${onlyInDeck ? "on" : ""}`} aria-pressed={onlyInDeck} onClick={() => setOnlyInDeck(!onlyInDeck)}>
-            In deck
+            {t("In deck")}
           </button>
           <div class="sort-select">
-            <span class="label">Sort</span>
+            <span class="label">{t("Sort")}</span>
             <Picker
-              title="Sort cards by"
+              title={t("Sort cards by")}
               value={sort}
               onChange={setSort}
               options={[
-                { key: "type", label: "Type" },
-                { key: "name", label: "Name" },
-                { key: "cost", label: "Cost" },
-                { key: "influence", label: "Influence" },
+                { key: "type", label: t("Type") },
+                { key: "name", label: t("Name") },
+                { key: "cost", label: t("Cost") },
+                { key: "influence", label: t("Influence") },
               ]}
             />
           </div>
         </div>
-        <span class="hint browser-count">{results.length} cards</span>
+        <span class="hint browser-count">{results.length === 1 ? t("1 card") : t("{n} cards", { n: results.length })}</span>
       </div>
       <div class="browse-grid">
         {results.slice(0, shown).map((c) => {
@@ -1260,7 +1263,7 @@ function CardBrowser({ db, deck, format, qtyOf, onQty, onOpen }: { db: CardDb; d
         })}
       </div>
       {results.length > shown && <div ref={more} class="browse-more" />}
-      {results.length === 0 && <p class="hint">No card matches these filters.</p>}
+      {results.length === 0 && <p class="hint">{t("No card matches these filters.")}</p>}
     </div>
   );
 }
@@ -1308,7 +1311,7 @@ function DeckStats({ deck, onOpen }: { deck: Deck; onOpen: (c: Card, list: Card[
   return (
     <div class="deck-stats-tab">
       <section class="panel section">
-        <span class="label">Cost curve</span>
+        <span class="label">{t("Cost curve")}</span>
         <div class="curve">
           {curve.map((b) => (
             <div class="curve-col">
@@ -1323,17 +1326,17 @@ function DeckStats({ deck, onOpen }: { deck: Deck; onOpen: (c: Card, list: Card[
         </div>
       </section>
       <section class="panel section">
-        <span class="label">Composition</span>
+        <span class="label">{t("Composition")}</span>
         <div class="type-bar">
           {groups.map((g, i) => (
-            <i class={`t${i}`} style={{ flexGrow: g.count }} title={`${g.type} ${g.count}`} />
+            <i class={`t${i}`} style={{ flexGrow: g.count }} title={`${t(g.type)} ${g.count}`} />
           ))}
         </div>
         <ul class="type-legend">
           {groups.map((g, i) => (
             <li>
               <i class={`t${i}`} />
-              {g.type}
+              {t(g.type)}
               <b>{g.count}</b>
               <span class="hint">{size ? Math.round((g.count / size) * 100) : 0}%</span>
             </li>
@@ -1341,24 +1344,24 @@ function DeckStats({ deck, onOpen }: { deck: Deck; onOpen: (c: Card, list: Card[
         </ul>
         {corp && size > 0 && (
           <p class="hint">
-            {agendas} agenda{agendas === 1 ? "" : "s"}, one every {Math.round((size / Math.max(1, agendas)) * 10) / 10} cards · {Math.round((1 - hyperNone(size, agendas, 5)) * 100)}% chance to open with one
+            {t(agendas === 1 ? "{n} agenda, one every {every} cards · {pct}% chance to open with one" : "{n} agendas, one every {every} cards · {pct}% chance to open with one", { n: agendas, every: Math.round((size / Math.max(1, agendas)) * 10) / 10, pct: Math.round((1 - hyperNone(size, agendas, 5)) * 100) })}
           </p>
         )}
       </section>
       <section class="panel section">
-        <span class="label">{corp ? "Ice" : "Icebreakers"}</span>
+        <span class="label">{corp ? t("Ice") : t("Icebreakers")}</span>
         <div class="spread">
           {spread.map((s) => (
             <div class={`spread-cell ${s.count ? "" : "zero"}`}>
               <b>{s.count}</b>
-              <span>{s.label}</span>
+              <span>{t(s.label)}</span>
             </div>
           ))}
         </div>
       </section>
       {influence.length > 0 && (
         <section class="panel section">
-          <span class="label">Influence spent</span>
+          <span class="label">{t("Influence spent")}</span>
           <ul class="inf-list">
             {influence.map(([f, n]) => (
               <li class={`faction-${factionKey(f)}`}>
@@ -1375,8 +1378,8 @@ function DeckStats({ deck, onOpen }: { deck: Deck; onOpen: (c: Card, list: Card[
       )}
       <section class="panel section sample">
         <div class="row">
-          <span class="label">Sample hand</span>
-          <span class="hint">{rest.length ? `${rest.length} left in deck` : ""}</span>
+          <span class="label">{t("Sample hand")}</span>
+          <span class="hint">{rest.length ? t("{n} left in deck", { n: rest.length }) : ""}</span>
         </div>
         <div class={`sample-hand ${leaving ? "leaving" : ""}`}>
           {hand.map((c, i) => (
@@ -1384,14 +1387,14 @@ function DeckStats({ deck, onOpen }: { deck: Deck; onOpen: (c: Card, list: Card[
               <CardImage code={c.code} alt={c.title} size="small" width="20vw" />
             </button>
           ))}
-          {hand.length === 0 && <span class="hint">Add cards to draw a sample hand.</span>}
+          {hand.length === 0 && <span class="hint">{t("Add cards to draw a sample hand.")}</span>}
         </div>
         <div class="sample-buttons">
           <button class="primary" disabled={!library.length || leaving} onClick={() => draw(true)}>
-            <Icon name="dice" /> {hand.length ? "Redraw" : "Draw 5"}
+            <Icon name="dice" /> {hand.length ? t("Redraw") : t("Draw 5")}
           </button>
           <button disabled={!hand.length || !rest.length} onClick={() => draw(false)}>
-            Draw 1 more
+            {t("Draw 1 more")}
           </button>
         </div>
       </section>
@@ -1411,16 +1414,16 @@ function CardInfo({ card, identity, format }: { card: Card; identity: Card; form
   return (
     <div class="sheet-info">
       <span class="label">
-        {card.type}
+        {t(card.type)}
         {Array.isArray(card.subtypes) && card.subtypes.length ? ` · ${(card.subtypes as string[]).join(" · ")}` : ""}
       </span>
       <h2>{card.title}</h2>
       <span class="label">
         {card.faction}
-        {inf ? ` · ${inf} inf` : ""} · {card.setname as string}
+        {inf ? ` · ${t("{n} inf", { n: inf })}` : ""} · {card.setname as string}
       </span>
-      <span class={`legal-line ${l}`}>{l === "legal" ? `Legal in ${FORMATS.find((f) => f.key === format)!.label}` : l === "restricted" ? "Restricted" : l === "banned" ? "Banned" : "Not in this format"}</span>
-      {card.text && <RichText class="card-text" text={card.text} />}
+      <span class={`legal-line ${l}`}>{l === "legal" ? t("Legal in {format}", { format: t(FORMATS.find((f) => f.key === format)!.label) }) : l === "restricted" ? t("Restricted") : l === "banned" ? t("Banned") : t("Not in this format")}</span>
+      {card.text && <RichText class="card-text" text={cardText(card) ?? card.text} />}
     </div>
   );
 }
@@ -1455,21 +1458,21 @@ function CardSheet({ card, list, identity, format, qty, onQty, onGo, onClose, co
           <ZoomableCardImage class="sheet-img" code={card.code} alt={card.title} size="large" gallery={list.map((c) => ({ code: c.code, alt: c.title }))} galleryStart={index} onGallery={(i) => onGo(list[i])} />
           <CardInfo card={card} identity={identity} format={format} />
         </div>
-        {blocked && <p class="error">Agendas must be neutral or from your identity's faction.</p>}
+        {blocked && <p class="error">{t("Agendas must be neutral or from your identity's faction.")}</p>}
         {!isId && (!blocked || qty > 0) && (
           <div class="sheet-stepper">
-            <span class="label">In deck</span>
+            <span class="label">{t("In deck")}</span>
             {onQty ? <Stepper qty={qty} max={deckLimit(card)} title={card.title} onQty={onQty} /> : <b class="edit-row-qty">{qty}×</b>}
           </div>
         )}
         {cover && (
           <button class={`cover-btn ${cover.code === card.code || (!cover.code && isId) ? "on" : ""}`} onClick={() => cover.set(isId ? undefined : cover.code === card.code ? undefined : card.code)}>
             <Icon name="star" />
-            {cover.code === card.code || (!cover.code && isId) ? "Deck cover" : "Use as deck cover"}
+            {cover.code === card.code || (!cover.code && isId) ? t("Deck cover") : t("Use as deck cover")}
           </button>
         )}
         <button class="ghost" onClick={onClose}>
-          Close
+          {t("Close")}
         </button>
       </div>
     </div>

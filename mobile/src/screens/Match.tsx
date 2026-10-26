@@ -13,21 +13,22 @@ import { settings } from "../settings";
 import { enablePush, notifying, pushSupported } from "../net/push";
 import { FORMAT_DESC, GAME_FORMATS, type GameFormat, dealtFormat, deckFormat } from "../deckrules";
 import { type Matched, type OpenSeek, type PlayingGame, type Seek, type SeekSide, cancelSeek, checkSeek, pendingSeek, publicGames, seek, updateSeek } from "../net/match";
+import { t } from "../i18n";
 
 const SIDES: { key: SeekSide; label: string }[] = [
   { key: "corp", label: "Corp" },
   { key: "runner", label: "Runner" },
   { key: "any", label: "Any" },
 ];
-const formatLabel = (f: string) => GAME_FORMATS.find((g) => g.key === f)?.label ?? f;
+const formatLabel = (f: string) => t(GAME_FORMATS.find((g) => g.key === f)?.label ?? f);
 const yours = (theirs: SeekSide): SeekSide => (theirs === "corp" ? "runner" : theirs === "runner" ? "corp" : "any");
-const sideLabel = (s: SeekSide) => (s === "any" ? "Any side" : s === "corp" ? "Corp" : "Runner");
+const sideLabel = (s: SeekSide) => (s === "any" ? t("Any side") : s === "corp" ? t("Corp") : t("Runner"));
 
 function since(at: number) {
   const s = Math.max(0, Math.round((Date.now() - at) / 1000));
-  if (s < 60) return `${s}s`;
+  if (s < 60) return t("{n}s", { n: s });
   if (s < 3600) return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
-  return `${Math.floor(s / 3600)} h ${Math.floor((s % 3600) / 60)} min`;
+  return t("{h} h {m} min", { h: Math.floor(s / 3600), m: Math.floor((s % 3600) / 60) });
 }
 
 function useTick(on: boolean) {
@@ -41,10 +42,10 @@ function useTick(on: boolean) {
 
 function Segmented<T extends string>({ label, value, options, onChange }: { label: string; value: T; options: { key: T; label: string }[]; onChange: (v: T) => void }) {
   return (
-    <div class="match-sides" role="radiogroup" aria-label={label}>
+    <div class="match-sides" role="radiogroup" aria-label={t(label)}>
       {options.map((o) => (
         <button role="radio" aria-checked={value === o.key} class={`side-${o.key} ${value === o.key ? "on" : ""}`} onClick={() => onChange(o.key)}>
-          {o.label}
+          {t(o.label)}
         </button>
       ))}
     </div>
@@ -160,15 +161,15 @@ export function Match({ name, db, matchups, onMatched, onJoin, onWatch, onClose,
   return (
     <>
       <Ticker>
-        Play online{mine ? <span class="cyan"> waiting</span> : listed && <span class="cyan"> {games!.open.length} open</span>}
+        {t("Play online")}{mine ? <span class="cyan"> {t("waiting")}</span> : listed && <span class="cyan"> {games!.open.length === 1 ? t("1 open") : t("{n} open", { n: games!.open.length })}</span>}
       </Ticker>
       <div class={`screen match ${mine ? "waiting" : ""}`}>
         <div class="match-bg" aria-hidden="true" />
         <header class="screen-head">
-          <button class="ghost" onClick={onClose} aria-label="Back to home">
+          <button class="ghost" onClick={onClose} aria-label={t("Back to home")}>
             <Icon name="arrow-left" />
           </button>
-          <h1>PLAY ONLINE</h1>
+          <h1>{t("PLAY ONLINE")}</h1>
         </header>
 
         {mine ? (
@@ -178,9 +179,9 @@ export function Match({ name, db, matchups, onMatched, onJoin, onWatch, onClose,
               <>
                 <span class="chip">{formatLabel(mine.format)}</span>
                 <span class={`chip side-${mine.side}`}>{sideLabel(mine.side)}</span>
-                <span class="chip">{mine.public === false ? "Private" : "Public"}</span>
+                <span class="chip">{mine.public === false ? t("Private") : t("Public")}</span>
                 <span class="chip">
-                  <Icon name="eye" /> {mine.spectators === false ? "No spectators" : "Spectators"}
+                  <Icon name="eye" /> {mine.spectators === false ? t("No spectators") : t("Spectators")}
                 </span>
                 <span class="chip">{since(mine.at)}</span>
               </>
@@ -191,7 +192,7 @@ export function Match({ name, db, matchups, onMatched, onJoin, onWatch, onClose,
           />
         ) : !mine && !games ? (
           <section class="panel section match-loading">
-            <p class="hint">Looking for open games…</p>
+            <p class="hint">{t("Looking for open games…")}</p>
           </section>
         ) : browsing ? (
           <>
@@ -199,7 +200,7 @@ export function Match({ name, db, matchups, onMatched, onJoin, onWatch, onClose,
               <section class="match-open">
                 <span class="label">
                   <i class="live-dot" aria-hidden="true" />
-                  Open games
+                  {t("Open games")}
                 </span>
                 <ul class="match-list">
                   {games!.open.map((o) => (
@@ -209,11 +210,11 @@ export function Match({ name, db, matchups, onMatched, onJoin, onWatch, onClose,
                           <strong>{o.name}</strong>
                           <span class="match-chips">
                             <span class="chip">{formatLabel(o.format)}</span>
-                            <span class={`chip side-${yours(o.side)}`}>{yours(o.side) === "any" ? "Either side" : `You play ${sideLabel(yours(o.side))}`}</span>
+                            <span class={`chip side-${yours(o.side)}`}>{yours(o.side) === "any" ? t("Either side") : yours(o.side) === "corp" ? t("You play Corp") : t("You play Runner")}</span>
                           </span>
                         </span>
                         <span class="match-play">
-                          Join
+                          {t("Join")}
                           <Icon name="arrow-right" />
                         </span>
                       </button>
@@ -226,7 +227,7 @@ export function Match({ name, db, matchups, onMatched, onJoin, onWatch, onClose,
               <section class="match-open">
                 <span class="label">
                   <Icon name="eye" />
-                  Playing now
+                  {t("Playing now")}
                 </span>
                 <ul class="match-list">
                   {games!.playing.map((g) => (
@@ -234,34 +235,34 @@ export function Match({ name, db, matchups, onMatched, onJoin, onWatch, onClose,
                       <button class="match-row" disabled={!g.spectators} onClick={() => onWatch(g.code)}>
                         <span class="match-who">
                           <strong>
-                            {g.name} vs {g.opponent}
+                            {g.name} {t("vs")} {g.opponent}
                           </strong>
                           <span class="match-chips">
                             <span class="chip">{formatLabel(g.format)}</span>
-                            {g.watchers > 0 && <span class="chip">{g.watchers} watching</span>}
+                            {g.watchers > 0 && <span class="chip">{g.watchers === 1 ? t("1 watching") : t("{n} watching", { n: g.watchers })}</span>}
                           </span>
                         </span>
-                        <span class="match-play">{g.spectators ? ["Watch", <Icon name="arrow-right" />] : "No spectators"}</span>
+                        <span class="match-play">{g.spectators ? [t("Watch"), <Icon name="arrow-right" />] : t("No spectators")}</span>
                       </button>
                     </li>
                   ))}
                 </ul>
               </section>
             )}
-            <Cta onClick={() => setCreating(true)}>Create a new game</Cta>
+            <Cta onClick={() => setCreating(true)}>{t("Create a new game")}</Cta>
           </>
         ) : (
           <section class="panel section match-form">
             <div class="match-field">
-              <span class="label">Format</span>
-              <Picker title="Format" value={format} onChange={setFormat} options={GAME_FORMATS.map((f) => ({ key: f.key as GameFormat, label: f.label, hint: FORMAT_DESC[f.key as GameFormat] }))} />
+              <span class="label">{t("Format")}</span>
+              <Picker title={t("Format")} value={format} onChange={setFormat} options={GAME_FORMATS.map((f) => ({ key: f.key as GameFormat, label: t(f.label), hint: FORMAT_DESC[f.key as GameFormat] }))} />
             </div>
             <div class="match-field">
-              <span class="label">Play as</span>
+              <span class="label">{t("Play as")}</span>
               <Segmented label="Play as" value={side} options={SIDES} onChange={setSide} />
             </div>
             <div class="match-field">
-              <span class="label">Who can join</span>
+              <span class="label">{t("Who can join")}</span>
               <Segmented
                 label="Who can join"
                 value={access}
@@ -273,7 +274,7 @@ export function Match({ name, db, matchups, onMatched, onJoin, onWatch, onClose,
               />
             </div>
             <div class="match-field">
-              <span class="label">Spectators</span>
+              <span class="label">{t("Spectators")}</span>
               <Segmented
                 label="Spectators"
                 value={spectators}
@@ -287,20 +288,20 @@ export function Match({ name, db, matchups, onMatched, onJoin, onWatch, onClose,
             {!dealtFormat(format) &&
               (["corp", "runner"] as Side[]).map((s) => (
                 <div class={`match-field ${side !== "any" && side !== s ? "unused" : ""}`} aria-disabled={side !== "any" && side !== s}>
-                  <span class="label">{`${s === "corp" ? "Corp" : "Runner"} deck`}</span>
+                  <span class="label">{s === "corp" ? t("Corp deck") : t("Runner deck")}</span>
                   {decks[s] ? (
                     <ul class="deck-library match-deck">
                       <DeckRow db={db} stored={decks[s]!} format={deckFormat(format) ?? "casual"} onOpen={() => setChoosing(s)} issuesOnly extra={<Icon name="chevron-right" class="deck-row-go" />} />
                     </ul>
                   ) : (
                     <button class="match-deck-empty" onClick={() => setChoosing(s)}>
-                      Choose a {s === "corp" ? "Corp" : "Runner"} deck
+                      {s === "corp" ? t("Choose a Corp deck") : t("Choose a Runner deck")}
                     </button>
                   )}
                 </div>
               ))}
             <Cta onClick={find} disabled={busy}>
-              {access === "public" ? "Find an opponent" : "Create a private game"}
+              {access === "public" ? t("Find an opponent") : t("Create a private game")}
             </Cta>
           </section>
         )}

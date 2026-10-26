@@ -10,6 +10,7 @@ import { animate } from "../fx/core";
 import { Icon } from "../icons";
 import { motionOff } from "../settings";
 import { Ticker } from "../ui";
+import { t } from "../i18n";
 
 interface Page {
   kicker: string;
@@ -117,10 +118,10 @@ function SidePick({ side, db, onPick }: { side: Side; db: CardDb; onPick: () => 
     <button class={`side-pick ${side}`} onClick={onPick}>
       {identity && <img class="side-art" crossOrigin="anonymous" src={cardImage(identity, "large")} alt="" />}
       <span class="side-text">
-        <span class="side-kicker">{corp ? "Megacorp" : "Hacker"}</span>
-        <span class="side-name">{corp ? "Corp" : "Runner"}</span>
-        <span class="side-tag">{corp ? "Build. Protect. Score." : "Break in. Steal. Vanish."}</span>
-        <span class="side-go">Play a guided game →</span>
+        <span class="side-kicker">{corp ? t("Megacorp") : t("Hacker")}</span>
+        <span class="side-name">{corp ? t("Corp") : t("Runner")}</span>
+        <span class="side-tag">{corp ? t("Build. Protect. Score.") : t("Break in. Steal. Vanish.")}</span>
+        <span class="side-go">{t("Play a guided game →")}</span>
       </span>
     </button>
   );
@@ -226,8 +227,8 @@ export function Guide({ db, onClose, onPlay, firstRun }: { db: CardDb; onClose: 
           </div>
         ) : (
           <section key={`${role}:${i}`} class={`panel section guide-page ${role}`} aria-hidden={role !== "current" || undefined}>
-            <span class="label cyan">{q.kicker}</span>
-            <h2>{q.title}</h2>
+            <span class="label cyan">{t(q.kicker)}</span>
+            <h2>{t(q.title)}</h2>
             {q.cards && (
               <div class="guide-cards">
                 {q.cards.map((title) => {
@@ -236,8 +237,8 @@ export function Guide({ db, onClose, onPlay, firstRun }: { db: CardDb; onClose: 
                 })}
               </div>
             )}
-            {q.body.map((t) => (
-              <p>{withTerms(iconize(t))}</p>
+            {q.body.map((line) => (
+              <p>{withTerms(iconize(t(line)))}</p>
             ))}
           </section>
         );
@@ -246,20 +247,20 @@ export function Guide({ db, onClose, onPlay, firstRun }: { db: CardDb; onClose: 
   return (
     <>
       <Ticker>
-        How to play{" "}
+        {t("How to play")}{" "}
         <span class="cyan">
           {index + 1}/{PAGES.length}
         </span>
       </Ticker>
       <div class="screen guide" ref={body} {...drag}>
         <header class="screen-head">
-          <button class="ghost" onClick={onClose} aria-label="Back to home">
+          <button class="ghost" onClick={onClose} aria-label={t("Back to home")}>
             <Icon name="arrow-left" />
           </button>
-          <h1>HOW TO PLAY</h1>
+          <h1>{t("HOW TO PLAY")}</h1>
           {firstRun && (
             <button class="ghost guide-skip" onClick={onClose}>
-              Skip
+              {t("Skip")}
             </button>
           )}
         </header>
@@ -275,7 +276,7 @@ export function Guide({ db, onClose, onPlay, firstRun }: { db: CardDb; onClose: 
           ))}
         </div>
         <button class="primary guide-next" style={last ? { visibility: "hidden" } : undefined} onClick={() => go(1)}>
-          Next
+          {t("Next")}
         </button>
       </div>
     </>

@@ -5,6 +5,7 @@ import { useBackClose } from "../back";
 import { useHold } from "../hold";
 import { cardImage } from "../engine";
 import { present } from "../fx/present";
+import { t } from "../i18n";
 
 interface Props {
   code: string;
@@ -177,7 +178,7 @@ export function ZoomableCardImage(props: Props & { gallery?: GalleryItem[]; gall
           const el = (e.currentTarget as HTMLElement).querySelector<HTMLElement>(".card-image");
           if (el && props.code) present(el, props.code);
         }}
-        aria-label={`Animate ${props.alt}`}
+        aria-label={t("Animate {card}", { card: props.alt })}
         {...peek.handlers}
       >
         <CardImage {...image} class="" />

@@ -1,6 +1,7 @@
 import { Ticker } from "../ui";
 import { Icon } from "../icons";
 import { useBackClose } from "../back";
+import { t } from "../i18n";
 
 const SOUNDS = [
   ["Bloop", "The Bloop sea creature .Wav", "Scpsea", "https://freesound.org/s/701050/", "CC0"],
@@ -22,56 +23,56 @@ export function Credits({ onClose }: { onClose: () => void }) {
   return (
     <>
       <Ticker>
-        Credits <span class="cyan">Pocket Rig</span>
+        {t("Credits")} <span class="cyan">Pocket Rig</span>
       </Ticker>
       <div class="screen credits">
         <header class="screen-head">
-          <button class="ghost" onClick={onClose} aria-label="Back to home">
+          <button class="ghost" onClick={onClose} aria-label={t("Back to home")}>
             <Icon name="arrow-left" />
           </button>
-          <h1>CREDITS</h1>
+          <h1>{t("CREDITS")}</h1>
         </header>
 
         <section class="panel section">
-          <h2 class="label">Rules engine</h2>
-          <p>The game runs on the {link("https://github.com/mtgred/netrunner", "jinteki.net")} rules engine, MIT license.</p>
+          <h2 class="label">{t("Rules engine")}</h2>
+          <p>{t("The game runs on the jinteki.net rules engine, MIT license.").split("jinteki.net").flatMap((s, i) => (i ? [link("https://github.com/mtgred/netrunner", "jinteki.net"), s] : [s]))}</p>
         </section>
 
         <section class="panel section">
-          <h2 class="label">Cards</h2>
-          <p>Card data and images from {link("https://netrunnerdb.com", "NetrunnerDB")}.</p>
+          <h2 class="label">{t("Cards")}</h2>
+          <p>{t("Card data and images from")} {link("https://netrunnerdb.com", "NetrunnerDB")}.</p>
         </section>
 
         <section class="panel section cyan">
-          <h2 class="label">Sound &amp; Music</h2>
-          <p>Sound effects and adaptive music generated procedurally with Claude (Anthropic).</p>
+          <h2 class="label">{t("Sound & Music")}</h2>
+          <p>{t("Sound effects and adaptive music generated procedurally with Claude (Anthropic).")}</p>
           <p>
-            Additional recordings from Kenney's Casino Audio, RPG Audio, UI Audio and Digital Audio packs, {link("https://kenney.nl", "kenney.nl")}, CC0 license.
+            {t("Additional recordings from Kenney's Casino Audio, RPG Audio, UI Audio and Digital Audio packs,")} {link("https://kenney.nl", "kenney.nl")}, {t("CC0 license.")}
           </p>
         </section>
 
         <section class="panel section">
-          <h2 class="label">jinteki.net sounds</h2>
-          <p>Classic game sounds from the jinteki.net sound bank:</p>
+          <h2 class="label">{t("jinteki.net sounds")}</h2>
+          <p>{t("Classic game sounds from the jinteki.net sound bank:")}</p>
           <ul class="credits-list">
             {SOUNDS.map(([name, file, author, url, licence]) => (
               <li>
-                <b>{name}</b> · {link(url, file)} by {author} · {licence}
+                <b>{name}</b> · {link(url, file)} {t("by")} {author} · {licence}
               </li>
             ))}
             <li>
-              <b>Archer</b> · by D/0, from {link("https://github.com/db0/Android-Netrunner-OCTGN", "Android-Netrunner-OCTGN")}, used with permission
+              <b>Archer</b> · {t("by D/0, from")} {link("https://github.com/db0/Android-Netrunner-OCTGN", "Android-Netrunner-OCTGN")}, {t("used with permission")}
             </li>
           </ul>
         </section>
 
         <section class="panel section">
-          <h2 class="label">Visuals</h2>
-          <p>Board grid adapted from {link("https://reactbits.dev", "React Bits")} CursorGrid by David Haz, MIT + Commons Clause.</p>
-          <p>Fonts: Big Shoulders Display and Space Mono, SIL Open Font License.</p>
+          <h2 class="label">{t("Visuals")}</h2>
+          <p>{t("Board grid adapted from")} {link("https://reactbits.dev", "React Bits")} {t("CursorGrid by David Haz, MIT + Commons Clause.")}</p>
+          <p>{t("Fonts: Big Shoulders Display and Space Mono, SIL Open Font License.")}</p>
         </section>
 
-        <p class="hint credits-note">Netrunner is a game by Null Signal Games. Pocket Rig is not affiliated with Null Signal Games.</p>
+        <p class="hint credits-note">{t("Netrunner is a game by Null Signal Games. Pocket Rig is not affiliated with Null Signal Games.")}</p>
       </div>
     </>
   );

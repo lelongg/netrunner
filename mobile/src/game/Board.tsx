@@ -15,7 +15,8 @@ import CursorGrid from "./CursorGrid";
 import { setMood } from "../music";
 import { PromptPanel } from "./PromptPanel";
 import { useBackClose } from "../back";
-import { PHASE_LABELS, byServerOrder, iconize, serverLabel, serverName } from "./text";
+import { PHASE_LABELS, byServerOrder, iconize, serverLabel, serverTitle } from "./text";
+import { t } from "../i18n";
 import { Icon, type IconName } from "../icons";
 import { glyphs } from "./Glyphs";
 import { Breakers } from "./Breakers";
@@ -27,6 +28,9 @@ import { motionOff, onSettings, setSetting, settings } from "../settings";
 import { uiSound } from "../uisound";
 import { useTilt } from "../tilt";
 import { warmGl } from "../fx/gl";
+import { labelText, setTextEngine, shown, showMsg, typeLine } from "./labels";
+import { frenchSubroutines } from "../cardtext";
+import { engineHasFrench } from "../engine";
 import { MenuDrawer, MenuItem, MenuSection, MenuTile, SettingsSections } from "../screens/SettingsMenu";
 
 const rootEl = { current: document.documentElement };
@@ -67,7 +71,7 @@ function Waiting({ name, lastAct }: { name: string; lastAct?: number }) {
   const elapsed = s >= 3600 ? `${Math.floor(s / 3600)}:${pad(Math.floor(s / 60) % 60)}:${pad(s % 60)}` : `${Math.floor(s / 60)}:${pad(s % 60)}`;
   return (
     <span class="status waiting">
-      <span>Waiting for {name}…</span>
+      <span>{t("Waiting for {name}…", { name })}</span>
       <time>{elapsed}</time>
     </span>
   );
@@ -129,24 +133,24 @@ function extras(p: any, side: Side) {
   if (side === "runner") {
     if (p.memory)
       out.push(
-        <Stat icon="mu" label="Memory">
+        <Stat icon="mu" label={t("Memory")}>
           {`${p.memory.used ?? 0}/${p.memory.available ?? 0}`}
         </Stat>,
       );
     out.push(
-      <Stat icon="tag" label="Tags" alert={(p.tag?.total ?? 0) > 0}>
+      <Stat icon="tag" label={t("Tags")} alert={(p.tag?.total ?? 0) > 0}>
         {p.tag?.total ?? 0}
       </Stat>,
     );
     if (p.link)
       out.push(
-        <Stat icon="link" label="Link">
+        <Stat icon="link" label={t("Link")}>
           {p.link}
         </Stat>,
       );
     if (p["brain-damage"])
       out.push(
-        <Stat icon="core" label="Core damage">
+        <Stat icon="core" label={t("Core damage")}>
           {p["brain-damage"]}
         </Stat>,
       );
@@ -154,7 +158,7 @@ function extras(p: any, side: Side) {
     const bp = (p["bad-publicity"]?.base ?? 0) + (p["bad-publicity"]?.additional ?? 0);
     if (bp)
       out.push(
-        <Stat icon="bad-pub" label="Bad publicity">
+        <Stat icon="bad-pub" label={t("Bad publicity")}>
           {bp}
         </Stat>,
       );
@@ -174,7 +178,7 @@ function Opponent({ view, side, name }: { view: any; side: Side; name: string })
       <div class="opp-info">
         <div class="opp-line">
           <span class={`label opp-name who-${side}`}>
-            {side} // {name}
+            {t(side === "corp" ? "Corp" : "Runner")} // {name}
           </span>
           <TurnState active={active} />
         </div>
@@ -182,7 +186,7 @@ function Opponent({ view, side, name }: { view: any; side: Side; name: string })
           <Meter value={active ? (p.click ?? 0) : 0} max={Math.max(active ? (p.click ?? 0) : 0, side === "runner" ? 4 : 3)} anchor={`${side}-clicks`} />
           <span class="label stats">
             <span data-anchor={side === "runner" ? "runner-hand" : undefined}>
-              <Stat icon="hand" label={side === "runner" ? "Grip" : "HQ"}>
+              <Stat icon="hand" label={side === "runner" ? t("Grip") : t("HQ")}>
                 {p["hand-count"] ?? 0}
               </Stat>
             </span>
@@ -215,7 +219,7 @@ function ScoreHalf({ side, points, req }: { side: Side; points: number; req: num
     }, 5000);
   }, [points]);
   return (
-    <div ref={row} class={`score-half score-${side}`} data-anchor={`${side}-points`} aria-label={`${side} ${points} of ${req} points`}>
+    <div ref={row} class={`score-half score-${side}`} data-anchor={`${side}-points`} aria-label={t("{side}: {points} of {req} points", { side: t(side === "corp" ? "Corp" : "Runner"), points, req })}>
       {Array.from({ length: req }, (_, i) => (
         <i class={i < points ? "on" : ""} />
       ))}
@@ -239,7 +243,7 @@ function TurnState({ active }: { active: boolean }) {
   return (
     <span class={`label turn-state ${active ? "active" : ""}`}>
       {active && <i ref={dot} class="turn-dot" />}
-      {active ? "Their turn" : "Waiting"}
+      {active ? t("Their turn") : t("Waiting")}
     </span>
   );
 }
@@ -256,13 +260,13 @@ function MeBar({ view, side, name }: { view: any; side: Side; name: string }) {
       <div class="me-info">
         <div class="me-line">
           <span class={`label who-${side}`}>
-            {side} // {name}
+            {t(side === "corp" ? "Corp" : "Runner")} // {name}
           </span>
         </div>
         <div class="me-line">
           <Meter value={clicks} max={Math.max(clicks, side === "runner" ? 4 : 3)} anchor={`${side}-clicks`} />
           <span class="label">
-            <Stat icon="click" label="Clicks">
+            <Stat icon="click" label={t("Clicks")}>
               {clicks}
             </Stat>
             {extras(p, side).map((x) => [" · ", x])}
@@ -293,7 +297,7 @@ function Pile({ label, count, cards, owner, side, selectable, onOpen, anchor }: 
     <div class="pile" data-anchor={anchor}>
       {face}
       <span class={target ? "yellow" : ""}>
-        {label} {count}
+        {t(label)} {count}
       </span>
     </div>
   );
@@ -315,7 +319,7 @@ function Piles({ view, zoneOwner, viewer, onTap, onZone, selectable, centrals = 
       {centrals && p.identity && (
         <div class="pile">
           <CardTile card={p.identity} owner={owner} onTap={onTap} size="sm" selectable={selectable.has(p.identity.cid)} />
-          {zoneOwner === "runner" && <span>Grip {p["hand-count"] ?? (p.hand ?? []).length}</span>}
+          {zoneOwner === "runner" && <span>{t("Grip")} {p["hand-count"] ?? (p.hand ?? []).length}</span>}
         </div>
       )}
       {centrals && <Pile label={zoneOwner === "corp" ? "R&D" : "Stack"} count={p["deck-count"] ?? 0} owner={owner} side={zoneOwner} selectable={selectable} anchor={`${zoneOwner}-deck`} />}
@@ -342,16 +346,16 @@ function ZoneSheet({ zone, view, viewer, selectable, onTap, onClose }: { zone: Z
   const mine = viewer === zone.owner;
   return (
     <div class="sheet-backdrop" onClick={onClose}>
-      <div class="sheet panel zone-sheet" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={ZONE_LABELS[zone.owner][zone.key]}>
+      <div class="sheet panel zone-sheet" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={t(ZONE_LABELS[zone.owner][zone.key])}>
         <div class="row">
           <span class="label">
-            {mine ? "Your" : "Their"} {ZONE_LABELS[zone.owner][zone.key]} · {cards.length}
+            {t(mine ? "Your {zone}" : "Their {zone}", { zone: t(ZONE_LABELS[zone.owner][zone.key]) })} · {cards.length}
           </span>
-          <button class="ghost" onClick={onClose} aria-label="Close">
+          <button class="ghost" onClick={onClose} aria-label={t("Close")}>
             <Icon name="close" />
           </button>
         </div>
-        {cards.length === 0 && <span class="status">Empty</span>}
+        {cards.length === 0 && <span class="status">{t("Empty")}</span>}
         <div class="zone-grid">
           {[...cards].reverse().map((c) => (
             <CardTile card={c} owner={mine} onTap={onTap} selectable={selectable.has(c.cid)} />
@@ -395,12 +399,12 @@ function Overflow({ class: cls, children }: { class: string; children: preact.Co
         {children}
       </div>
       {hidden[0] > 0 && (
-        <button class="more-hint left" onClick={() => go(-1)} aria-label={`${hidden[0]} more to the left`}>
+        <button class="more-hint left" onClick={() => go(-1)} aria-label={t("{n} more to the left", { n: hidden[0] })}>
           ‹ +{hidden[0]}
         </button>
       )}
       {hidden[1] > 0 && (
-        <button class="more-hint right" onClick={() => go(1)} aria-label={`${hidden[1]} more to the right`}>
+        <button class="more-hint right" onClick={() => go(1)} aria-label={t("{n} more to the right", { n: hidden[1] })}>
           +{hidden[1]} ›
         </button>
       )}
@@ -439,12 +443,12 @@ function ScrollHints() {
   return (
     <>
       {more[0] && (
-        <button class="more-hint up" style={{ top: `${head + 4}px` }} onClick={() => go(-1)} aria-label="Scroll the board up">
+        <button class="more-hint up" style={{ top: `${head + 4}px` }} onClick={() => go(-1)} aria-label={t("Scroll the board up")}>
           <Icon name="chevron-left" />
         </button>
       )}
       {more[1] && (
-        <button class="more-hint down" onClick={() => go(1)} aria-label="Scroll the board down">
+        <button class="more-hint down" onClick={() => go(1)} aria-label={t("Scroll the board down")}>
           <Icon name="chevron-left" />
         </button>
       )}
@@ -473,7 +477,7 @@ function CorpArea({ view, side, mine, onTap, onZone, selectable, runServer }: { 
     const n = count(key);
     return (
       <span class="server-name">
-        {serverName(key)}
+        {serverTitle(key)}
         {n != null && <b> {n}</b>}
       </span>
     );
@@ -481,7 +485,7 @@ function CorpArea({ view, side, mine, onTap, onZone, selectable, runServer }: { 
   return (
     <div class="area corp-area">
       <div class="row">
-        <span class="label">Servers</span>
+        <span class="label">{t("Servers")}</span>
         <span class="label">サーバー</span>
       </div>
       {!mine && <Piles view={view} zoneOwner="corp" viewer={side} onTap={onTap} onZone={onZone} selectable={selectable} centrals={false} />}
@@ -526,7 +530,7 @@ function RunnerArea({ view, side, onTap, onZone, selectable }: { view: any; side
   const row = (label: string, cards: any[]) =>
     cards?.length ? (
       <div class="rig-row">
-        <span class="label">{label}</span>
+        <span class="label">{t(label)}</span>
         <div class="rig-cards">
           {cards.map((c) => (
             <CardTile card={c} owner={owner} onTap={onTap} selectable={selectable.has(c.cid)} />
@@ -544,11 +548,11 @@ function RunnerArea({ view, side, onTap, onZone, selectable }: { view: any; side
   return (
     <div class="area runner-area">
       <div class="row">
-        <span class="label">Rig</span>
+        <span class="label">{t("Rig")}</span>
         <span class="label">リグ</span>
       </div>
       {!owner && <Piles view={view} zoneOwner="runner" viewer={side} onTap={onTap} onZone={onZone} selectable={selectable} />}
-      {empty && <span class="hint">Nothing installed</span>}
+      {empty && <span class="hint">{t("Nothing installed")}</span>}
       {owner ? rows.map(([label, key]) => row(label, rig[key])) : [...rows].reverse().map(([label, key]) => row(label, rig[key]))}
       {owner && <Piles view={view} zoneOwner="runner" viewer={side} onTap={onTap} onZone={onZone} selectable={selectable} />}
     </div>
@@ -590,7 +594,7 @@ function groupLog(log: any[], render: (m: unknown) => string, names: Record<Side
       turn.groups.push({ kind: "chat", lines: [glyphs(`${e.user?.username ?? "?"}: ${iconize(raw)}`)] });
       continue;
     }
-    const line = glyphs(iconize(raw));
+    const line = glyphs(iconize(showMsg(e.text, render)));
     const start = raw.match(TURN_START);
     if (start) {
       const side = sideOf(raw);
@@ -622,22 +626,22 @@ export function LogTurns({ log, render, names }: { log: any[]; render: (m: unkno
   const turns = useMemo(() => groupLog(log, render, names), [log.length]);
   return (
     <>
-      {turns.map((t) => (
-        <section class={`log-turn ${t.side ? `side-${t.side}` : ""}`}>
+      {turns.map((turn) => (
+        <section class={`log-turn ${turn.side ? `side-${turn.side}` : ""}`}>
           <header class="log-turn-head">
-            {t.number ? (
+            {turn.number ? (
               <>
-                <span>Turn {t.number}</span>
-                {t.side && <span class={`who-${t.side}`}>{t.side}</span>}
-                <span class="log-who">{t.who}</span>
+                <span>{t("Turn {n}", { n: turn.number })}</span>
+                {turn.side && <span class={`who-${turn.side}`}>{t(turn.side === "corp" ? "Corp" : "Runner")}</span>}
+                <span class="log-who">{turn.who}</span>
               </>
             ) : (
-              <span>Setup</span>
+              <span>{t("Setup")}</span>
             )}
           </header>
-          {t.groups.map((g) => (
+          {turn.groups.map((g) => (
             <div class={`log-group log-${g.kind} ${g.side ? `side-${g.side}` : ""}`}>
-              {g.kind === "action" && <span class="log-click">Click {g.click}</span>}
+              {g.kind === "action" && <span class="log-click">{t("Click {n}", { n: g.click ?? 0 })}</span>}
               {g.lines.map((l, i) => (
                 <p class={i > 0 ? "log-sub" : undefined}>{l}</p>
               ))}
@@ -658,8 +662,8 @@ function Log({ view, render, names, onSay, onClose }: { view: any; render: (m: u
     <div class="sheet-backdrop" onClick={onClose}>
       <div class="sheet panel log-sheet" onClick={(e) => e.stopPropagation()}>
         <div class="row">
-          <span class="label">Log</span>
-          <button class="ghost" onClick={onClose} aria-label="Close log">
+          <span class="label">{t("Log")}</span>
+          <button class="ghost" onClick={onClose} aria-label={t("Close log")}>
             <Icon name="close" />
           </button>
         </div>
@@ -675,8 +679,8 @@ function Log({ view, render, names, onSay, onClose }: { view: any; render: (m: u
             setText("");
           }}
         >
-          <input value={text} onInput={(e) => setText((e.target as HTMLInputElement).value)} placeholder="message or /command" aria-label="Chat message" />
-          <button class="primary">Send</button>
+          <input value={text} onInput={(e) => setText((e.target as HTMLInputElement).value)} placeholder={t("message or /command")} aria-label={t("Chat message")} />
+          <button class="primary">{t("Send")}</button>
         </form>
       </div>
     </div>
@@ -734,7 +738,9 @@ function Encounter({ view, ice, passed, render, onTap, skip, onToggle }: { view:
   const subs: any[] = (ice.subroutines ?? []).map((sub: any) => (allBy && !sub.broken && !sub.fired ? { ...sub, broken: true, breakerTitle: allBy } : sub));
   const encountering = !passed && (!!view.encounters || view.run?.phase === "encounter-ice");
   const strength = ice["current-strength"] ?? ice.strength;
-  const types = (ice.subtypes ?? []).join(" · ");
+  const types = typeLine(ice.subtypes ?? []);
+  const frSubs = frenchSubroutines(ice);
+  const subText = (sub: any, i: number) => (frSubs && frSubs.length === subs.length ? frSubs[i] : sub.label ? shown(sub.label) : t("Subroutine"));
   const states = subs.map((sub) => (sub.broken ? "broken" : sub.fired ? "fired" : sub.resolve === false ? "skipped" : "live"));
   const list = useRef<HTMLOListElement>(null);
   const seen = useRef<{ cid: unknown; states: string[] }>({ cid: ice.cid, states });
@@ -758,7 +764,7 @@ function Encounter({ view, ice, passed, render, onTap, skip, onToggle }: { view:
         <button class="enc-card" onClick={() => onTap(findCard(view, ice.cid) ?? ice)} aria-label={ice.title}>
           <CardImage code={ice.code} alt={ice.title} size="small" width="48px" />
           {passed && (
-            <span class="enc-cleared" aria-label="Passed">
+            <span class="enc-cleared" aria-label={t("Passed")}>
               <Icon name="check" />
             </span>
           )}
@@ -772,7 +778,7 @@ function Encounter({ view, ice, passed, render, onTap, skip, onToggle }: { view:
             {strength != null && (
               <>
                 {" · "}
-                <Stat icon="strength" label="Strength">
+                <Stat icon="strength" label={t("Strength")}>
                   {strength}
                 </Stat>
               </>
@@ -790,15 +796,15 @@ function Encounter({ view, ice, passed, render, onTap, skip, onToggle }: { view:
                 <li class={`enc-sub ${state} ${pickable ? "pickable" : ""} ${left ? "left" : ""}`} onClick={pickable ? () => onToggle!(i) : undefined} role={pickable ? "checkbox" : undefined} aria-checked={pickable ? !left : undefined}>
                   <Icon name="sub" />
                   <span class="enc-label">
-                    <span class="enc-text">{state === "broken" ? <Decrypt text={sub.label ?? "Subroutine"} /> : withTerms(iconize(sub.label ?? "Subroutine"))}</span>
+                    <span class="enc-text">{state === "broken" ? <Decrypt text={subText(sub, i)} /> : withTerms(iconize(subText(sub, i)))}</span>
                   </span>
-                  <span class="enc-state">{state === "broken" ? (breaker ? `Broken · ${breaker}` : "Broken") : state === "fired" ? "Fired" : state === "skipped" ? "Won't fire" : left ? "Let it fire" : pickable ? "Break" : encountering ? "Unbroken" : ""}</span>
+                  <span class="enc-state">{state === "broken" ? (breaker ? t("Broken · {card}", { card: breaker }) : t("Broken")) : state === "fired" ? t("Fired") : state === "skipped" ? t("Won't fire") : left ? t("Let it fire") : pickable ? t("Break") : encountering ? t("Unbroken") : ""}</span>
                 </li>
               );
             })}
           </ol>
         ) : (
-          <p class="enc-none">No subroutines</p>
+          <p class="enc-none">{t("No subroutines")}</p>
         )}
       </div>
     </div>
@@ -838,7 +844,7 @@ function Toasts({ toasts: all, render, dismiss: drop }: { toasts: any[]; render:
   if (!toasts.length) return null;
   const groups = new Map<string, { text: string; type: string; ids: string[] }>();
   for (const t of toasts) {
-    const text = iconize(render(t.msg));
+    const text = iconize(showMsg(t.msg, render));
     const group = groups.get(text) ?? { text, type: String(t.type), ids: [] as string[] };
     group.ids.push(t.id);
     groups.set(text, group);
@@ -853,7 +859,7 @@ function Toasts({ toasts: all, render, dismiss: drop }: { toasts: any[]; render:
           {g.ids.length > 1 && <span class="toast-count"> ×{g.ids.length}</span>}
         </button>
       ))}
-      {hidden > 0 && <span class="label">+{hidden} more</span>}
+      {hidden > 0 && <span class="label">{t("+{n} more", { n: hidden })}</span>}
     </div>
   );
 }
@@ -862,7 +868,7 @@ function GameOver({ view, side, db, render, onLeave }: { view: any; side: Side; 
   const logLength = (view.log ?? []).length;
   const { lines, cards } = useMemo(() => {
     const lines = (view.log ?? [])
-      .map((e: any) => iconize(render(e.text)))
+      .map((e: any) => iconize(showMsg(e.text, render)))
       .filter((t: string) => t && !/^\s*\[hr\]\s*$/i.test(t))
       .slice(-5);
     const found = new Map<string, { code: string; title: string; at: number }>();
@@ -876,7 +882,7 @@ function GameOver({ view, side, db, render, onLeave }: { view: any; side: Side; 
   return (
     <section class="prompt game-over">
       <span class={`big ${won ? "yellow" : ""}`} style="font-size: 56px">
-        {won ? "VICTORY" : "DEFEAT"}
+        {won ? t("VICTORY") : t("DEFEAT")}
       </span>
       {view.reason && <span class="label">{view.reason}</span>}
       {cards.length > 0 && (
@@ -891,19 +897,19 @@ function GameOver({ view, side, db, render, onLeave }: { view: any; side: Side; 
           <li>{glyphs(l)}</li>
         ))}
       </ol>
-      <Cta onClick={onLeave}>Back to home</Cta>
+      <Cta onClick={onLeave}>{t("Back to home")}</Cta>
     </section>
   );
 }
 
 function feedText(view: any, side: Side, names: Record<Side, string>, watching = false) {
-  if (view.winner) return `${names[view.winner as Side] ?? view.winner} wins`;
+  if (view.winner) return t("{name} wins", { name: names[view.winner as Side] ?? view.winner });
   if (view.run) {
     const ice = currentIce(view);
-    return `Run · ${serverName(view.run.server?.[0] ?? "")} · ${PHASE_LABELS[view.run.phase] ?? view.run.phase}${ice ? ` · ${ice.title ?? "unrezzed ice"}` : ""}`;
+    return `${t("Run · {server} · {phase}", { server: serverTitle(view.run.server?.[0] ?? ""), phase: t(PHASE_LABELS[view.run.phase] ?? view.run.phase) })}${ice ? ` · ${ice.title ?? t("unrezzed ice")}` : ""}`;
   }
   const active = view["active-player"] as Side;
-  return `Turn ${view.turn ?? 0} · ${active === side && !watching ? "your move" : `${names[active] ?? active} to play`}`;
+  return active === side && !watching ? t("Turn {n} · your move", { n: view.turn ?? 0 }) : t("Turn {n} · {name} to play", { n: view.turn ?? 0, name: names[active] ?? active });
 }
 
 function markStaged(node: any, staged: Set<unknown>): any {
@@ -941,7 +947,7 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
       else {
         await navigator.clipboard.writeText(url);
         uiSound("ui_copy");
-        tell("Link copied", copied);
+        tell(t("Link copied"), copied);
       }
     } catch {}
   };
@@ -969,6 +975,7 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
   const [deckOpen, setDeckOpen] = useState(false);
   const autoZone = useRef(false);
   const render = (m: unknown) => engine.renderMessage(m);
+  setTextEngine(engine, engineHasFrench);
   useFx(live, side, render, quiet, session.lobby.role === "spectator", (title) => db.byTitle.get(title)?.code);
   const sendNow = (command: string, args?: unknown) => session.send(command, args, side);
   const watching = session.lobby.role === "spectator";
@@ -1126,8 +1133,9 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
     const min: number = prompt["select-all"] ? max : (prompt["select-min"] ?? 0);
     const ready = staged.size >= min && staged.size <= max && staged.size > 0;
     const msg = render(prompt.msg);
-    const verb = /^discard/i.test(msg) ? "Discard" : /^trash/i.test(msg) ? "Trash" : "Confirm";
-    return { label: ready ? `${verb} ${stagedNames.length === 1 ? stagedNames[0] : `${staged.size} ${staged.size === 1 ? "card" : "cards"}`}` : `Pick ${Math.max(1, min - staged.size)} more`, ready, onConfirm: confirmStaged };
+    const verb = /^discard/i.test(msg) ? "Discard {what}" : /^trash/i.test(msg) ? "Trash {what}" : "Confirm {what}";
+    const what = stagedNames.length === 1 ? stagedNames[0] : staged.size === 1 ? t("1 card") : t("{n} cards", { n: staged.size });
+    return { label: ready ? t(verb, { what }) : t("Pick {n} more", { n: Math.max(1, min - staged.size) }), ready, onConfirm: confirmStaged };
   })();
   const closePrompt = () => session.say("/close-prompt", side);
 
@@ -1211,12 +1219,12 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
       <section class="actions watching">
         {view.winner ? (
           <span class="big yellow" style="font-size: 40px">
-            {names[view.winner as Side] ?? view.winner} wins
+            {t("{name} wins", { name: names[view.winner as Side] ?? view.winner })}
           </span>
         ) : (
           <p class="run-status">
-            Spectating
-            {view.run ? ` · run on ${serverName(runServer ?? "")} · ${PHASE_LABELS[view.run?.phase] ?? view.run?.phase}` : ` · ${names[view["active-player"] as Side] ?? "…"} to play`}
+            {t("Spectating")}
+            {view.run ? ` · ${t("run on {server} · {phase}", { server: serverTitle(runServer ?? ""), phase: t(PHASE_LABELS[view.run?.phase] ?? view.run?.phase) })}` : ` · ${t("{name} to play", { name: names[view["active-player"] as Side] ?? "…" })}`}
           </p>
         )}
         {view.reason && view.winner && <span class="label">{view.reason}</span>}
@@ -1224,15 +1232,15 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
           <Cta
             onClick={async () => {
               const seatSide = session.freeSeatSide!;
-              if (!(await ask({ title: `Take the ${seatSide === "corp" ? "Corp" : "Runner"} seat?`, body: "You will play this side from where the game stands now.", ok: "Take seat" }))) return;
+              if (!(await ask({ title: seatSide === "corp" ? t("Take the Corp seat?") : t("Take the Runner seat?"), body: t("You will play this side from where the game stands now."), ok: t("Take seat") }))) return;
               try {
                 await session.takeSeat();
               } catch (e) {
-                await tell("Could not take the seat", e instanceof Error ? e.message : String(e));
+                await tell(t("Could not take the seat"), e instanceof Error ? e.message : String(e));
               }
             }}
           >
-            Take the {session.freeSeatSide === "corp" ? "Corp" : "Runner"} seat
+            {session.freeSeatSide === "corp" ? t("Take the Corp seat") : t("Take the Runner seat")}
           </Cta>
         )}
       </section>
@@ -1260,7 +1268,7 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
     const list: string[] = byServerOrder(me["runnable-list"] ?? [], (x) => x);
     panel = (
       <section class="prompt">
-        <span class="label">Run on…</span>
+        <span class="label">{t("Run on…")}</span>
         <div class="choices">
           {list.map((s) => (
             <button
@@ -1275,7 +1283,7 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
             </button>
           ))}
           <button class="ghost" onClick={() => setPicking(false)}>
-            Cancel
+            {t("Cancel")}
           </button>
         </div>
       </section>
@@ -1289,8 +1297,8 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
       <section class="actions">
         {(view.run || view.encounters) && (
           <p class="run-status">
-            Run · {serverName(runServer ?? "")} · {PHASE_LABELS[view.run?.phase] ?? view.run?.phase}
-            {ice && !ice.rezzed ? " · unrezzed ice" : ""}
+            {t("Run · {server} · {phase}", { server: serverTitle(runServer ?? ""), phase: t(PHASE_LABELS[view.run?.phase] ?? view.run?.phase) })}
+            {ice && !ice.rezzed ? ` · ${t("unrezzed ice")}` : ""}
           </p>
         )}
         <div class="buttons">
@@ -1305,7 +1313,7 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
                 if (lead.then === "install-list") setPicking(true);
               }}
             >
-              {glyphs(iconize(armed === lead.command && lead.confirm ? lead.confirm : lead.label))}
+              {glyphs(iconize(labelText(armed === lead.command && lead.confirm ? lead.confirm : lead.label, lead.command)))}
             </Cta>
           )}
           {others.map((c) => (
@@ -1320,7 +1328,7 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
                 if (c.then === "install-list") setPicking(true);
               }}
             >
-              {glyphs(iconize(armed === c.command && c.confirm ? c.confirm : c.label))}
+              {glyphs(iconize(labelText(armed === c.command && c.confirm ? c.confirm : c.label, c.command)))}
             </button>
           ))}
           {commands.length === 0 && <Waiting name={names[opp]} lastAct={session.lastActAt} />}
@@ -1352,30 +1360,30 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
         onFeedHold={setShowLog}
         feedKey={log.length}
         action={
-          <button class="ticker-menu" onClick={() => setMenu(!menu)} aria-label="Menu" aria-expanded={menu}>
+          <button class="ticker-menu" onClick={() => setMenu(!menu)} aria-label={t("Menu")} aria-expanded={menu}>
             <Icon name={menu ? "close" : "menu"} />
-            <span>{menu ? "Close" : "Menu"}</span>
+            <span>{menu ? t("Close") : t("Menu")}</span>
           </button>
         }
       >
-        {view.winner || !lastLog ? feedText(view, side, names, watching) : glyphs(iconize(render(lastLog.text)))}
-        {!!session.lobby.watchers && <span class="cyan"> · {session.lobby.watchers} watching</span>}
-        {link && link !== "connected" && <span class="yellow"> · {link === "waiting" ? "opponent offline" : "reconnecting"}</span>}
+        {view.winner || !lastLog ? feedText(view, side, names, watching) : glyphs(iconize(showMsg(lastLog.text, render)))}
+        {!!session.lobby.watchers && <span class="cyan"> · {t("{n} watching", { n: session.lobby.watchers })}</span>}
+        {link && link !== "connected" && <span class="yellow"> · {link === "waiting" ? t("opponent offline") : t("reconnecting")}</span>}
       </Ticker>
       {menu && (
-        <MenuDrawer title="Game menu" tabs={["Game", "Settings"]} tab={menuTab} onTab={setMenuTab} onClose={() => setMenu(false)}>
+        <MenuDrawer title={t("Game menu")} tabs={["Game", "Settings"]} tab={menuTab} onTab={setMenuTab} onClose={() => setMenu(false)}>
           {menuTab === "Settings" ? (
             <SettingsSections />
           ) : (
             <>
               <div class="menu-tiles">
-                <MenuTile icon="deck" label="Deck list" onClick={() => closeMenu(() => setDeckOpen(true))} />
-                <MenuTile icon="history" label="Game log" onClick={() => closeMenu(() => setShowLog(true))} />
-                {canUndo && <MenuTile icon="undo" label="Undo click" onClick={() => closeMenu(() => session.say("/undo-click", side))} />}
-                {onSwitchSide && watching && <MenuTile icon="swap" label={`${opp === "corp" ? "Corp" : "Runner"} view`} onClick={() => closeMenu(onSwitchSide)} />}
+                <MenuTile icon="deck" label={t("Deck list")} onClick={() => closeMenu(() => setDeckOpen(true))} />
+                <MenuTile icon="history" label={t("Game log")} onClick={() => closeMenu(() => setShowLog(true))} />
+                {canUndo && <MenuTile icon="undo" label={t("Undo click")} onClick={() => closeMenu(() => session.say("/undo-click", side))} />}
+                {onSwitchSide && watching && <MenuTile icon="swap" label={opp === "corp" ? t("Corp view") : t("Runner view")} onClick={() => closeMenu(onSwitchSide)} />}
                 <MenuTile
                   icon={settings.sound || settings.music ? "sound" : "mute"}
-                  label={settings.sound || settings.music ? "Sound on" : "Sound off"}
+                  label={settings.sound || settings.music ? t("Sound on") : t("Sound off")}
                   active={settings.sound || settings.music}
                   onClick={() => {
                     const on = !(settings.sound || settings.music);
@@ -1385,55 +1393,55 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
                 />
               </div>
               {(session.watchUrl || session.rejoinUrl || !watching) && (
-                <MenuSection title="Share">
-                  {session.watchUrl && <MenuItem icon="eye" label="Spectator link" hint="Anyone with it can watch" onClick={() => closeMenu(() => shareLink(session.watchUrl!, "Watch this Netrunner game", "Send it to anyone who wants to watch this game."))} />}
-                  {session.rejoinUrl && <MenuItem icon="link" label="Rejoin link" hint="Keep it private: it takes your seat" onClick={() => closeMenu(() => shareLink(session.rejoinUrl!, "Rejoin my Netrunner game", "Keep it private: it lets anyone take your seat."))} />}
-                  {!watching && <MenuItem icon="share" label="Export game journal" hint="A file to replay or report a bug" onClick={() => closeMenu(exportJournal)} />}
+                <MenuSection title={t("Share")}>
+                  {session.watchUrl && <MenuItem icon="eye" label={t("Spectator link")} hint={t("Anyone with it can watch")} onClick={() => closeMenu(() => shareLink(session.watchUrl!, t("Watch this Netrunner game"), t("Send it to anyone who wants to watch this game.")))} />}
+                  {session.rejoinUrl && <MenuItem icon="link" label={t("Rejoin link")} hint={t("Keep it private: it takes your seat")} onClick={() => closeMenu(() => shareLink(session.rejoinUrl!, t("Rejoin my Netrunner game"), t("Keep it private: it lets anyone take your seat.")))} />}
+                  {!watching && <MenuItem icon="share" label={t("Export game journal")} hint={t("A file to replay or report a bug")} onClick={() => closeMenu(exportJournal)} />}
                 </MenuSection>
               )}
               {((prompt && ptype !== "run") || session.canFreeSeat) && (
-                <MenuSection title="Troubleshoot">
+                <MenuSection title={t("Troubleshoot")}>
                   {prompt && ptype !== "run" && (
                     <MenuItem
                       icon="warning"
-                      label="Close stuck prompt"
+                      label={t("Close stuck prompt")}
                       onClick={() => closeMenu(async () => {
-                        if (await ask({ title: "Close the prompt?", body: "Use this only if the game is stuck.", ok: "Close prompt", danger: true })) closePrompt();
+                        if (await ask({ title: t("Close the prompt?"), body: t("Use this only if the game is stuck."), ok: t("Close prompt"), danger: true })) closePrompt();
                       })}
                     />
                   )}
                   {session.canFreeSeat && (
                     <MenuItem
                       icon="close"
-                      label="Free opponent's seat"
-                      hint="Someone else can take it"
+                      label={t("Free opponent's seat")}
+                      hint={t("Someone else can take it")}
                       onClick={() => closeMenu(async () => {
-                        if (await ask({ title: "Free their seat?", body: `${session.lobby.opponentName ?? "Your opponent"} will be disconnected. Anyone with the game code, or watching it, can then take their seat and continue the game.`, ok: "Free seat", danger: true })) session.freeSeat();
+                        if (await ask({ title: t("Free their seat?"), body: t("{name} will be disconnected. Anyone with the game code, or watching it, can then take their seat and continue the game.", { name: session.lobby.opponentName ?? t("Your opponent") }), ok: t("Free seat"), danger: true })) session.freeSeat();
                       })}
                     />
                   )}
                 </MenuSection>
               )}
-              <MenuSection title="Leave">
-                <MenuItem icon="arrow-left" label="Back to home" hint={watching ? undefined : "The game stays saved"} onClick={() => closeMenu(onExit)} />
-                {!watching && onWatch && session.watchUrl && <MenuItem icon="eye" label="Watch instead" onClick={() => closeMenu(onWatch)} />}
+              <MenuSection title={t("Leave")}>
+                <MenuItem icon="arrow-left" label={t("Back to home")} hint={watching ? undefined : t("The game stays saved")} onClick={() => closeMenu(onExit)} />
+                {!watching && onWatch && session.watchUrl && <MenuItem icon="eye" label={t("Watch instead")} onClick={() => closeMenu(onWatch)} />}
                 {!watching && (
                   <MenuItem
                     icon="flag"
-                    label="Concede"
+                    label={t("Concede")}
                     tone="danger"
                     onClick={() => closeMenu(async () => {
-                      if (await ask({ title: "Concede?", body: "Your opponent wins this game.", ok: "Concede", danger: true })) session.concede(side);
+                      if (await ask({ title: t("Concede?"), body: t("Your opponent wins this game."), ok: t("Concede"), danger: true })) session.concede(side);
                     })}
                   />
                 )}
                 {!watching && (
                   <MenuItem
                     icon="trash"
-                    label="Delete game"
+                    label={t("Delete game")}
                     tone="quiet"
                     onClick={() => closeMenu(async () => {
-                      if (await ask({ title: "Delete this game?", body: "It is removed from this device and you will not be able to come back to it.", ok: "Delete", danger: true })) onLeave();
+                      if (await ask({ title: t("Delete this game?"), body: t("It is removed from this device and you will not be able to come back to it."), ok: t("Delete"), danger: true })) onLeave();
                     })}
                   />
                 )}
@@ -1460,7 +1468,7 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
         </div>
         {respond?.done ? (
           <div class="respond-done">
-            <span class="hint">Rez or use abilities, then hand the device back.</span>
+            <span class="hint">{t("Rez or use abilities, then hand the device back.")}</span>
             <Cta onClick={respond.onClick}>{respond.done}</Cta>
           </div>
         ) : (
@@ -1470,7 +1478,7 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
           <button class="respond-offer" onClick={respond.onClick}>
             <Icon name="swap" />
             <span>{respond.offer}</span>
-            <small>before your next action</small>
+            <small>{t("before your next action")}</small>
           </button>
         )}
         <MeBar view={view} side={side} name={names[side]} />
@@ -1478,8 +1486,8 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
           {hand.map((c) => (
             <CardTile key={c.cid} card={c} owner onTap={tap} selectable={selectable.has(c.cid)} />
           ))}
-          {watching && hand.length === 0 && Array.from({ length: me["hand-count"] ?? 0 }, () => <div class={`tile back ${side}`}><span class="back-label">{side === "corp" ? "CORP" : "RUN"}</span></div>)}
-          {hand.length === 0 && !(watching && me["hand-count"]) && <span class="hint">{side === "runner" ? "Empty grip" : "HQ is empty"}</span>}
+          {watching && hand.length === 0 && Array.from({ length: me["hand-count"] ?? 0 }, () => <div class={`tile back ${side}`}><span class="back-label">{side === "corp" ? t("CORP") : t("RUN")}</span></div>)}
+          {hand.length === 0 && !(watching && me["hand-count"]) && <span class="hint">{side === "runner" ? t("Empty grip") : t("HQ is empty")}</span>}
         </div>
       </footer>
       {deckOpen && session.deckFor(side) && <DeckView deck={session.deckFor(side)!} format={deckFormat(session.lobby.format) ?? "casual"} onClose={() => setDeckOpen(false)} />}

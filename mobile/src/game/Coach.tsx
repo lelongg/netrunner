@@ -7,6 +7,7 @@ import { motionOff } from "../settings";
 import { withTerms } from "./RichText";
 import { iconize } from "./text";
 import { basicCommands, promptOf } from "./actions";
+import { t } from "../i18n";
 
 interface Step {
   id: string;
@@ -115,9 +116,9 @@ export function Coach({ session, view, side }: { session: Session; view: any; si
   return (
     <>
       <div class="coach-ring" style={{ left: `${box.left - 4}px`, top: `${box.top - 4}px`, width: `${box.width + 8}px`, height: `${box.height + 8}px` }} />
-      <div ref={bubble} class="coach panel" style={style} role="dialog" aria-label="Tutorial">
-        <span class="label cyan">Tutorial · {STEPS.indexOf(step) + 1}/{STEPS.length}</span>
-        <p>{withTerms(iconize(step.text))}</p>
+      <div ref={bubble} class="coach panel" style={style} role="dialog" aria-label={t("Tutorial")}>
+        <span class="label cyan">{t("Tutorial")} · {STEPS.indexOf(step) + 1}/{STEPS.length}</span>
+        <p>{withTerms(iconize(t(step.text)))}</p>
         <div class="coach-actions">
           <button
             class="ghost"
@@ -126,10 +127,10 @@ export function Coach({ session, view, side }: { session: Session; view: any; si
               skipTutorial();
             }}
           >
-            Skip tutorial
+            {t("Skip tutorial")}
           </button>
           <button class="primary" onClick={() => done([step.id])}>
-            Got it
+            {t("Got it")}
           </button>
         </div>
       </div>

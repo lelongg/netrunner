@@ -18,6 +18,7 @@ import { useCardPeek } from "../game/CardImage";
 import CursorGrid from "../game/CursorGrid";
 import { QrScan } from "./QrScan";
 import { GameList, JoinCode, type Props, describe, startGame } from "./Home";
+import { t } from "../i18n";
 
 type Mode = "online" | "solo" | "local";
 
@@ -41,9 +42,9 @@ const factionKey = (f?: string) => (f ?? "neutral").toLowerCase().replace(/[^a-z
 
 function playerName() {
   try {
-    return localStorage.getItem("nsg.name")?.trim() || "Player";
+    return localStorage.getItem("nsg.name")?.trim() || t("Player");
   } catch {
-    return "Player";
+    return t("Player");
   }
 }
 
@@ -87,10 +88,10 @@ export function TabBar({ active, onTab, ready, global }: { active: Tab; onTab: (
   ];
   return (
     <nav class={`tabbar ${global ? "global" : ""}`}>
-      {tabs.map((t) => (
-        <button class={t.key === active ? "on" : ""} disabled={!ready && t.key !== active} onClick={() => t.key !== active && onTab(t.key)} aria-current={t.key === active ? "page" : undefined}>
-          <Icon name={t.icon} />
-          <span>{t.label}</span>
+      {tabs.map((tab) => (
+        <button class={tab.key === active ? "on" : ""} disabled={!ready && tab.key !== active} onClick={() => tab.key !== active && onTab(tab.key)} aria-current={tab.key === active ? "page" : undefined}>
+          <Icon name={tab.icon} />
+          <span>{t(tab.label)}</span>
         </button>
       ))}
     </nav>
@@ -108,7 +109,7 @@ function Continue({ props }: { props: Props }) {
   return (
     <div class={`continue ${status === "Your move" ? "hot" : ""}`}>
       <button class="continue-go" disabled={!ready} onClick={() => onResume(save)}>
-        <span class="continue-tag">{status === "Your move" ? "Your move" : "Continue"}</span>
+        <span class="continue-tag">{status === "Your move" ? t("Your move") : t("Continue")}</span>
         <span class="continue-main">
           <strong>{title}</strong>
           <span>{detail}</span>
@@ -116,17 +117,17 @@ function Continue({ props }: { props: Props }) {
         <Icon name="arrow-right" />
       </button>
       {saves.length > 1 && (
-        <button class="continue-more" onClick={() => setAll(true)} aria-label="All your games">
+        <button class="continue-more" onClick={() => setAll(true)} aria-label={t("All your games")}>
           +{saves.length - 1}
         </button>
       )}
       {all &&
         createPortal(
           <div class="sheet-backdrop" onClick={() => setAll(false)}>
-            <div class="sheet panel cyan games-sheet" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Your games">
+            <div class="sheet panel cyan games-sheet" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={t("Your games")}>
               <div class="row">
-                <span class="label cyan">Your games</span>
-                <button class="ghost" onClick={() => setAll(false)} aria-label="Close">
+                <span class="label cyan">{t("Your games")}</span>
+                <button class="ghost" onClick={() => setAll(false)} aria-label={t("Close")}>
                   <Icon name="close" />
                 </button>
               </div>
@@ -157,8 +158,8 @@ const TIPS = ["Hold a card to see it full size", "Hold the ticker to peek at the
 function useFeed(props: Props, hero: { deck?: string; card?: Card }) {
   const { ready, error, saves, seeking, db } = props;
   const [open, setOpen] = useState<number | null>(null);
-  const [lists, setLists] = useState<string[]>([]);
-  const [last, setLast] = useState<string | null>(null);
+  const [lists, setLists] = useState<{ name: string; user: string }[]>([]);
+  const [last, setLast] = useState<{ won: boolean; who?: string; bot: boolean; score: string } | null>(null);
   useEffect(() => {
     if (!relayUrl()) return;
     const poll = () =>
@@ -178,7 +179,7 @@ function useFeed(props: Props, hero: { deck?: string; card?: Card }) {
           r.items
             .filter((l) => l.deck)
             .slice(0, 2)
-            .map((l) => `New on NetrunnerDB: ${l.name} by ${l.user}`),
+            .map((l) => ({ name: l.name, user: l.user })),
         ),
       )
       .catch(() => {});
@@ -189,23 +190,25 @@ function useFeed(props: Props, hero: { deck?: string; card?: Card }) {
         const g = games.sort((a, b) => b.endedAt - a.endedAt)[0];
         const sum = g?.save.summary;
         if (!sum?.winner) return;
-        const who = sum.opponent ?? (g.save.v === 1 && g.save.vsBot ? "the bot" : "your opponent");
-        setLast(`Last game: ${sum.winner === sum.side ? "won" : "lost"} vs ${who}${sum.points ? ` ${sum.points[0]}–${sum.points[1]}` : ""}`);
+        setLast({ won: sum.winner === sum.side, who: sum.opponent, bot: g.save.v === 1 && !!g.save.vsBot, score: sum.points ? ` ${sum.points[0]}–${sum.points[1]}` : "" });
       })
       .catch(() => {});
   }, []);
   const items: { text: string; tone?: string }[] = [];
-  if (!ready) items.push({ text: error ? "Engine offline" : "Engine loading", tone: "yellow" });
+  if (!ready) items.push({ text: error ? t("Engine offline") : t("Engine loading"), tone: "yellow" });
   const mine = saves.filter((s) => !s.summary?.winner && describe(s).status === "Your move").length;
-  if (mine) items.push({ text: `Your move in ${mine} game${mine > 1 ? "s" : ""}`, tone: "yellow" });
-  if (seeking) items.push({ text: "Waiting for an opponent", tone: "cyan" });
-  if (open) items.push({ text: `${open} player${open > 1 ? "s" : ""} waiting for a game online`, tone: "cyan" });
-  if (open === 0 && !seeking) items.push({ text: "Nobody is searching right now · be the first" });
-  if (last) items.push({ text: last });
-  for (const l of lists) items.push({ text: l });
-  if (hero.card && !hero.deck) items.push({ text: `Identity of the day: ${hero.card.title}`, tone: "red" });
+  if (mine) items.push({ text: mine > 1 ? t("Your move in {n} games", { n: mine }) : t("Your move in 1 game"), tone: "yellow" });
+  if (seeking) items.push({ text: t("Waiting for an opponent"), tone: "cyan" });
+  if (open) items.push({ text: open > 1 ? t("{n} players waiting for a game online", { n: open }) : t("1 player waiting for a game online"), tone: "cyan" });
+  if (open === 0 && !seeking) items.push({ text: t("Nobody is searching right now · be the first") });
+  if (last) {
+    const who = last.who ?? (last.bot ? t("the bot") : t("your opponent"));
+    items.push({ text: (last.won ? t("Last game: won vs {who}", { who }) : t("Last game: lost vs {who}", { who })) + last.score });
+  }
+  for (const l of lists) items.push({ text: t("New on NetrunnerDB: {name} by {user}", { name: l.name, user: l.user }) });
+  if (hero.card && !hero.deck) items.push({ text: t("Identity of the day: {title}", { title: hero.card.title }), tone: "red" });
   const day = Math.floor(Date.now() / 86_400_000);
-  items.push({ text: `Tip: ${TIPS[day % TIPS.length]}` });
+  items.push({ text: t("Tip: {tip}", { tip: t(TIPS[day % TIPS.length]) }) });
   return items;
 }
 
@@ -262,7 +265,7 @@ export function HomeArena(props: Props) {
   const tint = FACTION_TINT[factionKey(hero.identity?.faction)] ?? (side === "corp" ? "#3aa3b5" : "#ff5a4f");
   const play = () => (mode === "online" ? onFind() : go("local", undefined, mode === "solo"));
   const searching = mode === "online" && seeking;
-  const label = searching ? "Waiting for an opponent…" : mode === "online" ? "Play online" : mode === "solo" ? "Play vs bot" : "Play local";
+  const label = searching ? t("Waiting for an opponent…") : mode === "online" ? t("Play online") : mode === "solo" ? t("Play vs bot") : t("Play local");
   return (
     <>
       <Ticker feedKey={feed.length}>
@@ -312,7 +315,7 @@ export function HomeArena(props: Props) {
         <div class="arena-shade" aria-hidden="true" />
         <CursorGrid className="arena-grid" cellSize={32} color={tint} gridColor={tint} radius={110} holdTime={200} fadeDuration={1400} maxOpacity={0.7} fillOpacity={0} gridOpacity={0.1} spotlight={0.3} ambient={motionOff() ? 0 : 0.9} fps={30} tempo={seeking ? 1.8 : 1.2} clickPulse={!motionOff()} intro={!motionOff()} edgeFade={0.08} />
         <header class="arena-top">
-          <button class="player-chip" onClick={props.onProfile} aria-label="Your profile">
+          <button class="player-chip" onClick={props.onProfile} aria-label={t("Your profile")}>
             {factionLogoKey(hero.identity?.faction) ? (
               <span key={`av-${side}`} class={`player-glyph ${slide ? "chip-in" : ""}`}>
                 <FactionLogo faction={hero.identity?.faction} />
@@ -321,7 +324,7 @@ export function HomeArena(props: Props) {
               <Art key={`av-${side}`} card={hero.identity} class={`player-avatar ${slide ? "chip-in" : ""}`} />
             )}
             <span key={`pt-${side}`} class={`player-text ${slide ? "chip-in" : ""}`}>
-              <small class="label">{hero.identity?.side === "Corp" ? "Corp ID" : "Runner ID"}</small>
+              <small class="label">{hero.identity?.side === "Corp" ? t("Corp ID") : t("Runner ID")}</small>
               <strong>{playerName()}</strong>
             </span>
           </button>
@@ -329,7 +332,7 @@ export function HomeArena(props: Props) {
         {error && <p class="error">{error}</p>}
         <Continue props={props} />
         <div class="deck-showcase">
-          <button class="deck-open" disabled={!ready} onClick={() => peek.consumed() || onDecks(hero.id, side)} aria-label={hero.id ? `Edit ${hero.deck}` : "Open your decks"} {...peek.handlers}>
+          <button class="deck-open" disabled={!ready} onClick={() => peek.consumed() || onDecks(hero.id, side)} aria-label={hero.id ? t("Edit {deck}", { deck: hero.deck ?? "" }) : t("Open your decks")} {...peek.handlers}>
             <span ref={slideEl} key={side} class={`deck-slide ${slide ? `slide-${slide}` : ""}`}>
               <span class="deck-tilt">
                 <span class="deck-frame">
@@ -353,14 +356,14 @@ export function HomeArena(props: Props) {
           </button>
           {peek.view}
           <span ref={captionEl} key={`c-${side}`} class={`deck-caption ${slide ? "fade-in" : ""}`}>
-            <strong>{hero.deck ?? hero.card?.title ?? "Build a deck"}</strong>
+            <strong>{hero.deck ?? hero.card?.title ?? t("Build a deck")}</strong>
           </span>
         </div>
         <div class="arena-bottom">
-          <div class="match-sides arena-modes" role="radiogroup" aria-label="Mode">
+          <div class="match-sides arena-modes" role="radiogroup" aria-label={t("Mode")}>
             {MODES.map((m) => (
               <button role="radio" aria-checked={mode === m.key} class={`mode-${m.key} ${mode === m.key ? "on" : ""}`} onClick={() => setMode(m.key)}>
-                {m.label}
+                {t(m.label)}
                 {m.key === "online" && seeking && <i class="mode-dot" />}
               </button>
             ))}
@@ -371,16 +374,16 @@ export function HomeArena(props: Props) {
             </Cta>
           </div>
           <button class="arena-link center" onClick={() => setJoining(true)}>
-            Have a game code?
+            {t("Have a game code?")}
           </button>
         </div>
         {joining &&
           createPortal(
             <div class="sheet-backdrop" onClick={() => setJoining(false)}>
-              <div class="sheet panel join-sheet" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Join a game">
+              <div class="sheet panel join-sheet" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={t("Join a game")}>
                 <div class="row">
-                  <span class="label">Join a game</span>
-                  <button class="ghost" onClick={() => setJoining(false)} aria-label="Close">
+                  <span class="label">{t("Join a game")}</span>
+                  <button class="ghost" onClick={() => setJoining(false)} aria-label={t("Close")}>
                     <Icon name="close" />
                   </button>
                 </div>
@@ -393,12 +396,12 @@ export function HomeArena(props: Props) {
                     }}
                   />
                 ) : (
-                  <p class="hint">Enter the five-character code your friend shared, or scan their QR code.</p>
+                  <p class="hint">{t("Enter the five-character code your friend shared, or scan their QR code.")}</p>
                 )}
                 <JoinCode ready={ready} initial={initialJoin} onJoin={(c) => go("guest", c)} />
                 {!scanning && typeof navigator !== "undefined" && !!navigator.mediaDevices?.getUserMedia && (
                   <button class="qr-start" onClick={() => setScanning(true)}>
-                    <Icon name="eye" /> Scan a QR code
+                    <Icon name="eye" /> {t("Scan a QR code")}
                   </button>
                 )}
               </div>

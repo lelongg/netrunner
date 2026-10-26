@@ -10,6 +10,7 @@ import { RelayTransport, relayUrl, createGame, forgetTicket, joinGame, rejoinLin
 import type { Entry, LinkStatus, Payload, Seat, Transport } from "./net/types";
 import { type Store, browserStore } from "./store";
 import { settings } from "./settings";
+import { t, t as tr } from "./i18n";
 
 export type Role = "host" | "guest" | "local" | "spectator";
 
@@ -327,7 +328,7 @@ export class Session {
 
   private linkChanged(status: LinkStatus) {
     if (status.error && status.error !== this.link.error) {
-      this.actionError = status.error;
+      this.actionError = t(status.error);
       if (/seat|no longer exists|expired/.test(status.error)) this.forget();
     }
     this.link = status;
@@ -419,7 +420,7 @@ export class Session {
           seat === this.seat && !this.watching
             ? (failed) => {
                 this.pending = false;
-                if (failed) this.actionError = "That action failed in the engine and was undone.";
+                if (failed) this.actionError = tr("That action failed in the engine and was undone.");
               }
             : undefined,
         );
@@ -627,12 +628,12 @@ export class Session {
     if (dealtFormat(format) || format === "casual") return null;
     if (format === "preconstructed") {
       const precon = (this.engine.precons() as any[]).some((m) => (["corp", "runner"] as Side[]).some((s) => m[s].identity === deck.identity && deck.name.startsWith(m[s].name))) || CORE_DECKS.some((d) => d.identity === deck.identity && deck.name.startsWith(d.name));
-      return precon ? null : "Only preconstructed decks are allowed in this format";
+      return precon ? null : t("Only preconstructed decks are allowed in this format");
     }
     try {
       return analyze(fromWire(deck, this.db), deckFormat(format)!).problems.find((p) => p.level === "error")?.text ?? null;
     } catch (e) {
-      return e instanceof Error ? e.message : "This deck cannot be read";
+      return e instanceof Error ? e.message : t("This deck cannot be read");
     }
   }
 
@@ -773,7 +774,7 @@ export class Session {
       .catch((e) => {
         console.error(e);
         this.pending = false;
-        this.actionError = "The game engine stopped responding. Reload the game.";
+        this.actionError = t("The game engine stopped responding. Reload the game.");
         this.emit();
       });
   }
@@ -888,7 +889,7 @@ export class Session {
     if (!this.booted) return;
     const recorded: LocalEntry = JSON.parse(JSON.stringify(entry));
     this.stage({ k: "exec", entry: recorded }, (failed) => {
-      if (failed) this.actionError = "That action failed in the engine and was undone.";
+      if (failed) this.actionError = t("That action failed in the engine and was undone.");
     });
     this.log.push(recorded);
     this.persist();
@@ -939,7 +940,7 @@ export class Session {
     const name = this.deckNames[side] ?? (side === mySide ? myDeck?.name : undefined);
     if (isGameFormat((this.setup as { format?: unknown } | undefined)?.format) && dealtFormat((this.setup as { format: GameFormat }).format)) return undefined;
     const fromSetup = (this.setup as Record<Side, { deck?: Omit<Deck, "name"> }> | undefined)?.[side]?.deck;
-    if (fromSetup) return { name: name ?? (side === "corp" ? "Corp deck" : "Runner deck"), ...fromSetup };
+    if (fromSetup) return { name: name ?? (side === "corp" ? t("Corp deck") : t("Runner deck")), ...fromSetup };
     if (side === mySide && myDeck) return fromWire(myDeck, this.db);
     if (role === "local" && this.opponentDeck) return fromWire(this.opponentDeck, this.db);
     return undefined;

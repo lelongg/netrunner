@@ -10,7 +10,10 @@ import { returnAccessed } from "../fx/access";
 import { Icon } from "../icons";
 import { RichText } from "./RichText";
 import { byServerOrder, iconize } from "./text";
+import { cardText } from "../cardtext";
 import { glyphs } from "./Glyphs";
+import { shown, showMsg, typeLine } from "./labels";
+import { t } from "../i18n";
 
 interface Props {
   view: any;
@@ -31,16 +34,16 @@ function NumberPicker({ min, max, initial, onSubmit, disabled, extra }: { min: n
   useEffect(() => setN(initial), [initial, min, max]);
   return (
     <div class="number-picker">
-      <button aria-label="Decrease" onClick={() => setN(Math.max(min, n - 1))} disabled={disabled || n <= min}>
+      <button aria-label={t("Decrease")} onClick={() => setN(Math.max(min, n - 1))} disabled={disabled || n <= min}>
         <Icon name="minus" />
       </button>
       <output>{n}</output>
-      <button aria-label="Increase" onClick={() => setN(Math.min(max, n + 1))} disabled={disabled || n >= max}>
+      <button aria-label={t("Increase")} onClick={() => setN(Math.min(max, n + 1))} disabled={disabled || n >= max}>
         <Icon name="plus" />
       </button>
       {extra}
       <button class="primary submit" onClick={() => onSubmit(n)} disabled={disabled}>
-        Confirm
+        {t("Confirm")}
       </button>
     </div>
   );
@@ -60,10 +63,10 @@ function ChoiceSheet({ items, index, disabled, onGo, onPick, onClose }: { items:
     <div class="sheet-info">
       <span class="label">
         {card.type}
-        {Array.isArray(card.subtypes) && card.subtypes.length ? ` · ${card.subtypes.join(" · ")}` : ""}
+        {Array.isArray(card.subtypes) && card.subtypes.length ? ` · ${typeLine(card.subtypes)}` : ""}
       </span>
       <h2>{card.title}</h2>
-      {card.text && <RichText class="card-text" text={card.text} />}
+      {card.text && <RichText class="card-text" text={cardText(card) ?? card.text} />}
     </div>
   );
   return createPortal(
@@ -87,10 +90,10 @@ function ChoiceSheet({ items, index, disabled, onGo, onPick, onClose }: { items:
         </div>
         <div class="sheet-actions">
           <button class="primary" disabled={disabled} onClick={() => onPick(cc)}>
-            Choose {cc.card.title}
+            {t("Choose {card}", { card: cc.card.title })}
           </button>
           <button class="ghost" onClick={onClose}>
-            Close
+            {t("Close")}
           </button>
         </div>
       </div>
@@ -100,23 +103,23 @@ function ChoiceSheet({ items, index, disabled, onGo, onPick, onClose }: { items:
 }
 
 function choiceLabel(value: any, render: (m: unknown) => string) {
-  if (value && typeof value === "object") return value.title ?? value["printed-title"] ?? render(value);
-  return render(value);
+  if (value && typeof value === "object") return value.title ?? value["printed-title"] ?? shown(render(value));
+  return shown(render(value));
 }
 
 export function PromptPanel({ view, side, prompt, render, send, closePrompt, disabled, db, staging, onShowZone, zoneLabel }: Props) {
   const ptype = prompt["prompt-type"];
   const choices = prompt.choices;
   const eid = prompt.eid;
-  const msg = iconize(render(prompt.msg));
+  const msg = iconize(showMsg(prompt.msg, render));
   const answer = (choice: unknown) => send("choice", { eid, choice });
   const [title, setTitle] = useState("");
   const [peek, setPeek] = useState<number | null>(null);
   useBackClose(peek != null, () => setPeek(null));
   const cardChoices: CardChoice[] = Array.isArray(choices)
     ? choices.flatMap((c: any) => {
-        const t = c.value && typeof c.value === "object" ? (c.value.title as string | undefined) : typeof c.value === "string" ? c.value : undefined;
-        const card = t ? db.byTitle.get(t) : undefined;
+        const name = c.value && typeof c.value === "object" ? (c.value.title as string | undefined) : typeof c.value === "string" ? c.value : undefined;
+        const card = name ? db.byTitle.get(name) : undefined;
         return card?.code && card.type !== "Identity" ? [{ choice: c, card }] : [];
       })
     : [];
@@ -136,14 +139,15 @@ export function PromptPanel({ view, side, prompt, render, send, closePrompt, dis
   let body: preact.ComponentChildren = null;
 
   if (ptype === "waiting") {
-    body = <span class="status">Waiting…</span>;
+    body = <span class="status">{t("Waiting…")}</span>;
   } else if (choices && typeof choices === "object" && !Array.isArray(choices) && choices.number != null) {
     const max = Number(choices.number);
     const min = Number(choices.minimum ?? 0);
     body = <NumberPicker min={min} max={max} initial={Number(choices.default ?? min)} onSubmit={answer} disabled={disabled} />;
   } else if (ptype === "trace") {
     const max = Number(choices ?? 0);
-    const info = prompt.strength != null ? `Strength to beat: ${prompt.strength}` : prompt.player === "corp" ? `Trace ${prompt.base}${prompt.bonus ? `+${prompt.bonus}` : ""} · Runner link ${prompt.link}` : `Trace ${prompt.base}${prompt.bonus ? `+${prompt.bonus}` : ""} + Corp credits · your link ${prompt.link}`;
+    const trace = `${prompt.base}${prompt.bonus ? `+${prompt.bonus}` : ""}`;
+    const info = prompt.strength != null ? t("Strength to beat: {n}", { n: prompt.strength }) : prompt.player === "corp" ? t("Trace {trace} · Runner link {link}", { trace, link: prompt.link }) : t("Trace {trace} + Corp credits · your link {link}", { trace, link: prompt.link });
     body = (
       <>
         <p class="hint">{info}</p>
@@ -156,14 +160,14 @@ export function PromptPanel({ view, side, prompt, render, send, closePrompt, dis
     const options: string[] = choices.autocomplete ?? [];
     body = (
       <div class="card-title-input">
-        <input list="card-titles" value={title} onInput={(e) => setTitle((e.target as HTMLInputElement).value)} placeholder="card name" aria-label="Card name" />
+        <input list="card-titles" value={title} onInput={(e) => setTitle((e.target as HTMLInputElement).value)} placeholder={t("card name")} aria-label={t("Card name")} />
         <datalist id="card-titles">
           {options.slice(0, 500).map((o) => (
             <option value={o} />
           ))}
         </datalist>
         <button class="primary" disabled={disabled || !title} onClick={() => answer(title)}>
-          Confirm
+          {t("Confirm")}
         </button>
       </div>
     );
@@ -178,8 +182,8 @@ export function PromptPanel({ view, side, prompt, render, send, closePrompt, dis
       <>
         {owed != null && (
           <p class="hint">
-            {owed ? `${owed} credits left to pay` : "Paid"}
-            {only ? ` · using ${only.title}` : ""}
+            {owed ? (owed === 1 ? t("1 credit left to pay") : t("{n} credits left to pay", { n: owed })) : t("Paid")}
+            {only ? ` · ${t("using {card}", { card: only.title })}` : ""}
           </p>
         )}
         <div class="choices">
@@ -187,14 +191,14 @@ export function PromptPanel({ view, side, prompt, render, send, closePrompt, dis
             const left = (card.counter?.credit ?? 0) + (card.counter?.recurring ?? 0) + (card["rec-counter"] ?? 0);
             return (
               <button class="primary wide" disabled={disabled} onClick={() => useSource(card)}>
-                {glyphs(iconize(`Use ${card.title}${left ? ` · ${left}[credit]` : ""}`))}
+                {glyphs(iconize(`${t("Use {card}", { card: card.title })}${left ? ` · ${left}[credit]` : ""}`))}
               </button>
             );
           })}
           {bp > 0 && owed != null && owed > 0 && (() => {
             const use = Math.min(bp, owed);
             const rest = owed - use;
-            const label = !rest ? `Pay ${owed}[credit] with bad publicity` : sources.length ? `Use ${use}[credit] bad publicity first` : `Pay ${owed}[credit] · ${use} bad publicity + ${rest} pool`;
+            const label = !rest ? t("Pay {n}[credit] with bad publicity", { n: owed }) : sources.length ? t("Use {n}[credit] bad publicity first", { n: use }) : t("Pay {n}[credit] · {use} bad publicity + {rest} pool", { n: owed, use, rest });
             return (
               <button class="primary wide" disabled={disabled || (!sources.length && pool < rest)} onClick={() => Array.from({ length: use }, () => send("bad-pub-choice", { eid }))}>
                 {glyphs(iconize(label))}
@@ -203,12 +207,12 @@ export function PromptPanel({ view, side, prompt, render, send, closePrompt, dis
           })()}
           {bp > 0 && (
             <button disabled={disabled} onClick={() => send("bad-pub-choice", { eid })}>
-              {glyphs(iconize(`Use 1[credit] bad publicity · ${bp} left`))}
+              {glyphs(iconize(t("Use 1[credit] bad publicity · {n} left", { n: bp })))}
             </button>
           )}
           {done && (
             <button class="wide" disabled={disabled || (owed != null && !poolOk)} onClick={() => answer({ uuid: done.uuid })}>
-              {glyphs(iconize(owed ? `Pay ${owed}[credit] from your pool` : "Done"))}
+              {glyphs(iconize(owed ? t("Pay {n}[credit] from your pool", { n: owed }) : t("Done")))}
             </button>
           )}
         </div>
@@ -254,22 +258,22 @@ export function PromptPanel({ view, side, prompt, render, send, closePrompt, dis
     const max: number = prompt["select-max"] ?? 1;
     const min: number = prompt["select-all"] ? max : (prompt["select-min"] ?? 0);
     const ready = staging.count >= min && staging.count <= max;
-    const verb = /^discard/i.test(msg) ? "Discard" : /^trash/i.test(msg) ? "Trash" : "Confirm";
-    const what = staging.names.length === 1 ? staging.names[0] : `${staging.count} cards`;
+    const verb = /^discard/i.test(msg) ? t("Discard") : /^trash/i.test(msg) ? t("Trash") : t("Confirm");
+    const what = staging.names.length === 1 ? staging.names[0] : staging.count === 1 ? t("1 card") : t("{n} cards", { n: staging.count });
     const extra = (Array.isArray(choices) ? choices : []).filter((c: any) => c.value !== "Hide" && c.value !== "Done");
     const canDone = staging.count > 0 || (Array.isArray(choices) && choices.some((c: any) => c.value === "Done"));
     body = (
       <>
-        {staging.count === 0 && <p class="hint">Tap a highlighted card to look at it and select it.</p>}
+        {staging.count === 0 && <p class="hint">{t("Tap a highlighted card to look at it and select it.")}</p>}
         <div class="choices">
           {onShowZone && (
             <button disabled={disabled} onClick={onShowZone}>
-              Show {zoneLabel ?? "cards"}
+              {zoneLabel ? t("Show {zone}", { zone: t(zoneLabel) }) : t("Show cards")}
             </button>
           )}
           {staging.count > 0 && (
             <button disabled={disabled} onClick={staging.onClear}>
-              Clear
+              {t("Clear")}
             </button>
           )}
           {extra.map((c: any) => (
@@ -279,11 +283,11 @@ export function PromptPanel({ view, side, prompt, render, send, closePrompt, dis
           ))}
           {staging.count === 0 && canDone ? (
             <button class="wide select-go" disabled={disabled} onClick={staging.onConfirm}>
-              Skip
+              {t("Skip")}
             </button>
           ) : (
             <button class="primary wide select-go" disabled={disabled || !ready} onClick={staging.onConfirm}>
-              {ready ? `${verb} ${what}` : `Pick ${min - staging.count} more`}
+              {ready ? `${verb} ${what}` : t("Pick {n} more", { n: min - staging.count })}
             </button>
           )}
         </div>
@@ -292,7 +296,7 @@ export function PromptPanel({ view, side, prompt, render, send, closePrompt, dis
   } else if (Array.isArray(choices)) {
     body = (
       <>
-        {ptype === "select" && <p class="hint">Tap a highlighted card to look at it and select it.</p>}
+        {ptype === "select" && <p class="hint">{t("Tap a highlighted card to look at it and select it.")}</p>}
         <div class={`choices ${choices.some((c: any) => choiceLabel(c.value, render).length > 22) ? "long" : ""}`}>
           {byServerOrder(choices, (c: any) => c.value)
             .filter((c: any) => c.value !== "Hide")
@@ -311,12 +315,12 @@ export function PromptPanel({ view, side, prompt, render, send, closePrompt, dis
             ))}
           {prompt["offer-bad-pub?"] && (
             <button disabled={disabled} onClick={() => send("bad-pub-choice", { eid })}>
-              Bad publicity ({view.runner?.["bad-pub-credit"] ?? "?"} available)
+              {t("Bad publicity ({n} available)", { n: view.runner?.["bad-pub-credit"] ?? "?" })}
             </button>
           )}
           {ptype === "select" && !(prompt.selectable ?? []).length && choices.every((c: any) => c.value === "Hide") && (
             <button class="primary" disabled={disabled} onClick={closePrompt}>
-              Skip · no valid target
+              {t("Skip · no valid target")}
             </button>
           )}
         </div>
@@ -359,11 +363,11 @@ export function PromptPanel({ view, side, prompt, render, send, closePrompt, dis
             {full && (
               <span class="label">
                 {full.type}
-                {Array.isArray(full.subtypes) && full.subtypes.length ? ` · ${full.subtypes.join(" · ")}` : ""}
+                {Array.isArray(full.subtypes) && full.subtypes.length ? ` · ${typeLine(full.subtypes)}` : ""}
               </span>
             )}
             <span class="prompt-card">{source.title}</span>
-            {full?.text ? <RichText class="card-text" text={full.text} /> : msgLine}
+            {full?.text ? <RichText class="card-text" text={cardText(full) ?? full.text} /> : msgLine}
           </div>
         </div>
       ) : (

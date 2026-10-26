@@ -1,6 +1,7 @@
 import { setSetting, settings } from "../settings";
 import { listSaves } from "../session";
 import { relayUrl, storedTicket } from "./relay";
+import { t } from "../i18n";
 
 export const pushSupported = () => typeof navigator !== "undefined" && "serviceWorker" in navigator && typeof PushManager !== "undefined" && typeof Notification !== "undefined";
 
@@ -10,7 +11,7 @@ const sameKey = (a: ArrayBuffer | null, b: Uint8Array) => !!a && a.byteLength ==
 
 async function registration() {
   const reg = await Promise.race([navigator.serviceWorker.ready, new Promise<null>((r) => setTimeout(() => r(null), 4000))]);
-  if (!reg) throw new Error("Notifications need the installed app. Reload the page and try again.");
+  if (!reg) throw new Error(t("Notifications need the installed app. Reload the page and try again."));
   return reg;
 }
 
@@ -45,14 +46,14 @@ async function shareWithGames(sub: PushSubscriptionJSON | null) {
 }
 
 export async function enablePush(kind?: PushKind): Promise<string | null> {
-  if (!pushSupported()) return "This browser cannot show notifications. On iPhone, add Pocket Rig to your home screen first.";
+  if (!pushSupported()) return t("This browser cannot show notifications. On iPhone, add Pocket Rig to your home screen first.");
   const relay = relayUrl();
-  if (!relay) return "Notifications need the online relay.";
+  if (!relay) return t("Notifications need the online relay.");
   const permission = await Notification.requestPermission();
-  if (permission !== "granted") return "Notifications are blocked for this site. Allow them in your browser settings, then try again.";
+  if (permission !== "granted") return t("Notifications are blocked for this site. Allow them in your browser settings, then try again.");
   try {
     const res = await fetch(`${relay}/push-key`);
-    if (!res.ok) return "This relay does not send notifications yet.";
+    if (!res.ok) return t("This relay does not send notifications yet.");
     const key = keyBytes(((await res.json()) as { key: string }).key);
     const reg = await registration();
     let sub = await reg.pushManager.getSubscription();
@@ -66,7 +67,7 @@ export async function enablePush(kind?: PushKind): Promise<string | null> {
     await shareWithGames(settings.notifyTurn ? sub.toJSON() : null);
     return null;
   } catch (e) {
-    return `Could not turn on notifications: ${e instanceof Error ? e.message : e}`;
+    return t("Could not turn on notifications: {error}", { error: e instanceof Error ? e.message : String(e) });
   }
 }
 

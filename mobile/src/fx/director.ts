@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef } from "preact/hooks";
 import type { Side } from "../engine";
 import { currentIce } from "../game/actions";
 import { serverName } from "../game/text";
+import { t as tr } from "../i18n";
 import { type Plan, accessStage, collect, moveKinds, pendingGain, play, prepare } from "./cards";
 import { setAim } from "./gl/aim";
 import { hasGl, letGoEffects } from "./gl";
@@ -299,7 +300,7 @@ function damageHit(kind: string) {
     vignette("cyan", 0.5);
     flash("cyan", 0.25, 0.35);
     shake(0.5);
-    stamp(label, "net damage", "cyan");
+    stamp(label, tr("net damage"), "cyan");
     buzz([20, 30, 20, 30, 20]);
     return;
   }
@@ -308,7 +309,7 @@ function damageHit(kind: string) {
     vignette("red", 0.5);
     flash("red", 0.18);
     shake(1);
-    stamp(label, "meat damage", "red");
+    stamp(label, tr("meat damage"), "red");
     buzz([140, 40, 90]);
     return;
   }
@@ -316,7 +317,7 @@ function damageHit(kind: string) {
   setTimeout(() => vignette("violet", 1.2), 120);
   glitch(0.6);
   shake(0.9);
-  stamp(label, `${kind} damage`, "violet");
+  stamp(label, /core|brain/.test(kind) ? tr("core damage") : tr("{kind} damage", { kind }), "violet");
   buzz([60, 120, 200]);
 }
 
@@ -403,11 +404,13 @@ function confetti() {
 
 let spectating = false;
 
+const clicksText = (n: number) => (n === 1 ? tr("1 click") : tr("{n} clicks", { n }));
+
 function finale(won: boolean, label?: string) {
   if (reduced()) return;
   const el = node(`fx-finale ${won ? "won" : "lost"}`);
   const word = node("fx-finale-word", el);
-  const text = label ?? (won ? "VICTORY" : "DEFEAT");
+  const text = label ?? (won ? tr("VICTORY") : tr("DEFEAT"));
   const letters = [...text].map((ch) => {
     const s = document.createElement("span");
     s.textContent = ch;
@@ -649,16 +652,16 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
 
   if (now.winner && !prev.winner)
     setTimeout(() => {
-      if (spectating) finale(true, `${now.winner === "corp" ? "CORP" : "RUNNER"} WINS`);
+      if (spectating) finale(true, now.winner === "corp" ? tr("CORP WINS") : tr("RUNNER WINS"));
       else finale(now.winner === me);
     }, 1600);
 
   if (now.active && prev.active && now.active !== prev.active && spectating) {
     const side = now.active as Side;
-    banner(`${side === "corp" ? "Corp" : "Runner"} turn`, `${now.clicks[side]} clicks`, "white", { size: "md", hold: 0.45 });
+    banner(side === "corp" ? tr("Corp turn") : tr("Runner turn"), clicksText(now.clicks[side]), "white", { size: "md", hold: 0.45 });
   } else if (now.active && prev.active && now.active !== prev.active) {
     const mine = now.active === me;
-    banner(mine ? "Your turn" : `${now.active === "corp" ? "Corp" : "Runner"} turn`, mine ? `${now.clicks[me]} clicks` : "", mine ? "gold" : "white", { size: mine ? "xl" : "md", hold: mine ? 0.6 : 0.35 });
+    banner(mine ? tr("Your turn") : now.active === "corp" ? tr("Corp turn") : tr("Runner turn"), mine ? clicksText(now.clicks[me]) : "", mine ? "gold" : "white", { size: mine ? "xl" : "md", hold: mine ? 0.6 : 0.35 });
     if (mine) {
       buzz([20, 40, 20]);
       const pips = [...document.querySelectorAll(`[data-anchor="${me}-clicks"] i`)];
@@ -707,7 +710,7 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
     if (!prev.faces[s] || !now.faces[s] || prev.faces[s] === now.faces[s]) continue;
     rezFlip(now.identities[s], s === "corp" ? "blue" : "red", true);
     const at = pointOf(tileEl(now.identities[s]));
-    if (at) setTimeout(() => floater([at[0], at[1] - 30], "Flipped", s === "corp" ? "blue" : "red", 50, true), 300);
+    if (at) setTimeout(() => floater([at[0], at[1] - 30], tr("Flipped"), s === "corp" ? "blue" : "red", 50, true), 300);
   }
 
   const messaged = (view.log ?? []).slice(prev.log).some((e: any) => /Send a Message/.test(render(e.text)));
@@ -750,14 +753,14 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
     const pt = pointOf(el);
     if (!pt) continue;
     animate(el!, { scale: [1.25, 1], filter: ["brightness(2)", "brightness(1)"] }, { type: "spring", visualDuration: 0.35, bounce: 0.5 });
-    floater([pt[0], pt[1] - 20], `+${str - before} str`, "cyan", 60, true);
+    floater([pt[0], pt[1] - 20], tr("+{n} str", { n: str - before }), "cyan", 60, true);
     burst(pt, "cyan", 12, 40, { size: 4, gravity: -50 });
   }
 
   if (now.tags > prev.tags) {
     const at = runnerTarget(me);
     reticle(at);
-    setTimeout(() => stamp(at, now.tags - prev.tags > 1 ? `+${now.tags - prev.tags} tags` : "Tagged", "red"), 350);
+    setTimeout(() => stamp(at, now.tags - prev.tags > 1 ? tr("+{n} tags", { n: now.tags - prev.tags }) : tr("Tagged"), "red"), 350);
     vignette("red", 0.4);
     buzz([30, 50, 30]);
   }
@@ -766,7 +769,7 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
     const server = document.querySelector(".server.running");
     const to = pointOf(server) ?? [innerWidth / 2, innerHeight / 3];
     warp(to, "cyan");
-    banner("Run", serverName(now.server), "cyan", { size: "xl", hold: 0.45 });
+    banner(tr("Run"), serverName(now.server), "cyan", { size: "xl", hold: 0.45 });
     stageFreeAt = performance.now() + 1900;
     setTimeout(() => {
       ring(to, "cyan", 220);
@@ -891,7 +894,7 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
     } else if (h.kind === "purge") {
       flash("violet", 0.35);
       ring([innerWidth / 2, innerHeight / 2], "violet", 360);
-      stamp([innerWidth / 2, innerHeight * 0.4], "Purge", "violet");
+      stamp([innerWidth / 2, innerHeight * 0.4], tr("Purge"), "violet");
     }
   }
 
@@ -907,7 +910,7 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
     } else {
       const jacked = lines.some((l: string) => /jacks? out/i.test(l));
       setTimeout(() => {
-        banner(jacked ? "Jacked out" : "Run ended", serverName(prev.server!), "white", { size: "lg", hold: 0.4, from: "right" });
+        banner(jacked ? tr("Jacked out") : tr("Run ended"), serverName(prev.server!), "white", { size: "lg", hold: 0.4, from: "right" });
         buzz(60);
       }, t * 1000);
     }
@@ -920,7 +923,7 @@ function breached(server: string, me: Side) {
   const corp = me === "corp";
   split(corp ? "red" : "cyan");
   setTimeout(() => {
-    banner(corp ? "Breached" : "Breach", server, corp ? "red" : "cyan", { size: "xl", hold: 0.5 });
+    banner(corp ? tr("Breached") : tr("Breach"), server, corp ? "red" : "cyan", { size: "xl", hold: 0.5 });
     if (corp) shake(0.5);
   }, 300);
   buzz(corp ? [80, 40, 80] : [30, 30, 30, 30, 80]);
@@ -984,7 +987,7 @@ function showdown(ice: any, kind: "rez" | "fire", run: (big: DOMRect, ghost: HTM
   const label = node("fx-showdown-label", stageEl);
   const t1 = document.createElement("span");
   t1.className = "fx-showdown-kind";
-  t1.textContent = kind === "rez" ? `Rez · ${(ice.subtypes ?? []).slice(0, 2).join(" · ")}` : caption || "Subroutine";
+  t1.textContent = kind === "rez" ? `${tr("Rez")} · ${(ice.subtypes ?? []).slice(0, 2).join(" · ")}` : caption || tr("Subroutine");
   const t2 = document.createElement("span");
   t2.className = "fx-showdown-title";
   t2.textContent = ice.title ?? "";
@@ -1088,10 +1091,10 @@ function accessShow(view: any, title: string, zone: string) {
   const label = node("fx-showdown-label", stageEl);
   const t1 = document.createElement("span");
   t1.className = "fx-showdown-kind";
-  t1.textContent = `Runner accesses · ${zone}`;
+  t1.textContent = `${tr("Runner accesses")} · ${zone}`;
   const t2 = document.createElement("span");
   t2.className = "fx-showdown-title fx-access-title";
-  t2.textContent = unseen ? "Unseen card" : title;
+  t2.textContent = unseen ? tr("Unseen card") : title;
   label.append(t1, t2);
   label.style.top = `${big.bottom + 14}px`;
   ghost.style.transformOrigin = "0 0";
@@ -1120,7 +1123,7 @@ function accessShow(view: any, title: string, zone: string) {
   const stop = () => end(toward(rectOf(accessSource(view, title, zone).el)) ?? from);
   const away = (where: "stolen" | "trashed") => end(toward(rectOf(anchor(where === "stolen" ? "runner-points" : "corp-discard"))));
   const resolve = (verb: string, revealed?: string) => {
-    t1.textContent = verb;
+    t1.textContent = tr(verb);
     t1.classList.add("resolved");
     const face = revealed && codeOf(revealed);
     if (!face) return;

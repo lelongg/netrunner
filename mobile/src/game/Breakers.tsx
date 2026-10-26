@@ -5,6 +5,8 @@ import { Icon } from "../icons";
 import { CardImage } from "./CardImage";
 import { glyphs } from "./Glyphs";
 import { iconize } from "./text";
+import { t } from "../i18n";
+import { labelText, shown, typeLine } from "./labels";
 import type { Side } from "../engine";
 
 function installed(view: any): any[] {
@@ -95,7 +97,7 @@ export function Breakers({ view, stamp, probe, side, ice, send, onTap, disabled,
           <div class="brk-head">
             <span>
               +<b>{badPub}</b>
-              {glyphs(iconize("[credit]"))} bad publicity for this run
+              {glyphs(iconize("[credit]"))} {t("bad publicity for this run")}
             </span>
           </div>
         )
@@ -109,11 +111,11 @@ export function Breakers({ view, stamp, probe, side, ice, send, onTap, disabled,
             </button>
             <div class="brk-text">
               <span class="brk-name">{ice.title}</span>
-              <span class="brk-desc">{glyphs(iconize(effect))}</span>
+              <span class="brk-desc">{glyphs(iconize(shown(effect)))}</span>
             </div>
             <button class="brk-go" disabled={disabled || cmd.enabled === false} onClick={() => send(cmd.command, cmd.args)}>
               <span class="brk-cost">{glyphs(iconize(cost))}</span>
-              <span class="brk-verb">Use</span>
+              <span class="brk-verb">{t("Use")}</span>
             </button>
           </div>
         );
@@ -129,11 +131,11 @@ export function Breakers({ view, stamp, probe, side, ice, send, onTap, disabled,
               <span class="brk-head-line">
                 <span class="brk-name">{card.title}</span>
                 <span class="brk-meta">
-                  {(card.subtypes ?? []).join(" · ")}
+                  {typeLine(card.subtypes ?? [])}
                   {card.counter?.virus != null && (
                     <>
                       {" · "}
-                      <span class="stat" aria-label={`${card.counter.virus} virus counters`}>
+                      <span class="stat" aria-label={t("{n} virus counters", { n: card.counter.virus })}>
                         <Icon name="virus" />
                         {card.counter.virus}
                       </span>
@@ -141,7 +143,7 @@ export function Breakers({ view, stamp, probe, side, ice, send, onTap, disabled,
                   )}
                 </span>
               </span>
-              <span class="brk-desc">{glyphs(iconize(effect))}</span>
+              <span class="brk-desc">{glyphs(iconize(shown(effect)))}</span>
             </div>
             <button class="brk-go" disabled={disabled} onClick={() => send(cmd.command, cmd.args)}>
               <span class="brk-cost">
@@ -154,7 +156,7 @@ export function Breakers({ view, stamp, probe, side, ice, send, onTap, disabled,
                   glyphs(iconize(cost))
                 )}
               </span>
-              <span class="brk-verb">{/^break/i.test(effect) ? "Break" : "Use"}</span>
+              <span class="brk-verb">{/^break/i.test(effect) ? t("Break") : t("Use")}</span>
             </button>
           </div>
         );
@@ -170,11 +172,11 @@ export function Breakers({ view, stamp, probe, side, ice, send, onTap, disabled,
               <span class="brk-head-line">
                 <span class="brk-name">{card.title}</span>
                 <span class="brk-meta">
-                  {(card.subtypes ?? []).filter((t: string) => t !== "Icebreaker").join(" · ")}
+                  {typeLine((card.subtypes ?? []).filter((t: string) => t !== "Icebreaker"))}
                   {extraOf(card) > 0 && (
                     <>
                       {" · "}
-                      <span class="brk-extra" aria-label={`${extraOf(card)} more credits for this breaker`}>
+                      <span class="brk-extra" aria-label={t("{n} more credits for this breaker", { n: extraOf(card) })}>
                         +{extraOf(card)}
                         {glyphs(iconize("[credit]"))}
                       </span>
@@ -187,7 +189,7 @@ export function Breakers({ view, stamp, probe, side, ice, send, onTap, disabled,
                     return (
                       <>
                         {" · "}
-                        <span class={`stat brk-str ${fits ? "ok" : "low"}`} data-tip="strength" aria-label={`strength ${str}`}>
+                        <span class={`stat brk-str ${fits ? "ok" : "low"}`} data-tip="strength" aria-label={t("strength {n}", { n: str })}>
                           <Icon name="strength" />
                           {str}
                         </span>
@@ -196,7 +198,7 @@ export function Breakers({ view, stamp, probe, side, ice, send, onTap, disabled,
                   })()}
                 </span>
               </span>
-              <span class="brk-desc">{partial ? (wanted ? `${label.startsWith("Match") ? "Match strength, break" : "Break"} ${wanted} of ${unbroken.length}` : "Nothing selected") : label.startsWith("Match") ? "Match strength, break all" : "Break all"}</span>
+              <span class="brk-desc">{partial ? (wanted ? t(label.startsWith("Match") ? "Match strength, break {n} of {total}" : "Break {n} of {total}", { n: wanted, total: unbroken.length }) : t("Nothing selected")) : label.startsWith("Match") ? t("Match strength, break all") : t("Break all")}</span>
             </div>
             {(partial ? !!wanted : !!full) && (
               <button class="brk-go" disabled={disabled || (partial ? !planOf(card)?.ok : full!.enabled === false)} onClick={() => (partial ? onPartial?.(card, wantedLabels) : send(full!.command, full!.args))}>
@@ -208,7 +210,7 @@ export function Breakers({ view, stamp, probe, side, ice, send, onTap, disabled,
                       })()
                     : glyphs(iconize(ab?.["cost-label"] ?? ""))}
                 </span>
-                <span class="brk-verb">Break</span>
+                <span class="brk-verb">{t("Break")}</span>
               </button>
             )}
           </div>
@@ -217,13 +219,13 @@ export function Breakers({ view, stamp, probe, side, ice, send, onTap, disabled,
       {manual.length > 0 && (
         <div class={`brk-manual ${open ? "open" : ""}`}>
           <button class="brk-toggle" onClick={() => setOpen(!open)} aria-expanded={open}>
-            {open ? "▾" : "▸"} Other abilities · {manual.length}
+            {open ? "▾" : "▸"} {t("Other abilities")} · {manual.length}
           </button>
           {open &&
             manual.map(({ card, cmd, off }) => (
               <button class={`brk-ab ${off ? "off" : ""}`} disabled={disabled || cmd.enabled === false} onClick={() => send(cmd.command, cmd.args)}>
                 <span>
-                  {card.title} · {glyphs(iconize(cmd.label))}
+                  {card.title} · {glyphs(iconize(labelText(cmd.label, cmd.command)))}
                 </span>
               </button>
             ))}

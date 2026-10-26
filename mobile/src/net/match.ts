@@ -2,6 +2,7 @@ import type { Side } from "../engine";
 import type { GameFormat } from "../deckrules";
 import { currentSub } from "./push";
 import { relayUrl, storeTicket } from "./relay";
+import { t } from "../i18n";
 
 export type SeekSide = Side | "any";
 
@@ -72,10 +73,10 @@ function remember(seek: Seek | null) {
 
 async function call(path: string, body?: unknown) {
   const relay = relayUrl();
-  if (!relay) throw new Error("Finding an opponent needs the online relay.");
+  if (!relay) throw new Error(t("Finding an opponent needs the online relay."));
   const res = await fetch(`${relay}${path}`, body === undefined ? undefined : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(json.error ?? `The relay answered ${res.status}`);
+  if (!res.ok) throw new Error(json.error ?? t("The relay answered {status}", { status: res.status }));
   return json;
 }
 

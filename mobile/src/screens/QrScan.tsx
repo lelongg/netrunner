@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "preact/hooks";
+import { t } from "../i18n";
 
 export function codeFromQr(text: string): string | null {
   const t = text.trim();
@@ -24,7 +25,7 @@ export function QrScan({ onCode }: { onCode: (code: string) => void }) {
       try {
         stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
       } catch {
-        setError("Camera unavailable. Allow camera access for this site, or type the code.");
+        setError(t("Camera unavailable. Allow camera access for this site, or type the code."));
         return;
       }
       if (stop || !video.current) return stream.getTracks().forEach((t) => t.stop());
@@ -80,7 +81,7 @@ export function QrScan({ onCode }: { onCode: (code: string) => void }) {
             <i class="qr-corners" />
             <i class="qr-line" />
           </span>
-          <p class="hint">{miss ? "That QR code is not a Pocket Rig game." : "Point the camera at the game's QR code."}</p>
+          <p class="hint">{miss ? t("That QR code is not a Pocket Rig game.") : t("Point the camera at the game's QR code.")}</p>
         </>
       )}
     </div>

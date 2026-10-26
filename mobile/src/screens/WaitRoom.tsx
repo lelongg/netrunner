@@ -5,6 +5,7 @@ import { QrZoom, shareLink } from "./Lobby";
 import { Cta } from "../ui";
 import { Icon } from "../icons";
 import { useTilt } from "../tilt";
+import { t } from "../i18n";
 
 export interface WaitProps {
   code?: string;
@@ -21,7 +22,7 @@ function useInvite(code?: string) {
   const link = code ? shareLink(code) : "";
   const share = async () => {
     try {
-      if (navigator.share) await navigator.share({ title: "Netrunner game", text: `Code: ${code}`, url: link });
+      if (navigator.share) await navigator.share({ title: t("Netrunner game"), text: t("Code: {code}", { code: code ?? "" }), url: link });
       else {
         await navigator.clipboard.writeText(link);
         setCopied(true);
@@ -30,15 +31,15 @@ function useInvite(code?: string) {
   };
   const qr = (cls: string) =>
     code ? (
-      <button ref={from} class={`qr-button ${cls}`} onClick={() => setBig(true)} aria-label="Enlarge the QR code">
-        <QrCode value={link} label={`QR code to join game ${code}`} />
+      <button ref={from} class={`qr-button ${cls}`} onClick={() => setBig(true)} aria-label={t("Enlarge the QR code")}>
+        <QrCode value={link} label={t("QR code to join game {code}", { code })} />
       </button>
     ) : (
       <div class={`qr qr-pending ${cls}`} />
     );
   const shareCta = (
     <Cta onClick={share} disabled={!code} tone="cyan">
-      {copied ? "Link copied" : "Share the link"}
+      {copied ? t("Link copied") : t("Share the link")}
     </Cta>
   );
   const zoom = big && code ? <QrZoom value={link} code={code} from={from.current} onClose={() => setBig(false)} /> : null;
@@ -51,12 +52,12 @@ function Actions({ busy, notify, onCancel }: WaitProps) {
       {notify && (
         <button class="match-notify" disabled={busy} onClick={notify}>
           <Icon name="sound" />
-          Notify me when someone joins
+          {t("Notify me when someone joins")}
         </button>
       )}
       <button class="match-stop" disabled={busy} onClick={onCancel}>
         <Icon name="close" />
-        Cancel the game
+        {t("Cancel the game")}
       </button>
     </div>
   );
@@ -83,9 +84,9 @@ function Signal(p: WaitProps) {
     <section class="wr wr-signal" ref={ref}>
       <div class="wr-signal-head">
         <span class="live-dot" aria-hidden="true" />
-        <span class="label">Waiting for an opponent</span>
+        <span class="label">{t("Waiting for an opponent")}</span>
       </div>
-      <div class="wr-slots" aria-label={`Game code ${p.code ?? ""}`}>
+      <div class="wr-slots" aria-label={t("Game code {code}", { code: p.code ?? "" })}>
         {letters(p.code).map((c, i) => (
           <span class="wr-slot" style={{ animationDelay: `${i * 0.12}s` }}>
             {c}
