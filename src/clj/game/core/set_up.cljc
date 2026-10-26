@@ -24,13 +24,26 @@
   (let [s-card (or (server-card (:title card)) card)]
     (assoc (make-card s-card) :art (:art card))))
 
+(defn- stack-deck
+  "Moves the cards named in stack to the top of the deck, in that order."
+  [stack cards]
+  (loop [top [] cards (vec cards) titles (seq stack)]
+    (if-not titles
+      (into top cards)
+      (if-let [i (first (keep-indexed (fn [i c] (when (= (first titles) (:title c)) i)) cards))]
+        (recur (conj top (nth cards i)) (into (subvec cards 0 i) (subvec cards (inc i))) (next titles))
+        (recur top cards (next titles))))))
+
 (defn create-deck
   "Creates a shuffled draw deck (R&D/Stack) from the given list of cards.
-  Loads card data from the server-card map if available."
+  Loads card data from the server-card map if available. A :stack of titles
+  fixes the top of the deck, as the tutorial does."
   [deck]
-  (->> deck :cards vec
-       (mapcat #(map build-card (repeat (:qty %) (assoc (:card %) :art (:art %)))))
-       shuffle-coll vec))
+  (cond->> (->> deck :cards vec
+                (mapcat #(map build-card (repeat (:qty %) (assoc (:card %) :art (:art %)))))
+                shuffle-coll vec)
+    (seq (:stack deck)) (stack-deck (:stack deck))
+    true vec))
 
 ;;; Functions for the creation of games and the progression of turns.
 (defn mulligan

@@ -3911,6 +3911,10 @@ button:active:not(:disabled) {
     height 0.2s;
 }
 
+.coach-ring.soft {
+  box-shadow: 0 0 18px var(--yellow);
+}
+
 .coach {
   position: fixed;
   left: 12px;

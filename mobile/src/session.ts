@@ -1,5 +1,7 @@
 import type { CardDb, Deck, EngineApi, Side } from "./engine";
 import { type Bot, makeBot } from "./bot/index.ts";
+import { ScriptedBot } from "./bot/scripted.ts";
+import { TUTORIALS } from "./game/coachScript.ts";
 import { CORE_DECKS } from "./bot/policy/decks/core.ts";
 import { type WireDeck, engineDeck, fromPrecon, fromWire, latest, toWire } from "./decks";
 import { type GameFormat, analyze, dealtFormat, deckFormat, isGameFormat } from "./deckrules";
@@ -555,6 +557,9 @@ export class Session {
     if (!held) this.scheduleBot();
   }
 
+  gate: ((command: string, args: unknown) => boolean) | null = null;
+  refused?: () => void;
+
   startTutorial(side: Side, mine: WireDeck, theirs: WireDeck) {
     this.lobby = { ...this.lobby, vsBot: true, opponentName: "Bot", tutorial: true, mySide: side, myDeck: mine, format: "casual" };
     this.opponentDeck = theirs;
@@ -568,7 +573,8 @@ export class Session {
 
   private makeBot() {
     if (!this.lobby.vsBot) return;
-    this.bot = makeBot(other(this.lobby.mySide), this.opponentDeck, (title) => this.db.byTitle.get(title) as any);
+    const bot = makeBot(other(this.lobby.mySide), this.opponentDeck, (title) => this.db.byTitle.get(title) as any);
+    this.bot = this.lobby.tutorial ? new ScriptedBot(bot, TUTORIALS[this.lobby.mySide].bot) : bot;
   }
 
   private scheduleBot() {
@@ -738,7 +744,10 @@ export class Session {
     const theirs = fromWire(this.effectiveDeck(other(this.lobby.mySide), this.opponentDeck)!, this.db);
     const me = { username: this.lobby.myName };
     const them = { username: this.lobby.opponentName ?? "Player 2" };
-    const players = this.lobby.mySide === "corp" ? { corp: { user: me, deck: engineDeck(mine) }, runner: { user: them, deck: engineDeck(theirs) } } : { corp: { user: them, deck: engineDeck(theirs) }, runner: { user: me, deck: engineDeck(mine) } };
+    const stacks = this.lobby.tutorial ? TUTORIALS[this.lobby.mySide].stacks : undefined;
+    const deck = (d: Deck, side: Side) => ({ ...engineDeck(d), stack: stacks?.[side] });
+    const theirSide = other(this.lobby.mySide);
+    const players = this.lobby.mySide === "corp" ? { corp: { user: me, deck: deck(mine, "corp") }, runner: { user: them, deck: deck(theirs, theirSide) } } : { corp: { user: them, deck: deck(theirs, theirSide) }, runner: { user: me, deck: deck(mine, "runner") } };
     this.deckNames = { [this.lobby.mySide]: mine.name, [other(this.lobby.mySide)]: theirs.name };
     this.boot({ gameid: this.lobby.code, format: this.lobby.format, ...players }, seed);
     this.log = [];
@@ -915,6 +924,7 @@ export class Session {
 
   send(command: string, args?: unknown, side: Side = this.lobby.mySide) {
     if (this.watching) return;
+    if (this.gate && !this.gate(command, args)) return this.refused?.();
     if (this.online()) {
       this.pending = true;
       this.push({ k: "act", command, args: JSON.parse(JSON.stringify(args ?? null)) });

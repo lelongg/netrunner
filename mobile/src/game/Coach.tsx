@@ -6,7 +6,8 @@ import { animate } from "../fx/core";
 import { motionOff } from "../settings";
 import { withTerms } from "./RichText";
 import { iconize } from "./text";
-import { basicCommands, promptOf } from "./actions";
+import { findCard, promptOf } from "./actions";
+import { type Beat, RESTRICTED, TUTORIALS } from "./coachScript";
 import { t } from "../i18n";
 
 interface Step {
@@ -16,7 +17,6 @@ interface Step {
   when: (view: any, side: Side) => boolean;
 }
 
-const myTurn = (view: any, side: Side) => view["active-player"] === side && !view.run && !view["end-turn"] && (view[side]?.click ?? 0) > 0 && !promptOf(view, side);
 const prompt = (view: any, side: Side) => promptOf(view, side);
 const accessing = (view: any, side: Side) => {
   const p = prompt(view, side);
@@ -24,39 +24,17 @@ const accessing = (view: any, side: Side) => {
 };
 
 const RUNNER: Step[] = [
-  { id: "welcome", anchor: ".me-bar", text: "You are the Runner, a hacker. Steal 7 agenda points from the Corp before it scores 7 of its own. This bar shows your credits, clicks and stats.", when: () => true },
-  { id: "corp", anchor: ".opp", text: "This is the Corp, played by the bot: its credits, the cards in its hand (HQ) and its clicks while it plays.", when: () => true },
-  { id: "servers", anchor: ".servers.theirs", text: "The Corp's servers. HQ is its hand, R&D its deck, Archives its discard. Each card it installs face down opens a remote server, and ice in front of a server protects it.", when: () => true },
-  { id: "corp-turn", anchor: ".ticker .feed", text: "The Corp is taking its turn. Follow its moves here, and tap this line to read the whole log.", when: (v, s) => v["active-player"] !== s && !v.run },
-  { id: "turn", anchor: '[data-anchor="runner-clicks"]', text: "Your turn! You have 4 clicks [click]. Every action spends one; when they run out, you end your turn.", when: myTurn },
-  { id: "hand", anchor: ".dock .hand", text: "Your grip. Tap a card to read it, then play or install it. Events are used once; programs, hardware and resources stay installed in your rig.", when: myTurn },
-  { id: "actions", anchor: ".actions .buttons", text: "Basic actions: gain 1[credit], draw a card, or Run a server to break in. Try installing an icebreaker before running into ice.", when: myTurn },
-  { id: "help", anchor: ".me-bar .stat", text: "Tap any icon, or any underlined word in a card's text, to see what it means.", when: myTurn },
-  { id: "approach", anchor: ".server.running", text: "You are running this server. You pass its ice one piece at a time, from the outermost. The Corp may rez a piece of ice when you approach it.", when: (v) => !!v.run && !v.encounters },
-  { id: "encounter", anchor: ".encounter", text: "Encounter! Each subroutine fires unless you break it. The panel below lists what your icebreakers can do; their strength must reach the ice's.", when: (v) => !!v.encounters },
-  { id: "access", anchor: ".prompt", text: "You are accessing a card. An agenda is stolen for its points; other cards can be trashed by paying their trash cost.", when: accessing },
-  { id: "end-turn", anchor: ".actions .buttons", text: "No clicks left: end your turn and the Corp plays again.", when: (v, s) => (v.turn ?? 0) > 0 && basicCommands(v, s).some((c) => c.command === "end-turn") },
+  { id: "encounter", anchor: ".encounter", text: "Each subroutine you don't break fires. Your icebreaker must match the ice type (barrier, code gate, sentry) and reach its strength before breaking.", when: (v) => !!v.encounters },
+  { id: "access", anchor: ".prompt", text: "Accessed agendas are stolen. Other cards can be trashed by paying their trash cost, or left in place.", when: accessing },
+  { id: "tagged", anchor: ".me-bar", text: "You are tagged! While you have a tag, the Corp may spend a click and 2[credit] to trash one of your resources. Remove a tag with a click and 2[credit].", when: (v) => (v.runner?.tag?.total ?? 0) > 0 },
+  { id: "discard", anchor: ".prompt", text: "Too many cards: you discard down to your maximum hand size at the end of your turn.", when: (v, s) => /discard/i.test(JSON.stringify(prompt(v, s)?.msg ?? "")) },
 ];
 
-const hasAgenda = (view: any, side: Side) => {
-  const servers = view[side]?.servers ?? {};
-  return Object.entries<any>(servers).some(([k, s]) => k.startsWith("remote") && (s.content ?? []).some((c: any) => c.type === "Agenda"));
-};
-
 const CORP: Step[] = [
-  { id: "welcome", anchor: ".me-bar", text: "You are the Corp, a megacorporation. Score 7 agenda points before the Runner steals 7 from you. This bar shows your credits and clicks.", when: () => true },
-  { id: "runner", anchor: ".opp", text: "This is the Runner, played by the bot: its credits, the cards in its grip, its memory and its tags.", when: () => true },
-  { id: "servers", anchor: ".servers.mine", text: "Your servers. HQ is your hand, R&D your deck, Archives your discard. Installing an agenda or an asset in a new remote server creates one; ice in front of a server protects it.", when: () => true },
-  { id: "turn", anchor: '[data-anchor="corp-clicks"]', text: "Your turn! You drew a card and have 3 clicks [click]. Every action spends one; when they run out, you end your turn.", when: myTurn },
-  { id: "hand", anchor: ".dock .hand", text: "Your HQ. Tap a card to read it: install agendas and assets in a remote server, ice in front of a server, or play operations. Installed cards stay face down until you rez them.", when: myTurn },
-  { id: "actions", anchor: ".actions .buttons", text: "Basic actions: gain 1[credit] or draw a card. Protect your servers with ice before you put an agenda in one.", when: myTurn },
-  { id: "help", anchor: ".me-bar .stat", text: "Tap any icon, or any underlined word in a card's text, to see what it means.", when: myTurn },
-  { id: "advance", anchor: ".servers.mine", text: "Tap your installed agenda to advance it: 1[click] and 1[credit] per counter. Once it has as many counters as its requirement, score it from the same card.", when: (v, s) => myTurn(v, s) && hasAgenda(v, s) },
-  { id: "runner-turn", anchor: ".ticker .feed", text: "The Runner is playing. Follow its moves here, and tap this line to read the whole log.", when: (v, s) => (v.turn ?? 0) > 0 && v["active-player"] !== s && !v.run },
-  { id: "run", anchor: ".server.running", text: "The Runner is running this server! It passes your ice one piece at a time, from the outermost.", when: (v) => !!v.run && !v.encounters },
-  { id: "rez", anchor: ".actions .buttons", text: "The Runner approaches face-down ice. Rez it now, paying its rez cost, to make it fight; or save your credits and let the Runner pass.", when: (v) => v.run?.phase === "approach-ice" && !!document.querySelector(".actions .buttons") },
-  { id: "encounter", anchor: ".encounter", text: "Your ice is encountered. Every subroutine the Runner does not break fires: ending the run, doing damage...", when: (v) => !!v.encounters },
-  { id: "end-turn", anchor: ".actions .buttons", text: "No clicks left: end your turn and the Runner plays.", when: (v, s) => (v.turn ?? 0) > 0 && basicCommands(v, s).some((c) => c.command === "end-turn") },
+  { id: "rez", anchor: ".actions .buttons", text: "The Runner approaches face-down ice: rez it now to make it fight, or save your credits and let the Runner pass.", when: (v) => v.run?.phase === "approach-ice" && !!document.querySelector(".actions .buttons") },
+  { id: "stolen", anchor: ".opp", text: "The Runner stole an agenda. Protect your servers with more ice, or bait with traps and assets.", when: (v) => (v.runner?.["agenda-point"] ?? 0) > 0 },
+  { id: "tagged", anchor: ".opp", text: "The Runner is tagged: you may spend a click and 2[credit] to trash one of its resources.", when: (v) => (v.runner?.tag?.total ?? 0) > 0 },
+  { id: "discard", anchor: ".prompt", text: "Too many cards: you discard down to your maximum hand size at the end of your turn.", when: (v, s) => /discard/i.test(JSON.stringify(prompt(v, s)?.msg ?? "")) },
 ];
 
 const key = (id: string) => `nsg.coach.${id}`;
@@ -69,13 +47,38 @@ function loadSeen(id: string): Set<string> {
   }
 }
 
+function loadIndex(id: string): number {
+  try {
+    return Number(localStorage.getItem(`nsg.coach.${id}.beat`) ?? 0) || 0;
+  } catch {
+    return 0;
+  }
+}
+
 export function Coach({ session, view, side }: { session: Session; view: any; side: Side }) {
   const id = session.saveId ?? "tutorial";
+  const script = TUTORIALS[side];
   const [seen, setSeen] = useState(() => loadSeen(id));
+  const [index, setIndex] = useState(() => loadIndex(id));
+  const [opened, setOpened] = useState<string | null>(null);
   const [box, setBox] = useState<DOMRect | null>(null);
+  const [nudge, setNudge] = useState(0);
   const bubble = useRef<HTMLDivElement>(null);
-  const STEPS = side === "corp" ? CORP : RUNNER;
-  const step = view.winner ? undefined : STEPS.find((s) => !seen.has(s.id) && s.when(view, side) && document.querySelector(s.anchor));
+  const TIPS = side === "corp" ? CORP : RUNNER;
+  const beat: Beat | undefined = view.winner ? undefined : script.beats[index];
+  const live = !!beat && (opened === beat.id || !beat.when || beat.when(view));
+  const tip = !beat && !view.winner ? TIPS.find((s) => !seen.has(s.id) && s.when(view, side) && document.querySelector(s.anchor)) : undefined;
+  const acting = live && !!beat?.done;
+  const shown = live ? beat : tip;
+
+  const advance = () => {
+    const next = index + 1;
+    setIndex(next);
+    setOpened(null);
+    try {
+      localStorage.setItem(`nsg.coach.${id}.beat`, String(next));
+    } catch {}
+  };
 
   const done = (ids: string[]) => {
     const next = new Set([...seen, ...ids]);
@@ -85,18 +88,50 @@ export function Coach({ session, view, side }: { session: Session; view: any; si
     } catch {}
   };
 
+  const skip = () => {
+    setIndex(script.beats.length);
+    try {
+      localStorage.setItem(`nsg.coach.${id}.beat`, String(script.beats.length));
+    } catch {}
+    done(TIPS.map((s) => s.id));
+    skipTutorial();
+  };
+
   useEffect(() => {
-    session.holdBot(!!step);
+    if (live && beat && opened !== beat.id) setOpened(beat.id);
+    if (live && beat?.done?.(view)) advance();
+  });
+
+  useEffect(() => {
+    if (!acting || !beat?.allow) {
+      session.gate = null;
+      return;
+    }
+    const allow = beat.allow;
+    session.gate = (command, args: any) => {
+      const v = session.views[side];
+      const verdict = allow(command, args?.card ? findCard(v, args.card.cid) : undefined, args, v);
+      return verdict ?? (!beat.strict && !RESTRICTED.has(command));
+    };
+    session.refused = () => setNudge((n) => n + 1);
+    return () => {
+      session.gate = null;
+      session.refused = undefined;
+    };
+  }, [acting, beat?.id]);
+
+  useEffect(() => {
+    session.holdBot(!!shown && !acting);
     return () => session.holdBot(false);
-  }, [step?.id]);
+  }, [shown?.id, acting]);
 
   useLayoutEffect(() => {
-    if (!step) return setBox(null);
+    if (!shown) return setBox(null);
     const measure = () => {
-      const el = document.querySelector(step.anchor);
-      if (el) setBox(el.getBoundingClientRect());
+      const el = document.querySelector(shown.anchor);
+      setBox(el ? el.getBoundingClientRect() : null);
     };
-    document.querySelector(step.anchor)?.scrollIntoView({ block: "nearest" });
+    document.querySelector(shown.anchor)?.scrollIntoView({ block: "nearest" });
     measure();
     const timer = setInterval(measure, 250);
     addEventListener("resize", measure);
@@ -104,34 +139,36 @@ export function Coach({ session, view, side }: { session: Session; view: any; si
       clearInterval(timer);
       removeEventListener("resize", measure);
     };
-  }, [step?.id]);
+  }, [shown?.id]);
 
   useLayoutEffect(() => {
-    if (step && bubble.current && !motionOff()) animate(bubble.current, { opacity: [0, 1], y: [10, 0] }, { duration: 0.25 });
-  }, [step?.id]);
+    if (shown && bubble.current && !motionOff()) animate(bubble.current, { opacity: [0, 1], y: [10, 0] }, { duration: 0.25 });
+  }, [shown?.id]);
 
-  if (!step || !box) return null;
-  const below = box.top < innerHeight / 2;
-  const style = below ? { top: `${Math.min(box.bottom + 12, innerHeight - 220)}px` } : { bottom: `${Math.min(innerHeight - box.top + 12, innerHeight - 220)}px` };
+  useLayoutEffect(() => {
+    if (nudge && bubble.current && !motionOff()) animate(bubble.current, { x: [0, -8, 8, -5, 5, 0] }, { duration: 0.35 });
+  }, [nudge]);
+
+  if (!shown || (!box && !acting)) return null;
+  const sheetOpen = !!document.querySelector(".sheet");
+  const below = !!box && box.top < innerHeight / 2;
+  const style = sheetOpen || !box ? { top: "8px" } : below ? { top: `${Math.min(box.bottom + 12, innerHeight - 220)}px` } : { bottom: `${Math.min(innerHeight - box.top + 12, innerHeight - 220)}px` };
+  const total = script.beats.length;
   return (
     <>
-      <div class="coach-ring" style={{ left: `${box.left - 4}px`, top: `${box.top - 4}px`, width: `${box.width + 8}px`, height: `${box.height + 8}px` }} />
-      <div ref={bubble} class="coach panel" style={style} role="dialog" aria-label={t("Tutorial")}>
-        <span class="label cyan">{t("Tutorial")} · {STEPS.indexOf(step) + 1}/{STEPS.length}</span>
-        <p>{withTerms(iconize(t(step.text)))}</p>
+      {box && !sheetOpen && <div class={`coach-ring ${acting ? "soft" : ""}`} style={{ left: `${box.left - 4}px`, top: `${box.top - 4}px`, width: `${box.width + 8}px`, height: `${box.height + 8}px` }} />}
+      <div ref={bubble} class={`coach panel ${acting ? "acting" : ""}`} style={style} role="dialog" aria-label={t("Tutorial")}>
+        <span class="label cyan">{live ? `${t("Tutorial")} · ${index + 1}/${total}` : t("Tip")}</span>
+        <p>{withTerms(iconize(t(shown.text)))}</p>
         <div class="coach-actions">
-          <button
-            class="ghost"
-            onClick={() => {
-              done(STEPS.map((s) => s.id));
-              skipTutorial();
-            }}
-          >
+          <button class="ghost" onClick={skip}>
             {t("Skip tutorial")}
           </button>
-          <button class="primary" onClick={() => done([step.id])}>
-            {t("Got it")}
-          </button>
+          {!acting && (
+            <button class="primary" onClick={() => (live ? advance() : done([shown.id]))}>
+              {t("Got it")}
+            </button>
+          )}
         </div>
       </div>
     </>
