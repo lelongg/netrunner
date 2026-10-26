@@ -1,0 +1,206 @@
+name: Policy self-play
+
+on:
+  workflow_dispatch:
+    inputs:
+      jobs:
+        description: 'Parallel jobs (each plays one matchup)'
+        default: '24'
+      games:
+        description: 'Games per job'
+        default: '50'
+      flags:
+        description: 'Extra policy-eval flags for the Corp'
+        default: ''
+  schedule:
+    - cron: '41 */4 * * *'
+
+permissions:
+  contents: write
+
+jobs:
+  engine:
+    name: 'Compile the engine'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore the compiled engine
+        id: engine
+        uses: actions/cache@v4
+        with:
+          path: mobile/engine/engine.js
+          key: engine-${{ hashFiles('src/clj/**', 'src/cljc/**', 'src/cljs/**', 'shadow-cljs.edn', 'project.clj', 'package-lock.json') }}
+
+      - uses: actions/setup-node@v4
+        if: steps.engine.outputs.cache-hit != 'true'
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Prepare java
+        if: steps.engine.outputs.cache-hit != 'true'
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Install clojure tools
+        if: steps.engine.outputs.cache-hit != 'true'
+        uses: DeLaGuardo/setup-clojure@94d767dbb80ae5c637d0f1ad70b75fa2b00495cd # 13.0
+        with:
+          lein: 2.9.1
+
+      - name: Cache lein project dependencies
+        if: steps.engine.outputs.cache-hit != 'true'
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.m2
+            ~/.lein
+          key: ${{ runner.os }}-mobile-clojure-${{ hashFiles('**/project.clj') }}
+          restore-keys: ${{ runner.os }}-mobile-clojure
+
+      - name: Compile the engine to JavaScript
+        if: steps.engine.outputs.cache-hit != 'true'
+        run: |
+          npm ci
+          npx shadow-cljs release engine
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: engine
+          path: mobile/engine/engine.js
+          retention-days: 3
+
+  plan:
+    name: 'Plan the jobs'
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      games: ${{ steps.plan.outputs.games }}
+      flags: ${{ steps.plan.outputs.flags }}
+    steps:
+      - id: plan
+        env:
+          JOBS: ${{ inputs.jobs }}
+          GAMES: ${{ inputs.games }}
+          FLAGS: ${{ inputs.flags }}
+          RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          node -e '
+            const jobs = Number(process.env.JOBS || 24);
+            const games = Number(process.env.GAMES || 50);
+            const offset = Number(process.env.RUN_NUMBER || 0) * 100000;
+            const corps = ["core-hb", "core-jinteki", "core-nbn", "core-weyland"];
+            const runners = ["core-anarch", "core-criminal", "core-shaper"];
+            const include = [];
+            for (let j = 0; j < jobs; j++) {
+              const corp = corps[j % corps.length];
+              const runner = runners[Math.floor(j / corps.length) % runners.length];
+              const round = Math.floor(j / (corps.length * runners.length));
+              include.push({ job: j, corp, runner, opponent: round % 2 === 0 ? "ref" : "policy", seed: 1 + round * games + offset });
+            }
+            console.log("matrix=" + JSON.stringify({ include }));
+            console.log("games=" + games);
+            console.log("flags=" + (process.env.FLAGS || ""));
+          ' >> "$GITHUB_OUTPUT"
+
+  play:
+    name: 'job ${{ matrix.job }} · ${{ matrix.corp }} vs ${{ matrix.runner }} (${{ matrix.opponent }})'
+    needs: [engine, plan]
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      max-parallel: 20
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install npm dependencies
+        run: npm ci --prefix mobile
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: engine
+          path: mobile/engine
+
+      - name: Fetch card data
+        run: npm run cards --prefix mobile
+
+      - name: Check out the frozen reference policies
+        run: |
+          ref=$(node -e 'console.log(require("./mobile/scripts/policy-reference.json").commit)')
+          git worktree add --detach "mobile/.policy-ref/${ref:0:12}" "$ref"
+
+      - name: Play
+        working-directory: mobile
+        env:
+          FLAGS: ${{ needs.plan.outputs.flags }}
+        run: |
+          mkdir -p selfplay
+          node --experimental-strip-types scripts/policy-eval.mjs --games ${{ needs.plan.outputs.games }} --corp policy --runner ${{ matrix.opponent }} --split tune --seed ${{ matrix.seed }} --corp-deck ${{ matrix.corp }} --runner-deck ${{ matrix.runner }} $FLAGS --positions selfplay/positions-${{ matrix.job }}.jsonl > selfplay/job-${{ matrix.job }}.log 2>&1
+          tail -n 30 selfplay/job-${{ matrix.job }}.log
+          test -f selfplay/positions-${{ matrix.job }}.jsonl && wc -l selfplay/positions-${{ matrix.job }}.jsonl
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: selfplay-${{ matrix.job }}
+          path: mobile/selfplay/*
+          retention-days: 30
+
+  fit:
+    name: 'Fit the evaluation'
+    needs: [plan, play]
+    if: always() && needs.play.result != 'cancelled'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: selfplay-*
+          path: selfplay
+
+      - name: Fit
+        run: |
+          cat selfplay/*/positions-*.jsonl > positions.jsonl
+          wc -l positions.jsonl
+          if curl -sSf -o previous.jsonl.gz "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/eval-results/selfplay/latest/all-positions.jsonl.gz"; then gzip -dc previous.jsonl.gz >> positions.jsonl; fi
+          wc -l positions.jsonl
+          node mobile/scripts/fit-eval.mjs positions.jsonl weights.json fit.md
+          cat fit.md >> "$GITHUB_STEP_SUMMARY"
+          grep -h "games in" selfplay/*/job-*.log > games.txt || true
+
+      - name: Publish on the eval-results branch
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          stamp=$(date -u +%Y-%m-%d-%H%M)
+          mkdir rb && cd rb
+          git init -q
+          git remote add origin "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          if git fetch -q origin eval-results; then git checkout -q eval-results; else git checkout -q --orphan eval-results; fi
+          mkdir -p "selfplay/${stamp}-${GITHUB_RUN_ID}" selfplay/latest
+          cp ../weights.json ../fit.md ../games.txt "selfplay/${stamp}-${GITHUB_RUN_ID}/"
+          gzip -c ../positions.jsonl > "selfplay/${stamp}-${GITHUB_RUN_ID}/positions.jsonl.gz"
+          cp ../weights.json ../fit.md selfplay/latest/
+          tail -n 400000 ../positions.jsonl | gzip -c > selfplay/latest/all-positions.jsonl.gz
+          git add -A
+          git -c user.name='policy-selfplay' -c user.email='policy-selfplay@users.noreply.github.com' commit -q -m "Self-play ${stamp} (run ${GITHUB_RUN_ID}, ${GITHUB_SHA:0:9})"
+          git push -q origin eval-results
+          echo "Weights: https://github.com/${GITHUB_REPOSITORY}/blob/eval-results/selfplay/${stamp}-${GITHUB_RUN_ID}/fit.md" >> "$GITHUB_STEP_SUMMARY"
