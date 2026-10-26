@@ -672,3 +672,48 @@ describe("jinteki plays its threats (replay 2L7UEEVY)", () => {
     expect(s.server("Server 1")?.content.some((c: any) => c.title === "Offworld Office")).toBe(true);
   });
 });
+
+describe("nbn keeps its last credits (replay BNDST9RP)", () => {
+  function brokeCorp() {
+    const s = new Scenario("core-nbn", "core-criminal");
+    s.clearHand("corp");
+    s.summon("corp", "Palisade", "Funhouse", "Tithe", "Manegarm Skunkworks");
+    s.credits("corp", 40);
+    for (const [card, server] of [["Funhouse", "HQ"], ["Palisade", "New remote"], ["Manegarm Skunkworks", "Server 1"], ["Tithe", "New remote"]] as [string, string][]) {
+      s.clicks("corp", 3);
+      s.install("corp", card, server);
+    }
+    s.rez("Funhouse");
+    s.rez("Palisade");
+    s.endTurn("corp");
+    s.clearHand("runner");
+    s.summon("runner", "Buzzsaw", "Smartware Distributor", "Smartware Distributor", "Pennyshaver", "Sure Gamble", "Sure Gamble");
+    s.credits("runner", 20);
+    s.install("runner", "Buzzsaw");
+    s.install("runner", "Smartware Distributor");
+    s.install("runner", "Smartware Distributor");
+    s.clicks("runner", 3);
+    s.install("runner", "Pennyshaver");
+    s.credits("runner", 5);
+    s.say("runner", "/tag 1");
+    s.endTurn("runner");
+    s.clearHand("corp");
+    s.summon("corp", "Send a Message", "Palisade", "Ping", "Tithe");
+    return s;
+  }
+
+  it("does not spend its last credits trashing resources with an agenda to score", () => {
+    const s = brokeCorp();
+    s.credits("corp", 4);
+    const move = s.decide("corp");
+    expect(move?.command).not.toBe("trash-resource");
+    expect(best(s, "corp", (w) => w.startsWith("trash a resource"))).toBeLessThan(0);
+  });
+
+  it("does not install a five-advancement agenda behind one ice with three credits", () => {
+    const s = brokeCorp();
+    s.credits("corp", 3);
+    s.decide("corp");
+    expect(best(s, "corp", (w) => /Send a Message/.test(w) && /install|Server 1/.test(w))).toBeLessThan(25);
+  });
+});

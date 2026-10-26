@@ -30,7 +30,8 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
   if (retribution && isTagged && obs.credits >= 1 && runnerRig(obs).length) push(proposal(playOf(obs, retribution), 78, "Retribution: trash a program or hardware while the Runner is tagged", "punish"));
   const picture = glacier.inHand(obs, "Bigger Picture");
   if (picture && isTagged) push(proposal(playOf(obs, picture), runnerCredits >= 5 ? 72 : 50, runnerCredits >= 5 ? `Bigger Picture: ${Math.min(runnerCredits, 5 * tags)} credits change hands` : "Bigger Picture: one more tag", "punish"));
-  if (isTagged && obs.credits >= 2 && runnerResources(obs).length) {
+  const reserve = obs.hand.some((c) => c.type === "Agenda") || obs.servers.some((s) => s.ices.some((i: any) => !i.rezzed)) ? 5 : 2;
+  if (isTagged && obs.credits >= 2 + reserve && runnerResources(obs).length) {
     const trash = byCommand(obs, "trash-resource")[0];
     const worth = runnerResources(obs).some((r: any) => Number(r.counter?.credit ?? 0) > 0 || /job|connection/i.test((r.subtypes ?? []).join(" ")));
     if (trash) push(proposal(trash, worth ? 66 : 48, "trash a resource while the Runner is tagged", "punish"));
