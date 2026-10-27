@@ -1251,3 +1251,43 @@ describe("corp uses its run-ending upgrade and ices a porous R&D (replay 5P5VJBP
     expect(best(s, "corp", (w) => w.startsWith("install Whitespace on R&D"))).toBeGreaterThan(best(s, "corp", (w) => /^install Whitespace on (HQ|Server|New remote)/.test(w)));
   });
 });
+
+describe("corp plays the agenda that wins (replay WMCQV8NR)", () => {
+  it("installs Orbital Superiority at six points behind three ice instead of Predictive Planogram", () => {
+    const s = new Scenario("core-weyland", "core-shaper");
+    s.clearHand("corp");
+    s.summon("corp", "Send a Message", "Send a Message");
+    for (let i = 0; i < 2; i++) {
+      s.say("corp", "/score");
+      s.act("corp", "Select Send a Message");
+      s.act("corp", "Done");
+    }
+    s.summon("corp", "Funhouse", "Pharos", "Tithe", "Tithe", "Whitespace", "Whitespace", "Ballista", "Tithe", "Ballista", "Palisade", "Malapert Data Vault");
+    s.credits("corp", 80);
+    for (const [c, srv] of [["Funhouse", "HQ"], ["Pharos", "HQ"], ["Tithe", "HQ"], ["Tithe", "R&D"], ["Whitespace", "R&D"], ["Whitespace", "R&D"], ["Ballista", "R&D"], ["Tithe", "New remote"], ["Ballista", "Server 1"], ["Palisade", "Server 1"], ["Malapert Data Vault", "Server 1"]] as [string, string][]) {
+      s.clicks("corp", 3);
+      s.credits("corp", 80);
+      s.install("corp", c, srv);
+    }
+    for (const t of ["Funhouse", "Pharos", "Whitespace", "Palisade"]) s.rez(t);
+    s.clearHand("corp");
+    s.summon("corp", "Orbital Superiority", "Offworld Office", "Offworld Office", "Pharos", "Public Trail");
+    s.credits("corp", 8);
+    s.clicks("corp", 0);
+    s.endTurn("corp");
+    s.clearHand("runner");
+    s.summon("runner", "Echelon", "Unity", "Conduit", "DZMZ Optimizer", "Smartware Distributor");
+    s.credits("runner", 40);
+    for (const c of ["DZMZ Optimizer", "Echelon", "Unity", "Conduit", "Smartware Distributor"]) {
+      s.clicks("runner", 4);
+      s.install("runner", c);
+    }
+    s.summon("runner", "Mayfly", "Telework Contract");
+    s.credits("runner", 7);
+    s.clicks("runner", 0);
+    s.endTurn("runner");
+    const move = s.decide("corp");
+    expect(move?.command).toBe("play");
+    expect(s.last("corp").chosen?.why).toMatch(/^install (Orbital Superiority|Offworld Office) .*match point/);
+  });
+});
