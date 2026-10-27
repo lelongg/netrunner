@@ -1,23 +1,23 @@
 ## base
 
-### design split · Corp 360 of 576 · decision 35 ms
+### design split · Runner 243 of 576 · decision 24 ms
 
 | Corp \ Runner | Party Hard | Stolen Goods | Planning Ahead | total |
 |---|---|---|---|---|
-| Discretion Advised | 32 | 37 | 33 | 102 |
-| Advanced Yomi | 35 | 21 | 34 | 90 |
-| Hyper Velocity | 18 | 17 | 22 | 57 |
-| Quick and Dirty | 37 | 41 | 33 | 111 |
+| Discretion Advised | 23 | 12 | 19 | 54 |
+| Advanced Yomi | 17 | 23 | 13 | 53 |
+| Hyper Velocity | 32 | 28 | 25 | 85 |
+| Quick and Dirty | 21 | 12 | 18 | 51 |
 
-Corp mistakes: Hyper Velocity stolen-from-remote 107, Discretion Advised stolen-from-remote 62, Advanced Yomi stolen-from-remote 62, Quick and Dirty stolen-from-remote 58, Quick and Dirty unrezzable-install 40, Hyper Velocity unrezzable-install 28, Quick and Dirty rich-credit-click 22, Discretion Advised unrezzable-install 21
+Runner mistakes: Stolen Goods rich-credit-click 139, Party Hard rich-credit-click 84, Planning Ahead rich-credit-click 76
 
-### test split · Corp 374 of 576 · decision 34 ms
+### test split · Runner 232 of 576 · decision 26 ms
 
 | Corp \ Runner | Party Hard | Stolen Goods | Planning Ahead | total |
 |---|---|---|---|---|
-| Discretion Advised | 33 | 34 | 38 | 105 |
-| Advanced Yomi | 31 | 21 | 35 | 87 |
-| Hyper Velocity | 20 | 26 | 29 | 75 |
-| Quick and Dirty | 38 | 34 | 35 | 107 |
+| Discretion Advised | 19 | 17 | 16 | 52 |
+| Advanced Yomi | 14 | 21 | 19 | 54 |
+| Hyper Velocity | 33 | 28 | 18 | 79 |
+| Quick and Dirty | 14 | 16 | 17 | 47 |
 
-Corp mistakes: Hyper Velocity stolen-from-remote 99, Advanced Yomi stolen-from-remote 64, Discretion Advised stolen-from-remote 47, Quick and Dirty stolen-from-remote 46, Quick and Dirty unrezzable-install 45, Discretion Advised unrezzable-install 28, Hyper Velocity unrezzable-install 28, Quick and Dirty thin-install 28
+Runner mistakes: Stolen Goods rich-credit-click 147, Party Hard rich-credit-click 67, Planning Ahead rich-credit-click 57
