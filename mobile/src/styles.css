@@ -1108,6 +1108,12 @@ textarea:focus {
   overflow-x: auto;
 }
 
+.piles:has(.stacked),
+.servers:has(.stacked) {
+  padding-top: 12px;
+  margin-top: -12px;
+}
+
 .pile {
   display: flex;
   flex-direction: column;
