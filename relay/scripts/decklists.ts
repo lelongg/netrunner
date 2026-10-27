@@ -253,8 +253,19 @@ async function tournaments() {
     .sort((a, b) => day(String(b.date)).localeCompare(day(String(a.date))))
     .slice(0, TOURNAMENTS_PER_RUN);
   let entries = 0;
+  let skipped = 0;
   for (const t of todo) {
-    const list: any[] = (await getJson(`${ABR}/entries?id=${t.id}`)) ?? [];
+    const list: any[] | null = await getJson(`${ABR}/entries?id=${t.id}`).then(
+      (r) => r ?? [],
+      (e) => {
+        console.warn(`tournament ${t.id} skipped: ${e instanceof Error ? e.message : e}`);
+        return null;
+      },
+    );
+    if (list === null) {
+      skipped++;
+      continue;
+    }
     const out = [`INSERT OR REPLACE INTO tournaments (id, title, date, format, players, top) VALUES (${Number(t.id)}, ${quote(String(t.title ?? "").slice(0, 120))}, ${quote(day(String(t.date)))}, ${quote(ABR_FORMATS[t.format] ?? String(t.format ?? "other"))}, ${Number(t.players_count) || list.length}, ${Number(t.top_count) || 0});`];
     for (const e of Array.isArray(list) ? list : []) {
       const swiss = Number(e.rank_swiss) || null;
@@ -272,14 +283,15 @@ async function tournaments() {
     }
     d1Write(out);
   }
-  console.log(`tournaments: ${todo.length} imported, ${entries} results`);
+  console.log(`tournaments: ${todo.length - skipped} imported, ${skipped} skipped, ${entries} results`);
 }
 
 async function legacyIds() {
   const nums = d1(`SELECT DISTINCT legacy FROM results WHERE deck IS NULL AND legacy IS NOT NULL AND legacy NOT IN (SELECT num FROM legacy_ids) ORDER BY legacy DESC LIMIT ${LEGACY_PER_RUN}`).map((r) => Number(r.legacy));
   const out: string[] = [];
   for (const num of nums) {
-    const json = await getJson(`${LEGACY_API}/${num}`);
+    const json = await getJson(`${LEGACY_API}/${num}`).catch(() => undefined);
+    if (json === undefined) continue;
     const uuid = json?.data?.[0]?.uuid;
     out.push(`INSERT OR REPLACE INTO legacy_ids (num, uuid) VALUES (${num}, ${uuid ? quote(String(uuid)) : "NULL"});`);
   }
