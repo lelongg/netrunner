@@ -15,6 +15,9 @@ on:
       side:
         description: 'Which side plays the current policy against the frozen reference: corp, runner or both'
         default: 'both'
+      opponent:
+        description: 'Runner the Corp policy faces: ref (frozen reference) or aggro (the current Runner policy in its aggressive style)'
+        default: 'ref'
   schedule:
     - cron: '23 2 * * *'
 
@@ -84,6 +87,7 @@ jobs:
       matrix: ${{ steps.plan.outputs.matrix }}
       games: ${{ steps.plan.outputs.games }}
       splits: ${{ steps.plan.outputs.splits }}
+      opponent: ${{ steps.plan.outputs.opponent }}
     steps:
       - id: plan
         env:
@@ -91,6 +95,7 @@ jobs:
           GAMES: ${{ inputs.games }}
           SPLITS: ${{ inputs.splits }}
           SIDE: ${{ inputs.side }}
+          OPPONENT: ${{ inputs.opponent }}
         run: |
           node -e '
             const configs = JSON.parse(process.env.CONFIGS || "[{\"name\":\"base\",\"flags\":\"\"}]");
@@ -102,6 +107,7 @@ jobs:
             console.log("matrix=" + JSON.stringify({ include }));
             console.log("games=" + (process.env.GAMES || "48"));
             console.log("splits=" + (process.env.SPLITS || "design test"));
+            console.log("opponent=" + (process.env.OPPONENT === "aggro" ? "aggro" : "ref"));
           ' >> "$GITHUB_OUTPUT"
 
   cells:
@@ -151,9 +157,10 @@ jobs:
           CORP: ${{ matrix.corp }}
           RUNNER: ${{ matrix.runner }}
           SIDE: ${{ matrix.side }}
+          OPPONENT: ${{ needs.plan.outputs.opponent }}
         run: |
           mkdir -p results
-          if [ "$SIDE" = "runner" ]; then players="--corp ref --runner policy"; else players="--corp policy --runner ref"; fi
+          if [ "$SIDE" = "runner" ]; then players="--corp ref --runner policy"; else players="--corp policy --runner $OPPONENT"; fi
           for split in ${{ needs.plan.outputs.splits }}; do
             node --experimental-strip-types scripts/policy-eval.mjs --games ${{ needs.plan.outputs.games }} $players --split $split --corp-deck ${{ matrix.corp }} --runner-deck ${{ matrix.runner }} $FLAGS --out results/$split > results/$split.log 2>&1 &
           done
@@ -169,7 +176,7 @@ jobs:
               const summary = JSON.parse(fs.readFileSync(`results/${split}/summary.json`, "utf8"));
               const side = process.env.SIDE === "runner" ? "runner" : "corp";
               const ms = log.match(new RegExp(side + ": decision avg ([0-9.]+)ms max ([0-9.]+)ms"));
-              fs.writeFileSync(`results/${split}/cell.json`, JSON.stringify({ config: process.env.CONFIG, flags: process.env.FLAGS, corp: process.env.CORP, runner: process.env.RUNNER, side, split, games: summary.games, wins: summary.wins, reasons: summary.reasons, mistakes: summary.mistakes, decisionMs: ms ? Number(ms[1]) : null, decisionMaxMs: ms ? Number(ms[2]) : null }));
+              fs.writeFileSync(`results/${split}/cell.json`, JSON.stringify({ config: process.env.CONFIG, flags: process.env.FLAGS, corp: process.env.CORP, runner: process.env.RUNNER, side, opponent: side === "corp" ? process.env.OPPONENT : "ref", split, games: summary.games, wins: summary.wins, reasons: summary.reasons, mistakes: summary.mistakes, decisionMs: ms ? Number(ms[1]) : null, decisionMaxMs: ms ? Number(ms[2]) : null }));
             ' $split
           done
 
@@ -221,6 +228,6 @@ jobs:
           cp ../report.md grids/latest.md
           cp ../report.json grids/latest.json
           git add -A
-          git -c user.name='policy-grid' -c user.email='policy-grid@users.noreply.github.com' commit -q -m "Grid ${stamp} (run ${GITHUB_RUN_ID}, ${GITHUB_SHA:0:9})"
+          git -c user.name='policy-grid' -c user.email='policy-grid@users.noreply.github.com' commit -q -m "Grid ${stamp} (run ${GITHUB_RUN_ID}, ${GITHUB_SHA:0:9}, ${{ needs.plan.outputs.opponent }})"
           git push -q origin eval-results
           echo "Report: https://github.com/${GITHUB_REPOSITORY}/blob/eval-results/grids/${stamp}-${GITHUB_RUN_ID}.md" >> "$GITHUB_STEP_SUMMARY"
