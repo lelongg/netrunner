@@ -15,7 +15,7 @@ import CursorGrid from "./CursorGrid";
 import { setMood } from "../music";
 import { PromptPanel } from "./PromptPanel";
 import { useBackClose } from "../back";
-import { PHASE_LABELS, byServerOrder, iconize, serverLabel, serverTitle } from "./text";
+import { PHASE_LABELS, byServerOrder, iconize, serverLabelShown, serverTitle } from "./text";
 import { t } from "../i18n";
 import { Icon, type IconName } from "../icons";
 import { glyphs } from "./Glyphs";
@@ -1299,7 +1299,7 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
                 setPicking(false);
               }}
             >
-              {serverLabel(s)}
+              {serverLabelShown(s)}
             </button>
           ))}
           <button class="ghost" onClick={() => setPicking(false)}>

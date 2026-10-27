@@ -112,6 +112,8 @@ export function PromptPanel({ view, side, prompt, render, send, closePrompt, dis
   const choices = prompt.choices;
   const eid = prompt.eid;
   const msg = iconize(showMsg(prompt.msg, render));
+  const breaking = /^Break (a|\d+|up to \d+)\b.*subroutines?/i.test(render(prompt.msg));
+  const optionLabel = (value: unknown) => (breaking && value !== "Done" ? `[subroutine] ${choiceLabel(value, render)}` : choiceLabel(value, render));
   const answer = (choice: unknown) => send("choice", { eid, choice });
   const [title, setTitle] = useState("");
   const [peek, setPeek] = useState<number | null>(null);
@@ -310,7 +312,7 @@ export function PromptPanel({ view, side, prompt, render, send, closePrompt, dis
                   answer({ uuid: c.uuid });
                 }}
               >
-                {glyphs(iconize(choiceLabel(c.value, render)))}
+                {glyphs(iconize(optionLabel(c.value)))}
               </button>
             ))}
           {prompt["offer-bad-pub?"] && (

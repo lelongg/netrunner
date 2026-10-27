@@ -180,6 +180,9 @@ function wrap(act: string, frame: (a: string) => string): string | null {
 
 const EXACT: Record<string, string> = {
   "No action": "Aucune action",
+  "Break a subroutine": "Choisissez la routine à neutraliser",
+  HQ: "QG",
+  "New remote": "Nouveau serveur distant",
   Yes: "Oui",
   No: "Non",
   Hide: "Masquer",
@@ -236,6 +239,8 @@ export function engineFr(text: string): string {
   if (!text) return text;
   const exact = EXACT[text];
   if (exact) return exact;
+  const remote = text.match(/^Server (\d+)$/);
+  if (remote) return `Serveur ${remote[1]}`;
   for (const [re, fn] of PROMPTS) {
     const m = text.match(re);
     if (m) return fn(m);
