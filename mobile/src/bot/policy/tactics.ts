@@ -96,7 +96,8 @@ export function iceThreat(ice: any, info: CardInfo, runnerCredits?: number, runn
   const segments = source.split(/\n|\.\s+/).map((x) => x.trim());
   const poor = source.match(/end the run if the runner has (\d+)\s*\[credits?\] or (?:fewer|less)|if the runner has (\d+)\s*\[credits?\] or (?:fewer|less), end the run/i);
   const unconditional = segments.some((x) => /^end the run\.?$/i.test(x) || (/^end the run unless/i.test(x) && !unless && !poor));
-  const etr = unconditional || (!!poor && (runnerCredits === undefined || runnerCredits - loss <= Number(poor[1] ?? poor[2]))) || (!!unless && runnerGrip !== undefined && runnerGrip <= Number(unless[1]));
+  const noSteal = /cannot steal/i.test(source);
+  const etr = unconditional || noSteal || (!!poor && (runnerCredits === undefined || runnerCredits - loss <= Number(poor[1] ?? poor[2]))) || (!!unless && runnerGrip !== undefined && runnerGrip <= Number(unless[1]));
   const encounterTags = Number(text.match(/when the runner encounters this ice, end the run unless the runner takes (\d+) tag/i)?.[1] ?? 0);
   return { etr, damage, creditLoss: loss, tag: /\btag\b/i.test(source), encounterTags, exact: labels.length > 0 };
 }
@@ -144,6 +145,14 @@ export interface RunEstimate {
   etrRisk: boolean;
 }
 
+export const CLICK_AS_CREDITS = 2;
+
+export function clickThrough(ice: any, clicks: number): number {
+  const subs: any[] = ice.subroutines ?? [];
+  const unbroken = subs.length ? subs.filter((x) => !x.broken && !x.fired).length : (plain(String(ice.text ?? "")).match(/\[subroutine\]/gi) ?? []).length;
+  return unbroken > 0 && clicks >= unbroken ? unbroken : 0;
+}
+
 export function estimateRun(obs: Observation, server: ServerInfo, unrezzedCost = 3, budget = Number(obs.view.runner?.credit ?? 0), extra: BreakerProfile[] = [], unrezzedBlock = 0): RunEstimate {
   let credits = 0;
   let exact = true;
@@ -167,7 +176,13 @@ export function estimateRun(obs: Observation, server: ServerInfo, unrezzedCost =
       if (tagPunisher(obs) && !(Number(obs.clicks ?? 0) >= 2 && Math.min(budget - credits, Number(obs.view.runner?.credit ?? 0)) >= 4)) blocked = true;
     }
     const facing = threat.etr || threat.tag ? Infinity : threat.damage * 2 + threat.creditLoss;
+    const clickable = (ice.subtypes ?? []).includes("Bioroid") ? clickThrough(ice, Number(obs.clicks ?? 0) - 1) : 0;
     if (!option || credits + option.cost.value > budget || option.cost.value > facing) {
+      if (clickable) {
+        credits += clickable * CLICK_AS_CREDITS;
+        exact = false;
+        continue;
+      }
       if (threat.etr) blocked = true;
       damage += threat.damage;
       credits += threat.creditLoss;
@@ -178,8 +193,9 @@ export function estimateRun(obs: Observation, server: ServerInfo, unrezzedCost =
     if (!option.cost.exact) exact = false;
   }
   for (const c of server.content) if (c.rezzed && c.title === "Manegarm Skunkworks" && Number(obs.clicks ?? 0) < 3) credits += 5;
-  if (unrezzed && (coverage(obs).size < 3 || unrezzedBlock > 0.3)) etrRisk = true;
-  if (unrezzed && unrezzedBlock >= 0.8) blocked = true;
+  const failOdds = unrezzed ? 1 - Math.pow(1 - Math.min(1, unrezzedBlock), unrezzed) : 0;
+  if (unrezzed && (coverage(obs).size < 3 || failOdds > 0.3)) etrRisk = true;
+  if (unrezzed && failOdds >= 0.6) blocked = true;
   return { server, credits, exact, blocked, unrezzed, damage, tags, etrRisk };
 }
 
@@ -245,6 +261,12 @@ export function serverSafety(obs: Observation, server: ServerInfo): Safety {
       const hidden = hiddenBreaker(obs, asRezzed);
       if (hidden && hidden.odds >= 0.25) {
         runnerCost += hidden.cost + 2;
+        exact = false;
+        continue;
+      }
+      const clickable = (ice.subtypes ?? []).includes("Bioroid") ? clickThrough(asRezzed, 3) : 0;
+      if (clickable) {
+        runnerCost += clickable * CLICK_AS_CREDITS;
         exact = false;
         continue;
       }
