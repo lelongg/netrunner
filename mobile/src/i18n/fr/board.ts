@@ -10,6 +10,8 @@ export default {
   "R&D": "R&D",
   "Archives": "Archives",
   "Server {n}": "Serveur {n}",
+  "New remote": "Nouveau serveur distant",
+  "Host": "Hôte",
   "Servers": "Serveurs",
   "Grip": "Main",
   "Stack": "Pile",

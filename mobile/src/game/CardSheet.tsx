@@ -8,7 +8,7 @@ import { visibleCode } from "./CardTile";
 import { Pager } from "./Pager";
 import { RichText } from "./RichText";
 import { useSheetPager } from "./swipe";
-import { iconize, serverLabel, serverName, serverRank } from "./text";
+import { iconize, serverLabelShown, serverName, serverRank } from "./text";
 import { Icon, type IconName } from "../icons";
 import { cardText } from "../cardtext";
 import { glyphs } from "./Glyphs";
@@ -251,7 +251,7 @@ export function CardSheet({ confirm, card, view, stamp, probe, side, db, send, o
             {installList.length === 0 && <span class="status">{t("Loading…")}</span>}
             {[...installList].sort((a, b) => (serverRank(a) ?? 1e9) - (serverRank(b) ?? 1e9)).map((s) => (
               <button class={serverRank(s) === undefined ? "" : "primary"} disabled={disabled} onClick={() => install(s)}>
-                {serverLabel(s)}
+                {serverLabelShown(s)}
               </button>
             ))}
             <button

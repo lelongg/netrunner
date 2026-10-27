@@ -41,6 +41,12 @@ export function serverLabel(label: unknown): string {
   return String(label);
 }
 
+export function serverLabelShown(label: unknown): string {
+  const s = serverLabel(label);
+  const n = s.match(/^Server (\d+)$/);
+  return n ? t("Server {n}", { n: n[1] }) : t(s);
+}
+
 export function serverName(key: string): string {
   if (key === "hq") return "HQ";
   if (key === "rd") return "R&D";
