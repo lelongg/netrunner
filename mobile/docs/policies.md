@@ -364,7 +364,14 @@ actually push back:
    objective is to beat a human, so the lists a human beat the bot with become test
    opponents, played by the policy of the matching faction when one exists and by the
    generic policy otherwise.
-4. **The heuristic bot**, kept as a sanity check that nothing regressed into nonsense.
+4. **The aggressive Runner** (`--runner aggro`): the working-tree Runner policy in its
+   aggressive style, meant to play the way the humans who beat the Corp bots do. It runs a
+   central every turn when it can afford it, prefers HQ when the Corp holds five cards or
+   more, runs more when it sits on ten credits, halves the penalties that keep it saving
+   for the remote, and does not wait for its rig to be complete. Its hand-survival rules
+   are unchanged. The Corp policies are tuned against it, since the frozen reference Runner
+   is more patient than a human.
+5. **The heuristic bot**, kept as a sanity check that nothing regressed into nonsense.
 
 With `--out`, the run writes:
 

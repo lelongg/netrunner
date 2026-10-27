@@ -372,6 +372,7 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
   const thin = obs.hand.length <= 1;
   const floor = reserve(obs);
   const floorNear = floor - obs.credits <= 6;
+  const aggressive = obs.memory.notes.style === "aggressive";
   const lockedOut = obs.servers.filter((s) => !s.remote).every((s) => s.ices.some((i: any) => i.rezzed && !(i.subtypes ?? []).some((t: string) => ICE_TYPES.has(t) && cov.has(t as any)) && iceThreat(i, obs.info(i), obs.credits).etr));
   if (lockedOut && obs.credits >= 8) {
     const draw = byCommand(obs, "draw")[0];
@@ -397,7 +398,7 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
     const cost = spend(p);
     const cheapRun = (p.kind === "run" || p.kind === "run-event") && cost <= 3;
     if (cost > 0 && !cheapRun && floorNear && obs.credits - cost < floor && !(plan.kind === "contest" && p.why.includes(String(plan.detail?.server))) && !(plan.kind === "closing" && (p.kind === "run" || p.kind === "run-event")) && p.kind !== "install-breaker" && !p.why.includes("(decisive:")) {
-      p.score -= 15;
+      p.score -= aggressive ? 6 : 15;
       p.why += ` (would drop below the ${floor} needed for the remote)`;
     }
   }
@@ -414,7 +415,7 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
     if (p.kind === "run" || p.kind === "run-event") {
       const t = ts.find((x) => p.why.includes(x.server.label));
       if (t && t.credits > 0 && obs.credits - t.credits < 3 && t.value < 5 && plan.kind !== "closing" && !p.why.includes("(decisive:")) {
-        p.score -= 22;
+        p.score -= aggressive ? 8 : 22;
         p.why += " (would leave under 3 credits for little value)";
       }
     }
@@ -439,14 +440,22 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
         p.why += " (a tag the Corp would punish before it can be cleared)";
       }
       if (t && t.server.ices.some((i: any) => !i.rezzed) && !fullyCovered(obs, t) && Number(obs.opp.credit ?? 0) >= 4 && t.value < 8) {
-        p.score -= 12;
+        p.score -= aggressive && cov.size >= 2 ? 4 : 12;
         p.why += " (an unrezzed ice may be one the rig cannot break)";
       }
       if (plan.kind === "contest" && t?.server.label === plan.detail?.server) p.score += 20;
       if (plan.kind === "closing" && t && !t.server.remote) p.score += 10;
-      if (plan.kind === "setup" && t && t.credits > 0) {
+      if (plan.kind === "setup" && t && t.credits > 0 && !aggressive) {
         p.score -= 10;
         p.why += " (still setting up)";
+      }
+      if (aggressive && t && !t.server.remote && t.credits <= obs.credits - 2 && safeHand(obs, t)) {
+        const hqFlood = t.server.key === "hq" && Number(obs.opp["hand-count"] ?? 0) >= 5;
+        const bonus = (obs.memory.runsThisTurn === 0 ? 8 : 0) + (obs.credits >= 10 ? 6 : 0) + (hqFlood ? 8 : 0);
+        if (bonus) {
+          p.score += bonus;
+          p.why += ` (pressure: ${[obs.memory.runsThisTurn === 0 ? "first run of the turn" : "", obs.credits >= 10 ? "rich" : "", hqFlood ? "HQ is flooded" : ""].filter(Boolean).join(", ")})`;
+        }
       }
       if (t && !safeHand(obs, t)) p.score = Math.min(p.score, 12);
     }

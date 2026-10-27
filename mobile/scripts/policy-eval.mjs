@@ -21,7 +21,7 @@ if (args.help) {
   console.log(`Usage: node --experimental-strip-types scripts/policy-eval.mjs [options]
   --games N          games to play (default 10)
   --corp KIND        policy | ref | heuristic | random (default policy)
-  --runner KIND      policy | ref | heuristic | random (default policy)
+  --runner KIND      policy | ref | aggro | heuristic | random (default policy; aggro is the policy in its aggressive style)
   --ref COMMIT       the frozen policy checkout that "ref" plays (default: scripts/policy-reference.json)
   --matchup I        preconstructed matchup index: 0 beginner, 1 intermediate (default 0)
   --corp-deck KEY    core deck for the Corp (core-hb, core-jinteki, core-nbn, core-weyland) instead of the matchup's
@@ -181,9 +181,9 @@ function makePlayer(kind, side, precon, random, game) {
   const simulate = kind === "ref" || args.sim === "0" || (typeof args.sim === "string" && args.sim !== side && args.sim !== "both") ? undefined : engineSimulator(engine, game, side);
   const holder = {};
   const trial = simulate && args.trial !== "0" ? engineTrial(engine, game, side, (v, s) => holder.bot.trialMove(v, s)) : undefined;
-  const bot = new tree.PolicyBot(side, match?.policy ?? null, lookup, { random, render, record: true, rescue: false, deck: { identity: precon.identity, cards: precon.cards }, simulate, trial, simWeight: args["sim-weight"] != null ? Number(args["sim-weight"]) : undefined, search: args.search === "1" || args.search === side || args.search === "both", searchWeight: args["search-weight"] != null ? Number(args["search-weight"]) : undefined, searchCap: args["search-cap"] != null ? Number(args["search-cap"]) : undefined, measuredBase: args["measured-base"] != null ? Number(args["measured-base"]) : undefined, weights });
+  const bot = new tree.PolicyBot(side, match?.policy ?? null, lookup, { random, render, record: true, rescue: false, style: kind === "aggro" ? "aggressive" : undefined, deck: { identity: precon.identity, cards: precon.cards }, simulate, trial, simWeight: args["sim-weight"] != null ? Number(args["sim-weight"]) : undefined, search: args.search === "1" || args.search === side || args.search === "both", searchWeight: args["search-weight"] != null ? Number(args["search-weight"]) : undefined, searchCap: args["search-cap"] != null ? Number(args["search-cap"]) : undefined, measuredBase: args["measured-base"] != null ? Number(args["measured-base"]) : undefined, weights });
   holder.bot = bot;
-  const id = `${kind === "ref" ? `ref@${ref.sha.slice(0, 7)}:` : ""}${bot.policyId}${match && !match.exact ? " (nearest deck)" : ""}`;
+  const id = `${kind === "ref" ? `ref@${ref.sha.slice(0, 7)}:` : kind === "aggro" ? "aggro:" : ""}${bot.policyId}${match && !match.exact ? " (nearest deck)" : ""}`;
   return { kind, id, bot, fallback: !match };
 }
 
