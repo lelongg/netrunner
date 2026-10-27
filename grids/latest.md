@@ -1,23 +1,23 @@
 ## base
 
-### design split · Corp vs aggro 353 of 576 · decision 26 ms
+### design split · Corp 363 of 576 · decision 36 ms
 
 | Corp \ Runner | Party Hard | Stolen Goods | Planning Ahead | total |
 |---|---|---|---|---|
-| Discretion Advised | 32 | 33 | 31 | 96 |
-| Advanced Yomi | 27 | 21 | 30 | 78 |
-| Hyper Velocity | 21 | 21 | 30 | 72 |
-| Quick and Dirty | 39 | 35 | 33 | 107 |
+| Discretion Advised | 32 | 36 | 37 | 105 |
+| Advanced Yomi | 33 | 22 | 34 | 89 |
+| Hyper Velocity | 20 | 17 | 22 | 59 |
+| Quick and Dirty | 37 | 41 | 32 | 110 |
 
-Corp mistakes: Hyper Velocity stolen-from-remote 63, Advanced Yomi stolen-from-remote 46, Discretion Advised stolen-from-remote 40, Quick and Dirty unrezzable-install 40, Hyper Velocity unrezzable-install 33, Quick and Dirty stolen-from-remote 33, Discretion Advised unrezzable-install 23, Advanced Yomi unrezzable-install 21
+Corp mistakes: Hyper Velocity stolen-from-remote 105, Advanced Yomi stolen-from-remote 63, Discretion Advised stolen-from-remote 59, Quick and Dirty stolen-from-remote 57, Quick and Dirty unrezzable-install 40, Hyper Velocity unrezzable-install 27, Discretion Advised unrezzable-install 23, Quick and Dirty rich-credit-click 22
 
-### test split · Corp vs aggro 391 of 576 · decision 26 ms
+### test split · Corp 374 of 576 · decision 35 ms
 
 | Corp \ Runner | Party Hard | Stolen Goods | Planning Ahead | total |
 |---|---|---|---|---|
-| Discretion Advised | 37 | 38 | 38 | 113 |
-| Advanced Yomi | 32 | 22 | 33 | 87 |
-| Hyper Velocity | 29 | 31 | 25 | 85 |
-| Quick and Dirty | 34 | 40 | 32 | 106 |
+| Discretion Advised | 33 | 35 | 38 | 106 |
+| Advanced Yomi | 27 | 23 | 35 | 85 |
+| Hyper Velocity | 20 | 27 | 29 | 76 |
+| Quick and Dirty | 38 | 34 | 35 | 107 |
 
-Corp mistakes: Quick and Dirty unrezzable-install 62, Hyper Velocity stolen-from-remote 56, Quick and Dirty stolen-from-remote 47, Advanced Yomi stolen-from-remote 43, Discretion Advised stolen-from-remote 40, Discretion Advised unrezzable-install 23, Hyper Velocity unrezzable-install 23, Discretion Advised thin-install 22
+Corp mistakes: Hyper Velocity stolen-from-remote 100, Advanced Yomi stolen-from-remote 60, Quick and Dirty stolen-from-remote 44, Discretion Advised stolen-from-remote 43, Quick and Dirty unrezzable-install 43, Discretion Advised unrezzable-install 28, Hyper Velocity unrezzable-install 28, Quick and Dirty thin-install 28
