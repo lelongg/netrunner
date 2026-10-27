@@ -300,7 +300,7 @@ function Stacked({ n, small, children }: { n: number; small?: boolean; children:
   const depth = layers * 2;
   const shadows = Array.from({ length: depth }, (_, i) => `${i + 1}px ${i + 1}px 0 0 ${i % 2 ? "var(--stack-edge)" : "var(--stack-gap)"}`);
   return (
-    <div class="stacked" style={{ boxShadow: shadows.join(", "), transform: `translateY(-${depth}px)` }}>
+    <div class="stacked" style={{ boxShadow: shadows.join(", "), transform: `translateY(-${depth}px)`, marginRight: `${depth}px` }}>
       {children}
     </div>
   );
