@@ -23,7 +23,7 @@ import { Breakers } from "./Breakers";
 import { Coach } from "./Coach";
 import { type Prober, Verified, useChecked, useVerified } from "./legal";
 import { CardImage, ZoomableCardImage } from "./CardImage";
-import { withTerms } from "./RichText";
+import { richChildren, withTerms } from "./RichText";
 import { motionOff, onSettings, setSetting, settings } from "../settings";
 import { uiSound } from "../uisound";
 import { useTilt } from "../tilt";
@@ -816,7 +816,7 @@ function Encounter({ view, ice, passed, render, onTap, skip, onToggle }: { view:
                 <li class={`enc-sub ${state} ${pickable ? "pickable" : ""} ${left ? "left" : ""}`} onClick={pickable ? () => onToggle!(i) : undefined} role={pickable ? "checkbox" : undefined} aria-checked={pickable ? !left : undefined}>
                   <Icon name="sub" />
                   <span class="enc-label">
-                    <span class="enc-text">{state === "broken" ? <Decrypt text={subText(sub, i)} /> : withTerms(iconize(subText(sub, i)))}</span>
+                    <span class="enc-text">{state === "broken" ? <Decrypt text={subText(sub, i).replace(/<\/?[a-z]+>/gi, "")} /> : richChildren(subText(sub, i))}</span>
                   </span>
                   <span class="enc-state">{state === "broken" ? (breaker ? t("Broken · {card}", { card: breaker }) : t("Broken")) : state === "fired" ? t("Fired") : state === "skipped" ? t("Won't fire") : left ? t("Let it fire") : pickable ? t("Break") : encountering ? t("Unbroken") : ""}</span>
                 </li>
