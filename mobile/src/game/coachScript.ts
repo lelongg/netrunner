@@ -191,7 +191,7 @@ const RUNNER: TutorialScript = {
     {
       id: "breach",
       anchor: ".actions .buttons",
-      when: (v) => !!v.run && !v.encounters,
+      when: (v) => !!v.run && (!v.encounters || subs(v).every((s) => s.broken)),
       done: (v) => !v.run || !!promptOf(v, "runner")?.choices,
       allow: continuing,
       text: "The only subroutine is broken: nothing stops you. Keep going until you breach the server and access its cards.",
