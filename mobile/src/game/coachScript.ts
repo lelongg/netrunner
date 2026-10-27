@@ -187,7 +187,7 @@ const RUNNER: TutorialScript = {
     },
     {
       id: "rd-run",
-      anchor: ".actions .buttons",
+      anchor: ".prompt button, .actions .buttons",
       when: (v) => runOn(v, "rd"),
       done: (v) => !v.run,
       allow: (command) => continuing(command) ?? (command === "choice" ? true : undefined),
@@ -340,9 +340,17 @@ const CORP: TutorialScript = {
       id: "seamless",
       anchor: '.hand .tile[aria-label="Seamless Launch"]',
       when: (v) => mainPhase("corp")(v) && v.turn === 2,
-      done: (v) => advanced(corpCard(v, "Offworld Office")) >= 2,
+      done: (v) => advanced(corpCard(v, "Offworld Office")) >= 2 || promptOf(v, "corp")?.["prompt-type"] === "select",
       allow: (command, card) => (command === "play" ? card?.title === "Seamless Launch" : undefined),
       text: "To score an agenda, you advance it: Offworld Office needs 4 advancement counters. Play Seamless Launch to place 2 at once on it, since you installed it last turn.",
+    },
+    {
+      id: "seamless-pick",
+      anchor: '[data-server="remote1"]',
+      when: (v) => promptOf(v, "corp")?.["prompt-type"] === "select",
+      done: (v) => advanced(corpCard(v, "Offworld Office")) >= 2,
+      allow: (command, card) => (command === "select" ? card?.title === "Offworld Office" : undefined),
+      text: "Now choose where the counters go: tap Offworld Office in Server 1 and select it.",
     },
     {
       id: "advance",
