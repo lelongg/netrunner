@@ -274,6 +274,14 @@ rule, so it reads as noise at this sample size. Stolen Goods still clicks for cr
 twenty times per split when it saves for a remote it judges too risky, which is where the
 next Runner pass goes.
 
+The reference was refrozen on 27 October at `7e2ae77` (the policies of the last row above)
+and the grids now play 48 games per cell and split on both sides. Against itself, the
+pair of policy sets gives the baseline every later pass is read against (wins of 576,
+design then test): Corp 369 / 374, Runner 254 / 222. At equal strength the Corp decks are
+ahead on these lists, Quick and Dirty and Discretion Advised most (109 of 144 each as
+Corp), Hyper Velocity least (63 and 76), so a Runner pass is read against 254 / 222 and a
+Corp pass against 369 / 374, not against 288.
+
 ## Turn search (experimental, off by default)
 
 `PolicyBot` can plan the Corp's whole turn instead of scoring one move at a time
