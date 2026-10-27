@@ -31,7 +31,7 @@ export function frenchSubroutines(card: { code?: unknown } | null | undefined): 
   if (settings.language !== "fr" || card?.code == null) return undefined;
   if (!french) load();
   const fr = french?.[String(card.code)];
-  return fr ? fr.split("\n").filter((l) => l.startsWith("[subroutine]")).map((l) => l.replace(/^\[subroutine\]\s*/, "").replace(/<\/?[a-z]+[^>]*>/g, "")) : undefined;
+  return fr ? fr.split("\n").filter((l) => l.startsWith("[subroutine]")).map((l) => l.replace(/^\[subroutine\]\s*/, "")) : undefined;
 }
 
 export function useLanguage() {

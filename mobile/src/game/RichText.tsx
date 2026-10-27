@@ -25,7 +25,7 @@ interface Node {
   children: ComponentChildren[];
 }
 
-export function RichText({ text, class: className }: { text: string; class?: string }) {
+export function richChildren(text: string): ComponentChildren[] {
   const root: Node = { tag: "div", children: [] };
   const stack: Node[] = [root];
   for (const part of text.split(/(<\/?[a-z]+>)/i)) {
@@ -47,5 +47,9 @@ export function RichText({ text, class: className }: { text: string; class?: str
     const node = stack.pop()!;
     stack[stack.length - 1].children.push(h(node.tag, null, ...node.children));
   }
-  return h("div", { class: className }, ...root.children);
+  return root.children;
+}
+
+export function RichText({ text, class: className }: { text: string; class?: string }) {
+  return h("div", { class: className }, ...richChildren(text));
 }
