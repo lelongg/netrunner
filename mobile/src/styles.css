@@ -1089,6 +1089,10 @@ textarea:focus {
   align-items: center;
 }
 
+.servers.mine .content {
+  padding-top: 10px;
+}
+
 .server-name {
   white-space: nowrap;
   font-size: 9px;
