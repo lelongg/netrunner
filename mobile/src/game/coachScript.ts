@@ -180,7 +180,7 @@ const RUNNER: TutorialScript = {
       when: (v) => !!v.encounters,
       done: (v) => subs(v).every((s) => s.broken),
       allow: oneTap,
-      text: "Cleaver now has strength 4. Use its Break ability (1[credit]) and pick End the run.",
+      text: "Cleaver now has strength 4. Use its Break ability (1[credit]): it breaks the subroutines checked in the panel above.",
     },
     {
       id: "one-tap",
