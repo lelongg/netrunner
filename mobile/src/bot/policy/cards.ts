@@ -1,5 +1,5 @@
 import { cardWorth, choiceLabel, choiceMove, choices, findChoice, promptFrom, selectMove, selectable } from "./prompts.ts";
-import { agendaProgress, iceThreat, strengthOf, tagPunisher } from "./tactics.ts";
+import { agendaProgress, iceThreat, isIcebreaker, playCostOf, strengthOf, tagPunisher } from "./tactics.ts";
 import type { Observation, Proposal } from "./types.ts";
 
 const yes = (obs: Observation, score: number, why: string): Proposal | null => {
@@ -45,7 +45,21 @@ function corpOwnSelect(obs: Observation, msg: string): Proposal[] {
     if (done) out.push({ move: choiceMove(obs, done), score: 20, why: "done shuffling", kind: "select" });
     return out;
   }
-  if (/install/i.test(msg) && !/ice/i.test(msg)) {
+  if (/installed .*to trash|trash .*installed/i.test(msg)) {
+    const theirs = cards.filter((c) => c.side !== "Corp");
+    const worth = (c: any) => {
+      const info = obs.info(c);
+      const breaker = isIcebreaker(c);
+      const income = /gain \d+\s*\[credit|take \d+\s*\[credit|place \d+\s*\[credit/i.test(info.text ?? "");
+      return (breaker ? 50 : 0) + (income ? 15 : 0) + playCostOf(c) * 3 + (c.type === "Hardware" ? 5 : 0);
+    };
+    const pick = [...theirs].sort((a, b) => worth(b) - worth(a))[0];
+    if (pick) out.push({ move: selectMove(obs, pick), score: 70, why: `trash ${pick.title}`, kind: "select" });
+    else if (done) out.push({ move: choiceMove(obs, done), score: 20, why: "nothing of the Runner's to trash", kind: "select" });
+    else if (mine.length) out.push({ move: selectMove(obs, least(mine)), score: 20, why: `trash ${least(mine).title}, the least useful card`, kind: "select" });
+    return out;
+  }
+  if (/install/i.test(msg) && !/installed/i.test(msg) && !/ice/i.test(msg)) {
     const scoringRoot = obs.servers.some((s) => s.remote && s.ices.length > 0 && s.content.some((c: any) => c.type === "Agenda" || !c.rezzed));
     const emptyIced = obs.servers.some((s) => s.remote && s.ices.length > 0 && !s.content.length);
     const fits = (c: any) => c.type === "ICE" || (c.type === "Upgrade" && scoringRoot) || (c.type === "Asset" && emptyIced);
