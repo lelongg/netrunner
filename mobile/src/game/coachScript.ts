@@ -208,7 +208,7 @@ const RUNNER: TutorialScript = {
       anchor: '.hand .tile[aria-label="Jailbreak"]',
       when: mainPhase("runner"),
       done: (v) => runOn(v, "rd") || discarded(v, "runner", "Jailbreak"),
-      allow: (command, card) => (command === "play" ? card?.title === "Jailbreak" : command === "choice" ? true : undefined),
+      allow: (command, card, args, view) => (command === "play" ? card?.title === "Jailbreak" : command === "choice" ? choiceValue(view, "runner", args) === "R&D" : undefined),
       text: "Last click. Play Jailbreak to run R&D, the Corp's deck: you will access its top 2 cards instead of 1, and draw a card if the run succeeds. No ice protects R&D yet.",
     },
     {
