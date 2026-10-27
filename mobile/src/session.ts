@@ -821,7 +821,7 @@ export class Session {
     this.boot(save.setup, save.seed);
     for (const entry of save.log) this.stage({ k: "exec", entry });
     this.log = [...save.log];
-    this.lobby = { ...this.lobby, opponentName: save.opponentName, vsBot: save.vsBot, tutorial: save.tutorial, scripted: save.scripted, started: true, opponentDeckReady: true };
+    this.lobby = { ...this.lobby, opponentName: save.opponentName, vsBot: save.vsBot, tutorial: save.tutorial, scripted: save.scripted ?? (["corp", "runner"] as Side[]).some((side) => !!(save.setup as any)?.[side]?.deck?.stack?.length), started: true, opponentDeckReady: true };
     this.makeBot();
     this.broadcast();
   }
