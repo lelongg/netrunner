@@ -18,6 +18,7 @@ export type Probe = { k: "try"; command: string; args: unknown } | { k: "break";
 export interface ProbeResult {
   ok: boolean;
   credits?: number;
+  virus?: number;
   funds?: Funds;
   view?: any;
   trial?: RunTrial | null;
@@ -125,6 +126,8 @@ export class GameRunner {
     if (open && open["prompt-type"] !== "run") return { ok: false };
     if (probe.boost && !this.tryOn(game, side, "change", { key: "credit", delta: probe.boost }, true)) return { ok: false };
     const credit = this.engine.availableCredits(game, side, probe.breaker)?.total ?? 0;
+    const virusOn = () => Number(findCard(this.engine.view(game, side), probe.breaker)?.counter?.virus ?? 0);
+    const virus = virusOn();
     const plan: BreakPlan = { ice: probe.ice, breaker: probe.breaker, want: probe.want, stage: "pump", steps: 0 };
     const render = (m: unknown) => this.engine.renderMessage(m);
     for (let next = breakStep(this.engine.view(game, side), side, plan, render, true); next && next !== "wait"; next = breakStep(this.engine.view(game, side), side, plan, render, true)) {
@@ -133,7 +136,7 @@ export class GameRunner {
     const after = this.engine.view(game, side);
     const ice = findCard(after, probe.ice);
     const left = (ice?.subroutines ?? []).filter((s: any) => !s.broken && !s.fired && probe.want.includes(s.label));
-    return { ok: !!ice && !left.length, credits: credit - (this.engine.availableCredits(game, side, probe.breaker)?.total ?? 0) };
+    return { ok: !!ice && !left.length, credits: credit - (this.engine.availableCredits(game, side, probe.breaker)?.total ?? 0), virus: virus - virusOn() };
   }
 
   probe(side: Side, probes: Probe[]): ProbeResult[] {

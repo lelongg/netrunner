@@ -35,6 +35,20 @@ function CostView({ cost }: { cost: string }) {
   return <>{glyphs(iconize(cost.replace(/^lose /i, "−")))}</>;
 }
 
+function grouped<T extends { card: any; cmd: Command }>(items: T[]): { item: T; count: number; virus: number | null }[] {
+  const out: { key: string; items: T[] }[] = [];
+  for (const it of items) {
+    const key = `${it.card.title}\n${it.cmd.label}`;
+    const g = out.find((x) => x.key === key);
+    if (g) g.items.push(it);
+    else out.push({ key, items: [it] });
+  }
+  return out.map(({ items: list }) => {
+    const counts = list.map((x) => x.card.counter?.virus).filter((n): n is number => n != null);
+    return { item: list.find((x) => x.cmd.enabled !== false) ?? list[0], count: list.length, virus: counts.length ? counts.reduce((a, b) => a + b, 0) : null };
+  });
+}
+
 function splitCost(label: string): [string, string] {
   const i = label.indexOf(":");
   return i > 0 && i < 40 ? [label.slice(0, i).trim(), label.slice(i + 1).trim()] : ["", label];
@@ -135,7 +149,7 @@ export function Breakers({ view, stamp, probe, side, ice, send, onTap, disabled,
           </div>
         );
       })}
-      {featured.map(({ card, cmd }) => {
+      {grouped(featured).map(({ item: { card, cmd }, count, virus }) => {
         const [cost, effect] = splitCost(cmd.label);
         return (
           <div class="brk best">
@@ -144,15 +158,18 @@ export function Breakers({ view, stamp, probe, side, ice, send, onTap, disabled,
             </button>
             <div class="brk-text">
               <span class="brk-head-line">
-                <span class="brk-name">{card.title}</span>
+                <span class="brk-name">
+                  {card.title}
+                  {count > 1 ? ` ×${count}` : ""}
+                </span>
                 <span class="brk-meta">
                   {typeLine(card.subtypes ?? [])}
-                  {card.counter?.virus != null && (
+                  {virus != null && (
                     <>
                       {" · "}
-                      <span class="stat" aria-label={t("{n} virus counters", { n: card.counter.virus })}>
+                      <span class="stat" aria-label={t("{n} virus counters", { n: virus })}>
                         <Icon name="virus" />
-                        {card.counter.virus}
+                        {virus}
                       </span>
                     </>
                   )}
@@ -214,7 +231,10 @@ export function Breakers({ view, stamp, probe, side, ice, send, onTap, disabled,
                   {partial
                     ? (() => {
                         const plan = planOf(card);
-                        return plan?.ok && plan.credits != null ? glyphs(iconize(`${plan.credits} [Credits]`)) : "";
+                        if (!plan?.ok) return "";
+                        const virus = plan.virus ?? 0;
+                        if (virus > 0 && !plan.credits) return <CostView cost={`${virus} hosted virus counters`} />;
+                        return plan.credits != null ? glyphs(iconize(`${plan.credits} [Credits]`)) : "";
                       })()
                     : <CostView cost={String(ab?.["cost-label"] ?? "")} />}
                 </span>
@@ -230,10 +250,11 @@ export function Breakers({ view, stamp, probe, side, ice, send, onTap, disabled,
             {open ? "▾" : "▸"} {t("Other abilities")} · {manual.length}
           </button>
           {open &&
-            manual.map(({ card, cmd, off }) => (
+            grouped(manual).map(({ item: { card, cmd, off }, count }) => (
               <button class={`brk-ab ${off ? "off" : ""}`} disabled={disabled || cmd.enabled === false} onClick={() => send(cmd.command, cmd.args)}>
                 <span>
-                  {card.title} · {glyphs(iconize(labelText(cmd.label, cmd.command)))}
+                  {card.title}
+                  {count > 1 ? ` ×${count}` : ""} · {glyphs(iconize(labelText(cmd.label, cmd.command)))}
                 </span>
               </button>
             ))}
