@@ -3,7 +3,7 @@ import { byCommand } from "./observe.ts";
 import { fromCandidate } from "./runs.ts";
 import { ICE_TYPES, type IceType, agendaProgress, coverage, estimateRun, gainOf, iceThreat, isEconomy, isIcebreaker, isTrap, iceTypes, playCostOf, rezCostOf, strengthOf, subtypes, tagged, runTrialOf, serverSafety } from "./tactics.ts";
 import type { Observation, Plan, Proposal } from "./types.ts";
-import { centralValue } from "./value.ts";
+import { centralValue, unrezzedPrice } from "./value.ts";
 
 export const playOf = (obs: Observation, card: any, server?: string): Candidate | undefined => byCommand(obs, "play", (c) => (c.args as any)?.card?.cid === card.cid && (server === undefined || (c.args as any)?.server === server))[0];
 export const cardAction = (obs: Observation, card: any, command: string, label?: RegExp): Candidate | undefined => byCommand(obs, command, (c) => (c.args as any)?.card?.cid === card.cid && (!label || label.test(c.label)))[0];
@@ -183,12 +183,17 @@ export function runProposals(obs: Observation, limit = 2): Proposal[] {
   const out: Proposal[] = [];
   if (obs.memory.runsThisTurn >= limit || obs.hand.length < 2) return out;
   const corpPoints = Number(obs.opp["agenda-point"] ?? 0);
+  const corpNeed = Number(obs.opp["agenda-point-req"] ?? 7);
+  const corpCredits = Number(obs.opp.credit ?? 0);
+  const price = unrezzedPrice(obs);
+  const unrezzedCost = corpCredits < 1 ? 0 : price ? Math.max(1, Math.round(price.cost)) : corpCredits < 3 ? 1 : 3;
+  const unrezzedBlock = corpCredits < 1 ? 0 : (price?.blocked ?? 0);
   for (const server of obs.servers) {
     const value = serverValue(obs, server);
     if (value <= 0) continue;
     const adv = Math.max(0, ...server.content.map((c: any) => agendaProgress(c).have));
-    const decisive = server.remote && corpPoints >= 5 && adv >= 1 && server.content.some((c: any) => !c.rezzed || c.type === "Agenda");
-    const est = runTrialOf(obs, server) ?? estimateRun(obs, server, 3, obs.credits + (decisive ? 3 : 0));
+    const decisive = server.remote && corpPoints + 3 >= corpNeed && adv >= 1 && server.content.some((c: any) => !c.rezzed || c.type === "Agenda");
+    const est = runTrialOf(obs, server) ?? estimateRun(obs, server, unrezzedCost, obs.credits + (decisive ? 3 : 0), [], unrezzedBlock);
     if (est.blocked || est.credits > obs.credits + (decisive ? 3 : 0)) continue;
     if (est.damage >= obs.hand.length) continue;
     if (adv > 1 && obs.hand.length < 1 + adv) continue;

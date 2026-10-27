@@ -48,7 +48,7 @@ function targets(obs: Observation, extra = 0, includeWorthless = false, corpTax 
     const est = runTrialOf(obs, server) ?? estimateRun(obs, server, unrezzedCost, obs.credits + extra, [], unrezzedBlock);
     const noSteal = server.ices.some((i: any) => i.rezzed && /cannot steal/i.test(obs.info(i).text ?? "") && !bestBreak(obs, i) && !clickThrough(i, obs.clicks - 1));
     if (!est.blocked && !noSteal) {
-      out.push({ server, value, credits: est.credits, exact: est.exact, damage: est.damage, tags: est.tags });
+      out.push({ server, value: value * (1 - 0.5 * (est.failOdds ?? 0)), credits: est.credits, exact: est.exact, damage: est.damage, tags: est.tags });
       continue;
     }
     const worthMayfly = server.remote ? server.content.some((c: any) => c.type === "Agenda" || agendaProgress(c).have > 0 || (!c.rezzed && !c.title)) : value >= 4;
@@ -191,7 +191,9 @@ function mulligan(obs: Observation) {
 function reserve(obs: Observation): number {
   const iced = obs.servers.filter((s) => s.remote && s.ices.length > 0 && s.content.some((c: any) => !c.rezzed || c.type === "Agenda"));
   if (!iced.length) return 4;
-  const costs = iced.map((s) => estimateRun(obs, s, 3, 99).credits + 1);
+  const price = unrezzedPrice(obs, 99);
+  const unrezzedCost = Number(obs.opp.credit ?? 0) < 1 ? 0 : price ? Math.max(1, Math.round(price.cost)) : 3;
+  const costs = iced.map((s) => estimateRun(obs, s, unrezzedCost, 99).credits + 1);
   return Math.min(12, Math.max(4, Math.max(...costs)));
 }
 
