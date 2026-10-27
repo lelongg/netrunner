@@ -57,7 +57,7 @@ function loadIndex(id: string): number {
 
 export function Coach({ session, view, side }: { session: Session; view: any; side: Side }) {
   const id = session.saveId ?? "tutorial";
-  const script = TUTORIALS[side];
+  const script = session.lobby.scripted ? TUTORIALS[side] : { beats: [] as Beat[] };
   const [seen, setSeen] = useState(() => loadSeen(id));
   const [index, setIndex] = useState(() => loadIndex(id));
   const [opened, setOpened] = useState<string | null>(null);
@@ -103,9 +103,17 @@ export function Coach({ session, view, side }: { session: Session; view: any; si
   });
 
   useEffect(() => {
-    if (!acting || !beat?.allow) {
+    if (!live || !beat) {
       session.gate = null;
       return;
+    }
+    session.refused = () => setNudge((n) => n + 1);
+    if (!acting || !beat.allow) {
+      session.gate = acting ? null : (command) => !RESTRICTED.has(command);
+      return () => {
+        session.gate = null;
+        session.refused = undefined;
+      };
     }
     const allow = beat.allow;
     session.gate = (command, args: any) => {
@@ -118,7 +126,7 @@ export function Coach({ session, view, side }: { session: Session; view: any; si
       session.gate = null;
       session.refused = undefined;
     };
-  }, [acting, beat?.id]);
+  }, [live, acting, beat?.id]);
 
   useEffect(() => {
     session.holdBot(!!shown && !acting);
