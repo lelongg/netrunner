@@ -209,7 +209,11 @@ export function runnerProposals(obs: Observation): Proposal[] {
     for (const c of byCommand(obs, "ability", (x) => (x.args as any)?.card?.cid === card.cid && /\[click\]/i.test(x.label))) {
       const take = c.label.match(/take (\d+)\s*\[credit/i);
       const place = c.label.match(/place (\d+)\s*\[credit/i);
-      if (take) push(proposal(c, 56, `${card.title}: take ${take[1]} credits`, "click-economy"));
+      const all = /take all/i.test(c.label);
+      const added = all ? c.label.match(/(?:gain|place) (\d+)\s*\[credit/i) : null;
+      const stored = Number(card.counter?.credit ?? 0) + (added ? Number(added[1]) : 0);
+      if (all) push(proposal(c, stored >= 3 ? Math.min(74, 44 + stored * 3) : stored * 10, `${card.title}: take ${stored} credits`, "click-economy"));
+      else if (take) push(proposal(c, 56, `${card.title}: take ${take[1]} credits`, "click-economy"));
       else if (place && Number(card.counter?.credit ?? 0) < 3) push(proposal(c, 22, `${card.title}: place ${place[1]} credits for later`, "click-economy"));
     }
   }

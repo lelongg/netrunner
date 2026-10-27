@@ -883,3 +883,37 @@ describe("runner contests the winning agenda", () => {
     expect(s.last("runner").chosen?.why).toMatch(/run Server 1.*decisive/);
   });
 });
+
+describe("runner cashes Pennyshaver", () => {
+  function pennyBoard(counters: number) {
+    const s = new Scenario("core-hb", "core-criminal");
+    centrals(s);
+    s.endTurn("corp");
+    s.clearHand("runner");
+    s.summon("runner", "Pennyshaver", "Carmen", "Buzzsaw");
+    s.credits("runner", 30);
+    for (const c of ["Pennyshaver", "Carmen", "Buzzsaw"]) {
+      s.clicks("runner", 4);
+      s.install("runner", c);
+    }
+    s.say("runner", `/counter credit ${counters}`);
+    s.act("runner", "Select Pennyshaver");
+    s.clicks("runner", 3);
+    s.summon("runner", "Jailbreak", "Tread Lightly", "Docklands Pass", "Leech");
+    s.credits("runner", 10);
+    return s;
+  }
+
+  it("takes eight credits from Pennyshaver instead of clicking for one", () => {
+    const s = pennyBoard(8);
+    const move = s.decide("runner");
+    expect(move?.command).toBe("ability");
+    expect(s.last("runner").chosen?.why).toMatch(/Pennyshaver: take 9 credits/);
+  });
+
+  it("leaves an empty Pennyshaver alone", () => {
+    const s = pennyBoard(0);
+    s.decide("runner");
+    expect(best(s, "runner", (w) => w.startsWith("Pennyshaver"))).toBeLessThan(best(s, "runner", (w) => w.startsWith("take a credit")));
+  });
+});
