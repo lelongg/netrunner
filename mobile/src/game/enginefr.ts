@@ -180,6 +180,7 @@ function wrap(act: string, frame: (a: string) => string): string | null {
 
 const EXACT: Record<string, string> = {
   "No action": "Aucune action",
+  "Break a subroutine": "Choisissez la routine à neutraliser",
   HQ: "QG",
   "New remote": "Nouveau serveur distant",
   Yes: "Oui",
