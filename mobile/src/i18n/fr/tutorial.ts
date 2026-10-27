@@ -1,5 +1,6 @@
 export default {
   Tip: "Astuce",
+  "Palisade is rezzed. Let the Runner encounter it: without an icebreaker, it cannot break the subroutine. Then fire it: End the run. Your agenda is safe.": "Palisade est activée. Laissez lae Runner la rencontrer : sans brise-glace, iel ne peut pas neutraliser la routine. Puis déclenchez-la : Fin du piratage. Votre projet est en sécurité.",
   "The Runner starts a run on Server 1! It must get past your ice first. Tap Let Runner approach ice.": "Lae Runner lance un piratage sur le serveur 1 ! Iel doit d'abord passer votre glace. Touchez Laisser lae Runner approcher la glace.",
   "The Corp rezzed it: it's Palisade. Tap Encounter ice to face it.": "La Corpo l'a activée : c'est Palisade. Touchez Rencontrer la glace pour l'affronter.",
   "The run begins. You pass the ice protecting the server one at a time, from the outermost in. Tap Approach ice.": "Le piratage commence. Vous passez les glaces qui protègent le serveur une par une, de l'extérieur vers l'intérieur. Touchez Approcher la glace.",

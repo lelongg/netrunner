@@ -25,7 +25,7 @@ const accessing = (view: any, side: Side) => {
 
 const RUNNER: Step[] = [
   { id: "encounter", anchor: ".encounter", text: "Each subroutine you don't break fires. Your icebreaker must match the ice type (barrier, code gate, sentry) and reach its strength before breaking.", when: (v) => !!v.encounters },
-  { id: "access", anchor: ".prompt", text: "Accessed agendas are stolen. Other cards can be trashed by paying their trash cost, or left in place.", when: accessing },
+  { id: "access", anchor: ".prompt button", text: "Accessed agendas are stolen. Other cards can be trashed by paying their trash cost, or left in place.", when: accessing },
   { id: "tagged", anchor: ".me-bar", text: "You are tagged! While you have a tag, the Corp may spend a click and 2[credit] to trash one of your resources. Remove a tag with a click and 2[credit].", when: (v) => (v.runner?.tag?.total ?? 0) > 0 },
   { id: "discard", anchor: ".prompt", text: "Too many cards: you discard down to your maximum hand size at the end of your turn.", when: (v, s) => /discard/i.test(JSON.stringify(prompt(v, s)?.msg ?? "")) },
 ];
@@ -151,7 +151,7 @@ export function Coach({ session, view, side }: { session: Session; view: any; si
 
   if (!shown || (!box && !acting)) return null;
   const sheetOpen = !!document.querySelector(".sheet");
-  const below = !!box && box.top < innerHeight / 2;
+  const below = !!box && innerHeight - box.bottom >= box.top;
   const style = sheetOpen || !box ? { top: "8px" } : below ? { top: `${Math.min(box.bottom + 12, innerHeight - 220)}px` } : { bottom: `${Math.min(innerHeight - box.top + 12, innerHeight - 220)}px` };
   const total = script.beats.length;
   return (

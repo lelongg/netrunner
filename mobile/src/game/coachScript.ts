@@ -89,7 +89,7 @@ const RUNNER: TutorialScript = {
     { id: "hand", anchor: ".dock .hand", text: "Your hand of 5 cards, called your grip. Tap a card to read it." },
     {
       id: "mulligan",
-      anchor: ".prompt",
+      anchor: ".prompt button",
       when: mulliganing("runner"),
       done: (v) => !mulliganing("runner")(v),
       strict: true,
@@ -172,7 +172,7 @@ const RUNNER: TutorialScript = {
     },
     {
       id: "steal",
-      anchor: ".prompt",
+      anchor: ".prompt button",
       when: (v) => !!v.run && !!promptOf(v, "runner")?.choices,
       done: (v) => points(v, "runner") >= 2 || !v.run,
       text: "It's an agenda: Offworld Office, worth 2 points. Steal it! Agendas you access are always stolen, for free.",
@@ -218,7 +218,7 @@ const RUNNER: TutorialScript = {
     },
     {
       id: "trash",
-      anchor: ".prompt",
+      anchor: ".prompt button",
       when: (v) => runOn(v, "remote2") && !!promptOf(v, "runner")?.choices,
       done: (v) => !v.run,
       text: "You access Nico Campaign. Pay 2[credit] to trash it: the Corp loses its income and the card goes to Archives.",
@@ -256,7 +256,7 @@ const CORP: TutorialScript = {
     { id: "hand", anchor: ".dock .hand", text: "Your hand of 5 cards, called HQ. Tap a card to read it." },
     {
       id: "mulligan",
-      anchor: ".prompt",
+      anchor: ".prompt button",
       when: mulliganing("corp"),
       done: (v) => !mulliganing("corp")(v),
       strict: true,
@@ -324,9 +324,9 @@ const CORP: TutorialScript = {
     {
       id: "fire",
       anchor: ".actions .buttons",
-      when: (v) => !!v.encounters,
+      when: (v) => !!v.run && !!corpCard(v, "Palisade")?.rezzed,
       done: (v) => !v.run,
-      text: "The Runner has no icebreaker to break the subroutine. When it lets it through, fire it: End the run. Your agenda is safe.",
+      text: "Palisade is rezzed. Let the Runner encounter it: without an icebreaker, it cannot break the subroutine. Then fire it: End the run. Your agenda is safe.",
     },
     {
       id: "seamless",
