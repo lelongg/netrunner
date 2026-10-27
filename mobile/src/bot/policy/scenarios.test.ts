@@ -1337,3 +1337,74 @@ describe("corp resolves every Ansel subroutine (replay 7QQ2WHAN)", () => {
     expect(rig).not.toContain("Cleaver");
   });
 });
+
+describe("corp keeps the Runner's winning agenda out of reach (replay NXL475EC)", () => {
+  it("does not install Offworld Office in a remote the Runner can enter when the Runner sits at five points", () => {
+    const s = new Scenario("core-hb", "core-anarch");
+    s.clearHand("corp");
+    s.summon("corp", "Send a Message", "Offworld Office");
+    s.credits("corp", 40);
+    s.install("corp", "Send a Message", "New remote");
+    s.install("corp", "Offworld Office", "New remote");
+    s.clicks("corp", 0);
+    s.endTurn("corp");
+    s.clearHand("runner");
+    s.credits("runner", 20);
+    s.clicks("runner", 4);
+    for (const srv of ["Server 1", "Server 2"]) {
+      s.act("runner", `Run on ${srv}`);
+      for (let i = 0; i < 20 && s.view("runner").run; i++) {
+        const c = s.decide("corp");
+        if (c) {
+          s.play("corp", c);
+          continue;
+        }
+        const r = s.decide("runner");
+        if (r) {
+          s.play("runner", r);
+          continue;
+        }
+        break;
+      }
+      for (let i = 0; i < 4 && s.view("runner").runner.prompt; i++) {
+        const m = s.decide("runner");
+        if (m) s.play("runner", m);
+        const c = s.decide("corp");
+        if (c) s.play("corp", c);
+      }
+    }
+    expect(Number(s.view("runner").runner["agenda-point"])).toBe(5);
+    s.clicks("runner", 0);
+    s.endTurn("runner");
+    s.clearHand("corp");
+    s.summon("corp", "Tithe", "Brân 1.0", "Whitespace", "Palisade", "Palisade", "Ansel 1.0", "Whitespace");
+    s.credits("corp", 60);
+    for (const [c, srv] of [["Tithe", "HQ"], ["Brân 1.0", "HQ"], ["Whitespace", "HQ"], ["Palisade", "R&D"], ["Palisade", "New remote"], ["Ansel 1.0", "Server 3"], ["Whitespace", "Server 3"]] as [string, string][]) {
+      s.clicks("corp", 3);
+      s.credits("corp", 60);
+      s.install("corp", c, srv);
+    }
+    for (const t of ["Tithe", "Brân 1.0", "Palisade", "Ansel 1.0"]) s.rez(t);
+    s.clicks("corp", 0);
+    s.endTurn("corp");
+    s.clearHand("runner");
+    s.summon("runner", "Carmen", "Cleaver", "Buzzsaw", "Leech", "Smartware Distributor");
+    s.credits("runner", 30);
+    for (const c of ["Carmen", "Cleaver", "Buzzsaw", "Leech", "Smartware Distributor"]) {
+      s.clicks("runner", 4);
+      s.install("runner", c);
+    }
+    s.summon("runner", "Docklands Pass", "Cookbook");
+    s.credits("runner", 7);
+    s.clicks("runner", 0);
+    s.endTurn("runner");
+    s.clearHand("corp");
+    s.summon("corp", "Offworld Office", "Urtica Cipher", "Nico Campaign");
+    s.credits("corp", 8);
+    s.clicks("corp", 1);
+    const move = s.decide("corp");
+    expect(s.last("corp").chosen?.why ?? "").not.toMatch(/^install Offworld Office/);
+    expect(best(s, "corp", (w) => w.startsWith("install Offworld Office"))).toBeLessThanOrEqual(10);
+    expect(move).not.toBeNull();
+  });
+});
