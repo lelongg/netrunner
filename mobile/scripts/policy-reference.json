@@ -1,5 +1,5 @@
 {
-  "commit": "f82de23678c3c8f650016d61257c7e092f93a0af",
-  "frozen": "2026-10-23",
-  "note": "policies after the third loop (Runner 0.4.0): tag discipline, Botulus hosting, Mayfly contests, breaker digging"
+  "commit": "7e2ae7713",
+  "frozen": "2026-10-27",
+  "note": "policies after the replay loops of 26-27 October (decisive runs, Pennyshaver, Corp install judgement before Sprint); the previous reference f82de236 was beaten 85 of 144 as Corp and 77 of 144 as Runner on the test split"
 }

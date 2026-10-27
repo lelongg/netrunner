@@ -5,16 +5,16 @@ on:
     inputs:
       games:
         description: 'Games per cell and split'
-        default: '6'
+        default: '48'
       splits:
         description: 'Seed splits, space separated'
         default: 'design test'
       configs:
         description: 'JSON list of {name, flags} to compare'
-        default: '[{"name":"base","flags":""},{"name":"search","flags":"--search 1"}]'
+        default: '[{"name":"base","flags":""}]'
       side:
-        description: 'Which side plays the current policy against the frozen reference: corp or runner'
-        default: 'corp'
+        description: 'Which side plays the current policy against the frozen reference: corp, runner or both'
+        default: 'both'
   schedule:
     - cron: '23 2 * * *'
 
@@ -84,7 +84,6 @@ jobs:
       matrix: ${{ steps.plan.outputs.matrix }}
       games: ${{ steps.plan.outputs.games }}
       splits: ${{ steps.plan.outputs.splits }}
-      side: ${{ steps.plan.outputs.side }}
     steps:
       - id: plan
         env:
@@ -94,25 +93,25 @@ jobs:
           SIDE: ${{ inputs.side }}
         run: |
           node -e '
-            const configs = JSON.parse(process.env.CONFIGS || "[{\"name\":\"base\",\"flags\":\"\"},{\"name\":\"search\",\"flags\":\"--search 1\"}]");
+            const configs = JSON.parse(process.env.CONFIGS || "[{\"name\":\"base\",\"flags\":\"\"}]");
             const corps = ["core-hb", "core-jinteki", "core-nbn", "core-weyland"];
             const runners = ["core-anarch", "core-criminal", "core-shaper"];
+            const sides = ["corp", "runner"].includes(process.env.SIDE) ? [process.env.SIDE] : ["corp", "runner"];
             const include = [];
-            for (const c of configs) for (const corp of corps) for (const runner of runners) include.push({ config: c.name, flags: c.flags, corp, runner });
+            for (const c of configs) for (const side of sides) for (const corp of corps) for (const runner of runners) include.push({ config: c.name, flags: c.flags, side, corp, runner });
             console.log("matrix=" + JSON.stringify({ include }));
-            console.log("games=" + (process.env.GAMES || "6"));
+            console.log("games=" + (process.env.GAMES || "48"));
             console.log("splits=" + (process.env.SPLITS || "design test"));
-            console.log("side=" + (process.env.SIDE === "runner" ? "runner" : "corp"));
           ' >> "$GITHUB_OUTPUT"
 
   cells:
-    name: '${{ matrix.config }} · ${{ matrix.corp }} vs ${{ matrix.runner }}'
+    name: '${{ matrix.config }} · ${{ matrix.side }} · ${{ matrix.corp }} vs ${{ matrix.runner }}'
     needs: [engine, plan]
     runs-on: ubuntu-latest
     timeout-minutes: 120
     strategy:
       fail-fast: false
-      max-parallel: 20
+      max-parallel: 24
       matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v4
@@ -151,7 +150,7 @@ jobs:
           CONFIG: ${{ matrix.config }}
           CORP: ${{ matrix.corp }}
           RUNNER: ${{ matrix.runner }}
-          SIDE: ${{ needs.plan.outputs.side }}
+          SIDE: ${{ matrix.side }}
         run: |
           mkdir -p results
           if [ "$SIDE" = "runner" ]; then players="--corp ref --runner policy"; else players="--corp policy --runner ref"; fi
@@ -176,7 +175,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: cell-${{ matrix.config }}-${{ matrix.corp }}-${{ matrix.runner }}
+          name: cell-${{ matrix.config }}-${{ matrix.side }}-${{ matrix.corp }}-${{ matrix.runner }}
           path: |
             mobile/results/*/cell.json
             mobile/results/*/summary.json

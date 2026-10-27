@@ -34,15 +34,16 @@ const label = (k) => DECKS[k] ?? k;
 const lines = [];
 const report = { configs: {}, cells };
 
+const sides = ["corp", "runner"].filter((s) => cells.some((c) => (c.side === "runner" ? "runner" : "corp") === s));
+
 for (const config of configs) {
   const flags = cells.find((c) => c.config === config)?.flags ?? "";
   lines.push(`## ${config}${flags ? ` (\`${flags}\`)` : ""}`, "");
   report.configs[config] = { flags, splits: {} };
-  for (const split of splits) {
-    const mine = cells.filter((c) => c.config === config && c.split === split);
+  for (const side of sides) for (const split of splits) {
+    const mine = cells.filter((c) => c.config === config && c.split === split && (c.side === "runner" ? "runner" : "corp") === side);
     if (!mine.length) continue;
     const games = mine[0].games;
-    const side = mine[0].side === "runner" ? "runner" : "corp";
     const who = side === "runner" ? "Runner" : "Corp";
     const cell = (corp, runner) => mine.find((c) => c.corp === corp && c.runner === runner);
     let total = 0;
@@ -61,13 +62,13 @@ for (const config of configs) {
     for (const c of mine) for (const [k, v] of Object.entries(c.mistakes ?? {})) if (k.startsWith(`${side}:`)) mistakes[`${label(side === "runner" ? c.runner : c.corp)} ${k.slice(side.length + 1)}`] = (mistakes[`${label(side === "runner" ? c.runner : c.corp)} ${k.slice(side.length + 1)}`] ?? 0) + v;
     const top = Object.entries(mistakes).sort((a, b) => b[1] - a[1]).slice(0, 8);
     if (top.length) lines.push(`${who} mistakes: ${top.map(([k, v]) => `${k} ${v}`).join(", ")}`, "");
-    report.configs[config].splits[split] = { side, games, total, played, decisionMs: ms.length ? ms.reduce((a, b) => a + b, 0) / ms.length : null, mistakes };
+    report.configs[config].splits[sides.length > 1 ? `${side}:${split}` : split] = { side, games, total, played, decisionMs: ms.length ? ms.reduce((a, b) => a + b, 0) / ms.length : null, mistakes };
   }
 }
 
 if (configs.length > 1) {
   lines.push("## Side by side", "", `| split | ${configs.join(" | ")} |`, `|---|${configs.map(() => "---").join("|")}|`);
-  for (const split of splits) lines.push(`| ${split} | ${configs.map((c) => { const s = report.configs[c].splits[split]; return s ? `${s.total} / ${s.played}` : "–"; }).join(" | ")} |`);
+  for (const key of Object.keys(report.configs[configs[0]].splits)) lines.push(`| ${key} | ${configs.map((c) => { const s = report.configs[c].splits[key]; return s ? `${s.total} / ${s.played}` : "–"; }).join(" | ")} |`);
   lines.push("");
 }
 
