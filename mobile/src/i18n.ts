@@ -1,11 +1,11 @@
-import { settings } from "./settings";
+import { settings } from "./settings.ts";
 
-import app from "./i18n/fr/app";
-import cards from "./i18n/fr/cards";
-import board from "./i18n/fr/board";
-import decks from "./i18n/fr/decks";
-import game from "./i18n/fr/game";
-import screens from "./i18n/fr/screens";
+import app from "./i18n/fr/app.ts";
+import cards from "./i18n/fr/cards.ts";
+import board from "./i18n/fr/board.ts";
+import decks from "./i18n/fr/decks.ts";
+import game from "./i18n/fr/game.ts";
+import screens from "./i18n/fr/screens.ts";
 
 const FR: Record<string, string> = { ...cards, ...app, ...board, ...decks, ...game, ...screens };
 
