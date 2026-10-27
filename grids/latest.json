@@ -4,60 +4,27 @@
       "flags": "",
       "splits": {
         "design": {
-          "side": "corp",
+          "side": "runner",
           "games": 12,
-          "total": 78,
+          "total": 72,
           "played": 144,
-          "decisionMs": 36.88333333333333,
+          "decisionMs": 23.733333333333334,
           "mistakes": {
-            "Discretion Advised stolen-from-remote": 29,
-            "Discretion Advised rich-credit-click": 25,
-            "Discretion Advised thin-install": 6,
-            "Discretion Advised thin-install-stolen": 4,
-            "Advanced Yomi stolen-from-remote": 28,
-            "Advanced Yomi rich-credit-click": 8,
-            "Advanced Yomi thin-install": 3,
-            "Advanced Yomi unrezzable-install": 1,
-            "Advanced Yomi thin-install-stolen": 1,
-            "Hyper Velocity stolen-from-remote": 33,
-            "Hyper Velocity thin-install": 5,
-            "Hyper Velocity thin-install-stolen": 3,
-            "Hyper Velocity rich-credit-click": 10,
-            "Hyper Velocity unrezzable-install": 5,
-            "Quick and Dirty stolen-from-remote": 17,
-            "Quick and Dirty unrezzable-install": 7,
-            "Quick and Dirty rich-credit-click": 17,
-            "Quick and Dirty thin-install": 4,
-            "Quick and Dirty thin-install-stolen": 1
+            "Stolen Goods rich-credit-click": 22,
+            "Planning Ahead rich-credit-click": 6,
+            "Party Hard rich-credit-click": 12
           }
         },
         "test": {
-          "side": "corp",
+          "side": "runner",
           "games": 12,
-          "total": 85,
+          "total": 76,
           "played": 144,
-          "decisionMs": 37.34166666666667,
+          "decisionMs": 27.90833333333333,
           "mistakes": {
-            "Discretion Advised rich-credit-click": 54,
-            "Discretion Advised stolen-from-remote": 19,
-            "Discretion Advised thin-install": 9,
-            "Discretion Advised thin-install-stolen": 7,
-            "Discretion Advised unrezzable-install": 8,
-            "Advanced Yomi rich-credit-click": 20,
-            "Advanced Yomi stolen-from-remote": 28,
-            "Advanced Yomi thin-install": 6,
-            "Advanced Yomi unrezzable-install": 1,
-            "Advanced Yomi thin-install-stolen": 1,
-            "Hyper Velocity stolen-from-remote": 41,
-            "Hyper Velocity thin-install": 5,
-            "Hyper Velocity rich-credit-click": 6,
-            "Hyper Velocity unrezzable-install": 13,
-            "Hyper Velocity thin-install-stolen": 1,
-            "Quick and Dirty stolen-from-remote": 20,
-            "Quick and Dirty thin-install": 9,
-            "Quick and Dirty thin-install-stolen": 3,
-            "Quick and Dirty rich-credit-click": 14,
-            "Quick and Dirty unrezzable-install": 9
+            "Party Hard rich-credit-click": 32,
+            "Stolen Goods rich-credit-click": 41,
+            "Planning Ahead rich-credit-click": 7
           }
         }
       }
@@ -69,7 +36,377 @@
       "flags": "",
       "corp": "core-hb",
       "runner": "core-anarch",
-      "side": "corp",
+      "side": "runner",
+      "split": "design",
+      "games": 12,
+      "wins": {
+        "corp": 9,
+        "runner": 3,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 12
+      },
+      "mistakes": {
+        "corp:unrezzable-install": 8,
+        "corp:stolen-from-remote": 11,
+        "corp:thin-install": 4,
+        "corp:thin-install-stolen": 2,
+        "corp:rich-credit-click": 5
+      },
+      "decisionMs": 20.8,
+      "decisionMaxMs": 1333.7
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-hb",
+      "runner": "core-anarch",
+      "side": "runner",
+      "split": "test",
+      "games": 12,
+      "wins": {
+        "corp": 6,
+        "runner": 6,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 12
+      },
+      "mistakes": {
+        "corp:stolen-from-remote": 11,
+        "corp:rich-credit-click": 51,
+        "corp:unrezzable-install": 10,
+        "runner:rich-credit-click": 9
+      },
+      "decisionMs": 26.2,
+      "decisionMaxMs": 1852.2
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-hb",
+      "runner": "core-criminal",
+      "side": "runner",
+      "split": "design",
+      "games": 12,
+      "wins": {
+        "corp": 6,
+        "runner": 6,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 12
+      },
+      "mistakes": {
+        "corp:thin-install": 3,
+        "corp:rich-credit-click": 27,
+        "corp:unrezzable-install": 3,
+        "corp:stolen-from-remote": 8,
+        "runner:rich-credit-click": 1
+      },
+      "decisionMs": 21.3,
+      "decisionMaxMs": 1130
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-hb",
+      "runner": "core-criminal",
+      "side": "runner",
+      "split": "test",
+      "games": 12,
+      "wins": {
+        "corp": 7,
+        "runner": 5,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 12
+      },
+      "mistakes": {
+        "corp:stolen-from-remote": 4,
+        "corp:unrezzable-install": 9,
+        "runner:rich-credit-click": 12,
+        "corp:rich-credit-click": 12
+      },
+      "decisionMs": 17.2,
+      "decisionMaxMs": 851.1
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-hb",
+      "runner": "core-shaper",
+      "side": "runner",
+      "split": "design",
+      "games": 12,
+      "wins": {
+        "corp": 6,
+        "runner": 6,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 12
+      },
+      "mistakes": {
+        "corp:unrezzable-install": 2,
+        "corp:thin-install": 3,
+        "corp:thin-install-stolen": 1,
+        "corp:stolen-from-remote": 7,
+        "corp:rich-credit-click": 27,
+        "runner:rich-credit-click": 1
+      },
+      "decisionMs": 31.4,
+      "decisionMaxMs": 1719.7
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-hb",
+      "runner": "core-shaper",
+      "side": "runner",
+      "split": "test",
+      "games": 12,
+      "wins": {
+        "corp": 5,
+        "runner": 7,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 12
+      },
+      "mistakes": {
+        "corp:stolen-from-remote": 10,
+        "corp:rich-credit-click": 62,
+        "runner:rich-credit-click": 3,
+        "corp:thin-install": 6,
+        "corp:thin-install-stolen": 3,
+        "corp:unrezzable-install": 1
+      },
+      "decisionMs": 23.8,
+      "decisionMaxMs": 1085.4
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-jinteki",
+      "runner": "core-anarch",
+      "side": "runner",
+      "split": "design",
+      "games": 12,
+      "wins": {
+        "corp": 6,
+        "runner": 6,
+        "none": 0
+      },
+      "reasons": {
+        "Flatline": 1,
+        "Agenda": 11
+      },
+      "mistakes": {
+        "corp:thin-install": 6,
+        "corp:stolen-from-remote": 15,
+        "runner:rich-credit-click": 10,
+        "corp:rich-credit-click": 2,
+        "corp:unrezzable-install": 2,
+        "corp:thin-install-stolen": 2
+      },
+      "decisionMs": 22.1,
+      "decisionMaxMs": 1105.5
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-jinteki",
+      "runner": "core-anarch",
+      "side": "runner",
+      "split": "test",
+      "games": 12,
+      "wins": {
+        "corp": 7,
+        "runner": 5,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 10,
+        "Flatline": 2
+      },
+      "mistakes": {
+        "corp:thin-install": 5,
+        "runner:rich-credit-click": 19,
+        "corp:stolen-from-remote": 11,
+        "corp:thin-install-stolen": 2,
+        "corp:unrezzable-install": 2
+      },
+      "decisionMs": 30,
+      "decisionMaxMs": 1157.4
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-jinteki",
+      "runner": "core-criminal",
+      "side": "runner",
+      "split": "design",
+      "games": 12,
+      "wins": {
+        "corp": 1,
+        "runner": 11,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 12
+      },
+      "mistakes": {
+        "corp:stolen-from-remote": 14,
+        "corp:unrezzable-install": 1,
+        "corp:thin-install": 4,
+        "corp:thin-install-stolen": 1,
+        "runner:rich-credit-click": 5
+      },
+      "decisionMs": 21.3,
+      "decisionMaxMs": 920.1
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-jinteki",
+      "runner": "core-criminal",
+      "side": "runner",
+      "split": "test",
+      "games": 12,
+      "wins": {
+        "corp": 5,
+        "runner": 7,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 11,
+        "Flatline": 1
+      },
+      "mistakes": {
+        "runner:rich-credit-click": 8,
+        "corp:thin-install": 3,
+        "corp:thin-install-stolen": 2,
+        "corp:stolen-from-remote": 10,
+        "corp:unrezzable-install": 3,
+        "corp:rich-credit-click": 1
+      },
+      "decisionMs": 30.5,
+      "decisionMaxMs": 1991.4
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-jinteki",
+      "runner": "core-shaper",
+      "side": "runner",
+      "split": "design",
+      "games": 12,
+      "wins": {
+        "corp": 5,
+        "runner": 7,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 9,
+        "Flatline": 3
+      },
+      "mistakes": {
+        "corp:rich-credit-click": 4,
+        "corp:stolen-from-remote": 9,
+        "corp:thin-install": 5,
+        "corp:thin-install-stolen": 4,
+        "corp:unrezzable-install": 2,
+        "runner:rich-credit-click": 2
+      },
+      "decisionMs": 21.2,
+      "decisionMaxMs": 1553.5
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-jinteki",
+      "runner": "core-shaper",
+      "side": "runner",
+      "split": "test",
+      "games": 12,
+      "wins": {
+        "corp": 7,
+        "runner": 5,
+        "none": 0
+      },
+      "reasons": {
+        "Flatline": 2,
+        "Agenda": 10
+      },
+      "mistakes": {
+        "corp:unrezzable-install": 4,
+        "corp:stolen-from-remote": 10,
+        "runner:rich-credit-click": 2,
+        "corp:rich-credit-click": 3
+      },
+      "decisionMs": 29.3,
+      "decisionMaxMs": 1122
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-nbn",
+      "runner": "core-anarch",
+      "side": "runner",
+      "split": "design",
+      "games": 12,
+      "wins": {
+        "corp": 5,
+        "runner": 7,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 11,
+        "Decked": 1
+      },
+      "mistakes": {
+        "corp:thin-install": 3,
+        "corp:stolen-from-remote": 17,
+        "corp:rich-credit-click": 10,
+        "runner:rich-credit-click": 1
+      },
+      "decisionMs": 29.4,
+      "decisionMaxMs": 701.6
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-nbn",
+      "runner": "core-anarch",
+      "side": "runner",
+      "split": "test",
+      "games": 12,
+      "wins": {
+        "corp": 3,
+        "runner": 9,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 12
+      },
+      "mistakes": {
+        "corp:stolen-from-remote": 14,
+        "corp:unrezzable-install": 1,
+        "corp:rich-credit-click": 1,
+        "corp:thin-install": 1
+      },
+      "decisionMs": 30.5,
+      "decisionMaxMs": 819.2
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-nbn",
+      "runner": "core-criminal",
+      "side": "runner",
       "split": "design",
       "games": 12,
       "wins": {
@@ -81,22 +418,96 @@
         "Agenda": 12
       },
       "mistakes": {
-        "corp:stolen-from-remote": 15,
-        "runner:rich-credit-click": 26,
-        "corp:rich-credit-click": 12,
-        "corp:thin-install": 1,
-        "corp:thin-install-stolen": 1
+        "corp:unrezzable-install": 5,
+        "corp:stolen-from-remote": 3,
+        "corp:thin-install": 6
       },
-      "decisionMs": 34.2,
-      "decisionMaxMs": 1591.5
+      "decisionMs": 24.8,
+      "decisionMaxMs": 601.9
     },
     {
       "config": "base",
       "flags": "",
-      "corp": "core-hb",
-      "runner": "core-anarch",
-      "side": "corp",
+      "corp": "core-nbn",
+      "runner": "core-criminal",
+      "side": "runner",
       "split": "test",
+      "games": 12,
+      "wins": {
+        "corp": 5,
+        "runner": 7,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 12
+      },
+      "mistakes": {
+        "corp:thin-install": 1,
+        "corp:stolen-from-remote": 8,
+        "corp:unrezzable-install": 2
+      },
+      "decisionMs": 20.5,
+      "decisionMaxMs": 611.9
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-nbn",
+      "runner": "core-shaper",
+      "side": "runner",
+      "split": "design",
+      "games": 12,
+      "wins": {
+        "corp": 6,
+        "runner": 6,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 12
+      },
+      "mistakes": {
+        "corp:thin-install": 4,
+        "corp:thin-install-stolen": 2,
+        "corp:stolen-from-remote": 10,
+        "runner:rich-credit-click": 3,
+        "corp:unrezzable-install": 1
+      },
+      "decisionMs": 30.6,
+      "decisionMaxMs": 1219.9
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-nbn",
+      "runner": "core-shaper",
+      "side": "runner",
+      "split": "test",
+      "games": 12,
+      "wins": {
+        "corp": 6,
+        "runner": 6,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 12
+      },
+      "mistakes": {
+        "corp:stolen-from-remote": 6,
+        "corp:unrezzable-install": 5,
+        "runner:rich-credit-click": 2,
+        "corp:rich-credit-click": 10,
+        "corp:thin-install": 1
+      },
+      "decisionMs": 26.1,
+      "decisionMaxMs": 1453.5
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-weyland",
+      "runner": "core-anarch",
+      "side": "runner",
+      "split": "design",
       "games": 12,
       "wins": {
         "corp": 9,
@@ -105,313 +516,23 @@
       },
       "reasons": {
         "Agenda": 11,
-        "Decked": 1
-      },
-      "mistakes": {
-        "corp:rich-credit-click": 9,
-        "runner:rich-credit-click": 34,
-        "corp:stolen-from-remote": 5,
-        "corp:thin-install": 3,
-        "corp:thin-install-stolen": 2,
-        "corp:unrezzable-install": 1
-      },
-      "decisionMs": 35,
-      "decisionMaxMs": 1197.4
-    },
-    {
-      "config": "base",
-      "flags": "",
-      "corp": "core-hb",
-      "runner": "core-criminal",
-      "side": "corp",
-      "split": "design",
-      "games": 12,
-      "wins": {
-        "corp": 7,
-        "runner": 5,
-        "none": 0
-      },
-      "reasons": {
-        "Agenda": 12
-      },
-      "mistakes": {
-        "corp:rich-credit-click": 13,
-        "runner:rich-credit-click": 20,
-        "corp:stolen-from-remote": 9,
-        "corp:thin-install": 1
-      },
-      "decisionMs": 17.6,
-      "decisionMaxMs": 760.5
-    },
-    {
-      "config": "base",
-      "flags": "",
-      "corp": "core-hb",
-      "runner": "core-criminal",
-      "side": "corp",
-      "split": "test",
-      "games": 12,
-      "wins": {
-        "corp": 8,
-        "runner": 4,
-        "none": 0
-      },
-      "reasons": {
-        "Agenda": 11,
         "Flatline": 1
       },
       "mistakes": {
+        "corp:thin-install": 4,
+        "corp:stolen-from-remote": 5,
         "corp:unrezzable-install": 4,
-        "runner:rich-credit-click": 2,
-        "corp:thin-install": 4,
-        "corp:thin-install-stolen": 3,
-        "corp:stolen-from-remote": 7,
-        "corp:rich-credit-click": 12
+        "runner:rich-credit-click": 1
       },
-      "decisionMs": 19,
-      "decisionMaxMs": 907.6
+      "decisionMs": 18.9,
+      "decisionMaxMs": 692.6
     },
     {
       "config": "base",
       "flags": "",
-      "corp": "core-hb",
-      "runner": "core-shaper",
-      "side": "corp",
-      "split": "design",
-      "games": 12,
-      "wins": {
-        "corp": 8,
-        "runner": 4,
-        "none": 0
-      },
-      "reasons": {
-        "Agenda": 10,
-        "Decked": 1,
-        "Flatline": 1
-      },
-      "mistakes": {
-        "corp:thin-install": 4,
-        "corp:thin-install-stolen": 3,
-        "corp:stolen-from-remote": 5,
-        "runner:rich-credit-click": 6
-      },
-      "decisionMs": 20.9,
-      "decisionMaxMs": 711.6
-    },
-    {
-      "config": "base",
-      "flags": "",
-      "corp": "core-hb",
-      "runner": "core-shaper",
-      "side": "corp",
-      "split": "test",
-      "games": 12,
-      "wins": {
-        "corp": 8,
-        "runner": 4,
-        "none": 0
-      },
-      "reasons": {
-        "Agenda": 12
-      },
-      "mistakes": {
-        "corp:rich-credit-click": 33,
-        "corp:unrezzable-install": 3,
-        "runner:rich-credit-click": 35,
-        "corp:stolen-from-remote": 7,
-        "corp:thin-install": 2,
-        "corp:thin-install-stolen": 2
-      },
-      "decisionMs": 25.5,
-      "decisionMaxMs": 1220.4
-    },
-    {
-      "config": "base",
-      "flags": "",
-      "corp": "core-jinteki",
+      "corp": "core-weyland",
       "runner": "core-anarch",
-      "side": "corp",
-      "split": "design",
-      "games": 12,
-      "wins": {
-        "corp": 10,
-        "runner": 2,
-        "none": 0
-      },
-      "reasons": {
-        "Agenda": 12
-      },
-      "mistakes": {
-        "runner:rich-credit-click": 52,
-        "corp:stolen-from-remote": 16,
-        "corp:rich-credit-click": 4,
-        "corp:thin-install": 1,
-        "corp:unrezzable-install": 1
-      },
-      "decisionMs": 68.8,
-      "decisionMaxMs": 2516.3
-    },
-    {
-      "config": "base",
-      "flags": "",
-      "corp": "core-jinteki",
-      "runner": "core-anarch",
-      "side": "corp",
-      "split": "test",
-      "games": 12,
-      "wins": {
-        "corp": 5,
-        "runner": 7,
-        "none": 0
-      },
-      "reasons": {
-        "Flatline": 3,
-        "Agenda": 9
-      },
-      "mistakes": {
-        "runner:rich-credit-click": 33,
-        "corp:rich-credit-click": 9,
-        "corp:stolen-from-remote": 10,
-        "corp:thin-install": 2
-      },
-      "decisionMs": 50.2,
-      "decisionMaxMs": 2127.8
-    },
-    {
-      "config": "base",
-      "flags": "",
-      "corp": "core-jinteki",
-      "runner": "core-criminal",
-      "side": "corp",
-      "split": "design",
-      "games": 12,
-      "wins": {
-        "corp": 3,
-        "runner": 9,
-        "none": 0
-      },
-      "reasons": {
-        "Agenda": 12
-      },
-      "mistakes": {
-        "corp:stolen-from-remote": 6,
-        "runner:rich-credit-click": 30
-      },
-      "decisionMs": 43.4,
-      "decisionMaxMs": 1916.9
-    },
-    {
-      "config": "base",
-      "flags": "",
-      "corp": "core-jinteki",
-      "runner": "core-criminal",
-      "side": "corp",
-      "split": "test",
-      "games": 12,
-      "wins": {
-        "corp": 5,
-        "runner": 7,
-        "none": 0
-      },
-      "reasons": {
-        "Flatline": 2,
-        "Agenda": 10
-      },
-      "mistakes": {
-        "corp:unrezzable-install": 1,
-        "corp:stolen-from-remote": 11,
-        "runner:rich-credit-click": 29,
-        "corp:rich-credit-click": 1,
-        "corp:thin-install": 1
-      },
-      "decisionMs": 46.1,
-      "decisionMaxMs": 1673.1
-    },
-    {
-      "config": "base",
-      "flags": "",
-      "corp": "core-jinteki",
-      "runner": "core-shaper",
-      "side": "corp",
-      "split": "design",
-      "games": 12,
-      "wins": {
-        "corp": 6,
-        "runner": 6,
-        "none": 0
-      },
-      "reasons": {
-        "Agenda": 12
-      },
-      "mistakes": {
-        "corp:thin-install": 2,
-        "corp:thin-install-stolen": 1,
-        "corp:stolen-from-remote": 6,
-        "runner:rich-credit-click": 21,
-        "corp:rich-credit-click": 4
-      },
-      "decisionMs": 32.1,
-      "decisionMaxMs": 1286.4
-    },
-    {
-      "config": "base",
-      "flags": "",
-      "corp": "core-jinteki",
-      "runner": "core-shaper",
-      "side": "corp",
-      "split": "test",
-      "games": 12,
-      "wins": {
-        "corp": 6,
-        "runner": 6,
-        "none": 0
-      },
-      "reasons": {
-        "Agenda": 12
-      },
-      "mistakes": {
-        "corp:rich-credit-click": 10,
-        "runner:rich-credit-click": 13,
-        "corp:stolen-from-remote": 7,
-        "corp:thin-install": 3,
-        "corp:thin-install-stolen": 1
-      },
-      "decisionMs": 35.6,
-      "decisionMaxMs": 1361.9
-    },
-    {
-      "config": "base",
-      "flags": "",
-      "corp": "core-nbn",
-      "runner": "core-anarch",
-      "side": "corp",
-      "split": "design",
-      "games": 12,
-      "wins": {
-        "corp": 3,
-        "runner": 9,
-        "none": 0
-      },
-      "reasons": {
-        "Agenda": 11,
-        "Decked": 1
-      },
-      "mistakes": {
-        "corp:stolen-from-remote": 13,
-        "runner:rich-credit-click": 9,
-        "corp:thin-install": 2,
-        "corp:thin-install-stolen": 1,
-        "corp:rich-credit-click": 2
-      },
-      "decisionMs": 27,
-      "decisionMaxMs": 1325.8
-    },
-    {
-      "config": "base",
-      "flags": "",
-      "corp": "core-nbn",
-      "runner": "core-anarch",
-      "side": "corp",
+      "side": "runner",
       "split": "test",
       "games": 12,
       "wins": {
@@ -420,25 +541,24 @@
         "none": 0
       },
       "reasons": {
-        "Agenda": 11,
-        "Decked": 1
+        "Agenda": 12
       },
       "mistakes": {
-        "corp:stolen-from-remote": 19,
-        "corp:thin-install": 2,
-        "corp:rich-credit-click": 5,
-        "runner:rich-credit-click": 14,
-        "corp:unrezzable-install": 2
+        "corp:stolen-from-remote": 10,
+        "corp:thin-install": 1,
+        "corp:thin-install-stolen": 1,
+        "runner:rich-credit-click": 4,
+        "corp:unrezzable-install": 8
       },
-      "decisionMs": 35.1,
-      "decisionMaxMs": 1137.4
+      "decisionMs": 21.4,
+      "decisionMaxMs": 967.1
     },
     {
       "config": "base",
       "flags": "",
-      "corp": "core-nbn",
+      "corp": "core-weyland",
       "runner": "core-criminal",
-      "side": "corp",
+      "side": "runner",
       "split": "design",
       "games": 12,
       "wins": {
@@ -447,25 +567,50 @@
         "none": 0
       },
       "reasons": {
-        "Agenda": 11,
-        "Decked": 1
+        "Agenda": 12
       },
       "mistakes": {
-        "corp:stolen-from-remote": 11,
-        "corp:rich-credit-click": 8,
-        "runner:rich-credit-click": 34,
-        "corp:unrezzable-install": 4
+        "corp:thin-install": 2,
+        "corp:stolen-from-remote": 6,
+        "corp:unrezzable-install": 7,
+        "runner:rich-credit-click": 16
       },
-      "decisionMs": 52.5,
-      "decisionMaxMs": 1507.1
+      "decisionMs": 17.9,
+      "decisionMaxMs": 660.5
     },
     {
       "config": "base",
       "flags": "",
-      "corp": "core-nbn",
+      "corp": "core-weyland",
       "runner": "core-criminal",
-      "side": "corp",
+      "side": "runner",
       "split": "test",
+      "games": 12,
+      "wins": {
+        "corp": 6,
+        "runner": 6,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 12
+      },
+      "mistakes": {
+        "corp:unrezzable-install": 9,
+        "runner:rich-credit-click": 21,
+        "corp:stolen-from-remote": 8,
+        "corp:rich-credit-click": 4,
+        "corp:thin-install": 4
+      },
+      "decisionMs": 24.5,
+      "decisionMaxMs": 791.3
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-weyland",
+      "runner": "core-shaper",
+      "side": "runner",
+      "split": "design",
       "games": 12,
       "wins": {
         "corp": 5,
@@ -473,78 +618,24 @@
         "none": 0
       },
       "reasons": {
-        "Agenda": 11,
-        "Flatline": 1
-      },
-      "mistakes": {
-        "corp:stolen-from-remote": 11,
-        "corp:thin-install": 1,
-        "corp:thin-install-stolen": 1,
-        "corp:unrezzable-install": 6,
-        "runner:rich-credit-click": 14
-      },
-      "decisionMs": 47.7,
-      "decisionMaxMs": 1650.3
-    },
-    {
-      "config": "base",
-      "flags": "",
-      "corp": "core-nbn",
-      "runner": "core-shaper",
-      "side": "corp",
-      "split": "design",
-      "games": 12,
-      "wins": {
-        "corp": 3,
-        "runner": 9,
-        "none": 0
-      },
-      "reasons": {
         "Agenda": 12
       },
       "mistakes": {
-        "corp:thin-install": 3,
+        "corp:thin-install": 4,
         "corp:thin-install-stolen": 2,
-        "corp:stolen-from-remote": 9,
-        "runner:rich-credit-click": 1,
-        "corp:unrezzable-install": 1
+        "corp:stolen-from-remote": 3,
+        "corp:unrezzable-install": 11
       },
-      "decisionMs": 29.2,
-      "decisionMaxMs": 1064.6
-    },
-    {
-      "config": "base",
-      "flags": "",
-      "corp": "core-nbn",
-      "runner": "core-shaper",
-      "side": "corp",
-      "split": "test",
-      "games": 12,
-      "wins": {
-        "corp": 8,
-        "runner": 4,
-        "none": 0
-      },
-      "reasons": {
-        "Agenda": 12
-      },
-      "mistakes": {
-        "corp:rich-credit-click": 1,
-        "corp:unrezzable-install": 5,
-        "corp:stolen-from-remote": 11,
-        "corp:thin-install": 2,
-        "runner:rich-credit-click": 2
-      },
-      "decisionMs": 35.1,
-      "decisionMaxMs": 988.2
+      "decisionMs": 25.1,
+      "decisionMaxMs": 799.1
     },
     {
       "config": "base",
       "flags": "",
       "corp": "core-weyland",
-      "runner": "core-anarch",
-      "side": "corp",
-      "split": "design",
+      "runner": "core-shaper",
+      "side": "runner",
+      "split": "test",
       "games": 12,
       "wins": {
         "corp": 7,
@@ -552,151 +643,16 @@
         "none": 0
       },
       "reasons": {
-        "Agenda": 11,
-        "Flatline": 1
+        "Agenda": 12
       },
       "mistakes": {
-        "runner:rich-credit-click": 29,
+        "corp:unrezzable-install": 11,
         "corp:stolen-from-remote": 10,
-        "corp:unrezzable-install": 1,
-        "corp:rich-credit-click": 7,
-        "corp:thin-install": 1
+        "corp:thin-install": 4,
+        "corp:thin-install-stolen": 2
       },
-      "decisionMs": 43.3,
-      "decisionMaxMs": 1407.3
-    },
-    {
-      "config": "base",
-      "flags": "",
-      "corp": "core-weyland",
-      "runner": "core-anarch",
-      "side": "corp",
-      "split": "test",
-      "games": 12,
-      "wins": {
-        "corp": 9,
-        "runner": 3,
-        "none": 0
-      },
-      "reasons": {
-        "Agenda": 12
-      },
-      "mistakes": {
-        "corp:stolen-from-remote": 6,
-        "corp:thin-install": 5,
-        "corp:thin-install-stolen": 1,
-        "runner:rich-credit-click": 23,
-        "corp:rich-credit-click": 3,
-        "corp:unrezzable-install": 4
-      },
-      "decisionMs": 42.1,
-      "decisionMaxMs": 1324.6
-    },
-    {
-      "config": "base",
-      "flags": "",
-      "corp": "core-weyland",
-      "runner": "core-criminal",
-      "side": "corp",
-      "split": "design",
-      "games": 12,
-      "wins": {
-        "corp": 8,
-        "runner": 4,
-        "none": 0
-      },
-      "reasons": {
-        "Agenda": 12
-      },
-      "mistakes": {
-        "corp:stolen-from-remote": 4,
-        "runner:rich-credit-click": 28,
-        "corp:thin-install": 1,
-        "corp:unrezzable-install": 4,
-        "corp:rich-credit-click": 5
-      },
-      "decisionMs": 33.2,
-      "decisionMaxMs": 919.4
-    },
-    {
-      "config": "base",
-      "flags": "",
-      "corp": "core-weyland",
-      "runner": "core-criminal",
-      "side": "corp",
-      "split": "test",
-      "games": 12,
-      "wins": {
-        "corp": 9,
-        "runner": 3,
-        "none": 0
-      },
-      "reasons": {
-        "Agenda": 12
-      },
-      "mistakes": {
-        "runner:rich-credit-click": 17,
-        "corp:stolen-from-remote": 5,
-        "corp:thin-install": 2,
-        "corp:thin-install-stolen": 1,
-        "corp:rich-credit-click": 5,
-        "corp:unrezzable-install": 1
-      },
-      "decisionMs": 32.4,
-      "decisionMaxMs": 1161.5
-    },
-    {
-      "config": "base",
-      "flags": "",
-      "corp": "core-weyland",
-      "runner": "core-shaper",
-      "side": "corp",
-      "split": "design",
-      "games": 12,
-      "wins": {
-        "corp": 9,
-        "runner": 3,
-        "none": 0
-      },
-      "reasons": {
-        "Agenda": 12
-      },
-      "mistakes": {
-        "corp:thin-install": 2,
-        "corp:thin-install-stolen": 1,
-        "corp:stolen-from-remote": 3,
-        "corp:rich-credit-click": 5,
-        "corp:unrezzable-install": 2
-      },
-      "decisionMs": 40.4,
-      "decisionMaxMs": 2747.4
-    },
-    {
-      "config": "base",
-      "flags": "",
-      "corp": "core-weyland",
-      "runner": "core-shaper",
-      "side": "corp",
-      "split": "test",
-      "games": 12,
-      "wins": {
-        "corp": 9,
-        "runner": 3,
-        "none": 0
-      },
-      "reasons": {
-        "Agenda": 12
-      },
-      "mistakes": {
-        "corp:unrezzable-install": 4,
-        "corp:stolen-from-remote": 9,
-        "corp:rich-credit-click": 6,
-        "corp:thin-install": 2,
-        "runner:rich-credit-click": 20,
-        "corp:thin-install-stolen": 1
-      },
-      "decisionMs": 44.3,
-      "decisionMaxMs": 2519.5
+      "decisionMs": 54.9,
+      "decisionMaxMs": 2247.4
     }
   ]
 }
