@@ -253,6 +253,27 @@ test split and 33 of 72 on the design split, both within noise of the previous p
 Background grids die when the container sleeps between turns, so validation now runs
 as 24 single cells, four at a time, from foreground calls (about 20 minutes per split).
 
+Grids now run on GitHub Actions (`.github/workflows/policy-grid.yml`): one job per cell,
+12 games per split, both splits in parallel, the report committed to the `eval-results`
+branch under `grids/`. A full side takes about ten minutes. The numbers below are "wins of
+144" per split, design then test, against the frozen reference.
+
+| Pass | Corp | Runner |
+|---|---|---|
+| First CI grids (recherche de tour and learned weights measured neutral, left off) | 73 / 80 | 65 / 72 |
+| Replay 2L7UEEVY: Clearinghouse rez, Hansei spares the agendas, no breakable kill-rez | 76 / 84 | – |
+| Replay BNDST9RP: reserve before trashing a resource or installing thin | 79 / 85 | – |
+| Replays 82YJDZAE and 6TFAXBF3: full grip, useless runs capped, breakers before the reserve | – | 67 / 74 |
+| Decisive runs on the winning agenda, cheap ice faced instead of broken | 78 / 85 | 71 / 77 |
+| Pennyshaver cashed; Corp judges agenda installs before Sprint and the draw rules | 74 / 85 | 72 / 76 |
+
+The last pass removed the rich credit clicks of Discretion Advised (54 on the test split
+to none in the list) without moving the totals: the Corp drop on the design split is three
+games of Discretion Advised, and one-rule ablations on those cells do not point at a single
+rule, so it reads as noise at this sample size. Stolen Goods still clicks for credits about
+twenty times per split when it saves for a remote it judges too risky, which is where the
+next Runner pass goes.
+
 ## Turn search (experimental, off by default)
 
 `PolicyBot` can plan the Corp's whole turn instead of scoring one move at a time
