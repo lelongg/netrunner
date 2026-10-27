@@ -282,6 +282,28 @@ ahead on these lists, Quick and Dirty and Discretion Advised most (109 of 144 ea
 Corp), Hyper Velocity least (63 and 76), so a Runner pass is read against 254 / 222 and a
 Corp pass against 369 / 374, not against 288.
 
+The Corp-side pass of 27 October against the aggressive Runner (`--runner aggro`, the
+grid's `opponent` input) measured the central-ice rules at 48 games per cell, wins of 576,
+design then test:
+
+| Corp version | vs reference Runner | vs aggressive Runner |
+|---|---|---|
+| Before the central rules | 369 / 374 | 353 / 375 |
+| Open or porous central the Runner runs is iced first (v1) | 354 / 374 | 345 / 384 |
+| v1 with a three-turn window, a boost after a steal, porous at three (v2) | – | 330 / 378 |
+| v1 with urgent ice only when the whole server can be rezzed (kept) | – | 353 / 391 |
+
+The spread between versions is inside the interval of 1152 games (about ±33 on a sum),
+so none of this is a measured gain: the 72-game local batches that motivated v1 (27 to
+22 Runner wins) and condemned v2 were noise. Two things did come out of it. The
+aggressive style is not a harder opponent for the Corp bots than the frozen reference
+at this scale (384 against 374 on the test split for v1), so the human edge over the
+bots is not captured by running centrals more often with the same evaluation. And the
+centrals are where the Corp bots lose: 66 of the 88 agendas stolen in 27 losses read
+during the pass came from R&D and HQ, while the Corp sat on twenty credits or more in a
+third of those games. The next Corp pass has to make the Corp score faster when rich
+rather than ice more.
+
 ## Turn search (experimental, off by default)
 
 `PolicyBot` can plan the Corp's whole turn instead of scoring one move at a time
