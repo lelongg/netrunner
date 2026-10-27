@@ -65,7 +65,9 @@ function mulligan(obs: Observation) {
 
 function proposals(obs: Observation, plan: Plan, base: Proposal[], extra?: (out: Proposal[], push: (p: Proposal | null) => void) => void): Proposal[] {
   const out = [...base];
-  const push = (p: Proposal | null) => p && out.push(p);
+  let push = (p: Proposal | null) => {
+    if (p) out.push(p);
+  };
   const seamless = inHand(obs, "Seamless Launch");
   const installed = agendaIn(obs);
   const scoring = scoringRemote(obs);
@@ -106,6 +108,77 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[], extra?: (out:
   }
   const runnerDeck = knownDeck(String(obs.opp.identity?.title ?? ""));
   const rezTax = obs.memory.opponentTitles.has("Tread Lightly") || (runnerDeck?.cards.some((c) => /rez cost[^.]*increased/i.test(obs.info({ title: c.title }).text ?? "")) ?? false) ? 3 : 1;
+  const judged = new WeakSet<Proposal>();
+  const judgeAgendaInstall = (p: Proposal) => {
+    if (p.kind !== "install-agenda" || judged.has(p)) return;
+    judged.add(p);
+    if (plan.kind === "window") p.score += 5;
+    const card = obs.hand.find((c) => c.type === "Agenda" && p.why.includes(c.title));
+    const target = remotes(obs).find((s) => p.why.endsWith(s.label) || p.why.includes(`in ${s.label}`));
+    const safety = target ? serverSafety(obs, target) : null;
+    const agendasInHand = obs.hand.filter((c) => c.type === "Agenda").length;
+    const racing = Number(obs.me["deck-count"] ?? 0) < 12 || agendasInHand >= 2 || obs.hand.length >= 5;
+    const points = Number(card?.agendapoints ?? 0);
+    const runnerIncome = [...(obs.opp.rig?.resource ?? []), ...(obs.opp.rig?.hardware ?? [])].filter((c: any) => /(gain|take|place) \d+\s*\[credits?\]/i.test(obs.info(c).text ?? "")).length;
+    const runnerReady = Number(obs.opp.credit ?? 0) + 4 + Math.min(4, runnerIncome * 1.5) >= 7 && Number(obs.opp["hand-count"] ?? 0) >= 1;
+    const thinAndSlow = !!card && !!target && target.ices.length < 2 && agendaProgress(card).need >= 4 && runnerReady && !canScoreNextTurn(obs, card, !!seamless);
+    if (safety && !safety.safe) {
+      const canRezOne = target!.ices.some((i) => i.rezzed || rezCostOf(i) <= obs.credits - 1);
+      const hq = obs.servers.find((s) => s.key === "hq")!;
+      const hqSafer = serverSafety(obs, hq).margin > safety.margin + 2 && obs.hand.length < 5 && agendasInHand <= 1;
+      const runnerCredits = Number(obs.opp.credit ?? 0);
+      const deep = target!.ices.length >= 2;
+      const margins = deep ? [-4, -8, 6] : [-1, -4, 3];
+      const cheapEntry = safety.runnerCost < 4;
+      const contestable = target!.ices.length >= 1 && canRezOne && obs.credits >= 3 && !hqSafer && plan.kind !== "economy" && (safety.margin >= margins[0] || (racing && runnerCredits <= margins[2] && safety.margin >= margins[1]));
+      const rich = obs.credits >= Math.max(15, safety.rezCost + 6);
+      const fortress = target!.ices.length >= 3 || (target!.ices.length >= 2 && target!.content.some((c: any) => c.type === "Upgrade"));
+      const desperate = Number(obs.me["deck-count"] ?? 99) < 10 && target!.ices.length >= 1 && canRezOne;
+      const stolenTurn = ((obs.memory.notes.stolenFrom ?? {}) as Record<string, number>)[target!.label];
+      const changedTurn = ((obs.memory.notes.iceChanged ?? {}) as Record<string, number>)[target!.label] ?? 0;
+      const breached = stolenTurn !== undefined && stolenTurn >= changedTurn;
+      const holdable = agendasInHand <= 2 && Number(obs.me["deck-count"] ?? 0) >= 10;
+      const taxRace = !contestable && ((rich && fortress) || desperate);
+      const flooded = agendasInHand >= 3;
+      const jam = !contestable && !taxRace && flooded && fortress && canRezOne && !cheapEntry && safety.runnerCost >= 7;
+      const slow = card ? agendaProgress(card).need >= 5 : false;
+      p.score = (breached && holdable && !desperate) || (cheapEntry && !desperate) ? Math.min(p.score, 12) : contestable ? Math.min(p.score, racing ? 58 : 48) - (points >= 3 ? 10 : 0) - (slow ? 8 : 0) : taxRace ? Math.min(p.score, 55) - (points >= 3 ? 8 : 0) - (slow ? 8 : 0) : jam ? Math.min(p.score, 44) - (points >= 3 ? 8 : 0) - (slow ? 6 : 0) : Math.min(p.score, 15);
+      p.why += ` (the Runner can get in: margin ${safety.margin}${breached ? ", and stole from there since the ice last changed" : ""}${cheapEntry ? ", and the run there is nearly free" : ""}${racing ? ", racing" : ""}${taxRace ? (desperate ? ", R&D is running out" : ", rich enough to make every run expensive") : ""}${jam ? ", jamming: too many agendas in hand to wait" : ""}${canRezOne ? "" : ", no ice can be rezzed"}${hqSafer ? ", HQ is safer" : ""})`;
+    } else if (card && target && safety?.safe && obs.clicks < 3 && canScoreNextTurn(obs, card, !!seamless)) p.score = Math.max(p.score, 72);
+    if (safety && !safety.safe && card && target && target.ices.length >= 2 && Number(card.agendapoints ?? 0) <= 1 && agendasHeld >= 2 && Number(obs.opp.credit ?? 0) - safety.runnerCost < safety.runnerCost && obs.credits >= safety.rezCost + 3) {
+      p.score = Math.max(p.score, 52);
+      p.why += " (a one-point agenda the Runner must pay to see: the next one scores)";
+    }
+    if (card && !seamless && agendaProgress(card).need >= 4 && obs.clicks <= 2 && safety && !safety.blocked && safety.margin < 4) {
+      p.score = Math.min(p.score, 40);
+      p.why += " (two turns to score without Seamless Launch)";
+    }
+    if (obs.clicks === 3) p.score = Math.min(p.score, 50);
+    if (baited && target && baitTargets.some((x) => x.server.label === target.label)) {
+      p.score = Math.min(p.score, 30);
+      p.why += " (bait first: the Runner is rich enough to get in)";
+    }
+    if (thinAndSlow) {
+      p.score = Math.min(p.score, 38);
+      p.why += " (one ice is thin for an agenda that takes two turns)";
+    }
+    if (card && target && target.ices.length < 2 && obs.credits < Math.max(3, scoringCost(card) - 1)) {
+      p.score = Math.min(p.score, 20);
+      p.why += ` (too poor to advance it behind one ice: ${scoringCost(card)} needed)`;
+    }
+    const enders = target ? target.ices.filter((i: any) => !i.rezzed && iceThreat({ ...i, subroutines: [] }, obs.info(i), 99).etr).map((i: any) => rezCostOf(i)) : [];
+    const cheapestEnder = enders.length ? Math.min(...enders) : target && target.ices.some((i: any) => !i.rezzed) ? safety?.rezCost ?? 0 : 0;
+    if (safety && target && cheapestEnder > 0 && cheapestEnder + rezTax > obs.credits) {
+      p.score = Math.min(p.score, 15);
+      p.why += ` (cannot rez an ender there with ${rezTax} to spare: ${cheapestEnder} needed)`;
+    }
+  };
+  for (const p of out) judgeAgendaInstall(p);
+  const pushRaw = push;
+  push = (p: Proposal | null) => {
+    if (p) judgeAgendaInstall(p);
+    pushRaw(p);
+  };
   const spike = inHand(obs, "Neurospike");
   if (spike && obs.credits >= 3) {
     const points = Number(obs.memory.notes.scoredPointsThisTurn ?? 0);
@@ -252,7 +325,6 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[], extra?: (out:
     }
     if (plan.kind === "economy" && (p.kind === "economy" || p.kind === "install-economy" || p.kind === "rez-economy" || p.kind === "click-economy")) p.score += 8;
     if (plan.kind === "economy" && p.kind === "install-ice" && !/is open/.test(p.why)) p.score -= 10;
-    if (plan.kind === "window" && p.kind === "install-agenda") p.score += 5;
   }
   extra?.(out, push);
   for (const p of out) {
@@ -272,67 +344,6 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[], extra?: (out:
         p.why += ` (keep ${reserve} credits to rez the ice in front of it)`;
         const credit = byCommand(obs, "credit")[0];
         if (credit) push(proposal(credit, 58, `take a credit: ${reserve} needed to rez the ice in front of ${installed.card.title}`, "credit"));
-      }
-    }
-    if (p.kind === "install-agenda") {
-      const card = obs.hand.find((c) => c.type === "Agenda" && p.why.includes(c.title));
-      const target = remotes(obs).find((s) => p.why.endsWith(s.label) || p.why.includes(`in ${s.label}`));
-      const safety = target ? serverSafety(obs, target) : null;
-      const agendasInHand = obs.hand.filter((c) => c.type === "Agenda").length;
-      const racing = Number(obs.me["deck-count"] ?? 0) < 12 || agendasInHand >= 2 || obs.hand.length >= 5;
-      const points = Number(card?.agendapoints ?? 0);
-      const runnerIncome = [...(obs.opp.rig?.resource ?? []), ...(obs.opp.rig?.hardware ?? [])].filter((c: any) => /(gain|take|place) \d+\s*\[credits?\]/i.test(obs.info(c).text ?? "")).length;
-      const runnerReady = Number(obs.opp.credit ?? 0) + 4 + Math.min(4, runnerIncome * 1.5) >= 7 && Number(obs.opp["hand-count"] ?? 0) >= 1;
-      const thinAndSlow = !!card && !!target && target.ices.length < 2 && agendaProgress(card).need >= 4 && runnerReady && !canScoreNextTurn(obs, card, !!seamless);
-      if (safety && !safety.safe) {
-        const canRezOne = target!.ices.some((i) => i.rezzed || rezCostOf(i) <= obs.credits - 1);
-        const hq = obs.servers.find((s) => s.key === "hq")!;
-        const hqSafer = serverSafety(obs, hq).margin > safety.margin + 2 && obs.hand.length < 5 && agendasInHand <= 1;
-        const runnerCredits = Number(obs.opp.credit ?? 0);
-        const deep = target!.ices.length >= 2;
-        const margins = deep ? [-4, -8, 6] : [-1, -4, 3];
-        const cheapEntry = safety.runnerCost < 4;
-        const contestable = target!.ices.length >= 1 && canRezOne && obs.credits >= 3 && !hqSafer && plan.kind !== "economy" && (safety.margin >= margins[0] || (racing && runnerCredits <= margins[2] && safety.margin >= margins[1]));
-        const rich = obs.credits >= Math.max(15, safety.rezCost + 6);
-        const fortress = target!.ices.length >= 3 || (target!.ices.length >= 2 && target!.content.some((c: any) => c.type === "Upgrade"));
-        const desperate = Number(obs.me["deck-count"] ?? 99) < 10 && target!.ices.length >= 1 && canRezOne;
-        const stolenTurn = ((obs.memory.notes.stolenFrom ?? {}) as Record<string, number>)[target!.label];
-        const changedTurn = ((obs.memory.notes.iceChanged ?? {}) as Record<string, number>)[target!.label] ?? 0;
-        const breached = stolenTurn !== undefined && stolenTurn >= changedTurn;
-        const holdable = agendasInHand <= 2 && Number(obs.me["deck-count"] ?? 0) >= 10;
-        const taxRace = !contestable && ((rich && fortress) || desperate);
-        const flooded = agendasInHand >= 3;
-        const jam = !contestable && !taxRace && flooded && fortress && canRezOne && !cheapEntry && safety.runnerCost >= 7;
-        const slow = card ? agendaProgress(card).need >= 5 : false;
-        p.score = (breached && holdable && !desperate) || (cheapEntry && !desperate) ? Math.min(p.score, 12) : contestable ? Math.min(p.score, racing ? 58 : 48) - (points >= 3 ? 10 : 0) - (slow ? 8 : 0) : taxRace ? Math.min(p.score, 55) - (points >= 3 ? 8 : 0) - (slow ? 8 : 0) : jam ? Math.min(p.score, 44) - (points >= 3 ? 8 : 0) - (slow ? 6 : 0) : Math.min(p.score, 15);
-        p.why += ` (the Runner can get in: margin ${safety.margin}${breached ? ", and stole from there since the ice last changed" : ""}${cheapEntry ? ", and the run there is nearly free" : ""}${racing ? ", racing" : ""}${taxRace ? (desperate ? ", R&D is running out" : ", rich enough to make every run expensive") : ""}${jam ? ", jamming: too many agendas in hand to wait" : ""}${canRezOne ? "" : ", no ice can be rezzed"}${hqSafer ? ", HQ is safer" : ""})`;
-      } else if (card && target && safety?.safe && obs.clicks < 3 && canScoreNextTurn(obs, card, !!seamless)) p.score = Math.max(p.score, 72);
-      if (safety && !safety.safe && card && target && target.ices.length >= 2 && Number(card.agendapoints ?? 0) <= 1 && agendasHeld >= 2 && Number(obs.opp.credit ?? 0) - safety.runnerCost < safety.runnerCost && obs.credits >= safety.rezCost + 3) {
-        p.score = Math.max(p.score, 52);
-        p.why += " (a one-point agenda the Runner must pay to see: the next one scores)";
-      }
-      if (card && !seamless && agendaProgress(card).need >= 4 && obs.clicks <= 2 && safety && !safety.blocked && safety.margin < 4) {
-        p.score = Math.min(p.score, 40);
-        p.why += " (two turns to score without Seamless Launch)";
-      }
-      if (obs.clicks === 3) p.score = Math.min(p.score, 50);
-      if (baited && target && baitTargets.some((x) => x.server.label === target.label)) {
-        p.score = Math.min(p.score, 30);
-        p.why += " (bait first: the Runner is rich enough to get in)";
-      }
-      if (thinAndSlow) {
-        p.score = Math.min(p.score, 38);
-        p.why += " (one ice is thin for an agenda that takes two turns)";
-      }
-      if (card && target && target.ices.length < 2 && obs.credits < Math.max(3, scoringCost(card) - 1)) {
-        p.score = Math.min(p.score, 20);
-        p.why += ` (too poor to advance it behind one ice: ${scoringCost(card)} needed)`;
-      }
-      const enders = target ? target.ices.filter((i: any) => !i.rezzed && iceThreat({ ...i, subroutines: [] }, obs.info(i), 99).etr).map((i: any) => rezCostOf(i)) : [];
-      const cheapestEnder = enders.length ? Math.min(...enders) : target && target.ices.some((i: any) => !i.rezzed) ? safety?.rezCost ?? 0 : 0;
-      if (safety && target && cheapestEnder > 0 && cheapestEnder + rezTax > obs.credits) {
-        p.score = Math.min(p.score, 15);
-        p.why += ` (cannot rez an ender there with ${rezTax} to spare: ${cheapestEnder} needed)`;
       }
     }
   }
