@@ -293,6 +293,13 @@ design then test:
 | v1 with a three-turn window, a boost after a steal, porous at three (v2) | – | 330 / 378 |
 | v1 with urgent ice only when the whole server can be rezzed (kept) | 363 / 374 | 353 / 391 |
 
+Two more passes of the same day measured flat against the reference: the Corp installing
+an agenda it can score next turn behind two rezzable ice when rich (360 / 374 against
+363 / 374), and the Runner dropping a contest that would need more cards than its hand
+size while putting its hand on the board at ten credits (243 / 232 against 254 / 222 and
+253 / 219 on the nightly sample). Both are kept: they remove behaviour that reads as a
+fault in replays and cost nothing measurable, but they are not progress on the number.
+
 The spread between versions is inside the interval of 1152 games (about ±33 on a sum),
 so none of this is a measured gain: the 72-game local batches that motivated v1 (27 to
 22 Runner wins) and condemned v2 were noise. Two things did come out of it. The
