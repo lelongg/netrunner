@@ -1,5 +1,5 @@
 import { useEffect, useState } from "preact/hooks";
-import { CardZoom } from "./game/CardImage";
+import { CardPeek } from "./game/CardImage";
 import { HOLD_MS, untilRelease } from "./hold";
 
 const OWN = ".tile, .card-zoom-trigger, .deck-row-id, .card-zoom, .card-peek, .deck-open";
@@ -58,9 +58,5 @@ export function PeekHost() {
       show = null;
     };
   }, []);
-  return card ? (
-    <div class="card-peek">
-      <CardZoom items={[card]} start={0} onClose={() => setCard(null)} />
-    </div>
-  ) : null;
+  return card ? <CardPeek code={card.code} alt={card.alt} onClose={() => setCard(null)} /> : null;
 }

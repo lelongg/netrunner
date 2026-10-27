@@ -151,17 +151,28 @@ export function CardZoom({ items, start, onClose }: { items: GalleryItem[]; star
   );
 }
 
+export function CardPeek({ code, alt, onClose }: { code: string; alt: string; onClose: () => void }) {
+  const root = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const el = root.current?.querySelector<HTMLElement>(".card-zoom-frame.current");
+      if (el) present(el, code);
+    }, 320);
+    return () => clearTimeout(timer);
+  }, [code]);
+  return (
+    <div class="card-peek" ref={root}>
+      <CardZoom items={[{ code, alt }]} start={0} onClose={onClose} />
+    </div>
+  );
+}
+
 export function useCardPeek(code: string | undefined, alt: string) {
   const [shown, setShown] = useState(false);
   const { handlers, consumed } = useHold(code ? setShown : undefined);
   const view =
     shown && code
-      ? createPortal(
-          <div class="card-peek">
-            <CardZoom items={[{ code, alt }]} start={0} onClose={() => setShown(false)} />
-          </div>,
-          document.body,
-        )
+      ? createPortal(<CardPeek code={code} alt={alt} onClose={() => setShown(false)} />, document.body)
       : null;
   return { handlers, consumed, view };
 }
