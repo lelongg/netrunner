@@ -345,6 +345,13 @@ from their scores against the old reference by about the same amount (Corp from 
 Runner from 263 / 250), which is what two improved sides look like: each now faces the
 other's better version.
 
+Replay 5P5VJBPX (the user's Party Hard 7-2 over Advanced Yomi) found Anoetic Void never
+rezzed in the scoring remote and R&D left behind a single Tithe for seven turns. With
+run-ending upgrades rezzed before the end of the turn and a lone cheap ice on R&D treated
+as open when the Corp is rich, the Corp grid against the refrozen reference reads 367 / 373
+against the baseline 355 / 362 (+23 on 1152, inside the interval), with Advanced Yomi the
+deck that gained most (96 / 104 against 85 / 93).
+
 The spread between versions is inside the interval of 1152 games (about ±33 on a sum),
 so none of this is a measured gain: the 72-game local batches that motivated v1 (27 to
 22 Runner wins) and condemned v2 were noise. Two things did come out of it. The
