@@ -1002,4 +1002,39 @@ describe("corp ices a central the Runner walks into", () => {
     expect(move?.command).toBe("play");
     expect(s.last("corp").chosen?.why).toMatch(/^install Palisade on R&D: ice R&D: the Runner walks in/);
   });
+
+  it("deepens the central it just lost an agenda from before a remote", () => {
+    const s = new Scenario("core-nbn", "core-criminal");
+    s.clearHand("corp");
+    s.summon("corp", "Whitespace", "Tithe", "Funhouse", "Palisade");
+    s.credits("corp", 40);
+    for (const [c, srv] of [["Whitespace", "R&D"], ["Tithe", "HQ"], ["Funhouse", "HQ"], ["Palisade", "New remote"]] as [string, string][]) {
+      s.clicks("corp", 3);
+      s.install("corp", c, srv);
+    }
+    s.rez("Whitespace");
+    s.rez("Funhouse");
+    s.rez("Palisade");
+    s.endTurn("corp");
+    s.clearHand("runner");
+    s.summon("runner", "Buzzsaw", "Marjanah", "Carmen");
+    s.credits("runner", 20);
+    for (const c of ["Buzzsaw", "Marjanah", "Carmen"]) {
+      s.clicks("runner", 4);
+      s.install("runner", c);
+    }
+    s.summon("runner", "Sure Gamble", "Jailbreak", "Overclock");
+    s.credits("runner", 14);
+    s.clicks("runner", 0);
+    s.endTurn("runner");
+    s.clearHand("corp");
+    s.summon("corp", "Ping", "Orbital Superiority");
+    s.credits("corp", 9);
+    s.clicks("corp", 3);
+    const turn = Number(s.view("corp").turn);
+    s.bots.corp.memory.notes.runsSeen = { "R&D": [turn - 3, turn - 1] };
+    s.bots.corp.memory.notes.stolenFrom = { "R&D": turn - 1 };
+    s.decide("corp");
+    expect(best(s, "corp", (w) => w.includes("on R&D: ice R&D: the Runner stole from it lately"))).toBeGreaterThan(best(s, "corp", (w) => w.includes("Server 1")));
+  });
 });
