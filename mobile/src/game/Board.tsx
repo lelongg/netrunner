@@ -293,7 +293,7 @@ function Stacked({ n, children }: { n: number; children: ComponentChildren }) {
   if (!layers) return <>{children}</>;
   const shadows = Array.from({ length: layers * 2 }, (_, i) => `${i + 1}px ${i + 1}px 0 0 ${i % 2 ? "var(--stack-edge)" : "var(--stack-gap)"}`);
   return (
-    <div class="stacked" style={{ boxShadow: shadows.join(", "), marginRight: `${layers * 2}px`, marginBottom: `${layers * 2}px` }}>
+    <div class="stacked" style={{ boxShadow: shadows.join(", ") }}>
       {children}
     </div>
   );
