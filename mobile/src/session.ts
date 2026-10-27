@@ -561,6 +561,7 @@ export class Session {
 
   gate: ((command: string, args: unknown) => boolean) | null = null;
   refused?: () => void;
+  skipCoach?: () => void;
 
   startTutorial(side: Side, mine: WireDeck, theirs: WireDeck) {
     this.lobby = { ...this.lobby, vsBot: true, opponentName: "Bot", tutorial: true, scripted: true, mySide: side, myDeck: mine, format: "casual" };

@@ -1373,7 +1373,14 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
       {menu && (
         <MenuDrawer title={t("Game menu")} tabs={["Game", "Settings"]} tab={menuTab} onTab={setMenuTab} onClose={() => setMenu(false)}>
           {menuTab === "Settings" ? (
-            <SettingsSections />
+            <>
+              <SettingsSections />
+              {session.skipCoach && (
+                <MenuSection title={t("Tutorial")}>
+                  <MenuItem icon="close" label={t("Skip tutorial")} hint={t("Hide the guided steps and tips")} onClick={() => closeMenu(session.skipCoach!)} />
+                </MenuSection>
+              )}
+            </>
           ) : (
             <>
               <div class="menu-tiles">
