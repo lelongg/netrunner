@@ -174,6 +174,12 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[], extra?: (out:
       p.score = Math.min(p.score, 15);
       p.why += ` (cannot rez an ender there with ${rezTax} to spare: ${cheapestEnder} needed)`;
     }
+    const corpPoints = Number(obs.me["agenda-point"] ?? 0);
+    const corpNeed = Number(obs.me["agenda-point-req"] ?? 7);
+    if (card && target && corpPoints + Number(card.agendapoints ?? 0) >= corpNeed && target.ices.length >= 2 && !(safety && safety.runnerCost < 4) && obs.credits >= Math.min(4, scoringCost(card))) {
+      p.score = Math.max(p.score, 62);
+      p.why += " (match point: scoring it wins the game)";
+    }
   };
   for (const p of out) judgeAgendaInstall(p);
   const pushRaw = push;
