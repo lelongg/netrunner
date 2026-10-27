@@ -1,13 +1,15 @@
+import type { ComponentChildren } from "preact";
 import { useState } from "preact/hooks";
 import { type Command, cardCommands, findCard } from "./actions";
 import { type Prober, useChecked, useProbe } from "./legal";
-import { Icon } from "../icons";
+import { Icon, type IconName } from "../icons";
 import { CardImage } from "./CardImage";
 import { glyphs } from "./Glyphs";
 import { iconize } from "./text";
 import { t } from "../i18n";
 import { labelText, shown, typeLine } from "./labels";
 import type { Side } from "../engine";
+import type { BreakCost } from "./runner";
 
 function installed(view: any): any[] {
   const out: any[] = [];
@@ -47,6 +49,24 @@ function grouped<T extends { card: any; cmd: Command }>(items: T[]): { item: T; 
     const counts = list.map((x) => x.card.counter?.virus).filter((n): n is number => n != null);
     return { item: list.find((x) => x.cmd.enabled !== false) ?? list[0], count: list.length, virus: counts.length ? counts.reduce((a, b) => a + b, 0) : null };
   });
+}
+
+const TOKEN_ICONS: Record<string, IconName> = { virus: "virus", power: "bolt", agenda: "agenda", advancement: "advance" };
+
+function PlanCost({ cost }: { cost: BreakCost }) {
+  const parts: ComponentChildren[] = [];
+  if (cost.credits > 0) parts.push(glyphs(iconize(`${cost.credits} [Credits]`)));
+  if (cost.clicks > 0) parts.push(glyphs(iconize("[Click]".repeat(cost.clicks))));
+  for (const [k, n] of Object.entries(cost.tokens))
+    parts.push(
+      <span aria-label={`${n} ${k}`}>
+        {n}
+        {TOKEN_ICONS[k] ? <Icon name={TOKEN_ICONS[k]} class="glyph" /> : ` ${k}`}
+      </span>,
+    );
+  if (cost.trashed) parts.push(<Icon name="trash" class="glyph" />);
+  if (!parts.length) parts.push(glyphs(iconize("0 [Credits]")));
+  return <>{parts.flatMap((p, i) => (i ? [" ", p] : [p]))}</>;
 }
 
 function splitCost(label: string): [string, string] {
@@ -231,10 +251,7 @@ export function Breakers({ view, stamp, probe, side, ice, send, onTap, disabled,
                   {partial
                     ? (() => {
                         const plan = planOf(card);
-                        if (!plan?.ok) return "";
-                        const virus = plan.virus ?? 0;
-                        if (virus > 0 && !plan.credits) return <CostView cost={`${virus} hosted virus counters`} />;
-                        return plan.credits != null ? glyphs(iconize(`${plan.credits} [Credits]`)) : "";
+                        return plan?.ok && plan.cost ? <PlanCost cost={plan.cost} /> : "";
                       })()
                     : <CostView cost={String(ab?.["cost-label"] ?? "")} />}
                 </span>

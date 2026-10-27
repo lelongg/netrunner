@@ -3391,6 +3391,22 @@ button:active:not(:disabled) {
   text-overflow: ellipsis;
 }
 
+.enc-meta {
+  display: flex;
+  min-width: 0;
+}
+
+.enc-types {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.enc-strength {
+  flex: none;
+  white-space: pre;
+}
+
 .enc-meta .stat,
 .enc-meta .stat .icon {
   color: var(--text);
