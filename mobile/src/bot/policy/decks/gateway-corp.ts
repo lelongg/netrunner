@@ -48,6 +48,7 @@ function plan(obs: Observation, current: Plan | null): Plan {
   if (runnerPoints >= need - 2 && obs.servers.some((s) => !s.remote && !s.ices.length)) return keep("defend", "the Runner is close to winning: close the open centrals first");
   if (obs.credits < 5 && !obs.hand.some((c) => isEconomyCard(obs, c) && Number(c.cost ?? 0) <= obs.credits)) return keep("economy", "poor and without a cheap economy card: install assets and click for credits");
   if (agendas.length && safeRemote && obs.credits >= 3) return keep("window", `install ${agendas[0].title} in ${safeRemote.label}: the Runner cannot get in cheaply`);
+  if (agendas.length && protectedRemote && protectedRemote.ices.length >= 2 && obs.credits >= 12 && current?.kind === "fortify" && current.since <= obs.turn - 2) return keep("window", `${protectedRemote.label} has waited two turns with the credits in hand: install ${agendas[0].title} and go`);
   if (agendas.length && protectedRemote) return keep("fortify", `${protectedRemote.label} is not safe enough for ${agendas[0].title}: add ice or credits`);
   if (!protectedRemote) return keep("fortify", "build an iced remote and ice the centrals");
   return keep("develop", "grow the economy and the ice while waiting for an agenda");
@@ -142,8 +143,9 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[], extra?: (out:
       const flooded = agendasInHand >= 3;
       const jam = !contestable && !taxRace && flooded && fortress && canRezOne && !cheapEntry && safety.runnerCost >= 7;
       const slow = card ? agendaProgress(card).need >= 5 : false;
-      p.score = (breached && holdable && !desperate) || (cheapEntry && !desperate) ? Math.min(p.score, 12) : contestable ? Math.min(p.score, racing ? 58 : 48) - (points >= 3 ? 10 : 0) - (slow ? 8 : 0) : taxRace ? Math.min(p.score, 55) - (points >= 3 ? 8 : 0) - (slow ? 8 : 0) : jam ? Math.min(p.score, 44) - (points >= 3 ? 8 : 0) - (slow ? 6 : 0) : Math.min(p.score, 15);
-      p.why += ` (the Runner can get in: margin ${safety.margin}${breached ? ", and stole from there since the ice last changed" : ""}${cheapEntry ? ", and the run there is nearly free" : ""}${racing ? ", racing" : ""}${taxRace ? (desperate ? ", R&D is running out" : ", rich enough to make every run expensive") : ""}${jam ? ", jamming: too many agendas in hand to wait" : ""}${canRezOne ? "" : ", no ice can be rezzed"}${hqSafer ? ", HQ is safer" : ""})`;
+      const fast = !!card && deep && canRezOne && !cheapEntry && !breached && obs.credits >= 12 && canScoreNextTurn(obs, card, !!seamless) && !contestable;
+      p.score = (breached && holdable && !desperate) || (cheapEntry && !desperate) ? Math.min(p.score, 12) : fast ? Math.min(p.score, 56) - (points >= 3 ? 8 : 0) : contestable ? Math.min(p.score, racing ? 58 : 48) - (points >= 3 ? 10 : 0) - (slow ? 8 : 0) : taxRace ? Math.min(p.score, 55) - (points >= 3 ? 8 : 0) - (slow ? 8 : 0) : jam ? Math.min(p.score, 44) - (points >= 3 ? 8 : 0) - (slow ? 6 : 0) : Math.min(p.score, 15);
+      p.why += ` (the Runner can get in: margin ${safety.margin}${breached ? ", and stole from there since the ice last changed" : ""}${cheapEntry ? ", and the run there is nearly free" : ""}${racing ? ", racing" : ""}${taxRace ? (desperate ? ", R&D is running out" : ", rich enough to make every run expensive") : ""}${jam ? ", jamming: too many agendas in hand to wait" : ""}${fast ? ", but it scores next turn and the credits are there" : ""}${canRezOne ? "" : ", no ice can be rezzed"}${hqSafer ? ", HQ is safer" : ""})`;
     } else if (card && target && safety?.safe && obs.clicks < 3 && canScoreNextTurn(obs, card, !!seamless)) p.score = Math.max(p.score, 72);
     if (safety && !safety.safe && card && target && target.ices.length >= 2 && Number(card.agendapoints ?? 0) <= 1 && agendasHeld >= 2 && Number(obs.opp.credit ?? 0) - safety.runnerCost < safety.runnerCost && obs.credits >= safety.rezCost + 3) {
       p.score = Math.max(p.score, 52);
