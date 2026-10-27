@@ -1373,14 +1373,7 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
       {menu && (
         <MenuDrawer title={t("Game menu")} tabs={["Game", "Settings"]} tab={menuTab} onTab={setMenuTab} onClose={() => setMenu(false)}>
           {menuTab === "Settings" ? (
-            <>
-              <SettingsSections />
-              {session.skipCoach && (
-                <MenuSection title={t("Tutorial")}>
-                  <MenuItem icon="close" label={t("Skip tutorial")} hint={t("Hide the guided steps and tips")} onClick={() => closeMenu(session.skipCoach!)} />
-                </MenuSection>
-              )}
-            </>
+            <SettingsSections />
           ) : (
             <>
               <div class="menu-tiles">
@@ -1431,6 +1424,7 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
               )}
               <MenuSection title={t("Leave")}>
                 <MenuItem icon="arrow-left" label={t("Back to home")} hint={watching ? undefined : t("The game stays saved")} onClick={() => closeMenu(onExit)} />
+                {session.skipCoach && <MenuItem icon="close" label={t("Skip tutorial")} hint={t("Hide the guided steps and tips")} onClick={() => closeMenu(session.skipCoach!)} />}
                 {!watching && onWatch && session.watchUrl && <MenuItem icon="eye" label={t("Watch instead")} onClick={() => closeMenu(onWatch)} />}
                 {!watching && (
                   <MenuItem
