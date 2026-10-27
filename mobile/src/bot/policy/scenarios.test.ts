@@ -917,3 +917,53 @@ describe("runner cashes Pennyshaver", () => {
     expect(best(s, "runner", (w) => w.startsWith("Pennyshaver"))).toBeLessThan(best(s, "runner", (w) => w.startsWith("take a credit")));
   });
 });
+
+describe("corp flooded with agendas on a rich turn", () => {
+  function floodedBoard() {
+    const s = new Scenario("core-hb", "core-shaper");
+    s.clearHand("corp");
+    s.summon("corp", "Tithe", "Whitespace", "Whitespace", "Ansel 1.0", "Whitespace", "Ansel 1.0", "Manegarm Skunkworks");
+    s.credits("corp", 60);
+    for (const [c, srv] of [["Whitespace", "HQ"], ["Whitespace", "HQ"], ["Ansel 1.0", "HQ"], ["Tithe", "R&D"], ["Whitespace", "New remote"], ["Ansel 1.0", "Server 1"], ["Manegarm Skunkworks", "Server 1"]] as [string, string][]) {
+      s.clicks("corp", 3);
+      s.credits("corp", 60);
+      s.install("corp", c, srv);
+    }
+    s.rez("Whitespace");
+    s.rez("Ansel 1.0");
+    s.endTurn("corp");
+    s.clearHand("runner");
+    s.summon("runner", "Echelon", "Unity", "Unity", "Echelon");
+    s.credits("runner", 40);
+    for (const c of ["Echelon", "Unity", "Unity", "Echelon"]) {
+      s.clicks("runner", 4);
+      s.install("runner", c);
+    }
+    s.summon("runner", "Sure Gamble", "Jailbreak", "Overclock", "Tread Lightly", "Leech");
+    s.credits("runner", 14);
+    s.clicks("runner", 0);
+    s.endTurn("runner");
+    s.clearHand("corp");
+    return s;
+  }
+
+  it("plays Sprint with four agendas in a seven-card hand instead of clicking for credits", () => {
+    const s = floodedBoard();
+    s.summon("corp", "Seamless Launch", "Send a Message", "Offworld Office", "Send a Message", "Manegarm Skunkworks", "Offworld Office", "Sprint");
+    s.credits("corp", 25);
+    s.clicks("corp", 2);
+    const move = s.decide("corp");
+    expect(move?.command).toBe("play");
+    expect(s.last("corp").chosen?.why).toMatch(/^Sprint: three cards, and two of 4 agendas/);
+  });
+
+  it("draws at twenty-five credits with six cards and no ice rather than clicking for one", () => {
+    const s = floodedBoard();
+    s.summon("corp", "Nico Campaign", "Seamless Launch", "Seamless Launch", "Send a Message", "Offworld Office", "Nico Campaign");
+    s.credits("corp", 25);
+    s.clicks("corp", 2);
+    const move = s.decide("corp");
+    expect(move?.command).toBe("draw");
+    expect(best(s, "corp", (w) => w.startsWith("take a credit"))).toBeLessThan(best(s, "corp", (w) => w.startsWith("draw")));
+  });
+});
