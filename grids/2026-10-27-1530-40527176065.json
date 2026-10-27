@@ -1,0 +1,812 @@
+{
+  "configs": {
+    "base": {
+      "flags": "",
+      "splits": {
+        "design": {
+          "side": "runner",
+          "opponent": "ref",
+          "games": 48,
+          "total": 241,
+          "played": 576,
+          "decisionMs": 24.416666666666668,
+          "mistakes": {
+            "Party Hard rich-credit-click": 95,
+            "Party Hard paid-and-stopped": 26,
+            "Stolen Goods paid-and-stopped": 57,
+            "Stolen Goods rich-credit-click": 189,
+            "Planning Ahead rich-credit-click": 73,
+            "Planning Ahead paid-and-stopped": 39
+          }
+        },
+        "test": {
+          "side": "runner",
+          "opponent": "ref",
+          "games": 48,
+          "total": 224,
+          "played": 576,
+          "decisionMs": 25.291666666666668,
+          "mistakes": {
+            "Party Hard rich-credit-click": 88,
+            "Party Hard paid-and-stopped": 38,
+            "Stolen Goods rich-credit-click": 215,
+            "Stolen Goods paid-and-stopped": 58,
+            "Planning Ahead paid-and-stopped": 41,
+            "Planning Ahead rich-credit-click": 61
+          }
+        }
+      }
+    }
+  },
+  "cells": [
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-hb",
+      "runner": "core-anarch",
+      "side": "runner",
+      "opponent": "ref",
+      "split": "design",
+      "games": 48,
+      "wins": {
+        "corp": 33,
+        "runner": 15,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 47,
+        "Decked": 1
+      },
+      "mistakes": {
+        "corp:thin-install": 6,
+        "corp:thin-install-stolen": 3,
+        "corp:stolen-from-remote": 33,
+        "corp:broke-with-economy-in-hand": 3,
+        "runner:rich-credit-click": 34,
+        "corp:rez-to-broke": 7,
+        "runner:paid-and-stopped": 7,
+        "corp:unrezzable-install": 8
+      },
+      "decisionMs": 22.1,
+      "decisionMaxMs": 1371
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-hb",
+      "runner": "core-anarch",
+      "side": "runner",
+      "opponent": "ref",
+      "split": "test",
+      "games": 48,
+      "wins": {
+        "corp": 30,
+        "runner": 18,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 48
+      },
+      "mistakes": {
+        "corp:stolen-from-remote": 36,
+        "corp:thin-install": 12,
+        "corp:thin-install-stolen": 5,
+        "runner:rich-credit-click": 30,
+        "corp:unrezzable-install": 8,
+        "corp:rez-to-broke": 8,
+        "runner:paid-and-stopped": 9,
+        "corp:rich-credit-click": 3,
+        "corp:broke-streak": 3
+      },
+      "decisionMs": 26.6,
+      "decisionMaxMs": 1743.2
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-hb",
+      "runner": "core-criminal",
+      "side": "runner",
+      "opponent": "ref",
+      "split": "design",
+      "games": 48,
+      "wins": {
+        "corp": 31,
+        "runner": 17,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 47,
+        "Flatline": 1
+      },
+      "mistakes": {
+        "runner:paid-and-stopped": 12,
+        "corp:stolen-from-remote": 16,
+        "runner:rich-credit-click": 80,
+        "corp:rez-to-broke": 7,
+        "corp:broke-with-economy-in-hand": 7,
+        "corp:thin-install": 6,
+        "corp:unrezzable-install": 3,
+        "corp:thin-install-stolen": 3,
+        "corp:rich-credit-click": 2
+      },
+      "decisionMs": 20.8,
+      "decisionMaxMs": 1520.8
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-hb",
+      "runner": "core-criminal",
+      "side": "runner",
+      "opponent": "ref",
+      "split": "test",
+      "games": 48,
+      "wins": {
+        "corp": 35,
+        "runner": 13,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 48
+      },
+      "mistakes": {
+        "corp:stolen-from-remote": 19,
+        "runner:rich-credit-click": 73,
+        "runner:paid-and-stopped": 13,
+        "corp:unrezzable-install": 9,
+        "corp:thin-install": 8,
+        "corp:rez-to-broke": 7,
+        "corp:broke-with-economy-in-hand": 3,
+        "corp:thin-install-stolen": 2,
+        "corp:rich-credit-click": 2,
+        "corp:broke-streak": 1
+      },
+      "decisionMs": 20.7,
+      "decisionMaxMs": 1510.7
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-hb",
+      "runner": "core-shaper",
+      "side": "runner",
+      "opponent": "ref",
+      "split": "design",
+      "games": 48,
+      "wins": {
+        "corp": 25,
+        "runner": 23,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 46,
+        "Decked": 2
+      },
+      "mistakes": {
+        "corp:stolen-from-remote": 28,
+        "corp:rez-to-broke": 7,
+        "corp:thin-install": 4,
+        "runner:rich-credit-click": 20,
+        "runner:paid-and-stopped": 9,
+        "corp:rich-credit-click": 1,
+        "corp:broke-with-economy-in-hand": 3,
+        "corp:thin-install-stolen": 3,
+        "corp:unrezzable-install": 8,
+        "corp:broke-streak": 1
+      },
+      "decisionMs": 28.2,
+      "decisionMaxMs": 1900.9
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-hb",
+      "runner": "core-shaper",
+      "side": "runner",
+      "opponent": "ref",
+      "split": "test",
+      "games": 48,
+      "wins": {
+        "corp": 35,
+        "runner": 13,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 47,
+        "Decked": 1
+      },
+      "mistakes": {
+        "corp:rich-credit-click": 4,
+        "corp:unrezzable-install": 8,
+        "corp:broke-with-economy-in-hand": 3,
+        "runner:paid-and-stopped": 9,
+        "corp:thin-install": 9,
+        "corp:rez-to-broke": 5,
+        "corp:broke-streak": 2,
+        "corp:stolen-from-remote": 18,
+        "runner:rich-credit-click": 14,
+        "corp:thin-install-stolen": 2
+      },
+      "decisionMs": 25.3,
+      "decisionMaxMs": 1370.6
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-jinteki",
+      "runner": "core-anarch",
+      "side": "runner",
+      "opponent": "ref",
+      "split": "design",
+      "games": 48,
+      "wins": {
+        "corp": 31,
+        "runner": 17,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 46,
+        "Flatline": 1,
+        "Decked": 1
+      },
+      "mistakes": {
+        "runner:rich-credit-click": 42,
+        "corp:stolen-from-remote": 23,
+        "runner:paid-and-stopped": 9,
+        "corp:unrezzable-install": 7,
+        "corp:rich-credit-click": 1,
+        "corp:rez-to-broke": 7,
+        "corp:broke-streak": 4,
+        "corp:broke-with-economy-in-hand": 1,
+        "corp:thin-install": 3
+      },
+      "decisionMs": 25.4,
+      "decisionMaxMs": 1509.6
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-jinteki",
+      "runner": "core-anarch",
+      "side": "runner",
+      "opponent": "ref",
+      "split": "test",
+      "games": 48,
+      "wins": {
+        "corp": 34,
+        "runner": 14,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 46,
+        "Flatline": 2
+      },
+      "mistakes": {
+        "corp:rich-credit-click": 5,
+        "runner:rich-credit-click": 37,
+        "corp:stolen-from-remote": 29,
+        "corp:thin-install": 5,
+        "corp:rez-to-broke": 6,
+        "corp:broke-streak": 2,
+        "runner:paid-and-stopped": 9,
+        "corp:unrezzable-install": 6
+      },
+      "decisionMs": 26.5,
+      "decisionMaxMs": 1950.6
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-jinteki",
+      "runner": "core-criminal",
+      "side": "runner",
+      "opponent": "ref",
+      "split": "design",
+      "games": 48,
+      "wins": {
+        "corp": 26,
+        "runner": 22,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 44,
+        "Flatline": 4
+      },
+      "mistakes": {
+        "runner:rich-credit-click": 46,
+        "corp:stolen-from-remote": 23,
+        "runner:paid-and-stopped": 13,
+        "corp:unrezzable-install": 4,
+        "corp:rez-to-broke": 1,
+        "corp:broke-with-economy-in-hand": 1,
+        "corp:rich-credit-click": 1,
+        "corp:broke-streak": 1,
+        "corp:thin-install": 3
+      },
+      "decisionMs": 19,
+      "decisionMaxMs": 1313.3
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-jinteki",
+      "runner": "core-criminal",
+      "side": "runner",
+      "opponent": "ref",
+      "split": "test",
+      "games": 48,
+      "wins": {
+        "corp": 25,
+        "runner": 23,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 43,
+        "Flatline": 5
+      },
+      "mistakes": {
+        "corp:stolen-from-remote": 19,
+        "runner:rich-credit-click": 59,
+        "runner:paid-and-stopped": 10,
+        "corp:unrezzable-install": 8,
+        "corp:rez-to-broke": 1,
+        "corp:broke-with-economy-in-hand": 1,
+        "corp:thin-install": 4,
+        "corp:broke-streak": 2
+      },
+      "decisionMs": 18.9,
+      "decisionMaxMs": 1445
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-jinteki",
+      "runner": "core-shaper",
+      "side": "runner",
+      "opponent": "ref",
+      "split": "design",
+      "games": 48,
+      "wins": {
+        "corp": 31,
+        "runner": 17,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 45,
+        "Flatline": 3
+      },
+      "mistakes": {
+        "corp:stolen-from-remote": 20,
+        "runner:paid-and-stopped": 6,
+        "corp:unrezzable-install": 6,
+        "corp:thin-install": 2,
+        "runner:rich-credit-click": 38,
+        "corp:broke-streak": 3
+      },
+      "decisionMs": 34.1,
+      "decisionMaxMs": 2611.3
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-jinteki",
+      "runner": "core-shaper",
+      "side": "runner",
+      "opponent": "ref",
+      "split": "test",
+      "games": 48,
+      "wins": {
+        "corp": 31,
+        "runner": 17,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 43,
+        "Flatline": 3,
+        "Decked": 2
+      },
+      "mistakes": {
+        "corp:unrezzable-install": 6,
+        "corp:stolen-from-remote": 22,
+        "runner:rich-credit-click": 29,
+        "corp:broke-streak": 4,
+        "corp:rez-to-broke": 2,
+        "corp:broke-with-economy-in-hand": 2,
+        "runner:paid-and-stopped": 4,
+        "corp:thin-install": 8,
+        "corp:rich-credit-click": 2,
+        "corp:thin-install-stolen": 2
+      },
+      "decisionMs": 32.5,
+      "decisionMaxMs": 2958.1
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-nbn",
+      "runner": "core-anarch",
+      "side": "runner",
+      "opponent": "ref",
+      "split": "design",
+      "games": 48,
+      "wins": {
+        "corp": 21,
+        "runner": 27,
+        "none": 0
+      },
+      "reasons": {
+        "Decked": 5,
+        "Agenda": 41,
+        "Flatline": 2
+      },
+      "mistakes": {
+        "corp:unrezzable-install": 20,
+        "corp:broke-with-economy-in-hand": 7,
+        "corp:thin-install": 3,
+        "corp:thin-install-stolen": 1,
+        "corp:stolen-from-remote": 36,
+        "corp:broke-streak": 10,
+        "runner:paid-and-stopped": 2,
+        "corp:rez-to-broke": 4,
+        "corp:rich-credit-click": 4
+      },
+      "decisionMs": 26.5,
+      "decisionMaxMs": 997.3
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-nbn",
+      "runner": "core-anarch",
+      "side": "runner",
+      "opponent": "ref",
+      "split": "test",
+      "games": 48,
+      "wins": {
+        "corp": 17,
+        "runner": 31,
+        "none": 0
+      },
+      "reasons": {
+        "Decked": 3,
+        "Agenda": 45
+      },
+      "mistakes": {
+        "corp:stolen-from-remote": 46,
+        "corp:broke-streak": 11,
+        "corp:thin-install": 8,
+        "corp:thin-install-stolen": 6,
+        "corp:rez-to-broke": 7,
+        "runner:rich-credit-click": 10,
+        "corp:unrezzable-install": 8,
+        "corp:broke-with-economy-in-hand": 4,
+        "runner:paid-and-stopped": 6
+      },
+      "decisionMs": 25.8,
+      "decisionMaxMs": 1968.7
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-nbn",
+      "runner": "core-criminal",
+      "side": "runner",
+      "opponent": "ref",
+      "split": "design",
+      "games": 48,
+      "wins": {
+        "corp": 16,
+        "runner": 32,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 44,
+        "Decked": 4
+      },
+      "mistakes": {
+        "corp:stolen-from-remote": 19,
+        "corp:rez-to-broke": 8,
+        "corp:broke-streak": 8,
+        "runner:rich-credit-click": 21,
+        "runner:paid-and-stopped": 7,
+        "corp:unrezzable-install": 9,
+        "corp:broke-with-economy-in-hand": 7,
+        "corp:rich-credit-click": 5,
+        "corp:thin-install": 3
+      },
+      "decisionMs": 13.4,
+      "decisionMaxMs": 815.7
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-nbn",
+      "runner": "core-criminal",
+      "side": "runner",
+      "opponent": "ref",
+      "split": "test",
+      "games": 48,
+      "wins": {
+        "corp": 21,
+        "runner": 27,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 47,
+        "Decked": 1
+      },
+      "mistakes": {
+        "corp:rez-to-broke": 10,
+        "corp:stolen-from-remote": 27,
+        "runner:rich-credit-click": 18,
+        "runner:paid-and-stopped": 6,
+        "corp:unrezzable-install": 7,
+        "corp:broke-streak": 10,
+        "corp:thin-install": 7,
+        "corp:broke-with-economy-in-hand": 2,
+        "corp:thin-install-stolen": 2
+      },
+      "decisionMs": 15.4,
+      "decisionMaxMs": 795.3
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-nbn",
+      "runner": "core-shaper",
+      "side": "runner",
+      "opponent": "ref",
+      "split": "design",
+      "games": 48,
+      "wins": {
+        "corp": 24,
+        "runner": 24,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 44,
+        "Decked": 3,
+        "Flatline": 1
+      },
+      "mistakes": {
+        "corp:stolen-from-remote": 22,
+        "corp:rich-credit-click": 3,
+        "corp:thin-install": 2,
+        "corp:thin-install-stolen": 2,
+        "corp:rez-to-broke": 4,
+        "corp:unrezzable-install": 8,
+        "corp:broke-streak": 6,
+        "runner:rich-credit-click": 1,
+        "corp:broke-with-economy-in-hand": 9,
+        "runner:paid-and-stopped": 3
+      },
+      "decisionMs": 24.7,
+      "decisionMaxMs": 1409.4
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-nbn",
+      "runner": "core-shaper",
+      "side": "runner",
+      "opponent": "ref",
+      "split": "test",
+      "games": 48,
+      "wins": {
+        "corp": 28,
+        "runner": 20,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 43,
+        "Decked": 4,
+        "Flatline": 1
+      },
+      "mistakes": {
+        "corp:stolen-from-remote": 30,
+        "corp:broke-with-economy-in-hand": 5,
+        "runner:rich-credit-click": 2,
+        "corp:broke-streak": 19,
+        "corp:thin-install": 5,
+        "corp:rez-to-broke": 7,
+        "corp:rich-credit-click": 1,
+        "runner:paid-and-stopped": 4,
+        "corp:unrezzable-install": 8
+      },
+      "decisionMs": 29.3,
+      "decisionMaxMs": 1444.4
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-weyland",
+      "runner": "core-anarch",
+      "side": "runner",
+      "opponent": "ref",
+      "split": "design",
+      "games": 48,
+      "wins": {
+        "corp": 35,
+        "runner": 13,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 48
+      },
+      "mistakes": {
+        "corp:broke-with-economy-in-hand": 2,
+        "corp:thin-install": 11,
+        "corp:stolen-from-remote": 33,
+        "runner:rich-credit-click": 19,
+        "corp:unrezzable-install": 22,
+        "corp:broke-streak": 6,
+        "corp:rich-credit-click": 3,
+        "runner:paid-and-stopped": 8,
+        "corp:rez-to-broke": 7,
+        "corp:thin-install-stolen": 8
+      },
+      "decisionMs": 27.7,
+      "decisionMaxMs": 1480.5
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-weyland",
+      "runner": "core-anarch",
+      "side": "runner",
+      "opponent": "ref",
+      "split": "test",
+      "games": 48,
+      "wins": {
+        "corp": 34,
+        "runner": 14,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 47,
+        "Flatline": 1
+      },
+      "mistakes": {
+        "corp:stolen-from-remote": 27,
+        "corp:thin-install": 9,
+        "corp:thin-install-stolen": 7,
+        "corp:broke-with-economy-in-hand": 4,
+        "runner:rich-credit-click": 11,
+        "corp:unrezzable-install": 27,
+        "corp:rez-to-broke": 2,
+        "runner:paid-and-stopped": 14,
+        "corp:broke-streak": 2,
+        "corp:rich-credit-click": 3
+      },
+      "decisionMs": 29.5,
+      "decisionMaxMs": 1734.6
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-weyland",
+      "runner": "core-criminal",
+      "side": "runner",
+      "opponent": "ref",
+      "split": "design",
+      "games": 48,
+      "wins": {
+        "corp": 35,
+        "runner": 13,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 48
+      },
+      "mistakes": {
+        "corp:unrezzable-install": 13,
+        "runner:paid-and-stopped": 25,
+        "runner:rich-credit-click": 42,
+        "corp:rez-to-broke": 7,
+        "corp:stolen-from-remote": 14,
+        "corp:broke-streak": 5,
+        "corp:rich-credit-click": 11,
+        "corp:thin-install": 1,
+        "corp:broke-with-economy-in-hand": 2
+      },
+      "decisionMs": 24.6,
+      "decisionMaxMs": 1381.2
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-weyland",
+      "runner": "core-criminal",
+      "side": "runner",
+      "opponent": "ref",
+      "split": "test",
+      "games": 48,
+      "wins": {
+        "corp": 29,
+        "runner": 19,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 48
+      },
+      "mistakes": {
+        "runner:paid-and-stopped": 29,
+        "corp:rez-to-broke": 9,
+        "runner:rich-credit-click": 65,
+        "corp:stolen-from-remote": 18,
+        "corp:thin-install": 6,
+        "corp:broke-with-economy-in-hand": 1,
+        "corp:unrezzable-install": 4,
+        "corp:rich-credit-click": 3,
+        "corp:broke-streak": 4,
+        "corp:thin-install-stolen": 1
+      },
+      "decisionMs": 23.8,
+      "decisionMaxMs": 1699.5
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-weyland",
+      "runner": "core-shaper",
+      "side": "runner",
+      "opponent": "ref",
+      "split": "design",
+      "games": 48,
+      "wins": {
+        "corp": 27,
+        "runner": 21,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 47,
+        "Decked": 1
+      },
+      "mistakes": {
+        "corp:rez-to-broke": 10,
+        "corp:thin-install": 5,
+        "corp:unrezzable-install": 9,
+        "runner:rich-credit-click": 14,
+        "corp:broke-with-economy-in-hand": 4,
+        "corp:stolen-from-remote": 16,
+        "runner:paid-and-stopped": 21,
+        "corp:rich-credit-click": 10,
+        "corp:broke-streak": 4
+      },
+      "decisionMs": 26.5,
+      "decisionMaxMs": 1685.9
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-weyland",
+      "runner": "core-shaper",
+      "side": "runner",
+      "opponent": "ref",
+      "split": "test",
+      "games": 48,
+      "wins": {
+        "corp": 33,
+        "runner": 15,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 48
+      },
+      "mistakes": {
+        "runner:paid-and-stopped": 24,
+        "corp:thin-install": 6,
+        "corp:thin-install-stolen": 2,
+        "corp:stolen-from-remote": 10,
+        "runner:rich-credit-click": 16,
+        "corp:rez-to-broke": 6,
+        "corp:unrezzable-install": 10,
+        "corp:broke-with-economy-in-hand": 2,
+        "corp:broke-streak": 3
+      },
+      "decisionMs": 29.2,
+      "decisionMaxMs": 1473.6
+    }
+  ]
+}
