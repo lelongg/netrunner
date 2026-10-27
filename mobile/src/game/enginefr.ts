@@ -75,8 +75,11 @@ function tail(rest: string): string {
   return count(rest)
     .replace(new RegExp(` from (${SERVER})\\b`), (_m, s) => ` ${server(s, "of")}`)
     .replace(/ from this (resource|asset|card)/, (_m, k) => ` sur ${k === "resource" ? "cette ressource" : k === "asset" ? "cet avoir" : "cette carte"}`)
-    .replace(/ from the stack/, " de la pile")
+    .replace(/ from the stack/i, " de la pile")
+    .replace(/ to the grip/, " dans la main")
+    .replace(/(^| )the stack$/i, "$1la pile")
     .replace(/ from the grip/, " de la main")
+    .replace(/ from HQ\b/, " depuis le QG")
     .replace(/ from the heap/, " du tas")
     .replace(/ on itself/, " sur elle-même")
     .replace(/ at no cost/, " sans payer son coût")
@@ -91,8 +94,8 @@ const ACTIONS: [RegExp, (m: RegExpMatchArray, mood: Mood) => string][] = [
   [new RegExp(`^make a run on (${SERVER})$`), (m, mood) => `${mood === "inf" ? "lancer" : "Lancez"} un piratage sur ${server(m[1])}`],
   [/^run (HQ|R&D|Archives)$/, (m, mood) => `${mood === "inf" ? "lancer" : "Lancez"} un piratage sur ${server(m[1])}`],
   [new RegExp(`^advance a card in (${SERVER})$`), (m, mood) => `${mood === "inf" ? "avancer" : "Avancez"} une carte dans ${server(m[1])}`],
-  [new RegExp(`^install facedown (.+) in the root of (${SERVER})( \\(new remote\\))?$`), (m, mood) => `${mood === "inf" ? "installer" : "Installez"} ${m[1]} face cachée à la racine ${server(m[2], "of")}${m[3] ? " (nouveau serveur distant)" : ""}`],
-  [new RegExp(`^install (?:facedown )?(.+?) protecting (${SERVER})( \\(new remote\\))?$`), (m, mood) => `${mood === "inf" ? "installer" : "Installez"} ${m[1] === "ice" ? "une glace" : m[1]} protégeant ${server(m[2])}${m[3] ? " (nouveau serveur distant)" : ""}`],
+  [new RegExp(`^install (facedown )?(.+?) in the root of (${SERVER})( \\(new remote\\))?$`), (m, mood) => `${mood === "inf" ? "installer" : "Installez"} ${count(m[2])}${m[1] ? " face cachée" : ""} à la racine ${server(m[3], "of")}${m[4] ? " (nouveau serveur distant)" : ""}`],
+  [new RegExp(`^install (?:facedown )?(.+?) protecting (${SERVER})( \\(new remote\\))?$`), (m, mood) => `${mood === "inf" ? "installer" : "Installez"} ${m[1] === "ice" ? "une glace" : tail(m[1])} protégeant ${server(m[2])}${m[3] ? " (nouveau serveur distant)" : ""}`],
   [new RegExp(`^rez (.+?) (?:in|protecting) (${SERVER})(?: at position (\\d+))?( at no cost)?$`), (m, mood) => `${mood === "inf" ? "activer" : "Activez"} ${m[1]} ${m[2] ? `dans ${server(m[2])}` : ""}${m[4] ? " sans payer son coût" : ""}`],
   [/^do (\d+) (net|meat|core|brain) damage$/, (m, mood) => `${mood === "inf" ? "infliger" : "Infligez"} ${m[1]} ${plural(m[1], "dégât", "dégâts")} ${{ net: "réseau", meat: "physique", core: "sévère", brain: "sévère" }[m[2]]}`],
   [/^give the Runner (\d+) tags?$/, (m, mood) => `${mood === "inf" ? "donner" : "Donnez"} ${m[1]} ${plural(m[1], "tag", "tags")} à lae Runner`],
@@ -109,6 +112,14 @@ const ACTIONS: [RegExp, (m: RegExpMatchArray, mood: Mood) => string][] = [
   [/^jack out$/, (_m, mood) => (mood === "inf" ? "se déconnecter" : "Déconnectez-vous")],
   [/^end the run$/, (_m, mood) => (mood === "inf" ? "mettre fin au piratage" : "Fin du piratage")],
   [/^trash itself when this run ends$/, (_m, mood) => (mood === "inf" ? "s'effacer à la fin de ce piratage" : "Effacez cette carte à la fin de ce piratage")],
+  [/^force the Runner to (\w+) (.+)$/, (m, mood) => {
+    const v = VERBS[m[1].toLowerCase()];
+    return v ? `${mood === "inf" ? "forcer" : "Forcez"} lae Runner à ${v[0]} ${tail(count(m[2]))}` : "";
+  }],
+  [/^force the (?:Runner|corp|runner|.+?) to take (\d+) tags? on encountering it$/, (m, mood) => `${mood === "inf" ? "forcer" : "Forcez"} lae Runner à prendre ${m[1]} ${plural(m[1], "tag", "tags")} en la rencontrant`],
+  [/^end the run if the Runner has (\d+) \[Credits?\] or less$/, (_m, mood) => `${mood === "inf" ? "mettre fin au piratage" : "Mettez fin au piratage"} si lae Runner a ${_m[1]} [Credits] ou moins`],
+  [/^install an ice from HQ or Archives$/, (_m, mood) => `${mood === "inf" ? "installer" : "Installez"} une glace depuis le QG ou les Archives`],
+  [/^increase the strength of (.+?) to (\d+) and break all (?:\d+ )?(?: )?subroutines on (.+)$/, (m, mood) => `${mood === "inf" ? "augmenter la force de" : "Augmentez la force de"} ${m[1]} à ${m[2]} et neutraliser toutes les routines de ${m[3]}`],
   [/^make the Runner lose (\d+) \[Credits?\]$/, (m, mood) => `${mood === "inf" ? "faire perdre" : "Faites perdre"} ${m[1]} [Credits] à lae Runner`],
   [/^(\w+) (.+)$/, (m, mood) => {
     const v = VERBS[m[1].toLowerCase()];
@@ -118,6 +129,7 @@ const ACTIONS: [RegExp, (m: RegExpMatchArray, mood: Mood) => string][] = [
 ];
 
 function action(text: string, mood: Mood): string {
+  text = text.replace(/^to /, "");
   const parts = text.split(/(?:,)? and (?=(?:gain|draw|lose|trash|place|take|remove|add|install|access|shuffle|reveal|give|do|make|end|jack)\b)/);
   if (parts.length > 1) {
     const done = parts.map((p) => action(p, mood));
@@ -156,7 +168,8 @@ const LINES: [RegExp, (m: RegExpMatchArray) => string | null][] = [
   [/^(.+?) trashes (.+?)\.$/, (m) => `${m[1]} efface ${m[2]}.`],
   [/^(.+?) wins the game\.$/, (m) => `${m[1]} gagne la partie.`],
   [/^(.+?) jacks out\.$/, (m) => `${m[1]} se déconnecte.`],
-  [/^(.+?) resolves (\d+) unbroken subroutines? on (.+?) \((.+)\)\.$/, (m) => `${m[1]} résout ${m[2]} ${plural(m[2], "routine non neutralisée", "routines non neutralisées")} de ${m[3]} (${m[4]}).`],
+  [/^(.+?) resolves (\d+) unbroken subroutines? on (.+?) \((.+)\)\.$/, (m) => `${m[1]} résout ${m[2]} ${plural(m[2], "routine non neutralisée", "routines non neutralisées")} de ${m[3]} (${m[4].replace(/"\[subroutine\] ([^"]+)"/g, (_q, sub) => `"[subroutine] ${engineFr(sub)}"`).replace(/" and "/g, '" et "')}).`],
+  [/^(.+?) discards (\d+) (?:cards? )?from HQ at end of turn\.$/, (m) => `${m[1]} défausse ${m[2]} ${plural(m[2], "carte", "cartes")} du QG en fin de tour.`],
   [/^(.+?) discards (\d+) from the stack at end of turn\.$/, (m) => `${m[1]} défausse ${m[2]} ${plural(m[2], "carte", "cartes")} de la pile en fin de tour.`],
 ];
 
