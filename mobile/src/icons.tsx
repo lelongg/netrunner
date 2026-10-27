@@ -3,6 +3,8 @@ const PATHS = {
   "arrow-left": { box: "0 0 32 20", d: "M30 10H4M13 2l-9 8 9 8" },
   "chevron-left": { box: "0 0 20 20", d: "M13 2 5 10l8 8" },
   "chevron-right": { box: "0 0 20 20", d: "M7 2l8 8-8 8" },
+  first: { box: "0 0 20 20", d: "M4 3v14M15 2 7 10l8 8" },
+  last: { box: "0 0 20 20", d: "M16 3v14M5 2l8 8-8 8" },
   close: { box: "0 0 20 20", d: "M3 3l14 14M17 3 3 17" },
   menu: { box: "0 0 20 20", d: "M2 4h16M2 10h16M2 16h10" },
   swap: { box: "0 0 20 20", d: "M16.5 8A7 7 0 0 0 4 5.5M3.5 2v4h4M3.5 12a7 7 0 0 0 12.5 2.5M16.5 18v-4h-4" },

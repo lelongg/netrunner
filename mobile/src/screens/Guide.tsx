@@ -149,6 +149,11 @@ export function Guide({ db, onClose, onPlay, firstRun }: { db: CardDb; onClose: 
     entering.current = dir;
     setIndex(next);
   };
+  const jump = (to: number) => {
+    if (to === index || to < 0 || to >= PAGES.length) return;
+    entering.current = to > index ? 1 : -1;
+    setIndex(to);
+  };
   const page = () => body.current?.querySelector<HTMLElement>(".guide-page.current");
   const peekOf = (dir: -1 | 1) => body.current?.querySelector<HTMLElement>(`.guide-page.peek.${dir === 1 ? "next" : "prev"}`);
   const swiped = useRef(false);
@@ -264,7 +269,7 @@ export function Guide({ db, onClose, onPlay, firstRun }: { db: CardDb; onClose: 
             </button>
           )}
         </header>
-        <Pager index={index} count={PAGES.length} onStep={go} />
+        <Pager index={index} count={PAGES.length} onStep={go} onJump={jump} />
         <div class="guide-track">
           {index > 0 && !PAGES[index - 1].choice && renderPage(index - 1, "peek prev")}
           {renderPage(index, "current")}
