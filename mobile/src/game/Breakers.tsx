@@ -45,7 +45,8 @@ export function Breakers({ view, stamp, probe, side, ice, send, onTap, disabled,
     at += raw[i].length;
   });
   const cardCommandsOf = (card: any) => byCard.get(card.cid) ?? [];
-  const breakerCards = cards.filter((c) => (c.subtypes ?? []).includes("Icebreaker"));
+  const autoBreakers = hostedOn(view, ice).filter((c) => (c.abilities ?? []).some((a: any) => a.dynamic === "auto-pump-and-break"));
+  const breakerCards = [...autoBreakers, ...cards.filter((c) => (c.subtypes ?? []).includes("Icebreaker"))];
   const plans = useProbe(partial && wanted ? breakerCards.map((c) => ({ k: "break", ice: ice.cid, breaker: c.cid, want: wantedLabels })) : [], probe, stamp ?? view);
   const planOf = (card: any) => plans?.[breakerCards.indexOf(card)];
   const fundsOf = useProbe(breakerCards.map((c) => ({ k: "funds", card: c.cid })), probe, stamp ?? view)?.map((r) => r.funds?.total);
@@ -55,12 +56,12 @@ export function Breakers({ view, stamp, probe, side, ice, send, onTap, disabled,
   const unbrokenLabels: string[] = (ice.subroutines ?? []).filter((s: any) => !s.broken && !s.fired && s.resolve !== false).map((s: any) => s.label);
   const reach = useProbe(unbrokenLabels.length ? breakerCards.map((c) => ({ k: "break", ice: ice.cid, breaker: c.cid, want: unbrokenLabels, boost: 99 })) : [], probe, ice.cid);
   const cannotBreak = (card: any) => reach?.[breakerCards.indexOf(card)]?.ok === false;
-  const onIce = hostedOn(view, ice).flatMap((card) => {
+  const onIce = hostedOn(view, ice).filter((card) => !autoBreakers.includes(card)).flatMap((card) => {
     const usable = cardCommandsOf(card).filter((cmd) => cmd.enabled !== false && (cmd.command === "ability" || cmd.command === "dynamic-ability"));
     const single = unbroken.length === 1 && usable.some((cmd) => /break 1 subroutine/i.test(cmd.label));
     return usable.filter((cmd) => !(single && /fully break/i.test(cmd.label))).map((cmd) => ({ card, cmd }));
   });
-  const breakers = cards.filter((c) => (c.subtypes ?? []).includes("Icebreaker"));
+  const breakers = breakerCards;
   const others = cards
     .filter((c) => !breakers.includes(c))
     .flatMap((card) =>
@@ -145,7 +146,7 @@ export function Breakers({ view, stamp, probe, side, ice, send, onTap, disabled,
               </span>
               <span class="brk-desc">{glyphs(iconize(shown(effect)))}</span>
             </div>
-            <button class="brk-go" disabled={disabled} onClick={() => send(cmd.command, cmd.args)}>
+            <button class="brk-go" disabled={disabled || (/^break/i.test(effect) && !wanted)} onClick={() => (/^break/i.test(effect) && onPartial ? onPartial(card, wantedLabels) : send(cmd.command, cmd.args))}>
               <span class="brk-cost">
                 {/^(\d+ )?hosted virus counters?$/i.test(cost) ? (
                   <span aria-label={cost}>

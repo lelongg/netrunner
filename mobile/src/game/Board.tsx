@@ -1225,6 +1225,18 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
       groupBreaks(false);
     }
   }, [view, session.pending, planTick]);
+  const picked = useRef("");
+  useEffect(() => {
+    if (plan.current || session.pending || !view.encounters || !prompt || !Array.isArray(prompt.choices)) return;
+    if (!/^Break (a|\d+|up to \d+)\b.*subroutines?/i.test(render(prompt.msg))) return;
+    const key = `${prompt.eid}:${prompt.choices.length}`;
+    if (picked.current === key) return;
+    const wanted = (ice?.subroutines ?? []).filter((sub: any, i: number) => !sub.broken && !sub.fired && !skipped.has(i)).map((sub: any) => sub.label);
+    const pick = prompt.choices.find((c: any) => wanted.includes(c.value)) ?? prompt.choices.find((c: any) => c.value === "Done");
+    if (!pick) return;
+    picked.current = key;
+    send("choice", { eid: prompt.eid, choice: { uuid: pick.uuid } });
+  }, [view, session.pending]);
   const toggleSub = (i: number) => {
     const next = new Set(skipped);
     if (!next.delete(i)) next.add(i);
