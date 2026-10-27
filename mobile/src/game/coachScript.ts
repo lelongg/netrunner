@@ -30,6 +30,10 @@ const held = (view: any, side: Side, title: string) => hand(view, side).find((c)
 const installed = (view: any): any[] => Object.values<any>(view?.corp?.servers ?? {}).flatMap((s) => [...(s.content ?? []), ...(s.ices ?? [])]);
 const corpCard = (view: any, title: string) => installed(view).find((c) => c.title === title);
 const inRig = (view: any, title: string) => Object.values<any>(view?.runner?.rig ?? {}).some((cards) => Array.isArray(cards) && cards.some((c) => c?.title === title));
+const rigCard = (view: any, title: string) => Object.values<any>(view?.runner?.rig ?? {}).flatMap((cards) => (Array.isArray(cards) ? cards : [])).find((c) => c?.title === title);
+const strength = (card: any) => Number(card?.["current-strength"] ?? card?.strength ?? 0);
+const subs = (view: any): any[] => currentIce(view)?.subroutines ?? [];
+const oneTap = (command: string, _card: any, args: any) => (command === "dynamic-ability" && args?.dynamic === "auto-pump-and-break" ? false : command === "continue" ? false : undefined);
 const discarded = (view: any, side: Side, title: string) => (view?.[side]?.discard ?? []).some((c: any) => c.title === title);
 const points = (view: any, side: Side) => view?.[side]?.["agenda-point"] ?? 0;
 const clicks = (view: any, side: Side) => view?.[side]?.click ?? 0;
@@ -77,10 +81,12 @@ const RUNNER: TutorialScript = {
     turns: {
       1: [play("corp", "Offworld Office", "New remote"), play("corp", "Palisade", "Server 1"), credit],
       2: [play("corp", "Nico Campaign", "New remote"), rez("Nico Campaign"), play("corp", "Whitespace", "R&D"), credit],
+      3: [play("corp", "Tithe", "HQ"), credit, credit],
     },
     react: (view) => {
       const ice = currentIce(view);
-      return view.turn === 1 && view.run?.phase === "approach-ice" && ice?.title === "Palisade" && !ice.rezzed ? { command: "rez", args: { card: cardRef(ice) } } : null;
+      const wanted = ({ 1: "Palisade", 3: "Whitespace" } as Record<number, string>)[view.turn];
+      return view.run?.phase === "approach-ice" && ice?.title === wanted && !ice.rezzed ? { command: "rez", args: { card: cardRef(ice) } } : null;
     },
   },
   beats: [
@@ -156,11 +162,31 @@ const RUNNER: TutorialScript = {
     },
     {
       id: "encounter",
+      anchor: ".encounter",
+      when: (v) => !!v.encounters,
+      text: "Palisade is a barrier with one subroutine, End the run. Every subroutine you don't break fires. To break one, you need an icebreaker of the right type, Cleaver for barriers, with at least the ice's strength: Palisade has 4 here (+2 on a remote server), Cleaver only 3.",
+    },
+    {
+      id: "pump",
       anchor: ".encounter, .breakers",
       when: (v) => !!v.encounters,
-      done: (v) => !v.encounters || (currentIce(v)?.subroutines ?? []).every((s: any) => s.broken),
-      allow: (command) => (command === "continue" ? false : undefined),
-      text: "Palisade is rezzed: a barrier with one subroutine, End the run. It has strength 4 here (+2 on a remote server) and Cleaver only 3, so Cleaver needs +1 strength (2[credit]) before breaking it (1[credit]). Use the break button below: it does both.",
+      done: (v) => strength(rigCard(v, "Cleaver")) >= strength(currentIce(v)) || subs(v).every((s) => s.broken),
+      allow: oneTap,
+      text: "Let's do it by hand first. Open Other abilities below and use Cleaver's +1 strength (2[credit]). A boost lasts until the end of this encounter.",
+    },
+    {
+      id: "break",
+      anchor: ".encounter, .breakers, .prompt button",
+      when: (v) => !!v.encounters,
+      done: (v) => subs(v).every((s) => s.broken),
+      allow: oneTap,
+      text: "Cleaver now has strength 4. Use its Break ability (1[credit]) and pick End the run.",
+    },
+    {
+      id: "one-tap",
+      anchor: ".encounter",
+      when: (v) => !!v.encounters,
+      text: "Broken! Next time, the yellow Break button does all of this in one tap: it raises the strength as needed and breaks every subroutine, at the lowest price.",
     },
     {
       id: "breach",
@@ -217,12 +243,20 @@ const RUNNER: TutorialScript = {
       text: "You only have 3[credit]. Play Creative Commission: +5[credit], but it takes an extra click if you have one left. Cards often trade clicks for credits.",
     },
     {
+      id: "unity",
+      anchor: '.hand .tile[aria-label="Unity"]',
+      when: mainPhase("runner"),
+      done: (v) => inRig(v, "Unity"),
+      allow: playing("Unity"),
+      text: "The Corp put a new ice on R&D. Install Unity, a decoder: it breaks code gates, the ice that taxes you or blocks you with conditions.",
+    },
+    {
       id: "run-nico",
       anchor: ".actions .buttons",
       when: (v) => mainPhase("runner")(v) && !!corpCard(v, "Nico Campaign"),
       done: (v) => (runOn(v, "remote2") && !!promptOf(v, "runner")?.choices) || discarded(v, "corp", "Nico Campaign"),
       allow: (command, card, args) => running("Server 2")(command, card, args) ?? continuing(command),
-      text: "Run Server 2. No ice protects it: go straight to the server.",
+      text: "Last click: run Server 2. No ice protects it: go straight to the server.",
     },
     {
       id: "trash",
@@ -232,18 +266,80 @@ const RUNNER: TutorialScript = {
       text: "You access Nico Campaign. Pay 2[credit] to trash it: the Corp loses its income and the card goes to Archives.",
     },
     {
+      id: "end-turn-2",
+      anchor: ".actions .buttons",
+      when: endOfTurn("runner"),
+      done: (v) => v["active-player"] === "corp" || !!v["end-turn"],
+      allow: ending,
+      text: "End your turn. Next turn, you will run R&D through its new ice.",
+    },
+    {
       id: "telework",
       anchor: '.hand .tile[aria-label="Telework Contract"]',
-      when: mainPhase("runner"),
+      when: (v) => mainPhase("runner")(v) && v.turn === 3,
       done: (v) => inRig(v, "Telework Contract"),
       allow: playing("Telework Contract"),
-      text: "Last click: install Telework Contract. Resources stay in your rig; this one holds 9[credit] that you take 3 at a time with a click.",
+      text: "Money first. Install Telework Contract: resources stay in your rig, and this one holds 9[credit].",
+    },
+    {
+      id: "take",
+      anchor: '.rig-cards .tile[aria-label="Telework Contract"]',
+      when: mainPhase("runner"),
+      done: (v) => (rigCard(v, "Telework Contract")?.counter?.credit ?? 9) < 9,
+      allow: (command, card) => (command === "ability" ? card?.title === "Telework Contract" : undefined),
+      text: "Tap Telework Contract in your rig and use its ability: 1[click] to take 3[credit] from it. Installed cards often have click abilities like this one.",
+    },
+    {
+      id: "run-rd",
+      anchor: ".actions .buttons",
+      when: mainPhase("runner"),
+      done: (v) => runOn(v, "rd"),
+      allow: running("R&D"),
+      text: "Now run R&D. This time it is protected.",
+    },
+    {
+      id: "rd-approach",
+      anchor: ".actions .buttons",
+      when: (v) => runOn(v, "rd") && !v.encounters,
+      done: (v) => !v.run || !!v.encounters,
+      allow: continuing,
+      text: "As before: approach the ice, the Corp decides whether to rez it, then encounter it.",
+    },
+    {
+      id: "whitespace",
+      anchor: ".encounter",
+      when: (v) => !!v.encounters && currentIce(v)?.title === "Whitespace",
+      text: "Whitespace, a code gate with two subroutines. They fire in order: first you lose 3[credit], then the run ends if you have 6[credit] or less. Unity has strength 1, more than Whitespace's 0: no boost needed, 1[credit] per subroutine.",
+    },
+    {
+      id: "pick",
+      anchor: ".encounter, .breakers",
+      when: (v) => !!v.encounters && currentIce(v)?.title === "Whitespace",
+      done: (v) => subs(v).some((s) => s.broken),
+      allow: (command, card, args, view) => (command === "choice" && /loses/i.test(String(choiceValue(view, "runner", args) ?? "")) ? false : oneTap(command, card, args)),
+      text: "You don't have to break everything. Tap the first subroutine to leave it out: the button now offers to break 1 of 2. Break only the one that ends the run.",
+    },
+    {
+      id: "let-fire",
+      anchor: ".actions .buttons",
+      when: (v) => !!v.encounters && subs(v).some((s) => s.broken),
+      done: (v) => !v.encounters,
+      allow: (command) => (command === "continue" ? true : command === "jack-out" ? false : undefined),
+      text: "Now let the rest fire: you lose 3[credit], but the run goes on since the subroutine that ends it is broken. Saving credits by choosing what to break is a big part of the Runner's game.",
+    },
+    {
+      id: "rd-access",
+      anchor: ".prompt button, .actions .buttons",
+      when: (v) => runOn(v, "rd") && !v.encounters,
+      done: (v) => !v.run,
+      allow: (command) => continuing(command) ?? (command === "choice" ? true : undefined),
+      text: "You are through: go on to R&D and access its top card.",
     },
     {
       id: "free",
       anchor: ".me-bar",
-      when: endOfTurn("runner"),
-      text: "That's the basics! The rest of the game is yours. Unity breaks code gates like the Whitespace on R&D; Carmen breaks sentries. Steal 7 points to win. Tips will pop up when something new happens.",
+      when: (v) => mainPhase("runner")(v) || endOfTurn("runner")(v),
+      text: "That's the basics! The rest of the game is yours. Carmen breaks sentries like the Tithe now on HQ. Steal 7 points to win. Tips will pop up when something new happens.",
     },
   ],
 };
