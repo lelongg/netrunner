@@ -129,6 +129,13 @@ export function Coach({ session, view, side }: { session: Session; view: any; si
   }, [live, acting, beat?.id]);
 
   useEffect(() => {
+    session.skipCoach = index < script.beats.length || TIPS.some((s) => !seen.has(s.id)) ? skip : undefined;
+    return () => {
+      session.skipCoach = undefined;
+    };
+  });
+
+  useEffect(() => {
     session.holdBot(!!shown && !acting);
     return () => session.holdBot(false);
   }, [shown?.id, acting]);
@@ -171,16 +178,13 @@ export function Coach({ session, view, side }: { session: Session; view: any; si
       <div ref={bubble} class={`coach panel ${acting ? "acting" : ""}`} style={style} role="dialog" aria-label={t("Tutorial")}>
         <span class="label cyan">{live ? `${t("Tutorial")} · ${index + 1}/${total}` : t("Tip")}</span>
         <p>{withTerms(iconize(t(shown.text)))}</p>
-        <div class="coach-actions">
-          <button class="ghost" onClick={skip}>
-            {t("Skip tutorial")}
-          </button>
-          {!acting && (
+        {!acting && (
+          <div class="coach-actions">
             <button class="primary" onClick={() => (live ? advance() : done([shown.id]))}>
               {t("Got it")}
             </button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </>
   );

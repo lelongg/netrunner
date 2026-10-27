@@ -3911,6 +3911,11 @@ button:active:not(:disabled) {
     height 0.2s;
 }
 
+body:has(.menu-drawer) .coach,
+body:has(.menu-drawer) .coach-ring {
+  display: none;
+}
+
 .coach-ring.soft {
   box-shadow: 0 0 18px var(--yellow);
 }
