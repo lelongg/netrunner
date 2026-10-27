@@ -156,7 +156,7 @@ const RUNNER: TutorialScript = {
     },
     {
       id: "encounter",
-      anchor: ".breakers",
+      anchor: ".encounter, .breakers",
       when: (v) => !!v.encounters,
       done: (v) => !v.encounters || (currentIce(v)?.subroutines ?? []).every((s: any) => s.broken),
       allow: (command) => (command === "continue" ? false : undefined),
@@ -331,7 +331,7 @@ const CORP: TutorialScript = {
     },
     {
       id: "fire",
-      anchor: ".actions .buttons",
+      anchor: ".encounter, .actions .buttons",
       when: (v) => !!v.run && !!corpCard(v, "Palisade")?.rezzed,
       done: (v) => !v.run,
       text: "Palisade is rezzed. Let the Runner encounter it: without an icebreaker, it cannot break the subroutine. Then fire it: End the run. Your agenda is safe.",

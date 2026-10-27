@@ -128,8 +128,11 @@ export function Coach({ session, view, side }: { session: Session; view: any; si
   useLayoutEffect(() => {
     if (!shown) return setBox(null);
     const measure = () => {
-      const el = document.querySelector(shown.anchor);
-      setBox(el ? el.getBoundingClientRect() : null);
+      const rects = [...document.querySelectorAll(shown.anchor)].map((el) => el.getBoundingClientRect()).filter((r) => r.width || r.height);
+      if (!rects.length) return setBox(null);
+      const left = Math.min(...rects.map((r) => r.left));
+      const top = Math.min(...rects.map((r) => r.top));
+      setBox(new DOMRect(left, top, Math.max(...rects.map((r) => r.right)) - left, Math.max(...rects.map((r) => r.bottom)) - top));
     };
     document.querySelector(shown.anchor)?.scrollIntoView({ block: "nearest" });
     measure();
