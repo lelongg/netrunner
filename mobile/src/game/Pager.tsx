@@ -14,7 +14,7 @@ export function Pager({ index, count, onStep, onJump }: { index: number; count: 
 
   if (count < 2) return null;
   return (
-    <div class="pager">
+    <div class={`pager ${onJump ? "jumps" : ""}`}>
       {onJump && (
         <button class="ghost" disabled={index <= 0} onClick={() => onJump(0)} aria-label={t("First card")}>
           <Icon name="first" />

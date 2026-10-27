@@ -2022,6 +2022,16 @@ form.chat input {
   line-height: 1;
 }
 
+.pager.jumps {
+  justify-content: center;
+  gap: 4px;
+}
+
+.pager.jumps .label {
+  min-width: 72px;
+  text-align: center;
+}
+
 .pager button:disabled {
   opacity: 0.25;
 }
