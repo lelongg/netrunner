@@ -331,6 +331,20 @@ The Runner grid after the partial-break fix read 241 / 224 with the counter unch
 by ice the Corp rezzed during the run, the price of running into unrezzed ice rather than
 a misread of known ice.
 
+Replay BAFNY36P (the user's Quick and Dirty 7-2 over Party Hard) showed the Runner never
+running from turn 3 to turn 11 while three agendas were scored behind four ice that were
+never rezzed: the generic run proposals priced each unrezzed ice at three credits while the
+Runner's own targets priced it from the Corp's deck at about two, so the remote looked
+unaffordable and the reserve for it was never reached. With one deck price everywhere, the
+combined odds of an impassable ice discounting a run instead of dropping it, and the decisive
+run starting three points from the Corp's win, the Runner grid reads 263 / 250 against
+241-244 / 220-224: the first gain of the day outside the interval (+48 on 1152 games), with
+every Corp row up or level. The reference was refrozen on this version (`c0839d7`); its
+baseline against itself reads Corp 355 / 362 and Runner 242 / 222. Both sides dropped
+from their scores against the old reference by about the same amount (Corp from 368 / 388,
+Runner from 263 / 250), which is what two improved sides look like: each now faces the
+other's better version.
+
 The spread between versions is inside the interval of 1152 games (about ±33 on a sum),
 so none of this is a measured gain: the 72-game local batches that motivated v1 (27 to
 22 Runner wins) and condemned v2 were noise. Two things did come out of it. The

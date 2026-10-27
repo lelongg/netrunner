@@ -112,10 +112,10 @@ export function corpProposals(obs: Observation): Proposal[] {
       const runs = Number(recentRuns(s.label) ?? 0);
       const siege = runs >= 2 && (digger || s.key === "hq");
       const safety = s.ices.length ? serverSafety(obs, s) : null;
-      const porous = !!safety && !safety.blocked && safety.runnerCost <= 2 && runs >= 1;
+      const porous = !!safety && !safety.blocked && safety.runnerCost <= 2 && (runs >= 1 || (obs.credits >= 10 && s.key === "rd" && s.ices.length <= 1));
       if (s.ices.length >= (siege ? 4 : 3) && !(porous && s.ices.length < 4)) continue;
       if (obs.credits < 6 && runs < 2 && !porous) continue;
-      targets.push({ server: s, score: 40 - s.ices.length * 3 + (runs >= 2 ? 18 : runs ? 9 : 0) + (siege ? 6 : 0) + (porous ? 12 : 0), urgent: runs >= 1, why: porous ? `ice ${s.label}: the Runner walks in for ${safety!.runnerCost} and ran it ${runs} times lately` : siege ? `ice ${s.label}: the Runner is digging it (${runs} runs lately)` : runs ? `deepen ${s.label}: the Runner ran it ${runs} times lately` : `deepen ${s.label}` });
+      targets.push({ server: s, score: 40 - s.ices.length * 3 + (runs >= 2 ? 18 : runs ? 9 : 0) + (siege ? 6 : 0) + (porous ? 12 : 0), urgent: runs >= 1, why: porous ? `ice ${s.label}: the Runner walks in for ${safety!.runnerCost}${runs ? ` and ran it ${runs} times lately` : ""}` : siege ? `ice ${s.label}: the Runner is digging it (${runs} runs lately)` : runs ? `deepen ${s.label}: the Runner ran it ${runs} times lately` : `deepen ${s.label}` });
     }
     const rezDebt = obs.servers.flatMap((s) => s.ices).filter((i: any) => !i.rezzed).reduce((n: number, i: any) => n + rezCostOf(i), 0);
     const endsRun = (c: any) => iceThreat({ ...c, subroutines: [] }, obs.info(c), 99).etr;
@@ -271,6 +271,12 @@ export function corpFreeProposals(obs: Observation): Proposal[] {
       if (isTrap(text) || !isEconomy(text) || rezCostOf(card) > obs.credits) continue;
       const c = cardAction(obs, card, "rez");
       if (c) out.push(fromCandidate(c, 58, `rez ${card.title} before ending the turn`, "rez-economy"));
+    }
+    for (const card of server.content) {
+      if (card.rezzed || card.type !== "Upgrade" || rezCostOf(card) > Math.min(1, obs.credits)) continue;
+      if (!/whenever the runner approaches this server|end the run/i.test(obs.info(card).text ?? "")) continue;
+      const c = cardAction(obs, card, "rez");
+      if (c) out.push(fromCandidate(c, 58, `rez ${card.title} before ending the turn: it only works rezzed`, "rez"));
     }
   }
   return out;
