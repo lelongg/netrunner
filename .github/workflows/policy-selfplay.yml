@@ -140,7 +140,7 @@ jobs:
 
       - name: Check out the frozen reference policies
         run: |
-          ref=$(node -e 'console.log(require("./mobile/scripts/policy-reference.json").commit)')
+          ref=$(git rev-parse "$(node -e 'console.log(require("./mobile/scripts/policy-reference.json").commit)')^{commit}")
           git worktree add --detach "mobile/.policy-ref/${ref:0:12}" "$ref"
 
       - name: Play
