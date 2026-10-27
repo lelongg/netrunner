@@ -124,11 +124,13 @@ export function Breakers({ view, stamp, probe, side, ice, send, onTap, disabled,
     return { card, full, ab, manual };
   });
   const price = (r: (typeof all)[number]) => Number(String(r.ab?.["cost-label"] ?? "").match(/\d+/)?.[0] ?? 0);
-  const rows = all.filter((r) => r.full || (partial && wanted && planOf(r.card)?.ok)).sort((a, b) => price(a) - price(b));
+  const rowOk = (r: (typeof all)[number]) => (partial ? !!wanted && !!planOf(r.card)?.ok : !!r.full && r.full.enabled !== false);
+  const rows = all.filter(rowOk).sort((a, b) => price(a) - price(b));
+  const unaffordable = all.filter((r) => r.full && !rowOk(r)).map((r) => ({ card: r.card, cmd: r.full!, off: true }));
   const usable = all.flatMap((r) => r.manual.map((cmd) => ({ card: r.card, cmd, off: cannotBreak(r.card) })));
   const aimed = others.filter(({ cmd }) => /piece of ice|subroutine/i.test(cmd.label));
   const featured = [...onIce, ...aimed];
-  const manual: { card: any; cmd: Command; off?: boolean }[] = [...usable.filter((m) => !m.off), ...others.filter((o) => !aimed.includes(o)), ...usable.filter((m) => m.off)];
+  const manual: { card: any; cmd: Command; off?: boolean }[] = [...usable.filter((m) => !m.off), ...others.filter((o) => !aimed.includes(o)), ...usable.filter((m) => m.off), ...unaffordable];
   const fromIce = cardCommandsOf(ice).filter((c) => c.command === "runner-ability" && c.enabled !== false);
   if (!rows.length && !manual.length && !fromIce.length && !featured.length) return null;
   const badPub = view.runner?.["bad-pub-credit"] ?? 0;
