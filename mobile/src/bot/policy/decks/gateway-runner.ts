@@ -169,7 +169,8 @@ function plan(obs: Observation, current: Plan | null): Plan {
   const need = Number(obs.me["agenda-point-req"] ?? 7);
   const cov = coverage(obs);
   const overclock = obs.hand.some((c) => c.title === "Overclock") ? 5 : 0;
-  const reach = new Set(targets(obs, overclock, true).filter((t) => t.credits <= obs.credits + overclock + 2).map((t) => t.server.label));
+  const handMax = Number(obs.me["hand-size"]?.total ?? obs.me["hand-size"] ?? 5);
+  const reach = new Set(targets(obs, overclock, true).filter((t) => t.credits <= obs.credits + overclock + 2 && requiredHand(obs, t) < handMax).map((t) => t.server.label));
   const threat = obs.servers.find((s) => s.remote && reach.has(s.label) && s.content.some((c: any) => agendaProgress(c).have >= 1 || (!c.rezzed && !c.title && s.ices.length > 0 && obs.turn >= 3 && cov.size >= 1)));
   if (threat && obs.credits >= 3 && (obs.hand.length >= 2 || Number(obs.opp["agenda-point"] ?? 0) + 3 >= need)) return keep("contest", `the Corp is setting up ${threat.label}: get into it before it scores`, { server: threat.label });
   if (points >= need - 2 && obs.credits >= 4) return keep("closing", "two points away: hit R&D and HQ every turn");
@@ -421,6 +422,13 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
     }
     if (p.kind === "remove-tag" && punisher) p.score = 78;
     if (richNoRig && (p.kind === "click-economy" || p.kind === "credit")) p.score -= 15;
+    if (obs.credits >= 10 && plan.kind !== "contest" && p.kind === "install" && !thin) {
+      const card = obs.hand.find((c) => p.why.includes(c.title));
+      if (card && playCostOf(card) <= obs.credits - 6) {
+        p.score += 8;
+        p.why += " (rich: the hand belongs on the board)";
+      }
+    }
     if (obs.credits >= 20 && (p.kind === "economy" || p.kind === "click-economy" || p.kind === "install-economy" || p.kind === "credit")) p.score -= 18;
     if (p.kind === "run-event") {
       const t = ts.find((x) => p.why.includes(` into ${x.server.label}`));
