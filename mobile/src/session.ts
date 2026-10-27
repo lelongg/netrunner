@@ -29,6 +29,7 @@ export interface LobbyState {
   started: boolean;
   vsBot?: boolean;
   tutorial?: boolean;
+  scripted?: boolean;
   error?: string;
   step?: "relay" | "host";
   hint?: "unreachable";
@@ -48,6 +49,7 @@ export type SavedGame =
       opponentName?: string;
       vsBot?: boolean;
       tutorial?: boolean;
+      scripted?: boolean;
       setup: unknown;
       deckNames?: Partial<Record<Side, string>>;
       seed: number[];
@@ -561,7 +563,7 @@ export class Session {
   refused?: () => void;
 
   startTutorial(side: Side, mine: WireDeck, theirs: WireDeck) {
-    this.lobby = { ...this.lobby, vsBot: true, opponentName: "Bot", tutorial: true, mySide: side, myDeck: mine, format: "casual" };
+    this.lobby = { ...this.lobby, vsBot: true, opponentName: "Bot", tutorial: true, scripted: true, mySide: side, myDeck: mine, format: "casual" };
     this.opponentDeck = theirs;
     this.lobby.opponentDeckReady = true;
     this.start();
@@ -574,7 +576,7 @@ export class Session {
   private makeBot() {
     if (!this.lobby.vsBot) return;
     const bot = makeBot(other(this.lobby.mySide), this.opponentDeck, (title) => this.db.byTitle.get(title) as any);
-    this.bot = this.lobby.tutorial ? new ScriptedBot(bot, TUTORIALS[this.lobby.mySide].bot) : bot;
+    this.bot = this.lobby.scripted ? new ScriptedBot(bot, TUTORIALS[this.lobby.mySide].bot) : bot;
   }
 
   private scheduleBot() {
@@ -744,7 +746,7 @@ export class Session {
     const theirs = fromWire(this.effectiveDeck(other(this.lobby.mySide), this.opponentDeck)!, this.db);
     const me = { username: this.lobby.myName };
     const them = { username: this.lobby.opponentName ?? "Player 2" };
-    const stacks = this.lobby.tutorial ? TUTORIALS[this.lobby.mySide].stacks : undefined;
+    const stacks = this.lobby.scripted ? TUTORIALS[this.lobby.mySide].stacks : undefined;
     const deck = (d: Deck, side: Side) => ({ ...engineDeck(d), stack: stacks?.[side] });
     const theirSide = other(this.lobby.mySide);
     const players = this.lobby.mySide === "corp" ? { corp: { user: me, deck: deck(mine, "corp") }, runner: { user: them, deck: deck(theirs, theirSide) } } : { corp: { user: them, deck: deck(theirs, theirSide) }, runner: { user: me, deck: deck(mine, "runner") } };
@@ -819,7 +821,7 @@ export class Session {
     this.boot(save.setup, save.seed);
     for (const entry of save.log) this.stage({ k: "exec", entry });
     this.log = [...save.log];
-    this.lobby = { ...this.lobby, opponentName: save.opponentName, vsBot: save.vsBot, tutorial: save.tutorial, started: true, opponentDeckReady: true };
+    this.lobby = { ...this.lobby, opponentName: save.opponentName, vsBot: save.vsBot, tutorial: save.tutorial, scripted: save.scripted, started: true, opponentDeckReady: true };
     this.makeBot();
     this.broadcast();
   }
@@ -837,6 +839,7 @@ export class Session {
         opponentName: this.lobby.opponentName,
         vsBot: this.lobby.vsBot,
         tutorial: this.lobby.tutorial,
+        scripted: this.lobby.scripted,
         setup: this.setup,
         deckNames: this.deckNames,
         seed: this.seed,
