@@ -276,15 +276,20 @@ function playGame({ seed, matchup, players, maxActions, full, m = matchups[match
       }
       const start = line.match(/^runner (?:spends \[Click\] to make a run on|uses .+ to make a run on) (.+?)\.?$/);
       if (start) {
-        run = { server: start[1], paid: 0, breached: false };
+        run = { server: start[1], paid: 0, breached: false, rezzed: false, jacked: false };
         continue;
       }
       if (!run) continue;
       const paid = line.match(/^runner pays (\d+) \[Credits?\](?! from) to (?:use|increase)/);
       if (paid) run.paid += Number(paid[1]);
       if (/^runner breaches /.test(line)) run.breached = true;
+      if (/^corp pays \d+ \[Credits?\] to rez .* protecting /.test(line)) run.rezzed = true;
+      if (/jacks out/.test(line)) run.jacked = true;
       if (/end the run|jacks out|runner is ending|corp started/.test(line)) {
-        if (!run.breached && run.paid >= 3) flag("wasted-run", "runner", `paid ${run.paid} on a run on ${run.server} that never breached: ${line}`, "runner:paid-and-stopped");
+        if (!run.breached && run.paid >= 3) {
+          const why = run.rezzed ? "new-ice" : run.jacked ? "jacked-out" : "known-ice";
+          flag("wasted-run", "runner", `paid ${run.paid} on a run on ${run.server} that never breached (${why}): ${line}`, `runner:paid-and-stopped-${why}`);
+        }
         run = null;
       }
     }
