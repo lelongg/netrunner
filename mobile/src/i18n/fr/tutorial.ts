@@ -1,6 +1,6 @@
 export default {
   Tip: "Astuce",
-  "Hide the guided steps and tips": "Masquer les étapes guidées et les astuces",
+  "Hide the help bubbles": "Masquer les bulles d'aide",
   "Palisade is a barrier with one subroutine, End the run. Every subroutine you don't break fires. To break one, you need an icebreaker of the right type, Cleaver for barriers, with at least the ice's strength: Palisade has 4 here (+2 on a remote server), Cleaver only 3.": "Palisade est une barrière avec une routine, Fin du piratage. Toute routine que vous ne neutralisez pas se déclenche. Pour en neutraliser une, il faut un brise-glace du bon type, Cleaver pour les barrières, avec au moins la force de la glace : Palisade a 4 ici (+2 sur un serveur distant), Cleaver seulement 3.",
   "Let's do it by hand first. Open Other abilities below and use Cleaver's +1 strength (2[credit]). A boost lasts until the end of this encounter.": "Faisons-le d'abord à la main. Ouvrez Autres capacités ci-dessous et utilisez le +1 en force de Cleaver (2[credit]). Un bonus dure jusqu'à la fin de cette rencontre.",
   "Cleaver now has strength 4. Use its Break ability (1[credit]) and pick End the run.": "Cleaver a maintenant une force de 4. Utilisez sa capacité de neutralisation (1[credit]) et choisissez Fin du piratage.",
