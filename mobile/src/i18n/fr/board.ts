@@ -140,7 +140,7 @@ export default {
   "Keep it private: it lets anyone take your seat.": "Gardez-le privé : il permet à n'importe qui de prendre votre place.",
   "Link copied": "Lien copié",
   "Export game journal": "Exporter le journal de partie",
-  "A file to replay or report a bug": "Un fichier pour rejouer ou signaler un bug",
+  "To replay or report a bug": "Rejouer ou signaler un bug",
   "Troubleshoot": "Dépannage",
   "Close stuck prompt": "Fermer la demande bloquée",
   "Close the prompt?": "Fermer la demande ?",

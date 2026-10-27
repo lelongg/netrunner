@@ -1415,7 +1415,7 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
                 <MenuSection title={t("Share")}>
                   {session.watchUrl && <MenuItem icon="eye" label={t("Spectator link")} hint={t("Anyone with it can watch")} onClick={() => closeMenu(() => shareLink(session.watchUrl!, t("Watch this Netrunner game"), t("Send it to anyone who wants to watch this game.")))} />}
                   {session.rejoinUrl && <MenuItem icon="link" label={t("Rejoin link")} hint={t("Keep it private: it takes your seat")} onClick={() => closeMenu(() => shareLink(session.rejoinUrl!, t("Rejoin my Netrunner game"), t("Keep it private: it lets anyone take your seat.")))} />}
-                  {!watching && <MenuItem icon="share" label={t("Export game journal")} hint={t("A file to replay or report a bug")} onClick={() => closeMenu(exportJournal)} />}
+                  {!watching && <MenuItem icon="share" label={t("Export game journal")} hint={t("To replay or report a bug")} onClick={() => closeMenu(exportJournal)} />}
                 </MenuSection>
               )}
               {((prompt && ptype !== "run") || session.canFreeSeat) && (
