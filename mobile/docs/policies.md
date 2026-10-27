@@ -339,7 +339,11 @@ unaffordable and the reserve for it was never reached. With one deck price every
 combined odds of an impassable ice discounting a run instead of dropping it, and the decisive
 run starting three points from the Corp's win, the Runner grid reads 263 / 250 against
 241-244 / 220-224: the first gain of the day outside the interval (+48 on 1152 games), with
-every Corp row up or level. The reference was refrozen on this version.
+every Corp row up or level. The reference was refrozen on this version (`c0839d7`); its
+baseline against itself reads Corp 355 / 362 and Runner 242 / 222. Both sides dropped
+from their scores against the old reference by about the same amount (Corp from 368 / 388,
+Runner from 263 / 250), which is what two improved sides look like: each now faces the
+other's better version.
 
 The spread between versions is inside the interval of 1152 games (about ±33 on a sum),
 so none of this is a measured gain: the 72-game local batches that motivated v1 (27 to
