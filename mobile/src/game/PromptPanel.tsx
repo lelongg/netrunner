@@ -114,13 +114,6 @@ export function PromptPanel({ view, side, prompt, render, send, closePrompt, dis
   const msg = iconize(showMsg(prompt.msg, render));
   const breaking = /^Break (a|\d+|up to \d+)\b.*subroutines?/i.test(render(prompt.msg));
   const optionLabel = (value: unknown) => (breaking && value !== "Done" ? `[subroutine] ${choiceLabel(value, render)}` : choiceLabel(value, render));
-  const onlySub = breaking && Array.isArray(choices) ? choices.filter((c: any) => c.value !== "Done") : [];
-  const autoBroken = useRef<unknown>(null);
-  useEffect(() => {
-    if (disabled || onlySub.length !== 1 || autoBroken.current === eid) return;
-    autoBroken.current = eid;
-    answer({ uuid: onlySub[0].uuid });
-  }, [eid, onlySub.length, disabled]);
   const answer = (choice: unknown) => send("choice", { eid, choice });
   const [title, setTitle] = useState("");
   const [peek, setPeek] = useState<number | null>(null);
