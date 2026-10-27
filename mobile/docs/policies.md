@@ -291,7 +291,7 @@ design then test:
 | Before the central rules | 369 / 374 | 353 / 375 |
 | Open or porous central the Runner runs is iced first (v1) | 354 / 374 | 345 / 384 |
 | v1 with a three-turn window, a boost after a steal, porous at three (v2) | – | 330 / 378 |
-| v1 with urgent ice only when the whole server can be rezzed (kept) | – | 353 / 391 |
+| v1 with urgent ice only when the whole server can be rezzed (kept) | 363 / 374 | 353 / 391 |
 
 The spread between versions is inside the interval of 1152 games (about ±33 on a sum),
 so none of this is a measured gain: the 72-game local batches that motivated v1 (27 to
