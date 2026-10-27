@@ -156,7 +156,7 @@ const RUNNER: TutorialScript = {
     },
     {
       id: "encounter",
-      anchor: ".encounter",
+      anchor: ".breakers",
       when: (v) => !!v.encounters,
       done: (v) => !v.encounters || (currentIce(v)?.subroutines ?? []).every((s: any) => s.broken),
       allow: (command) => (command === "continue" ? false : undefined),
@@ -323,7 +323,7 @@ const CORP: TutorialScript = {
     },
     {
       id: "fire",
-      anchor: ".encounter",
+      anchor: ".actions .buttons",
       when: (v) => !!v.encounters,
       done: (v) => !v.run,
       text: "The Runner has no icebreaker to break the subroutine. When it lets it through, fire it: End the run. Your agenda is safe.",
