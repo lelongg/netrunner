@@ -2024,6 +2024,7 @@ form.chat input {
 
 .pager-group {
   display: flex;
+  gap: 12px;
 }
 
 .pager-group button:has(+ button),
