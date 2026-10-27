@@ -308,6 +308,16 @@ the contest bonus reaches Overclock. The both-sides grid after it: Corp 362 / 38
 Runner 244 / 220, flat again, with the Runner's rich credit clicks back up (Stolen Goods
 182 and 183) now that it refuses runs it cannot finish.
 
+Replay YT9YUQBD (the user's Stolen Goods 9-3 over Hyper Velocity) showed the Corp ruining
+itself: Funhouse rezzed for its whole purse on turn one to stop a single HQ access, then
+twelve turns at three to five credits installing ice while Hedge Fund waited in hand, and
+Public Trail paid for twice on a tag cleared for two. With an early rez that would leave
+the Corp broke refused on a central unless it ends the run, installs that put an economy
+operation out of reach this turn penalised, and Public Trail kept for a tag that sticks or
+can be followed up, the Corp grid reads 368 / 388, the best of the day (Hyper Velocity 66 /
+82 against 55-63 / 75-76). Still inside the interval on the sum, but every deck row held or
+rose and the weakest deck gained the most.
+
 The spread between versions is inside the interval of 1152 games (about ±33 on a sum),
 so none of this is a measured gain: the 72-game local batches that motivated v1 (27 to
 22 Runner wins) and condemned v2 were noise. Two things did come out of it. The
