@@ -794,14 +794,14 @@ function Encounter({ view, ice, passed, render, onTap, skip, onToggle }: { view:
         <div class="enc-head">
           <span class="enc-title">{ice.title}</span>
           <span class="enc-meta">
-            {types}
+            <span class="enc-types">{types}</span>
             {strength != null && (
-              <>
-                {" · "}
+              <span class="enc-strength">
+                {types ? " · " : ""}
                 <Stat icon="strength" label={t("Strength")}>
                   {strength}
                 </Stat>
-              </>
+              </span>
             )}
           </span>
         </div>
