@@ -293,14 +293,14 @@ const ZONE_LABELS: Record<Side, Record<ZoneKey, string>> = {
   runner: { discard: "Heap", "play-area": "Play area", rfg: "Removed", "set-aside": "Set aside", deck: "Stack" },
 };
 
-function Stacked({ n, small, top, children }: { n: number; small?: boolean; top?: boolean; children: ComponentChildren }) {
+function Stacked({ n, small, children }: { n: number; small?: boolean; children: ComponentChildren }) {
   const full = n > 1 ? Math.min(5, 1 + Math.floor(n / 8)) : 0;
   const layers = small && full ? Math.max(1, Math.round(full * 0.7)) : full;
   if (!layers) return <>{children}</>;
   const depth = layers * 2;
   const shadows = Array.from({ length: depth }, (_, i) => `${i + 1}px ${i + 1}px 0 0 ${i % 2 ? "var(--stack-edge)" : "var(--stack-gap)"}`);
   return (
-    <div class="stacked" style={{ boxShadow: shadows.join(", "), transform: top ? undefined : `translateY(-${depth}px)` }}>
+    <div class="stacked" style={{ boxShadow: shadows.join(", "), transform: `translateY(-${depth}px)` }}>
       {children}
     </div>
   );
@@ -483,12 +483,12 @@ function CorpArea({ view, side, mine, onTap, onZone, selectable, runServer }: { 
   const tile = (c: any) => <CardTile card={c} owner={owner} onTap={onTap} selectable={selectable.has(c.cid)} />;
   const discard: any[] = corp.discard ?? [];
   const central = (key: string) => {
-    if (key === "hq") return corp.identity ? <Stacked n={corp["hand-count"] ?? (corp.hand ?? []).length} top={mine}>{tile(corp.identity)}</Stacked> : null;
-    if (key === "rd") return <Stacked n={corp["deck-count"] ?? 0} top={mine}><div class={`tile ${corp["deck-count"] ? "back corp" : "empty"}`} /></Stacked>;
+    if (key === "hq") return corp.identity ? <Stacked n={corp["hand-count"] ?? (corp.hand ?? []).length}>{tile(corp.identity)}</Stacked> : null;
+    if (key === "rd") return <Stacked n={corp["deck-count"] ?? 0}><div class={`tile ${corp["deck-count"] ? "back corp" : "empty"}`} /></Stacked>;
     if (key === "archives") {
       const top = discard[discard.length - 1];
       const target = discard.some((c) => selectable.has(c.cid));
-      return top ? <Stacked n={discard.length} top={mine}><CardTile card={top} owner={owner} onTap={() => onZone({ owner: "corp", key: "discard" })} selectable={target} /></Stacked> : <div class="tile empty" />;
+      return top ? <Stacked n={discard.length}><CardTile card={top} owner={owner} onTap={() => onZone({ owner: "corp", key: "discard" })} selectable={target} /></Stacked> : <div class="tile empty" />;
     }
     return null;
   };
