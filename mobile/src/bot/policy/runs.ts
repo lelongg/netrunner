@@ -84,6 +84,7 @@ export function encounterPlan(obs: Observation): { proposal: Proposal; threat: R
   if (full && full.cost <= obs.credits && full.cost <= facing) return { proposal: fromCandidate(full.c, 85, `fully break ${ice.title} for ${full.cost}`, "break"), threat };
   const option = bestBreak(obs, ice);
   if (!option || option.cost.value > facing) return null;
+  if (threat.etr && option.cost.exact && option.cost.value > obs.credits + runCredits(obs)) return null;
   const breaker = option.profile.card;
   if (option.profile.strength < strengthOf(ice)) {
     const pump = byCommand(obs, "dynamic-ability", (c) => /match strength/i.test(c.label) && (c.args as any)?.card?.cid === breaker.cid)[0];

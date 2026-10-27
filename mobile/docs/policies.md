@@ -318,6 +318,15 @@ can be followed up, the Corp grid reads 368 / 388, the best of the day (Hyper Ve
 82 against 55-63 / 75-76). Still inside the interval on the sum, but every deck row held or
 rose and the weakest deck gained the most.
 
+With the log-based detectors in the grid (Corp 366 / 389, Runner 243 / 221), the counts
+over 1152 games per side point at the next targets. For the policy Runner,
+runner:paid-and-stopped reached 258 (Stolen Goods 118, Planning Ahead 78, Party Hard 62);
+the cases read showed the Runner pumping Marjanah and breaking one of Pharos's three
+subroutines with the six credits it had, so an encounter no longer starts breaking an ice
+that ends the run when the exact cost of a full break exceeds the credits for the run. For
+the policy Corp, corp:rez-to-broke stayed at 133 against 136 for the reference: most cases
+read were rezzes of an ice that does end the run, which the rule keeps on purpose.
+
 The spread between versions is inside the interval of 1152 games (about ±33 on a sum),
 so none of this is a measured gain: the 72-game local batches that motivated v1 (27 to
 22 Runner wins) and condemned v2 were noise. Two things did come out of it. The

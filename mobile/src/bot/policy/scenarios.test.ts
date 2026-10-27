@@ -1136,3 +1136,37 @@ describe("corp keeps its purse early (replay YT9YUQBD)", () => {
     expect(s.last("corp").chosen?.why).toMatch(/economy operation/);
   });
 });
+
+describe("runner does not start breaking ice it cannot finish", () => {
+  it("lets Pharos fire rather than pump Marjanah and break one of its three subroutines with six credits", () => {
+    const s = new Scenario("core-weyland", "core-criminal");
+    s.clearHand("corp");
+    s.summon("corp", "Pharos", "Offworld Office");
+    s.credits("corp", 40);
+    s.install("corp", "Pharos", "New remote");
+    s.clicks("corp", 3);
+    s.install("corp", "Offworld Office", "Server 1");
+    s.rez("Pharos");
+    s.clicks("corp", 0);
+    s.endTurn("corp");
+    s.clearHand("runner");
+    s.summon("runner", "Marjanah", "Sure Gamble");
+    s.credits("runner", 20);
+    s.install("runner", "Marjanah");
+    s.credits("runner", 6);
+    s.act("runner", "Run on Server 1");
+    for (let i = 0; i < 8 && !s.actions("runner").some((a) => /match strength|break/i.test(a.label)); i++) {
+      if (s.actions("runner").some((a) => a.label.startsWith("Encounter ice"))) {
+        s.act("runner", "Encounter ice");
+        continue;
+      }
+      const corp = s.decide("corp");
+      if (corp) s.play("corp", corp);
+      else s.runStep("runner");
+    }
+    const move = s.decide("runner");
+    expect(s.last("runner").chosen?.kind).not.toBe("pump");
+    expect(Number(s.view("runner").runner.credit)).toBe(6);
+    expect(move).not.toBeNull();
+  });
+});
