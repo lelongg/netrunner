@@ -1291,3 +1291,49 @@ describe("corp plays the agenda that wins (replay WMCQV8NR)", () => {
     expect(s.last("corp").chosen?.why).toMatch(/^install (Orbital Superiority|Offworld Office) .*match point/);
   });
 });
+
+describe("corp resolves every Ansel subroutine (replay 7QQ2WHAN)", () => {
+  it("trashes the Runner's breaker when Ansel's subroutines fire", async () => {
+    const engine = await import("../../../engine/engine.js");
+    const { cardRef } = await import("../../game/actions.ts");
+    const s = new Scenario("core-hb", "core-anarch");
+    s.clearHand("corp");
+    s.summon("corp", "Ansel 1.0", "Manegarm Skunkworks");
+    s.credits("corp", 40);
+    s.install("corp", "Ansel 1.0", "New remote");
+    s.install("corp", "Manegarm Skunkworks", "Server 1");
+    s.clearHand("corp");
+    s.summon("corp", "Pharos", "Hedge Fund");
+    s.credits("corp", 12);
+    s.clicks("corp", 0);
+    s.endTurn("corp");
+    s.clearHand("runner");
+    s.summon("runner", "Cleaver", "Leech", "Smartware Distributor");
+    s.credits("runner", 20);
+    for (const c of ["Cleaver", "Leech", "Smartware Distributor"]) {
+      s.clicks("runner", 4);
+      s.install("runner", c);
+    }
+    s.summon("runner", "Sure Gamble", "Carnivore");
+    s.credits("runner", 12);
+    s.clicks("runner", 4);
+    s.act("runner", "Run on Server 1");
+    for (let i = 0; i < 25 && s.view("runner").run; i++) {
+      const corp = s.decide("corp");
+      if (corp) {
+        s.play("corp", corp);
+        continue;
+      }
+      const labels = s.actions("runner").map((a) => a.label);
+      if (labels.includes("Let it fire")) {
+        engine.act(s.game, "corp", "unbroken-subroutines", { card: cardRef(s.view("corp").encounters?.ice) });
+        continue;
+      }
+      const step = labels.find((l) => /^(Encounter ice|Approach|Continue)/.test(l));
+      if (!step) break;
+      s.act("runner", step);
+    }
+    const rig = ["program", "hardware", "resource"].flatMap((z) => (s.view("runner").runner.rig[z] ?? []).map((c: any) => c.title));
+    expect(rig).not.toContain("Cleaver");
+  });
+});
