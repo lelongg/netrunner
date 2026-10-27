@@ -129,7 +129,7 @@ export function Breakers({ view, stamp, probe, side, ice, send, onTap, disabled,
   const aimed = others.filter(({ cmd }) => /piece of ice|subroutine/i.test(cmd.label));
   const featured = [...onIce, ...aimed];
   const manual: { card: any; cmd: Command; off?: boolean }[] = [...usable.filter((m) => !m.off), ...others.filter((o) => !aimed.includes(o)), ...usable.filter((m) => m.off)];
-  const fromIce = cardCommandsOf(ice).filter((c) => c.command === "runner-ability");
+  const fromIce = cardCommandsOf(ice).filter((c) => c.command === "runner-ability" && c.enabled !== false);
   if (!rows.length && !manual.length && !fromIce.length && !featured.length) return null;
   const badPub = view.runner?.["bad-pub-credit"] ?? 0;
   return (
