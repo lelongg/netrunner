@@ -288,6 +288,17 @@ const ZONE_LABELS: Record<Side, Record<ZoneKey, string>> = {
   runner: { discard: "Heap", "play-area": "Play area", rfg: "Removed", "set-aside": "Set aside", deck: "Stack" },
 };
 
+function Stacked({ n, children }: { n: number; children: ComponentChildren }) {
+  const layers = n > 1 ? Math.min(5, 1 + Math.floor(n / 8)) : 0;
+  if (!layers) return <>{children}</>;
+  const shadows = Array.from({ length: layers * 2 }, (_, i) => `${i + 1}px ${i + 1}px 0 0 ${i % 2 ? "var(--stack-edge)" : "var(--stack-gap)"}`);
+  return (
+    <div class="stacked" style={{ boxShadow: shadows.join(", "), marginRight: `${layers * 2}px`, marginBottom: `${layers * 2}px` }}>
+      {children}
+    </div>
+  );
+}
+
 function Pile({ label, count, cards, owner, side, selectable, onOpen, anchor }: { label: string; count: number; cards?: any[]; owner: boolean; side: Side; selectable: Set<unknown>; onOpen?: () => void; anchor?: string }) {
   const top = cards?.[cards.length - 1];
   const target = (cards ?? []).some((c) => selectable.has(c.cid));
@@ -295,7 +306,7 @@ function Pile({ label, count, cards, owner, side, selectable, onOpen, anchor }: 
   const face = top ? <CardTile card={top} owner={owner} size="sm" onTap={onOpen} selectable={target} /> : <div class={`tile tile-sm ${count ? back : "empty"}`} />;
   return (
     <div class="pile" data-anchor={anchor}>
-      {face}
+      <Stacked n={count}>{face}</Stacked>
       <span class={target ? "yellow" : ""}>
         {t(label)} {count}
       </span>
@@ -318,7 +329,9 @@ function Piles({ view, zoneOwner, viewer, onTap, onZone, selectable, centrals = 
     <div class="piles">
       {centrals && p.identity && (
         <div class="pile">
-          <CardTile card={p.identity} owner={owner} onTap={onTap} size="sm" selectable={selectable.has(p.identity.cid)} />
+          <Stacked n={zoneOwner === "runner" ? (p["hand-count"] ?? (p.hand ?? []).length) : 0}>
+            <CardTile card={p.identity} owner={owner} onTap={onTap} size="sm" selectable={selectable.has(p.identity.cid)} />
+          </Stacked>
           {zoneOwner === "runner" && <span>{t("Grip")} {p["hand-count"] ?? (p.hand ?? []).length}</span>}
         </div>
       )}
@@ -463,12 +476,12 @@ function CorpArea({ view, side, mine, onTap, onZone, selectable, runServer }: { 
   const tile = (c: any) => <CardTile card={c} owner={owner} onTap={onTap} selectable={selectable.has(c.cid)} />;
   const discard: any[] = corp.discard ?? [];
   const central = (key: string) => {
-    if (key === "hq") return corp.identity ? tile(corp.identity) : null;
-    if (key === "rd") return <div class={`tile ${corp["deck-count"] ? "back corp" : "empty"}`} />;
+    if (key === "hq") return corp.identity ? <Stacked n={corp["hand-count"] ?? (corp.hand ?? []).length}>{tile(corp.identity)}</Stacked> : null;
+    if (key === "rd") return <Stacked n={corp["deck-count"] ?? 0}><div class={`tile ${corp["deck-count"] ? "back corp" : "empty"}`} /></Stacked>;
     if (key === "archives") {
       const top = discard[discard.length - 1];
       const target = discard.some((c) => selectable.has(c.cid));
-      return top ? <CardTile card={top} owner={owner} onTap={() => onZone({ owner: "corp", key: "discard" })} selectable={target} /> : <div class="tile empty" />;
+      return top ? <Stacked n={discard.length}><CardTile card={top} owner={owner} onTap={() => onZone({ owner: "corp", key: "discard" })} selectable={target} /></Stacked> : <div class="tile empty" />;
     }
     return null;
   };
