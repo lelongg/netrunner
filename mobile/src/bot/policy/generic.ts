@@ -89,8 +89,10 @@ export function corpProposals(obs: Observation): Proposal[] {
     const rd = obs.servers.find((s) => s.key === "rd")!;
     const targets: { server: { label: string; ices: any[] }; score: number; why: string; urgent?: boolean }[] = [];
     const recentRuns = (label: string) => obs.memory.notes.runsSeen && (obs.memory.notes.runsSeen as Record<string, number[]>)[label]?.filter((t) => t >= obs.turn - 2).length;
-    if (!hq.ices.length) targets.push({ server: hq, score: (agendas.length ? 60 : 50) + (recentRuns("HQ") ? 12 : 0), why: agendas.length ? "HQ is open with an agenda in hand" : "HQ is open" });
-    if (!rd.ices.length) targets.push({ server: rd, score: 48 + (recentRuns("R&D") ? 14 : 0), why: recentRuns("R&D") ? "R&D is open and the Runner keeps running it" : "R&D is open" });
+    const hqRuns = Number(recentRuns("HQ") ?? 0);
+    const rdRuns = Number(recentRuns("R&D") ?? 0);
+    if (!hq.ices.length) targets.push({ server: hq, score: (agendas.length ? 60 : 50) + (hqRuns >= 2 ? 20 : hqRuns ? 12 : 0), urgent: hqRuns >= 1, why: hqRuns ? `HQ is open and the Runner ran it ${hqRuns} times lately` : agendas.length ? "HQ is open with an agenda in hand" : "HQ is open" });
+    if (!rd.ices.length) targets.push({ server: rd, score: 48 + (rdRuns >= 2 ? 22 : rdRuns ? 14 : 0), urgent: rdRuns >= 1, why: rdRuns ? `R&D is open and the Runner ran it ${rdRuns} times lately` : "R&D is open" });
     if (agendas.length && !empty.length) targets.push({ server: { label: "New remote", ices: [] }, score: hq.ices.length ? 52 : 45, why: "an agenda in hand needs a protected remote" });
     for (const s of obs.servers.filter((x) => x.remote && x.content.length && x.ices.length < 2)) {
       const upgradesOnly = s.content.every((c: any) => c.type === "Upgrade");
@@ -106,9 +108,11 @@ export function corpProposals(obs: Observation): Proposal[] {
     for (const s of [rd, hq].sort((a, b) => a.ices.length - b.ices.length)) {
       const runs = Number(recentRuns(s.label) ?? 0);
       const siege = runs >= 2 && (digger || s.key === "hq");
-      if (s.ices.length >= (siege ? 4 : 3)) continue;
-      if (obs.credits < 6 && runs < 2) continue;
-      targets.push({ server: s, score: 40 - s.ices.length * 3 + (runs >= 2 ? 18 : runs ? 9 : 0) + (siege ? 6 : 0), urgent: runs >= 1, why: siege ? `ice ${s.label}: the Runner is digging it (${runs} runs lately)` : runs ? `deepen ${s.label}: the Runner ran it ${runs} times lately` : `deepen ${s.label}` });
+      const safety = s.ices.length ? serverSafety(obs, s) : null;
+      const porous = !!safety && !safety.blocked && safety.runnerCost <= 2 && runs >= 1;
+      if (s.ices.length >= (siege ? 4 : 3) && !(porous && s.ices.length < 4)) continue;
+      if (obs.credits < 6 && runs < 2 && !porous) continue;
+      targets.push({ server: s, score: 40 - s.ices.length * 3 + (runs >= 2 ? 18 : runs ? 9 : 0) + (siege ? 6 : 0) + (porous ? 12 : 0), urgent: runs >= 1, why: porous ? `ice ${s.label}: the Runner walks in for ${safety!.runnerCost} and ran it ${runs} times lately` : siege ? `ice ${s.label}: the Runner is digging it (${runs} runs lately)` : runs ? `deepen ${s.label}: the Runner ran it ${runs} times lately` : `deepen ${s.label}` });
     }
     const rezDebt = obs.servers.flatMap((s) => s.ices).filter((i: any) => !i.rezzed).reduce((n: number, i: any) => n + rezCostOf(i), 0);
     const endsRun = (c: any) => iceThreat({ ...c, subroutines: [] }, obs.info(c), 99).etr;
