@@ -157,7 +157,8 @@ export function corpProposals(obs: Observation): Proposal[] {
   if (obs.hand.length < 4 && deckLeft > 8) push(proposal(byCommand(obs, "draw")[0], broke ? 29 : rich ? 50 : 35, rich ? "draw: rich but nothing to spend on" : "draw: the hand is thin", "draw"));
   if (obs.credits >= 15 && deckLeft > 8 && obs.hand.length < 5) push(proposal(byCommand(obs, "draw")[0], 40, "draw: credits are plentiful, cards are not", "draw"));
   if (obs.credits >= 12 && deckLeft > 8 && !ice.length && (obs.hand.length <= 5 || (obs.credits >= 18 && obs.hand.length <= 6 && obs.clicks >= 2)) && ((obs.memory.notes.kinds as string[] | undefined) ?? []).filter((k) => k === "draw").length < 2) push(proposal(byCommand(obs, "draw")[0], 42, "draw: rich with no ice in hand", "draw"));
-  push(proposal(byCommand(obs, "credit")[0], 30 + (nearly ? 18 : wantCredits ? 10 : 0) + (obs.credits < 3 ? 4 : 0) + (broke ? 8 : 0), broke ? "take a credit: unrezzed ice cannot be rezzed" : nearly ? "take a credit: an economy operation in hand is playable this turn" : wantCredits ? "take a credit towards an economy operation in hand" : "take a credit", "credit"));
+  const nextTurn = !nearly && obs.credits < 5 && obs.hand.some((c) => c.type === "Operation" && gainOf(obs.info(c).text) > playCostOf(c) + 3 && playCostOf(c) > obs.credits && playCostOf(c) <= obs.credits + obs.clicks + 1);
+  push(proposal(byCommand(obs, "credit")[0], 30 + (nearly ? 18 : nextTurn ? 14 : wantCredits ? 10 : 0) + (obs.credits < 3 ? 4 : 0) + (broke ? 8 : 0), broke ? "take a credit: unrezzed ice cannot be rezzed" : nearly ? "take a credit: an economy operation in hand is playable this turn" : nextTurn ? "take a credit: an economy operation in hand is playable next turn" : wantCredits ? "take a credit towards an economy operation in hand" : "take a credit", "credit"));
   if (deckLeft > 8) push(proposal(byCommand(obs, "draw")[0], 28, "draw a card", "draw"));
   return out;
 }

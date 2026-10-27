@@ -318,6 +318,15 @@ can be followed up, the Corp grid reads 368 / 388, the best of the day (Hyper Ve
 82 against 55-63 / 75-76). Still inside the interval on the sum, but every deck row held or
 rose and the weakest deck gained the most.
 
+With the log-based detectors in the grid (Corp 366 / 389, Runner 243 / 221), the counts
+over 1152 games per side point at the next targets. For the policy Runner,
+runner:paid-and-stopped reached 258 (Stolen Goods 118, Planning Ahead 78, Party Hard 62);
+the cases read showed the Runner pumping Marjanah and breaking one of Pharos's three
+subroutines with the six credits it had, so an encounter no longer starts breaking an ice
+that ends the run when the exact cost of a full break exceeds the credits for the run. For
+the policy Corp, corp:rez-to-broke stayed at 133 against 136 for the reference: most cases
+read were rezzes of an ice that does end the run, which the rule keeps on purpose.
+
 The spread between versions is inside the interval of 1152 games (about ±33 on a sum),
 so none of this is a measured gain: the 72-game local batches that motivated v1 (27 to
 22 Runner wins) and condemned v2 were noise. Two things did come out of it. The
@@ -427,6 +436,15 @@ actually push back:
    are unchanged. The Corp policies are tuned against it, since the frozen reference Runner
    is more patient than a human.
 5. **The heuristic bot**, kept as a sanity check that nothing regressed into nonsense.
+
+The summary counts mistakes that the evaluation detects from the game state and the log,
+whichever bot plays: an agenda stolen from a remote, a thin or unrezzable agenda install,
+a credit click while rich, and, from the log, `corp:broke-streak` (three Corp turns in a row
+ending under five credits, `corp:broke-with-economy-in-hand` when an economy operation was
+waiting), `corp:rez-to-broke` (a rez that leaves the Corp at one credit or less before
+turn seven) and `runner:paid-and-stopped` (a run that cost three credits or more in breaks
+and never breached). The first few of each kind are exported as situations. The log-based
+counters came from the user's replays: each named a fault the grids could not see.
 
 With `--out`, the run writes:
 

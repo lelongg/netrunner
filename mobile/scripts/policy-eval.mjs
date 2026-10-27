@@ -245,6 +245,50 @@ function playGame({ seed, matchup, players, maxActions, full, m = matchups[match
   const idle = { corp: { turn: -1, kinds: [] }, runner: { turn: -1, kinds: [] } };
   const positions = [];
   let positionTurn = -1;
+  let logSeen = 0;
+  let brokeStreak = 0;
+  let run = null;
+  const econInHand = (view) => (view.corp?.hand ?? []).some((c) => {
+    const info = byTitle.get(c.title);
+    const gain = Number(String(info?.text ?? "").match(/gain (\d+)\s*\[credit/i)?.[1] ?? 0);
+    return info?.type === "Operation" && gain > Number(info.cost ?? 0) && Number(info.cost ?? 0) > Number(view.corp?.credit ?? 0);
+  });
+  const flag = (kind, side, note_, k) => {
+    note(k);
+    if (P[side].bot instanceof PolicyBot && (mistakes[k] ?? 0) <= 3) situations.push(snapshot(engine.view(game, side), side, P[side].bot, P[side].bot.records[P[side].bot.records.length - 1], kind, note_));
+  };
+  const scanLog = () => {
+    const view = engine.view(game, "corp");
+    const lines = logLines(view, render);
+    for (; logSeen < lines.length; logSeen++) {
+      const line = lines[logSeen];
+      const ending = line.match(/^corp is ending (?:\[their\]|their) turn (\d+) with (\d+) \[Credit/);
+      if (ending) {
+        const turn = Number(ending[1]);
+        const credits = Number(ending[2]);
+        brokeStreak = turn >= 3 && credits < 5 ? brokeStreak + 1 : 0;
+        if (brokeStreak === 3) flag("broke-streak", "corp", `three Corp turns in a row ended under five credits${econInHand(view) ? " with an economy operation in hand" : ""}`, econInHand(view) ? "corp:broke-with-economy-in-hand" : "corp:broke-streak");
+        continue;
+      }
+      if (/^corp pays \d+ \[Credits?\] to rez /.test(line) && Number(view.corp?.credit ?? 0) <= 1 && Number(view.turn ?? 0) <= 6) {
+        flag("rez-to-broke", "corp", `a rez left the Corp at ${view.corp?.credit} credits: ${line}`, "corp:rez-to-broke");
+        continue;
+      }
+      const start = line.match(/^runner (?:spends \[Click\] to make a run on|uses .+ to make a run on) (.+?)\.?$/);
+      if (start) {
+        run = { server: start[1], paid: 0, breached: false };
+        continue;
+      }
+      if (!run) continue;
+      const paid = line.match(/^runner pays (\d+) \[Credits?\](?! from) to (?:use|increase)/);
+      if (paid) run.paid += Number(paid[1]);
+      if (/^runner breaches /.test(line)) run.breached = true;
+      if (/end the run|jacks out|runner is ending|corp started/.test(line)) {
+        if (!run.breached && run.paid >= 3) flag("wasted-run", "runner", `paid ${run.paid} on a run on ${run.server} that never breached: ${line}`, "runner:paid-and-stopped");
+        run = null;
+      }
+    }
+  };
   while (n < maxActions && !engine.winner(game)) {
     const moves = {};
     const views = {};
@@ -321,6 +365,7 @@ function playGame({ seed, matchup, players, maxActions, full, m = matchups[match
       }
     }
     P[side].bot?.applied?.(move);
+    scanLog();
     if (side === "corp") {
       const now = engine.view(game, "corp");
       for (const a of remoteAgendas(now)) {
