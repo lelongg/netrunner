@@ -56,13 +56,14 @@ for (const config of configs) {
       return `| ${label(corp)} | ${wins.map((w) => (w === undefined ? "–" : String(w))).join(" | ")} | ${sum} |`;
     });
     const ms = mine.map((c) => c.decisionMs).filter((x) => x != null);
-    lines.push(`### ${split} split · ${who} ${total} of ${played}${ms.length ? ` · decision ${(ms.reduce((a, b) => a + b, 0) / ms.length).toFixed(0)} ms` : ""}`, "");
+    const opponent = mine[0].opponent && mine[0].opponent !== "ref" ? ` vs ${mine[0].opponent}` : "";
+    lines.push(`### ${split} split · ${who}${opponent} ${total} of ${played}${ms.length ? ` · decision ${(ms.reduce((a, b) => a + b, 0) / ms.length).toFixed(0)} ms` : ""}`, "");
     lines.push(`| Corp \\ Runner | ${RUNNERS.map(label).join(" | ")} | total |`, `|---|${RUNNERS.map(() => "---").join("|")}|---|`, ...rows, "");
     const mistakes = {};
     for (const c of mine) for (const [k, v] of Object.entries(c.mistakes ?? {})) if (k.startsWith(`${side}:`)) mistakes[`${label(side === "runner" ? c.runner : c.corp)} ${k.slice(side.length + 1)}`] = (mistakes[`${label(side === "runner" ? c.runner : c.corp)} ${k.slice(side.length + 1)}`] ?? 0) + v;
     const top = Object.entries(mistakes).sort((a, b) => b[1] - a[1]).slice(0, 8);
     if (top.length) lines.push(`${who} mistakes: ${top.map(([k, v]) => `${k} ${v}`).join(", ")}`, "");
-    report.configs[config].splits[sides.length > 1 ? `${side}:${split}` : split] = { side, games, total, played, decisionMs: ms.length ? ms.reduce((a, b) => a + b, 0) / ms.length : null, mistakes };
+    report.configs[config].splits[sides.length > 1 ? `${side}:${split}` : split] = { side, opponent: mine[0].opponent ?? "ref", games, total, played, decisionMs: ms.length ? ms.reduce((a, b) => a + b, 0) / ms.length : null, mistakes };
   }
 }
 

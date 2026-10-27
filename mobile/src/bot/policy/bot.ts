@@ -33,6 +33,7 @@ export interface BotOptions {
   search?: boolean;
   searchWidth?: number;
   searchBeam?: number;
+  style?: string;
   searchWeight?: number;
   searchCap?: number;
   weights?: Weights | null;
@@ -144,6 +145,7 @@ export class PolicyBot {
     this.searchWeight = options.searchWeight ?? 1;
     this.searchCap = options.searchCap ?? 20;
     this.weights = options.weights ?? null;
+    if (options.style) this.memory.notes.style = options.style;
   }
 
   observeView(view: any): Observation {

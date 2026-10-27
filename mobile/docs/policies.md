@@ -274,6 +274,36 @@ rule, so it reads as noise at this sample size. Stolen Goods still clicks for cr
 twenty times per split when it saves for a remote it judges too risky, which is where the
 next Runner pass goes.
 
+The reference was refrozen on 27 October at `7e2ae77` (the policies of the last row above)
+and the grids now play 48 games per cell and split on both sides. Against itself, the
+pair of policy sets gives the baseline every later pass is read against (wins of 576,
+design then test): Corp 369 / 374, Runner 254 / 222. At equal strength the Corp decks are
+ahead on these lists, Quick and Dirty and Discretion Advised most (109 of 144 each as
+Corp), Hyper Velocity least (63 and 76), so a Runner pass is read against 254 / 222 and a
+Corp pass against 369 / 374, not against 288.
+
+The Corp-side pass of 27 October against the aggressive Runner (`--runner aggro`, the
+grid's `opponent` input) measured the central-ice rules at 48 games per cell, wins of 576,
+design then test:
+
+| Corp version | vs reference Runner | vs aggressive Runner |
+|---|---|---|
+| Before the central rules | 369 / 374 | 353 / 375 |
+| Open or porous central the Runner runs is iced first (v1) | 354 / 374 | 345 / 384 |
+| v1 with a three-turn window, a boost after a steal, porous at three (v2) | – | 330 / 378 |
+| v1 with urgent ice only when the whole server can be rezzed (kept) | – | 353 / 391 |
+
+The spread between versions is inside the interval of 1152 games (about ±33 on a sum),
+so none of this is a measured gain: the 72-game local batches that motivated v1 (27 to
+22 Runner wins) and condemned v2 were noise. Two things did come out of it. The
+aggressive style is not a harder opponent for the Corp bots than the frozen reference
+at this scale (384 against 374 on the test split for v1), so the human edge over the
+bots is not captured by running centrals more often with the same evaluation. And the
+centrals are where the Corp bots lose: 66 of the 88 agendas stolen in 27 losses read
+during the pass came from R&D and HQ, while the Corp sat on twenty credits or more in a
+third of those games. The next Corp pass has to make the Corp score faster when rich
+rather than ice more.
+
 ## Turn search (experimental, off by default)
 
 `PolicyBot` can plan the Corp's whole turn instead of scoring one move at a time
@@ -364,7 +394,14 @@ actually push back:
    objective is to beat a human, so the lists a human beat the bot with become test
    opponents, played by the policy of the matching faction when one exists and by the
    generic policy otherwise.
-4. **The heuristic bot**, kept as a sanity check that nothing regressed into nonsense.
+4. **The aggressive Runner** (`--runner aggro`): the working-tree Runner policy in its
+   aggressive style, meant to play the way the humans who beat the Corp bots do. It runs a
+   central every turn when it can afford it, prefers HQ when the Corp holds five cards or
+   more, runs more when it sits on ten credits, halves the penalties that keep it saving
+   for the remote, and does not wait for its rig to be complete. Its hand-survival rules
+   are unchanged. The Corp policies are tuned against it, since the frozen reference Runner
+   is more patient than a human.
+5. **The heuristic bot**, kept as a sanity check that nothing regressed into nonsense.
 
 With `--out`, the run writes:
 
