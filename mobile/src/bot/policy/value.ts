@@ -1,5 +1,5 @@
 import { knownDeck } from "./decks/known.ts";
-import { breakCost, breakerProfile, canBreak, coverage, iceThreat, plain, rigProfiles } from "./tactics.ts";
+import { CLICK_AS_CREDITS, breakCost, breakerProfile, canBreak, clickThrough, coverage, iceThreat, plain, rigProfiles } from "./tactics.ts";
 import type { Observation, ServerInfo } from "./types.ts";
 
 export interface AgendaOutlook {
@@ -90,7 +90,7 @@ export interface UnrezzedPrice {
   exact: boolean;
 }
 
-export function unrezzedPrice(obs: Observation): UnrezzedPrice | null {
+export function unrezzedPrice(obs: Observation, budget = obs.credits, corpBudget = Number(obs.opp.credit ?? 0)): UnrezzedPrice | null {
   const deck = assumedDeck(obs);
   if (!deck || obs.side !== "runner") return null;
   const onBoard = new Map<string, number>();
@@ -104,13 +104,22 @@ export function unrezzedPrice(obs: Observation): UnrezzedPrice | null {
     if (c.info.type !== "ICE") continue;
     const copies = Math.max(0, c.qty - (onBoard.get(c.title) ?? 0));
     if (!copies) continue;
+    if (Number(c.info.cost ?? 0) > corpBudget) {
+      weight += copies;
+      continue;
+    }
     const text = plain(c.info.text ?? "");
     const subs = (text.match(/\[subroutine\]/gi) ?? []).length || 1;
     const ice = { title: c.title, subtypes: c.info.subtypes ?? [], strength: Number(c.info.strength ?? 0), subroutines: Array.from({ length: subs }, () => ({})) };
     const option = profiles.filter((p) => canBreak(p, ice)).map((p) => breakCost(p, ice)).sort((a, b) => a.value - b.value)[0];
     weight += copies;
-    if (option) cost += copies * option.value;
-    else {
+    const clickable = (ice.subtypes ?? []).includes("Bioroid") ? clickThrough({ ...ice, text: c.info.text }, Number(obs.clicks ?? 0) - 1) : 0;
+    if (option && option.value <= budget) cost += copies * option.value;
+    else if (clickable) cost += copies * clickable * CLICK_AS_CREDITS;
+    else if (option) {
+      blocked += copies;
+      cost += copies * option.value;
+    } else {
       const threat = iceThreat({ ...ice, subroutines: [] }, c.info, obs.credits, obs.hand.length);
       if (threat.etr) blocked += copies;
       cost += copies * (threat.damage * 2 + threat.creditLoss);

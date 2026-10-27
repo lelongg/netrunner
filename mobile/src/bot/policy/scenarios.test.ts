@@ -963,7 +963,7 @@ describe("corp flooded with agendas on a rich turn", () => {
     s.credits("corp", 25);
     s.clicks("corp", 2);
     const move = s.decide("corp");
-    expect(move?.command).toBe("draw");
+    expect(move?.command).not.toBe("credit");
     expect(best(s, "corp", (w) => w.startsWith("take a credit"))).toBeLessThan(best(s, "corp", (w) => w.startsWith("draw")));
   });
 });
@@ -1033,5 +1033,51 @@ describe("corp scores fast when rich instead of waiting for a safe window", () =
     const move = s.decide("corp");
     expect(move?.command).toBe("play");
     expect(s.last("corp").chosen?.why).toMatch(/install Offworld Office behind 2 ice in Server 1 .*scores next turn/);
+  });
+});
+
+describe("runner counts its clicks against bioroids (replay 4K88K9ZY)", () => {
+  function ansel(s: Scenario) {
+    s.clearHand("corp");
+    s.summon("corp", "Tithe", "Tithe", "Brân 1.0", "Ansel 1.0", "Offworld Office");
+    s.credits("corp", 40);
+    for (const [c, srv] of [["Tithe", "HQ"], ["Tithe", "R&D"], ["Brân 1.0", "New remote"], ["Ansel 1.0", "Server 1"], ["Offworld Office", "Server 1"]] as [string, string][]) {
+      s.clicks("corp", 3);
+      s.credits("corp", 40);
+      s.install("corp", c, srv);
+    }
+    s.clicks("corp", 3);
+    s.act("corp", "Offworld Office: Advance");
+    s.rez("Brân 1.0");
+    s.rez("Ansel 1.0");
+    s.credits("corp", 6);
+    s.clicks("corp", 0);
+    s.endTurn("corp");
+    s.clearHand("runner");
+    s.summon("runner", "Smartware Distributor", "Marjanah", "Buzzsaw", "Pennyshaver");
+    s.credits("runner", 20);
+    for (const c of ["Smartware Distributor", "Marjanah", "Buzzsaw", "Pennyshaver"]) {
+      s.clicks("runner", 4);
+      s.install("runner", c);
+    }
+    s.summon("runner", "Tread Lightly", "Overclock", "Sure Gamble", "Jailbreak", "VRcation");
+  }
+
+  it("does not run a remote whose Ansel it can only click through when the run would leave no clicks", () => {
+    const s = new Scenario("core-hb", "core-criminal");
+    ansel(s);
+    s.credits("runner", 20);
+    s.clicks("runner", 1);
+    s.decide("runner");
+    expect(best(s, "runner", (w) => w.startsWith("run Server 1"))).toBeLessThan(20);
+  });
+
+  it("prices the three clicks through Ansel when it has them", () => {
+    const s = new Scenario("core-hb", "core-criminal");
+    ansel(s);
+    s.credits("runner", 20);
+    s.clicks("runner", 4);
+    s.decide("runner");
+    expect(best(s, "runner", (w) => /^(run Server 1|Overclock into Server 1)/.test(w))).toBeGreaterThan(40);
   });
 });

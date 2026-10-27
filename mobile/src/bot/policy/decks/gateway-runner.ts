@@ -33,12 +33,12 @@ interface Target {
   viaMayfly?: boolean;
 }
 
-function targets(obs: Observation, extra = 0, includeWorthless = false): Target[] {
+function targets(obs: Observation, extra = 0, includeWorthless = false, corpTax = 0): Target[] {
   const out: Target[] = [];
   const mayfly = inHand(obs, "Mayfly");
   const mayflyCost = mayfly ? playCostOf(mayfly) : 0;
   const mayflyProfile = mayfly && Number(obs.me.memory?.available ?? 4) - Number(obs.me.memory?.used ?? 0) >= 1 ? breakerProfile(mayfly, obs.info(mayfly)) : null;
-  const price = unrezzedPrice(obs);
+  const price = unrezzedPrice(obs, obs.credits + extra, Number(obs.opp.credit ?? 0) - corpTax);
   for (const server of obs.servers) {
     const value = serverValue(obs, server);
     if (value <= 0 && !includeWorthless) continue;
@@ -285,7 +285,7 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
   }
   const tread = inHand(obs, "Tread Lightly");
   if (tread && obs.credits >= 1 && obs.memory.runsThisTurn < 2 && Number(obs.opp.credit ?? 0) <= 7) {
-    const t = ts.filter((x) => x.server.ices.some((i: any) => !i.rezzed) && safeHand(obs, x))[0];
+    const t = targets(obs, 0, true, 3).filter((x) => x.server.ices.some((i: any) => !i.rezzed) && safeHand(obs, x))[0];
     if (t) push(proposal(playOf(obs, tread), runScore({ ...t, credits: 1 }, 1), `Tread Lightly into ${t.server.label}: the Corp cannot afford to rez`, "run-event", false));
   }
   const red = inRig(obs, "Red Team");
@@ -439,6 +439,10 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
     }
     if (p.kind === "run") {
       const t = ts.find((x) => p.why.startsWith(`run ${x.server.label}`));
+      if (!t && !p.why.startsWith("run Archives")) {
+        p.score = Math.min(p.score, 10);
+        p.why += " (its ice is likely beyond the rig)";
+      }
       if (t && !safeHand(obs, t)) {
         p.score -= 40;
         p.why += ` (the grip cannot survive the access: ${requiredHand(obs, t)} cards needed)`;
@@ -469,6 +473,11 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
     }
     if (p.kind === "run-event") {
       const t = ts.find((x) => p.why.includes(` into ${x.server.label}`));
+      if (!t && / into (Server|HQ|R&D)/.test(p.why) && !p.why.startsWith("Tread Lightly")) {
+        p.score = Math.min(p.score, 10);
+        p.why += " (its ice is likely beyond the rig)";
+      }
+      if (plan.kind === "contest" && t?.server.label === plan.detail?.server) p.score += 20;
       if (t && !safeHand(obs, t)) {
         p.score = Math.min(p.score, 12);
         p.why += ` (the grip cannot survive the access: ${requiredHand(obs, t)} cards needed)`;
