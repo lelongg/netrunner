@@ -158,7 +158,7 @@ function safeHand(obs: Observation, t: Target) {
   const adv = Math.max(0, ...t.server.content.map((c: any) => agendaProgress(c).have));
   const corpPoints = Number(obs.opp["agenda-point"] ?? 0);
   const need = Number(obs.opp["agenda-point-req"] ?? 7);
-  const desperate = t.server.remote && adv >= 2 && corpPoints + 3 >= need;
+  const desperate = t.server.remote && ((adv >= 2 && corpPoints + 3 >= need) || (adv >= 1 && corpPoints + 2 >= need));
   const required = desperate ? Math.min(2, requiredHand(obs, t)) : requiredHand(obs, t);
   return obs.hand.length > required;
 }
@@ -396,7 +396,7 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
   for (const p of out) {
     const cost = spend(p);
     const cheapRun = (p.kind === "run" || p.kind === "run-event") && cost <= 3;
-    if (cost > 0 && !cheapRun && floorNear && obs.credits - cost < floor && !(plan.kind === "contest" && p.why.includes(String(plan.detail?.server))) && !(plan.kind === "closing" && (p.kind === "run" || p.kind === "run-event")) && p.kind !== "install-breaker") {
+    if (cost > 0 && !cheapRun && floorNear && obs.credits - cost < floor && !(plan.kind === "contest" && p.why.includes(String(plan.detail?.server))) && !(plan.kind === "closing" && (p.kind === "run" || p.kind === "run-event")) && p.kind !== "install-breaker" && !p.why.includes("(decisive:")) {
       p.score -= 15;
       p.why += ` (would drop below the ${floor} needed for the remote)`;
     }
@@ -413,7 +413,7 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
     if (p.kind === "credit" && (obs.credits < 8 || (floorNear && obs.credits < floor)) && cov.size >= 2) p.score += 12;
     if (p.kind === "run" || p.kind === "run-event") {
       const t = ts.find((x) => p.why.includes(x.server.label));
-      if (t && t.credits > 0 && obs.credits - t.credits < 3 && t.value < 5 && plan.kind !== "closing") {
+      if (t && t.credits > 0 && obs.credits - t.credits < 3 && t.value < 5 && plan.kind !== "closing" && !p.why.includes("(decisive:")) {
         p.score -= 22;
         p.why += " (would leave under 3 credits for little value)";
       }
