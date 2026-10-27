@@ -278,7 +278,7 @@ function App() {
     if (existing) resume(existing);
     else if (!joinParam) setOpening(null);
     else {
-      let name = "Player";
+      let name = t("Player");
       try {
         name = localStorage.getItem("nsg.name")?.trim() || name;
       } catch {}
@@ -404,7 +404,7 @@ function App() {
             setOpening("tutorial");
             afterPaint(() => {
               const m = loaded.matchups.find((x) => x.key === "beginner") ?? loaded.matchups[0];
-              let name = "Player";
+              let name = t("Player");
               try {
                 name = localStorage.getItem("nsg.name")?.trim() || name;
               } catch {}
