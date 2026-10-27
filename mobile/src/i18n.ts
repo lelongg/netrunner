@@ -6,8 +6,9 @@ import board from "./i18n/fr/board.ts";
 import decks from "./i18n/fr/decks.ts";
 import game from "./i18n/fr/game.ts";
 import screens from "./i18n/fr/screens.ts";
+import tutorial from "./i18n/fr/tutorial.ts";
 
-const FR: Record<string, string> = { ...cards, ...app, ...board, ...decks, ...game, ...screens };
+const FR: Record<string, string> = { ...cards, ...app, ...board, ...decks, ...game, ...screens, ...tutorial };
 
 export const french = () => settings.language === "fr";
 
