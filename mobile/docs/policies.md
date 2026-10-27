@@ -300,6 +300,14 @@ size while putting its hand on the board at ten credits (243 / 232 against 254 /
 253 / 219 on the nightly sample). Both are kept: they remove behaviour that reads as a
 fault in replays and cost nothing measurable, but they are not progress on the number.
 
+Replay 4K88K9ZY (Discretion Advised 7-1 against the Stolen Goods bot) then fixed the
+Runner's reading of bioroids: "cannot steal" counts as an end-the-run, a bioroid is
+clicked through only with the clicks left after the run, unrezzed ice is priced by the
+odds of meeting one the budget cannot pay, a server the estimate drops is capped, and
+the contest bonus reaches Overclock. The both-sides grid after it: Corp 362 / 380,
+Runner 244 / 220, flat again, with the Runner's rich credit clicks back up (Stolen Goods
+182 and 183) now that it refuses runs it cannot finish.
+
 The spread between versions is inside the interval of 1152 games (about ±33 on a sum),
 so none of this is a measured gain: the 72-game local batches that motivated v1 (27 to
 22 Runner wins) and condemned v2 were noise. Two things did come out of it. The
