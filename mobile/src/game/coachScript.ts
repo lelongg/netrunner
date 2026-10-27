@@ -220,9 +220,9 @@ const RUNNER: TutorialScript = {
       id: "run-nico",
       anchor: ".actions .buttons",
       when: (v) => mainPhase("runner")(v) && !!corpCard(v, "Nico Campaign"),
-      done: (v) => runOn(v, "remote2"),
-      allow: running("Server 2"),
-      text: "Run Server 2.",
+      done: (v) => (runOn(v, "remote2") && !!promptOf(v, "runner")?.choices) || discarded(v, "corp", "Nico Campaign"),
+      allow: (command, card, args) => running("Server 2")(command, card, args) ?? continuing(command),
+      text: "Run Server 2. No ice protects it: go straight to the server.",
     },
     {
       id: "trash",
