@@ -1003,3 +1003,35 @@ describe("corp ices a central the Runner walks into", () => {
     expect(s.last("corp").chosen?.why).toMatch(/^install Palisade on R&D: ice R&D: the Runner walks in/);
   });
 });
+
+describe("corp scores fast when rich instead of waiting for a safe window", () => {
+  it("installs Offworld Office behind two rezzable ice at fifteen credits with Seamless Launch in hand although the Runner can get in", () => {
+    const s = new Scenario("core-hb", "core-criminal");
+    centrals(s);
+    s.summon("corp", "Whitespace", "Palisade");
+    s.credits("corp", 40);
+    for (const [c, srv] of [["Whitespace", "New remote"], ["Palisade", "Server 1"]] as [string, string][]) {
+      s.clicks("corp", 3);
+      s.install("corp", c, srv);
+    }
+    s.endTurn("corp");
+    s.clearHand("runner");
+    s.summon("runner", "Buzzsaw", "Marjanah", "Carmen");
+    s.credits("runner", 20);
+    for (const c of ["Buzzsaw", "Marjanah", "Carmen"]) {
+      s.clicks("runner", 4);
+      s.install("runner", c);
+    }
+    s.summon("runner", "Sure Gamble", "Jailbreak", "Overclock", "Tread Lightly");
+    s.credits("runner", 12);
+    s.clicks("runner", 0);
+    s.endTurn("runner");
+    s.clearHand("corp");
+    s.summon("corp", "Offworld Office", "Seamless Launch", "Hedge Fund");
+    s.credits("corp", 15);
+    s.clicks("corp", 2);
+    const move = s.decide("corp");
+    expect(move?.command).toBe("play");
+    expect(s.last("corp").chosen?.why).toMatch(/install Offworld Office behind 2 ice in Server 1 .*scores next turn/);
+  });
+});
