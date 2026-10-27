@@ -1203,3 +1203,51 @@ describe("runner probes a remote behind unrezzed ice (replay BAFNY36P)", () => {
     expect(s.last("runner").chosen?.why).toMatch(/^run Server 1/);
   });
 });
+
+describe("corp uses its run-ending upgrade and ices a porous R&D (replay 5P5VJBPX)", () => {
+  it("rezzes Anoetic Void before ending the turn", () => {
+    const s = new Scenario("core-jinteki", "core-anarch");
+    s.clearHand("corp");
+    s.summon("corp", "Palisade", "Anoetic Void", "Offworld Office");
+    s.credits("corp", 40);
+    for (const [c, srv] of [["Palisade", "New remote"], ["Anoetic Void", "Server 1"], ["Offworld Office", "Server 1"]] as [string, string][]) {
+      s.clicks("corp", 3);
+      s.install("corp", c, srv);
+    }
+    s.credits("corp", 9);
+    s.clicks("corp", 0);
+    const move = s.decide("corp");
+    expect(move?.command).toBe("rez");
+    expect(s.last("corp").chosen?.why).toMatch(/^rez Anoetic Void/);
+  });
+
+  it("puts a second ice on R&D behind a lone Tithe when rich and the Runner has a killer", () => {
+    const s = new Scenario("core-jinteki", "core-anarch");
+    s.clearHand("corp");
+    s.summon("corp", "Tithe", "Karunā", "Diviner", "Tithe");
+    s.credits("corp", 40);
+    for (const [c, srv] of [["Tithe", "HQ"], ["Karunā", "HQ"], ["Diviner", "HQ"], ["Tithe", "R&D"]] as [string, string][]) {
+      s.clicks("corp", 3);
+      s.install("corp", c, srv);
+    }
+    s.rez("Tithe");
+    s.endTurn("corp");
+    s.clearHand("runner");
+    s.summon("runner", "Carmen", "Buzzsaw", "Leech");
+    s.credits("runner", 20);
+    for (const c of ["Carmen", "Buzzsaw", "Leech"]) {
+      s.clicks("runner", 4);
+      s.install("runner", c);
+    }
+    s.summon("runner", "Sure Gamble", "Overclock", "Botulus");
+    s.credits("runner", 6);
+    s.clicks("runner", 0);
+    s.endTurn("runner");
+    s.clearHand("corp");
+    s.summon("corp", "Whitespace", "Regolith Mining License", "Hedge Fund");
+    s.credits("corp", 13);
+    s.clicks("corp", 3);
+    s.decide("corp");
+    expect(best(s, "corp", (w) => w.startsWith("install Whitespace on R&D"))).toBeGreaterThan(best(s, "corp", (w) => /^install Whitespace on (HQ|Server|New remote)/.test(w)));
+  });
+});
