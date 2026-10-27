@@ -1170,3 +1170,36 @@ describe("runner does not start breaking ice it cannot finish", () => {
     expect(move).not.toBeNull();
   });
 });
+
+describe("runner probes a remote behind unrezzed ice (replay BAFNY36P)", () => {
+  it("runs an advanced remote behind four unrezzed Weyland ice at eight credits instead of clicking", () => {
+    const s = new Scenario("core-weyland", "core-anarch");
+    s.clearHand("corp");
+    s.summon("corp", "Funhouse", "Ballista", "Ballista", "Palisade", "Whitespace", "Tithe", "Funhouse", "Pharos", "Send a Message");
+    s.credits("corp", 60);
+    for (const [c, srv] of [["Funhouse", "HQ"], ["Ballista", "HQ"], ["Ballista", "R&D"], ["Palisade", "R&D"], ["Whitespace", "New remote"], ["Tithe", "Server 1"], ["Funhouse", "Server 1"], ["Pharos", "Server 1"], ["Send a Message", "Server 1"]] as [string, string][]) {
+      s.clicks("corp", 3);
+      s.credits("corp", 60);
+      s.install("corp", c, srv);
+    }
+    s.clicks("corp", 3);
+    s.act("corp", "Send a Message: Advance");
+    s.act("corp", "Send a Message: Advance");
+    s.credits("corp", 14);
+    s.clicks("corp", 0);
+    s.endTurn("corp");
+    s.clearHand("runner");
+    s.summon("runner", "Cleaver", "Leech", "Buzzsaw", "Carnivore", "Smartware Distributor", "Cookbook");
+    s.credits("runner", 30);
+    for (const c of ["Cleaver", "Leech", "Buzzsaw", "Carnivore", "Smartware Distributor", "Cookbook"]) {
+      s.clicks("runner", 4);
+      s.install("runner", c);
+    }
+    s.summon("runner", "Docklands Pass", "DZMZ Optimizer", "DZMZ Optimizer", "Botulus");
+    s.credits("runner", 8);
+    s.clicks("runner", 4);
+    const move = s.decide("runner");
+    expect(move?.command).toBe("run");
+    expect(s.last("runner").chosen?.why).toMatch(/^run Server 1/);
+  });
+});

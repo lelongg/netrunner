@@ -326,6 +326,10 @@ subroutines with the six credits it had, so an encounter no longer starts breaki
 that ends the run when the exact cost of a full break exceeds the credits for the run. For
 the policy Corp, corp:rez-to-broke stayed at 133 against 136 for the reference: most cases
 read were rezzes of an ice that does end the run, which the rule keeps on purpose.
+The Runner grid after the partial-break fix read 241 / 224 with the counter unchanged
+(259): split by cause on 24 local Stolen Goods games, nine wasted runs in ten were stopped
+by ice the Corp rezzed during the run, the price of running into unrezzed ice rather than
+a misread of known ice.
 
 The spread between versions is inside the interval of 1152 games (about ±33 on a sum),
 so none of this is a measured gain: the 72-game local batches that motivated v1 (27 to
@@ -442,8 +446,9 @@ whichever bot plays: an agenda stolen from a remote, a thin or unrezzable agenda
 a credit click while rich, and, from the log, `corp:broke-streak` (three Corp turns in a row
 ending under five credits, `corp:broke-with-economy-in-hand` when an economy operation was
 waiting), `corp:rez-to-broke` (a rez that leaves the Corp at one credit or less before
-turn seven) and `runner:paid-and-stopped` (a run that cost three credits or more in breaks
-and never breached). The first few of each kind are exported as situations. The log-based
+turn seven) and `runner:paid-and-stopped-*` (a run that cost three credits or more in breaks
+and never breached, split by cause: `new-ice` when the Corp rezzed ice during the run,
+`jacked-out`, and `known-ice` when the run was stopped by ice that was already rezzed). The first few of each kind are exported as situations. The log-based
 counters came from the user's replays: each named a fault the grids could not see.
 
 With `--out`, the run writes:

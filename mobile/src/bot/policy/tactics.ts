@@ -143,6 +143,7 @@ export interface RunEstimate {
   damage: number;
   tags: number;
   etrRisk: boolean;
+  failOdds?: number;
 }
 
 export const CLICK_AS_CREDITS = 2;
@@ -195,8 +196,8 @@ export function estimateRun(obs: Observation, server: ServerInfo, unrezzedCost =
   for (const c of server.content) if (c.rezzed && c.title === "Manegarm Skunkworks" && Number(obs.clicks ?? 0) < 3) credits += 5;
   const failOdds = unrezzed ? 1 - Math.pow(1 - Math.min(1, unrezzedBlock), unrezzed) : 0;
   if (unrezzed && (coverage(obs).size < 3 || failOdds > 0.3)) etrRisk = true;
-  if (unrezzed && failOdds >= 0.6) blocked = true;
-  return { server, credits, exact, blocked, unrezzed, damage, tags, etrRisk };
+  if (unrezzed && unrezzedBlock >= 0.8) blocked = true;
+  return { server, credits, exact, blocked, unrezzed, damage, tags, etrRisk, failOdds };
 }
 
 export function runTrialOf(obs: Observation, server: ServerInfo): RunEstimate | null {
