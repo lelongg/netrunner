@@ -1,0 +1,746 @@
+{
+  "configs": {
+    "base": {
+      "flags": "",
+      "splits": {
+        "design": {
+          "side": "corp",
+          "opponent": "aggro",
+          "games": 48,
+          "total": 353,
+          "played": 576,
+          "decisionMs": 29.591666666666665,
+          "mistakes": {
+            "Discretion Advised stolen-from-remote": 42,
+            "Discretion Advised rich-credit-click": 5,
+            "Discretion Advised thin-install": 11,
+            "Discretion Advised unrezzable-install": 25,
+            "Discretion Advised thin-install-stolen": 3,
+            "Advanced Yomi stolen-from-remote": 51,
+            "Advanced Yomi rich-credit-click": 3,
+            "Advanced Yomi unrezzable-install": 23,
+            "Advanced Yomi thin-install": 14,
+            "Advanced Yomi thin-install-stolen": 2,
+            "Hyper Velocity thin-install": 9,
+            "Hyper Velocity unrezzable-install": 33,
+            "Hyper Velocity stolen-from-remote": 52,
+            "Hyper Velocity rich-credit-click": 2,
+            "Hyper Velocity thin-install-stolen": 3,
+            "Quick and Dirty unrezzable-install": 35,
+            "Quick and Dirty thin-install": 10,
+            "Quick and Dirty stolen-from-remote": 26,
+            "Quick and Dirty rich-credit-click": 16,
+            "Quick and Dirty thin-install-stolen": 2
+          }
+        },
+        "test": {
+          "side": "corp",
+          "opponent": "aggro",
+          "games": 48,
+          "total": 375,
+          "played": 576,
+          "decisionMs": 29.03333333333333,
+          "mistakes": {
+            "Discretion Advised stolen-from-remote": 46,
+            "Discretion Advised thin-install": 18,
+            "Discretion Advised unrezzable-install": 27,
+            "Discretion Advised rich-credit-click": 5,
+            "Advanced Yomi thin-install": 19,
+            "Advanced Yomi rich-credit-click": 4,
+            "Advanced Yomi stolen-from-remote": 45,
+            "Advanced Yomi unrezzable-install": 17,
+            "Advanced Yomi thin-install-stolen": 2,
+            "Hyper Velocity unrezzable-install": 22,
+            "Hyper Velocity stolen-from-remote": 57,
+            "Hyper Velocity thin-install": 19,
+            "Hyper Velocity thin-install-stolen": 4,
+            "Quick and Dirty unrezzable-install": 42,
+            "Quick and Dirty stolen-from-remote": 41,
+            "Quick and Dirty thin-install": 21,
+            "Quick and Dirty thin-install-stolen": 7,
+            "Quick and Dirty rich-credit-click": 9
+          }
+        }
+      }
+    }
+  },
+  "cells": [
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-hb",
+      "runner": "core-anarch",
+      "side": "corp",
+      "opponent": "aggro",
+      "split": "design",
+      "games": 48,
+      "wins": {
+        "corp": 29,
+        "runner": 19,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 47,
+        "Decked": 1
+      },
+      "mistakes": {
+        "corp:stolen-from-remote": 14,
+        "corp:rich-credit-click": 3,
+        "corp:thin-install": 3,
+        "corp:unrezzable-install": 15,
+        "corp:thin-install-stolen": 1
+      },
+      "decisionMs": 22.5,
+      "decisionMaxMs": 1476.7
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-hb",
+      "runner": "core-anarch",
+      "side": "corp",
+      "opponent": "aggro",
+      "split": "test",
+      "games": 48,
+      "wins": {
+        "corp": 30,
+        "runner": 18,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 48
+      },
+      "mistakes": {
+        "corp:stolen-from-remote": 13,
+        "corp:thin-install": 8,
+        "corp:unrezzable-install": 11,
+        "runner:rich-credit-click": 4,
+        "corp:rich-credit-click": 1
+      },
+      "decisionMs": 25.4,
+      "decisionMaxMs": 1471.7
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-hb",
+      "runner": "core-criminal",
+      "side": "corp",
+      "opponent": "aggro",
+      "split": "design",
+      "games": 48,
+      "wins": {
+        "corp": 34,
+        "runner": 14,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 47,
+        "Decked": 1
+      },
+      "mistakes": {
+        "corp:stolen-from-remote": 16,
+        "corp:thin-install": 5,
+        "corp:rich-credit-click": 2,
+        "corp:thin-install-stolen": 1,
+        "corp:unrezzable-install": 3,
+        "runner:rich-credit-click": 13
+      },
+      "decisionMs": 32.8,
+      "decisionMaxMs": 2233
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-hb",
+      "runner": "core-criminal",
+      "side": "corp",
+      "opponent": "aggro",
+      "split": "test",
+      "games": 48,
+      "wins": {
+        "corp": 35,
+        "runner": 13,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 46,
+        "Decked": 2
+      },
+      "mistakes": {
+        "corp:stolen-from-remote": 15,
+        "corp:unrezzable-install": 7,
+        "runner:rich-credit-click": 5,
+        "corp:thin-install": 1,
+        "corp:rich-credit-click": 1
+      },
+      "decisionMs": 32.4,
+      "decisionMaxMs": 1744.3
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-hb",
+      "runner": "core-shaper",
+      "side": "corp",
+      "opponent": "aggro",
+      "split": "design",
+      "games": 48,
+      "wins": {
+        "corp": 31,
+        "runner": 17,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 47,
+        "Decked": 1
+      },
+      "mistakes": {
+        "corp:stolen-from-remote": 12,
+        "corp:thin-install": 3,
+        "corp:thin-install-stolen": 1,
+        "corp:unrezzable-install": 7,
+        "runner:rich-credit-click": 5
+      },
+      "decisionMs": 30.7,
+      "decisionMaxMs": 1186.9
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-hb",
+      "runner": "core-shaper",
+      "side": "corp",
+      "opponent": "aggro",
+      "split": "test",
+      "games": 48,
+      "wins": {
+        "corp": 38,
+        "runner": 10,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 48
+      },
+      "mistakes": {
+        "corp:unrezzable-install": 9,
+        "corp:stolen-from-remote": 18,
+        "corp:rich-credit-click": 3,
+        "corp:thin-install": 9,
+        "runner:rich-credit-click": 9
+      },
+      "decisionMs": 30.8,
+      "decisionMaxMs": 2524.2
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-jinteki",
+      "runner": "core-anarch",
+      "side": "corp",
+      "opponent": "aggro",
+      "split": "design",
+      "games": 48,
+      "wins": {
+        "corp": 35,
+        "runner": 13,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 45,
+        "Flatline": 2,
+        "Decked": 1
+      },
+      "mistakes": {
+        "runner:rich-credit-click": 91,
+        "corp:stolen-from-remote": 14,
+        "corp:rich-credit-click": 1,
+        "corp:unrezzable-install": 9,
+        "corp:thin-install": 5
+      },
+      "decisionMs": 44.2,
+      "decisionMaxMs": 1817.7
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-jinteki",
+      "runner": "core-anarch",
+      "side": "corp",
+      "opponent": "aggro",
+      "split": "test",
+      "games": 48,
+      "wins": {
+        "corp": 33,
+        "runner": 15,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 48
+      },
+      "mistakes": {
+        "runner:rich-credit-click": 77,
+        "corp:thin-install": 6,
+        "corp:rich-credit-click": 2,
+        "corp:stolen-from-remote": 14,
+        "corp:unrezzable-install": 4
+      },
+      "decisionMs": 40.2,
+      "decisionMaxMs": 1990.4
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-jinteki",
+      "runner": "core-criminal",
+      "side": "corp",
+      "opponent": "aggro",
+      "split": "design",
+      "games": 48,
+      "wins": {
+        "corp": 19,
+        "runner": 29,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 46,
+        "Flatline": 2
+      },
+      "mistakes": {
+        "runner:rich-credit-click": 47,
+        "corp:stolen-from-remote": 19,
+        "corp:unrezzable-install": 8,
+        "corp:thin-install": 5,
+        "corp:thin-install-stolen": 1
+      },
+      "decisionMs": 34.3,
+      "decisionMaxMs": 1987.7
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-jinteki",
+      "runner": "core-criminal",
+      "side": "corp",
+      "opponent": "aggro",
+      "split": "test",
+      "games": 48,
+      "wins": {
+        "corp": 26,
+        "runner": 22,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 46,
+        "Flatline": 1,
+        "Decked": 1
+      },
+      "mistakes": {
+        "runner:rich-credit-click": 54,
+        "corp:rich-credit-click": 1,
+        "corp:unrezzable-install": 7,
+        "corp:stolen-from-remote": 16,
+        "corp:thin-install": 4,
+        "corp:thin-install-stolen": 1
+      },
+      "decisionMs": 33.1,
+      "decisionMaxMs": 1817.8
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-jinteki",
+      "runner": "core-shaper",
+      "side": "corp",
+      "opponent": "aggro",
+      "split": "design",
+      "games": 48,
+      "wins": {
+        "corp": 29,
+        "runner": 19,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 46,
+        "Flatline": 2
+      },
+      "mistakes": {
+        "corp:stolen-from-remote": 18,
+        "runner:rich-credit-click": 19,
+        "corp:thin-install": 4,
+        "corp:thin-install-stolen": 1,
+        "corp:rich-credit-click": 2,
+        "corp:unrezzable-install": 6
+      },
+      "decisionMs": 27,
+      "decisionMaxMs": 1755.3
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-jinteki",
+      "runner": "core-shaper",
+      "side": "corp",
+      "opponent": "aggro",
+      "split": "test",
+      "games": 48,
+      "wins": {
+        "corp": 34,
+        "runner": 14,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 46,
+        "Flatline": 2
+      },
+      "mistakes": {
+        "corp:stolen-from-remote": 15,
+        "corp:thin-install": 9,
+        "runner:rich-credit-click": 24,
+        "corp:unrezzable-install": 6,
+        "corp:rich-credit-click": 1,
+        "corp:thin-install-stolen": 1
+      },
+      "decisionMs": 22.1,
+      "decisionMaxMs": 1232.4
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-nbn",
+      "runner": "core-anarch",
+      "side": "corp",
+      "opponent": "aggro",
+      "split": "design",
+      "games": 48,
+      "wins": {
+        "corp": 27,
+        "runner": 21,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 45,
+        "Decked": 2,
+        "Flatline": 1
+      },
+      "mistakes": {
+        "corp:thin-install": 5,
+        "corp:unrezzable-install": 11,
+        "corp:stolen-from-remote": 20,
+        "corp:rich-credit-click": 1
+      },
+      "decisionMs": 38.3,
+      "decisionMaxMs": 1989.5
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-nbn",
+      "runner": "core-anarch",
+      "side": "corp",
+      "opponent": "aggro",
+      "split": "test",
+      "games": 48,
+      "wins": {
+        "corp": 22,
+        "runner": 26,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 46,
+        "Decked": 2
+      },
+      "mistakes": {
+        "corp:unrezzable-install": 13,
+        "corp:stolen-from-remote": 22,
+        "corp:thin-install": 6,
+        "runner:rich-credit-click": 3
+      },
+      "decisionMs": 36.8,
+      "decisionMaxMs": 1512.5
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-nbn",
+      "runner": "core-criminal",
+      "side": "corp",
+      "opponent": "aggro",
+      "split": "design",
+      "games": 48,
+      "wins": {
+        "corp": 23,
+        "runner": 25,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 45,
+        "Flatline": 1,
+        "Decked": 2
+      },
+      "mistakes": {
+        "corp:unrezzable-install": 12,
+        "corp:stolen-from-remote": 11,
+        "runner:rich-credit-click": 4,
+        "corp:thin-install": 1,
+        "corp:rich-credit-click": 1
+      },
+      "decisionMs": 22.7,
+      "decisionMaxMs": 1144.3
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-nbn",
+      "runner": "core-criminal",
+      "side": "corp",
+      "opponent": "aggro",
+      "split": "test",
+      "games": 48,
+      "wins": {
+        "corp": 29,
+        "runner": 19,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 46,
+        "Flatline": 2
+      },
+      "mistakes": {
+        "corp:thin-install": 9,
+        "corp:stolen-from-remote": 16,
+        "corp:unrezzable-install": 5,
+        "corp:thin-install-stolen": 1
+      },
+      "decisionMs": 23.3,
+      "decisionMaxMs": 851.2
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-nbn",
+      "runner": "core-shaper",
+      "side": "corp",
+      "opponent": "aggro",
+      "split": "design",
+      "games": 48,
+      "wins": {
+        "corp": 20,
+        "runner": 28,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 47,
+        "Decked": 1
+      },
+      "mistakes": {
+        "corp:stolen-from-remote": 21,
+        "corp:unrezzable-install": 10,
+        "corp:thin-install": 3,
+        "corp:thin-install-stolen": 3,
+        "runner:rich-credit-click": 4
+      },
+      "decisionMs": 38.2,
+      "decisionMaxMs": 2080.4
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-nbn",
+      "runner": "core-shaper",
+      "side": "corp",
+      "opponent": "aggro",
+      "split": "test",
+      "games": 48,
+      "wins": {
+        "corp": 25,
+        "runner": 23,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 42,
+        "Decked": 2,
+        "Flatline": 4
+      },
+      "mistakes": {
+        "corp:stolen-from-remote": 19,
+        "runner:rich-credit-click": 1,
+        "corp:thin-install": 4,
+        "corp:thin-install-stolen": 3,
+        "corp:unrezzable-install": 4
+      },
+      "decisionMs": 37.9,
+      "decisionMaxMs": 1693.5
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-weyland",
+      "runner": "core-anarch",
+      "side": "corp",
+      "opponent": "aggro",
+      "split": "design",
+      "games": 48,
+      "wins": {
+        "corp": 35,
+        "runner": 13,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 48
+      },
+      "mistakes": {
+        "corp:unrezzable-install": 14,
+        "corp:thin-install": 6,
+        "corp:stolen-from-remote": 15,
+        "corp:rich-credit-click": 4,
+        "runner:rich-credit-click": 4,
+        "corp:thin-install-stolen": 2
+      },
+      "decisionMs": 15.9,
+      "decisionMaxMs": 766.4
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-weyland",
+      "runner": "core-anarch",
+      "side": "corp",
+      "opponent": "aggro",
+      "split": "test",
+      "games": 48,
+      "wins": {
+        "corp": 36,
+        "runner": 12,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 48
+      },
+      "mistakes": {
+        "corp:unrezzable-install": 18,
+        "corp:stolen-from-remote": 13,
+        "corp:thin-install": 8,
+        "runner:rich-credit-click": 4,
+        "corp:thin-install-stolen": 3,
+        "corp:rich-credit-click": 4
+      },
+      "decisionMs": 14.9,
+      "decisionMaxMs": 639.2
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-weyland",
+      "runner": "core-criminal",
+      "side": "corp",
+      "opponent": "aggro",
+      "split": "design",
+      "games": 48,
+      "wins": {
+        "corp": 37,
+        "runner": 11,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 47,
+        "Flatline": 1
+      },
+      "mistakes": {
+        "corp:thin-install": 3,
+        "corp:unrezzable-install": 10,
+        "corp:stolen-from-remote": 2,
+        "runner:rich-credit-click": 32,
+        "corp:rich-credit-click": 10
+      },
+      "decisionMs": 19.2,
+      "decisionMaxMs": 1098.9
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-weyland",
+      "runner": "core-criminal",
+      "side": "corp",
+      "opponent": "aggro",
+      "split": "test",
+      "games": 48,
+      "wins": {
+        "corp": 38,
+        "runner": 10,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 48
+      },
+      "mistakes": {
+        "corp:stolen-from-remote": 10,
+        "runner:rich-credit-click": 33,
+        "corp:thin-install": 6,
+        "corp:thin-install-stolen": 1,
+        "corp:unrezzable-install": 15,
+        "corp:rich-credit-click": 3
+      },
+      "decisionMs": 21.5,
+      "decisionMaxMs": 1222.4
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-weyland",
+      "runner": "core-shaper",
+      "side": "corp",
+      "opponent": "aggro",
+      "split": "design",
+      "games": 48,
+      "wins": {
+        "corp": 34,
+        "runner": 14,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 46,
+        "Decked": 1,
+        "Flatline": 1
+      },
+      "mistakes": {
+        "corp:unrezzable-install": 11,
+        "runner:rich-credit-click": 12,
+        "corp:stolen-from-remote": 9,
+        "corp:thin-install": 1,
+        "corp:rich-credit-click": 2
+      },
+      "decisionMs": 29.3,
+      "decisionMaxMs": 1910.7
+    },
+    {
+      "config": "base",
+      "flags": "",
+      "corp": "core-weyland",
+      "runner": "core-shaper",
+      "side": "corp",
+      "opponent": "aggro",
+      "split": "test",
+      "games": 48,
+      "wins": {
+        "corp": 29,
+        "runner": 19,
+        "none": 0
+      },
+      "reasons": {
+        "Agenda": 47,
+        "Decked": 1
+      },
+      "mistakes": {
+        "corp:stolen-from-remote": 18,
+        "corp:rich-credit-click": 2,
+        "runner:rich-credit-click": 11,
+        "corp:unrezzable-install": 9,
+        "corp:thin-install": 7,
+        "corp:thin-install-stolen": 3
+      },
+      "decisionMs": 30,
+      "decisionMaxMs": 2077.4
+    }
+  ]
+}
