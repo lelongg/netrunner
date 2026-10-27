@@ -84,6 +84,9 @@ export function corpProposals(obs: Observation): Proposal[] {
     }
   }
   const ice = obs.hand.filter((c) => c.type === "ICE").sort((a, b) => strengthOf(b) - strengthOf(a));
+  const wantCredits = obs.hand.some((c) => c.type === "Operation" && gainOf(obs.info(c).text) > playCostOf(c) && playCostOf(c) > obs.credits);
+  const econOp = obs.hand.filter((c) => c.type === "Operation" && gainOf(obs.info(c).text) > playCostOf(c) + 3 && playCostOf(c) > obs.credits && playCostOf(c) <= obs.credits + obs.clicks - 1).sort((a, b) => playCostOf(a) - playCostOf(b))[0];
+  const nearly = obs.hand.some((c) => c.type === "Operation" && gainOf(obs.info(c).text) > playCostOf(c) + 3 && playCostOf(c) > obs.credits && playCostOf(c) <= obs.credits + obs.clicks);
   if (ice.length) {
     const hq = obs.servers.find((s) => s.key === "hq")!;
     const rd = obs.servers.find((s) => s.key === "rd")!;
@@ -137,8 +140,17 @@ export function corpProposals(obs: Observation): Proposal[] {
   const trap = obs.hand.find((c) => c.type === "Asset" && isTrap(obs.info(c).text));
   if (trap && obs.servers.filter((s) => s.remote).length < 4 && obs.credits >= 3) push(proposal(playOf(obs, trap, "New remote"), 38, `install ${trap.title} as a bait`, "install-trap"));
   if (tagged(obs.view) && obs.credits >= (obs.hand.some((c) => c.type === "Agenda") ? 7 : 4) && (obs.view.runner?.rig?.resource ?? []).length) push(proposal(byCommand(obs, "trash-resource")[0], 45, "trash a resource while the Runner is tagged", "trash-resource"));
-  const wantCredits = obs.hand.some((c) => c.type === "Operation" && gainOf(obs.info(c).text) > playCostOf(c) && playCostOf(c) > obs.credits);
-  const nearly = obs.hand.some((c) => c.type === "Operation" && gainOf(obs.info(c).text) > playCostOf(c) + 3 && playCostOf(c) > obs.credits && playCostOf(c) <= obs.credits + obs.clicks);
+  if (econOp) {
+    for (const p of out) {
+      if (!p.kind.startsWith("install")) continue;
+      const card = obs.hand.find((c) => p.why.includes(c.title));
+      const cost = card ? (card.type === "ICE" ? iceInstallCost(obs.servers.find((x) => p.why.includes(`on ${x.label}`)) ?? { ices: [] }) : playCostOf(card)) : 0;
+      if (obs.credits - cost + obs.clicks - 2 < playCostOf(econOp)) {
+        p.score -= 15;
+        p.why += ` (would put ${econOp.title} out of reach this turn)`;
+      }
+    }
+  }
   const deckLeft = Number(obs.me["deck-count"] ?? 0);
   const broke = obs.credits < 3 && obs.servers.some((s) => s.ices.some((i) => !i.rezzed && rezCostOf(i) > obs.credits));
   const rich = obs.credits >= 12 && obs.hand.length <= 2 && !ice.length;

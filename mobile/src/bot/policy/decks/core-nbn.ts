@@ -22,8 +22,11 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
   const runnerCredits = Number(obs.opp.credit ?? 0);
 
   const trail = glacier.inHand(obs, "Public Trail");
-  if (trail && obs.credits >= (runnerCredits < 8 ? 4 : 7) && ranLastTurn(obs) && !isTagged) {
-    const bite = runnerCredits < 8 ? 64 : runnerCredits < 12 ? 52 : 30;
+  const runnerIncome = [...(obs.opp.rig?.resource ?? []), ...(obs.opp.rig?.hardware ?? [])].filter((c: any) => /(gain|take|place) \d+\s*\[credits?\]/i.test(obs.info(c).text ?? "")).length;
+  const sticks = runnerCredits + runnerIncome < 2;
+  const followUp = obs.credits - 4 >= 2 && obs.clicks >= 2 && (obs.opp.rig?.resource ?? []).length > 0;
+  if (trail && obs.credits >= (runnerCredits < 8 ? 4 : 7) && ranLastTurn(obs) && !isTagged && (sticks || followUp || runnerCredits >= 8)) {
+    const bite = runnerCredits < 8 ? (sticks ? 64 : 48) : runnerCredits < 12 ? 52 : 30;
     push(proposal(playOf(obs, trail), bite, runnerCredits < 8 ? "Public Trail: the Runner cannot pay eight, the tag sticks" : "Public Trail: tax eight credits or tag", "tag"));
   }
   const retribution = glacier.inHand(obs, "Retribution");

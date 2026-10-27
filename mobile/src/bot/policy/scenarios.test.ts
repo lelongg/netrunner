@@ -1081,3 +1081,58 @@ describe("runner counts its clicks against bioroids (replay 4K88K9ZY)", () => {
     expect(best(s, "runner", (w) => /^(run Server 1|Overclock into Server 1)/.test(w))).toBeGreaterThan(40);
   });
 });
+
+describe("corp keeps its purse early (replay YT9YUQBD)", () => {
+  it("does not rez Funhouse for its whole purse under Tread Lightly on turn one", () => {
+    const s = new Scenario("core-nbn", "core-criminal");
+    s.clearHand("corp");
+    s.summon("corp", "Funhouse", "Palisade", "Orbital Superiority", "Hedge Fund", "Spin Doctor");
+    s.credits("corp", 10);
+    s.install("corp", "Funhouse", "HQ");
+    s.install("corp", "Palisade", "R&D");
+    s.credits("corp", 8);
+    s.clicks("corp", 0);
+    s.endTurn("corp");
+    s.clearHand("runner");
+    s.summon("runner", "Tread Lightly", "Sure Gamble", "VRcation", "Marjanah", "Overclock");
+    s.credits("runner", 9);
+    s.act("runner", "Tread Lightly: Play");
+    s.act("runner", "Choose: HQ");
+    let why = "";
+    for (let i = 0; i < 12 && !why; i++) {
+      const move = s.decide("corp");
+      if (move) {
+        const chosen = s.last("corp").chosen;
+        if (chosen?.kind === "rez" || /would leave|keep the credits/.test(chosen?.why ?? "")) why = chosen?.why ?? "";
+        s.play("corp", move);
+      } else s.runStep("runner");
+    }
+    expect(why).toMatch(/would leave 0 on turn/);
+  });
+
+  it("clicks up to Hedge Fund instead of installing ice on R&D at four credits", () => {
+    const s = new Scenario("core-nbn", "core-criminal");
+    centrals(s);
+    s.endTurn("corp");
+    s.clearHand("runner");
+    s.summon("runner", "Marjanah", "Buzzsaw");
+    s.credits("runner", 20);
+    for (const c of ["Marjanah", "Buzzsaw"]) {
+      s.clicks("runner", 4);
+      s.install("runner", c);
+    }
+    s.summon("runner", "Sure Gamble", "Jailbreak", "Overclock");
+    s.credits("runner", 6);
+    s.clicks("runner", 0);
+    s.endTurn("runner");
+    s.clearHand("corp");
+    s.summon("corp", "Hedge Fund", "Ping", "Palisade", "Send a Message");
+    s.credits("corp", 4);
+    s.clicks("corp", 3);
+    const turn = Number(s.view("corp").turn);
+    s.bots.corp.memory.notes.runsSeen = { "R&D": [turn - 2, turn - 1] };
+    const move = s.decide("corp");
+    expect(move?.command).toBe("credit");
+    expect(s.last("corp").chosen?.why).toMatch(/economy operation/);
+  });
+});
