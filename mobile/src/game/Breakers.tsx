@@ -23,6 +23,18 @@ function installed(view: any): any[] {
 
 const hostedOn = (view: any, ice: any): any[] => ((findCard(view, ice.cid) ?? ice).hosted ?? []).filter((c: any) => c.side === "Runner");
 
+function CostView({ cost }: { cost: string }) {
+  const virus = cost.match(/^(\d+ )?hosted virus counters?$/i);
+  if (virus)
+    return (
+      <span aria-label={cost}>
+        {virus[1]?.trim() ?? 1}
+        <Icon name="virus" class="glyph" />
+      </span>
+    );
+  return <>{glyphs(iconize(cost.replace(/^lose /i, "−")))}</>;
+}
+
 function splitCost(label: string): [string, string] {
   const i = label.indexOf(":");
   return i > 0 && i < 40 ? [label.slice(0, i).trim(), label.slice(i + 1).trim()] : ["", label];
@@ -115,7 +127,9 @@ export function Breakers({ view, stamp, probe, side, ice, send, onTap, disabled,
               <span class="brk-desc">{glyphs(iconize(shown(effect)))}</span>
             </div>
             <button class="brk-go" disabled={disabled || cmd.enabled === false} onClick={() => send(cmd.command, cmd.args)}>
-              <span class="brk-cost">{glyphs(iconize(cost))}</span>
+              <span class="brk-cost">
+                <CostView cost={cost} />
+              </span>
               <span class="brk-verb">{t("Use")}</span>
             </button>
           </div>
@@ -148,14 +162,7 @@ export function Breakers({ view, stamp, probe, side, ice, send, onTap, disabled,
             </div>
             <button class="brk-go" disabled={disabled || (/^break/i.test(effect) && !wanted)} onClick={() => (/^break/i.test(effect) && onPartial ? onPartial(card, wantedLabels) : send(cmd.command, cmd.args))}>
               <span class="brk-cost">
-                {/^(\d+ )?hosted virus counters?$/i.test(cost) ? (
-                  <span aria-label={cost}>
-                    {cost.match(/\d+/)?.[0] ?? 1}
-                    <Icon name="virus" class="glyph" />
-                  </span>
-                ) : (
-                  glyphs(iconize(cost))
-                )}
+                <CostView cost={cost} />
               </span>
               <span class="brk-verb">{/^break/i.test(effect) ? t("Break") : t("Use")}</span>
             </button>
@@ -209,7 +216,7 @@ export function Breakers({ view, stamp, probe, side, ice, send, onTap, disabled,
                         const plan = planOf(card);
                         return plan?.ok && plan.credits != null ? glyphs(iconize(`${plan.credits} [Credits]`)) : "";
                       })()
-                    : glyphs(iconize(ab?.["cost-label"] ?? ""))}
+                    : <CostView cost={String(ab?.["cost-label"] ?? "")} />}
                 </span>
                 <span class="brk-verb">{t("Break")}</span>
               </button>
