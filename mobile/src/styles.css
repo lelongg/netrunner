@@ -1108,6 +1108,12 @@ textarea:focus {
   overflow-x: auto;
 }
 
+.piles:has(.stacked),
+.servers:has(.stacked) {
+  padding-top: 12px;
+  margin-top: -12px;
+}
+
 .pile {
   display: flex;
   flex-direction: column;
@@ -1367,6 +1373,12 @@ textarea:focus {
   overflow-y: auto;
   --tile-w: 64px;
   --tile-h: 89px;
+}
+
+.stacked {
+  display: flex;
+  --stack-edge: rgb(170 184 200 / 0.55);
+  --stack-gap: rgb(4 6 9 / 0.9);
 }
 
 .pile .tile {
