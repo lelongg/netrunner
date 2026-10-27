@@ -248,7 +248,7 @@ function TurnState({ active }: { active: boolean }) {
   );
 }
 
-function MeBar({ view, side, name }: { view: any; side: Side; name: string }) {
+function MeBar({ view, side, name, onUndo }: { view: any; side: Side; name: string; onUndo?: () => void }) {
   const p = view[side] ?? {};
   const clicks = p.click ?? 0;
   return (
@@ -273,6 +273,11 @@ function MeBar({ view, side, name }: { view: any; side: Side; name: string }) {
           </span>
         </div>
       </div>
+      {onUndo && (
+        <button class="ghost me-undo" onClick={onUndo} aria-label={t("Undo click")}>
+          <Icon name="undo" />
+        </button>
+      )}
     </div>
   );
 }
@@ -1394,7 +1399,6 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
               <div class="menu-tiles">
                 <MenuTile icon="deck" label={t("Deck list")} onClick={() => closeMenu(() => setDeckOpen(true))} />
                 <MenuTile icon="history" label={t("Game log")} onClick={() => closeMenu(() => setShowLog(true))} />
-                {canUndo && <MenuTile icon="undo" label={t("Undo click")} onClick={() => closeMenu(() => session.say("/undo-click", side))} />}
                 {onSwitchSide && watching && <MenuTile icon="swap" label={opp === "corp" ? t("Corp view") : t("Runner view")} onClick={() => closeMenu(onSwitchSide)} />}
                 <MenuTile
                   icon={settings.sound || settings.music ? "sound" : "mute"}
@@ -1497,7 +1501,7 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
             <small>{t("before your next action")}</small>
           </button>
         )}
-        <MeBar view={view} side={side} name={names[side]} />
+        <MeBar view={view} side={side} name={names[side]} onUndo={canUndo ? () => session.say("/undo-click", side) : undefined} />
         <div class="hand" data-anchor={`${side}-hand`}>
           {hand.map((c) => (
             <CardTile key={c.cid} card={c} owner onTap={tap} selectable={selectable.has(c.cid)} />
