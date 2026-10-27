@@ -352,6 +352,14 @@ as open when the Corp is rich, the Corp grid against the refrozen reference read
 against the baseline 355 / 362 (+23 on 1152, inside the interval), with Advanced Yomi the
 deck that gained most (96 / 104 against 85 / 93).
 
+Replay WMCQV8NR (the user's Planning Ahead 7-5 over Quick and Dirty) showed the Corp sitting
+at five points for nine turns with three winning agendas in hand, the install capped because
+an ender could not be rezzed with the Tread Lightly margin. An agenda whose points win the
+game is now installed behind two or more ice the Runner cannot enter for under four. The
+Corp grid reads 361 / 373 (Quick and Dirty 107 / 102), level with the previous 367 / 373:
+the situation is rare in bot games, where the reference Runner seldom lets the Corp reach
+five points with a full hand.
+
 The spread between versions is inside the interval of 1152 games (about ±33 on a sum),
 so none of this is a measured gain: the 72-game local batches that motivated v1 (27 to
 22 Runner wins) and condemned v2 were noise. Two things did come out of it. The
