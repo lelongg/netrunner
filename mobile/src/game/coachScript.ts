@@ -350,7 +350,7 @@ const CORP: TutorialScript = {
       when: (v) => promptOf(v, "corp")?.["prompt-type"] === "select",
       done: (v) => advanced(corpCard(v, "Offworld Office")) >= 2,
       allow: (command, card) => (command === "select" ? card?.title === "Offworld Office" : undefined),
-      text: "Now choose where the counters go: tap Offworld Office in Server 1 and select it.",
+      text: "Now choose where the counters go: tap Offworld Office in Server 1, select it, then confirm.",
     },
     {
       id: "advance",

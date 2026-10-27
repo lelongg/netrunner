@@ -1,6 +1,6 @@
 export default {
   Tip: "Astuce",
-  "Now choose where the counters go: tap Offworld Office in Server 1 and select it.": "Choisissez maintenant où placer les pions : touchez Offworld Office dans le serveur 1 et sélectionnez-le.",
+  "Now choose where the counters go: tap Offworld Office in Server 1, select it, then confirm.": "Choisissez maintenant où placer les pions : touchez Offworld Office dans le serveur 1, sélectionnez-le, puis confirmez.",
   "No ice protects R&D: go straight to the server and access its top cards. Steal any agenda you find; other cards stay where they are.": "Aucune glace ne protège R&D : allez droit au serveur et accédez aux cartes du dessus. Volez tout projet que vous trouvez ; les autres cartes restent en place.",
   "Palisade is rezzed. Let the Runner encounter it: without an icebreaker, it cannot break the subroutine. Then fire it: End the run. Your agenda is safe.": "Palisade est activée. Laissez lae Runner la rencontrer : sans brise-glace, iel ne peut pas neutraliser la routine. Puis déclenchez-la : Fin du piratage. Votre projet est en sécurité.",
   "The Runner starts a run on Server 1! It must get past your ice first. Tap Let Runner approach ice.": "Lae Runner lance un piratage sur le serveur 1 ! Iel doit d'abord passer votre glace. Touchez Laisser lae Runner approcher la glace.",
