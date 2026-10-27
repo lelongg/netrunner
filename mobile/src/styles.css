@@ -1369,10 +1369,6 @@ textarea:focus {
   --tile-h: 89px;
 }
 
-.pile:has(.stacked) {
-  gap: 13px;
-}
-
 .stacked {
   display: flex;
   --stack-edge: rgb(170 184 200 / 0.55);

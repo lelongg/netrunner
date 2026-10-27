@@ -288,12 +288,14 @@ const ZONE_LABELS: Record<Side, Record<ZoneKey, string>> = {
   runner: { discard: "Heap", "play-area": "Play area", rfg: "Removed", "set-aside": "Set aside", deck: "Stack" },
 };
 
-function Stacked({ n, children }: { n: number; children: ComponentChildren }) {
-  const layers = n > 1 ? Math.min(5, 1 + Math.floor(n / 8)) : 0;
+function Stacked({ n, small, children }: { n: number; small?: boolean; children: ComponentChildren }) {
+  const full = n > 1 ? Math.min(5, 1 + Math.floor(n / 8)) : 0;
+  const layers = small && full ? Math.max(1, Math.round(full * 0.7)) : full;
   if (!layers) return <>{children}</>;
-  const shadows = Array.from({ length: layers * 2 }, (_, i) => `${i + 1}px ${i + 1}px 0 0 ${i % 2 ? "var(--stack-edge)" : "var(--stack-gap)"}`);
+  const depth = layers * 2;
+  const shadows = Array.from({ length: depth }, (_, i) => `${i + 1}px ${i + 1}px 0 0 ${i % 2 ? "var(--stack-edge)" : "var(--stack-gap)"}`);
   return (
-    <div class="stacked" style={{ boxShadow: shadows.join(", ") }}>
+    <div class="stacked" style={{ boxShadow: shadows.join(", "), transform: `translateY(-${depth}px)` }}>
       {children}
     </div>
   );
@@ -306,7 +308,7 @@ function Pile({ label, count, cards, owner, side, selectable, onOpen, anchor }: 
   const face = top ? <CardTile card={top} owner={owner} size="sm" onTap={onOpen} selectable={target} /> : <div class={`tile tile-sm ${count ? back : "empty"}`} />;
   return (
     <div class="pile" data-anchor={anchor}>
-      <Stacked n={count}>{face}</Stacked>
+      <Stacked n={count} small>{face}</Stacked>
       <span class={target ? "yellow" : ""}>
         {t(label)} {count}
       </span>
@@ -329,7 +331,7 @@ function Piles({ view, zoneOwner, viewer, onTap, onZone, selectable, centrals = 
     <div class="piles">
       {centrals && p.identity && (
         <div class="pile">
-          <Stacked n={zoneOwner === "runner" ? (p["hand-count"] ?? (p.hand ?? []).length) : 0}>
+          <Stacked n={zoneOwner === "runner" ? (p["hand-count"] ?? (p.hand ?? []).length) : 0} small>
             <CardTile card={p.identity} owner={owner} onTap={onTap} size="sm" selectable={selectable.has(p.identity.cid)} />
           </Stacked>
           {zoneOwner === "runner" && <span>{t("Grip")} {p["hand-count"] ?? (p.hand ?? []).length}</span>}
