@@ -1408,3 +1408,75 @@ describe("corp keeps the Runner's winning agenda out of reach (replay NXL475EC)"
     expect(move).not.toBeNull();
   });
 });
+
+describe("corp shuts HQ when an agenda there wins the game for the Runner (replay X8D5Y9LP)", () => {
+  it("installs Manegarm Skunkworks in HQ behind tag-only ice when the Runner sits at four points", () => {
+    const s = new Scenario("core-nbn", "core-criminal");
+    s.clearHand("corp");
+    s.summon("corp", "Orbital Superiority", "Orbital Superiority");
+    s.credits("corp", 40);
+    s.install("corp", "Orbital Superiority", "New remote");
+    s.install("corp", "Orbital Superiority", "New remote");
+    s.clicks("corp", 0);
+    s.endTurn("corp");
+    s.clearHand("runner");
+    s.credits("runner", 20);
+    s.clicks("runner", 4);
+    for (const srv of ["Server 1", "Server 2"]) {
+      s.act("runner", `Run on ${srv}`);
+      for (let i = 0; i < 20 && s.view("runner").run; i++) {
+        const c = s.decide("corp");
+        if (c) {
+          s.play("corp", c);
+          continue;
+        }
+        const r = s.decide("runner");
+        if (r) {
+          s.play("runner", r);
+          continue;
+        }
+        break;
+      }
+      for (let i = 0; i < 4 && s.view("runner").runner.prompt; i++) {
+        const m = s.decide("runner");
+        if (m) s.play("runner", m);
+        const c = s.decide("corp");
+        if (c) s.play("corp", c);
+      }
+    }
+    expect(Number(s.view("runner").runner["agenda-point"])).toBe(4);
+    s.clicks("runner", 0);
+    s.endTurn("runner");
+    s.clearHand("corp");
+    s.summon("corp", "Funhouse", "Whitespace", "Funhouse", "Palisade", "Tithe");
+    s.credits("corp", 60);
+    for (const [c, srv] of [["Funhouse", "HQ"], ["Whitespace", "HQ"], ["Funhouse", "HQ"], ["Palisade", "R&D"], ["Tithe", "R&D"]] as [string, string][]) {
+      s.clicks("corp", 3);
+      s.credits("corp", 60);
+      s.install("corp", c, srv);
+    }
+    for (const t of ["Funhouse", "Whitespace", "Palisade", "Tithe"]) s.rez(t);
+    s.clicks("corp", 0);
+    s.endTurn("corp");
+    s.clearHand("runner");
+    s.summon("runner", "Buzzsaw", "Marjanah", "Carmen", "Docklands Pass");
+    s.credits("runner", 30);
+    for (const c of ["Buzzsaw", "Marjanah", "Carmen", "Docklands Pass"]) {
+      s.clicks("runner", 4);
+      s.install("runner", c);
+    }
+    s.credits("runner", 6);
+    s.clicks("runner", 0);
+    s.endTurn("runner");
+    s.clearHand("corp");
+    s.summon("corp", "Send a Message", "Manegarm Skunkworks", "AMAZE Amusements", "Tithe");
+    s.credits("corp", 16);
+    s.clicks("corp", 3);
+    s.decide("corp");
+    expect(s.last("corp").chosen?.why ?? "").toMatch(/^Manegarm Skunkworks in HQ/);
+    s.install("corp", "Manegarm Skunkworks", "HQ");
+    s.clicks("corp", 0);
+    s.decide("corp");
+    expect(s.last("corp").chosen?.why ?? "").toMatch(/^rez Manegarm Skunkworks/);
+  });
+});

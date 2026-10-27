@@ -360,6 +360,19 @@ Corp grid reads 361 / 373 (Quick and Dirty 107 / 102), level with the previous 3
 the situation is rare in bot games, where the reference Runner seldom lets the Corp reach
 five points with a full hand.
 
+Replay 7QQ2WHAN (the user's Stolen Goods 8-0 over Discretion Advised) showed Ansel 1.0 firing
+its trash subroutine and the Corp declining the prompt: a prompt asking for an installed
+card to trash now picks the Runner's most valuable card (breakers first). The Corp grid reads
+366 / 376, Discretion Advised 92 / 97 against 89 / 92.
+
+Replay NXL475EC (Discretion Advised 1-7) had Offworld Office installed in a remote the Runner
+entered at five points: an agenda whose steal wins the game for the Runner now stays out of a
+remote the Runner can enter unless it scores next turn. Replay X8D5Y9LP (Hyper Velocity 5-7)
+lost on an HQ run through two Funhouse and a Whitespace at four points, with Send a Message in
+HQ and the Corp spending its last turn on a purge: when an agenda in HQ would win the game for
+the Runner and HQ is not safe, Manegarm Skunkworks goes into HQ first, and a run-ending upgrade
+guarding an agenda is rezzed before the end of the turn whenever three credits remain after it.
+
 The spread between versions is inside the interval of 1152 games (about ±33 on a sum),
 so none of this is a measured gain: the 72-game local batches that motivated v1 (27 to
 22 Runner wins) and condemned v2 were noise. Two things did come out of it. The
