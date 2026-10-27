@@ -428,6 +428,15 @@ actually push back:
    is more patient than a human.
 5. **The heuristic bot**, kept as a sanity check that nothing regressed into nonsense.
 
+The summary counts mistakes that the evaluation detects from the game state and the log,
+whichever bot plays: an agenda stolen from a remote, a thin or unrezzable agenda install,
+a credit click while rich, and, from the log, `corp:broke-streak` (three Corp turns in a row
+ending under five credits, `corp:broke-with-economy-in-hand` when an economy operation was
+waiting), `corp:rez-to-broke` (a rez that leaves the Corp at one credit or less before
+turn seven) and `runner:paid-and-stopped` (a run that cost three credits or more in breaks
+and never breached). The first few of each kind are exported as situations. The log-based
+counters came from the user's replays: each named a fault the grids could not see.
+
 With `--out`, the run writes:
 
 - `games.jsonl`: one line per game with the seed, the policy ids and versions, the deck

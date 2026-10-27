@@ -423,7 +423,7 @@ function run(obs: Observation, plan: Plan): Proposal | null {
       const next = byCommand(obs, "continue")[0];
       if (next) return fromCandidate(next, 30, `leave ${ice.title} unrezzed: the Runner has the clicks to walk through it`, "pass");
     }
-    const ruin = server ? ruinousRez(obs, cost, server, threat.etr) : null;
+    const ruin = server ? ruinousRez(obs, cost, server, threat.etr, threat.damage >= Number(obs.opp["hand-count"] ?? 5)) : null;
     if (ruin) return fromCandidate(byCommand(obs, "continue")[0] ?? rez, 30, ruin, "pass");
     const waste = server ? wastefulRez(obs, ice, server) : null;
     if (waste?.wasteful) return fromCandidate(byCommand(obs, "continue")[0] ?? rez, 30, waste.why, "pass");

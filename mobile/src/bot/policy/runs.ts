@@ -23,13 +23,14 @@ export function wastefulRez(obs: Observation, ice: any, server: Observation["ser
   return { wasteful, why: `${ice.title} costs ${cost} to rez and ${tax} to break: the Runner gets through ${server.label} anyway with ${purse} for the run, keep the credits` };
 }
 
-export function ruinousRez(obs: Observation, cost: number, server: Observation["servers"][number], stops: boolean): string | null {
-  if (server.remote || stops || cost < 5 || obs.credits - cost >= 2 || obs.turn > 4) return null;
+export function ruinousRez(obs: Observation, cost: number, server: Observation["servers"][number], stops: boolean, kills = false): string | null {
+  if (stops || kills || cost < 3 || obs.credits - cost >= 2) return null;
   const runnerPoints = Number(obs.view.runner?.["agenda-point"] ?? 0);
   if (runnerPoints + 2 >= Number(obs.view.runner?.["agenda-point-req"] ?? 7)) return null;
-  const agendas = server.key === "hq" ? obs.hand.filter((c) => c.type === "Agenda").length / Math.max(1, obs.hand.length) : 0.3;
-  if (agendas >= 0.5) return null;
-  return `rezzing for ${cost} would leave ${obs.credits - cost} on turn ${obs.turn}: one access in ${server.label} costs less than the turns to recover`;
+  const early = !server.remote && cost >= 5 && obs.turn <= 4;
+  const agendas = server.key === "hq" ? obs.hand.filter((c) => c.type === "Agenda").length / Math.max(1, obs.hand.length) : 0;
+  if (early && agendas >= 0.5) return null;
+  return `rezzing for ${cost} would leave ${obs.credits - cost} on turn ${obs.turn} and does not stop the run on ${server.label}: keep the credits`;
 }
 
 export function runServer(obs: Observation) {
@@ -52,7 +53,7 @@ export function corpRun(obs: Observation, reserve = 0): Proposal | null {
     const agendaBehind = !!server && (server.content.some((c: any) => c.type === "Agenda") || (server.key === "hq" && obs.hand.some((c) => c.type === "Agenda")));
     const bites = threat.etr || threat.damage > 0 || threat.tag || threat.encounterTags > 0 || threat.creditLoss >= Math.max(2, cost - 1) || !threat.exact;
     const affordable = cost <= obs.credits - reserve && (obs.credits - cost >= 2 || threat.etr || agendaBehind);
-    const ruin = server ? ruinousRez(obs, cost, server, threat.etr) : null;
+    const ruin = server ? ruinousRez(obs, cost, server, threat.etr, threat.damage >= grip) : null;
     if (protects && ruin) return fromCandidate(byCommand(obs, "continue")[0] ?? rez, 14, ruin, "pass");
     const waste = server ? wastefulRez(obs, ice, server) : null;
     if (affordable && protects && bites && !waste?.wasteful) return fromCandidate(rez, 80, `rez ${ice.title} for ${cost} to protect ${server?.label}`, "rez");
