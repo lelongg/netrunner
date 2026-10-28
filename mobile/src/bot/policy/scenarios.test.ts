@@ -1692,3 +1692,54 @@ describe("runner stops running an HQ it has fully seen this turn (replay RXSPQFR
     expect(half).toBeLessThan(2.5);
   });
 });
+
+describe("runner remembers the top of R&D and follows it into HQ (replay RXSPQFRJ)", () => {
+  it("counts a card seen on top of R&D as known in HQ once the Corp draws it", () => {
+    const s = new Scenario("core-hb", "core-criminal");
+    s.clearHand("corp");
+    s.summon("corp", "Palisade", "Hedge Fund");
+    s.credits("corp", 40);
+    s.clicks("corp", 3);
+    s.install("corp", "Palisade", "New remote");
+    s.say("corp", "/move-deck");
+    s.act("corp", "Select Hedge Fund");
+    s.credits("corp", 2);
+    s.endTurn("corp");
+    s.clearHand("runner");
+    s.summon("runner", "Sang Kancil", "Carmen", "Lie Low", "Gourmand");
+    s.credits("runner", 8);
+    s.clicks("runner", 4);
+    s.act("runner", "Run on R&D");
+    for (let i = 0; i < 20 && s.view("runner").run; i++) {
+      const r = s.decide("runner");
+      if (r) {
+        s.play("runner", r);
+        continue;
+      }
+      const c = s.decide("corp");
+      if (c) {
+        s.play("corp", c);
+        continue;
+      }
+      break;
+    }
+    for (let i = 0; i < 6; i++) {
+      const m = s.decide("runner");
+      if (!m || !/toast|optional effect|decline/.test(s.last("runner").chosen?.why ?? "")) break;
+      s.play("runner", m);
+    }
+    const notes = (s.bots.runner as any).memory.notes;
+    expect(notes.rdKnown).toHaveLength(1);
+    expect(Number(s.view("runner").corp["hand-count"])).toBe(0);
+    s.clicks("runner", 0);
+    s.endTurn("runner");
+    s.clicks("corp", 0);
+    s.endTurn("corp");
+    expect(Number(s.view("runner").corp["hand-count"])).toBe(1);
+    s.clicks("runner", 4);
+    s.decide("runner");
+    expect(notes.rdKnown).toHaveLength(0);
+    expect(notes.hqKnown).toHaveLength(1);
+    expect(best(s, "runner", (w) => w.startsWith("run HQ"))).toBeLessThan(35);
+  });
+});

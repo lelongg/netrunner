@@ -39,9 +39,15 @@ export function agendaOutlook(obs: Observation): AgendaOutlook | null {
   left = Math.max(0, left);
   points = Math.max(0, points);
   const facedown = obs.servers.filter((s) => s.remote).flatMap((s) => s.content).filter((c: any) => !c.rezzed && !c.title && !obs.memory.seen.has(c.cid)).length;
-  const knownHq = Math.min(Number(obs.opp["hand-count"] ?? 0), ((obs.memory.notes.hqKnown ?? []) as string[]).length);
-  const unknownCards = Math.max(1, Number(obs.opp["deck-count"] ?? 0) + Number(obs.opp["hand-count"] ?? 0) - knownHq + facedown);
+  const { hq: knownHq, rd: knownRd } = knownCentrals(obs);
+  const unknownCards = Math.max(1, Number(obs.opp["deck-count"] ?? 0) + Number(obs.opp["hand-count"] ?? 0) - knownHq - knownRd + facedown);
   return { agendas: left, points, unknownCards, density: Math.min(1, left / unknownCards), averagePoints: left ? points / left : 0 };
+}
+
+export function knownCentrals(obs: Observation): { hq: number; rd: number } {
+  const hq = Math.min(Number(obs.opp["hand-count"] ?? 0), ((obs.memory.notes.hqKnown ?? []) as string[]).length);
+  const rd = Math.min(Number(obs.opp["deck-count"] ?? 0), ((obs.memory.notes.rdKnown ?? []) as string[]).length);
+  return { hq, rd };
 }
 
 export function accessesOn(obs: Observation, server: ServerInfo): number {
@@ -66,7 +72,10 @@ export function centralValue(obs: Observation, server: ServerInfo): number | nul
   const accesses = accessesOn(obs, server);
   const need = Number(obs.me["agenda-point-req"] ?? 7) - Number(obs.me["agenda-point"] ?? 0);
   const closing = outlook.averagePoints >= need ? 1.5 : 1;
-  const expectedPoints = Math.min(1, outlook.density * accesses) * outlook.averagePoints * closing;
+  const known = knownCentrals(obs);
+  const size = Number(obs.opp["hand-count"] ?? 0);
+  const fresh = server.key === "hq" ? accesses * (Math.max(0, size - known.hq) / Math.max(1, size)) : server.key === "rd" ? Math.max(0, accesses - known.rd) : accesses;
+  const expectedPoints = Math.min(1, outlook.density * fresh) * outlook.averagePoints * closing;
   const credits = passiveGains(obs, server, accesses);
   return expectedPoints * 7 + credits * 0.6;
 }
