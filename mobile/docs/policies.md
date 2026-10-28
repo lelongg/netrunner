@@ -384,6 +384,12 @@ safe and half the hand or more are agendas, an install in a remote of two ice or
 costs the Runner at least four and as much as HQ (with an ender the Corp can rez) now scores
 46. The Corp grid reads 365 / 381 against 360 / 375, Hyper Velocity 72 / 79 against 68 / 78,
 and its rich credit clicks drop from 62 / 76 to 45 / 32.
+Linking each stolen agenda to the rule that installed it over 48 local Hyper Velocity games
+gave 8 steals in 75 for clean installs, 6 in 35 at match point, 10 in 44 for contested
+ones, but 4 in 7 into a nearly free remote and 3 in 7 under the one-point bait rule, which
+ignored the cost of entry. The bait now needs the same four-credit entry: 364 / 385,
+Hyper Velocity 72 / 80, remote steals 72 / 77. Against the 355 / 362 baseline of this
+reference the Corp side is now +32 over 1152 games, at the edge of the interval.
 
 The spread between versions is inside the interval of 1152 games (about ±33 on a sum),
 so none of this is a measured gain: the 72-game local batches that motivated v1 (27 to
