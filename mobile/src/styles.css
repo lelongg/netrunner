@@ -5843,6 +5843,10 @@ button.armed {
   align-items: stretch;
 }
 
+.set-select {
+  flex: 1;
+}
+
 .browser-row .toggle {
   min-height: 38px;
   padding: 4px 10px;
