@@ -1480,3 +1480,71 @@ describe("corp shuts HQ when an agenda there wins the game for the Runner (repla
     expect(s.last("corp").chosen?.why ?? "").toMatch(/^rez Manegarm Skunkworks/);
   });
 });
+
+describe("corp does not sit on a hand of agendas behind an open HQ (Hyper Velocity grid)", () => {
+  it("installs an agenda in its best remote instead of clicking for credits when HQ is no safer", () => {
+    const s = new Scenario("core-nbn", "core-criminal");
+    s.clearHand("corp");
+    s.summon("corp", "Send a Message", "Orbital Superiority");
+    s.credits("corp", 40);
+    s.install("corp", "Send a Message", "New remote");
+    s.install("corp", "Orbital Superiority", "New remote");
+    s.clicks("corp", 0);
+    s.endTurn("corp");
+    s.clearHand("runner");
+    s.credits("runner", 20);
+    s.clicks("runner", 4);
+    for (const srv of ["Server 1", "Server 2"]) {
+      s.act("runner", `Run on ${srv}`);
+      for (let i = 0; i < 20 && s.view("runner").run; i++) {
+        const c = s.decide("corp");
+        if (c) {
+          s.play("corp", c);
+          continue;
+        }
+        const r = s.decide("runner");
+        if (r) {
+          s.play("runner", r);
+          continue;
+        }
+        break;
+      }
+      for (let i = 0; i < 4 && s.view("runner").runner.prompt; i++) {
+        const m = s.decide("runner");
+        if (m) s.play("runner", m);
+        const c = s.decide("corp");
+        if (c) s.play("corp", c);
+      }
+    }
+    expect(Number(s.view("runner").runner["agenda-point"])).toBe(5);
+    s.clicks("runner", 0);
+    s.endTurn("runner");
+    s.clearHand("corp");
+    s.summon("corp", "Whitespace", "Ping", "Whitespace", "Tithe", "Palisade", "Palisade", "Ping");
+    s.credits("corp", 60);
+    for (const [c, srv] of [["Whitespace", "HQ"], ["Ping", "HQ"], ["Palisade", "R&D"], ["Palisade", "R&D"], ["Ping", "New remote"], ["Whitespace", "Server 3"], ["Tithe", "Server 3"]] as [string, string][]) {
+      s.clicks("corp", 3);
+      s.credits("corp", 60);
+      s.install("corp", c, srv);
+    }
+    for (const t of ["Whitespace", "Ping", "Tithe", "Palisade"]) s.rez(t);
+    s.clicks("corp", 0);
+    s.endTurn("corp");
+    s.clearHand("runner");
+    s.summon("runner", "Buzzsaw", "Marjanah", "Carmen");
+    s.credits("runner", 30);
+    for (const c of ["Buzzsaw", "Marjanah", "Carmen"]) {
+      s.clicks("runner", 4);
+      s.install("runner", c);
+    }
+    s.credits("runner", 4);
+    s.clicks("runner", 0);
+    s.endTurn("runner");
+    s.clearHand("corp");
+    s.summon("corp", "Send a Message", "Orbital Superiority", "Send a Message", "Public Trail");
+    s.credits("corp", 18);
+    s.clicks("corp", 1);
+    s.decide("corp");
+    expect(s.last("corp").chosen?.why ?? "").toMatch(/^install .* in Server 3 .*HQ is no safer/);
+  });
+});
