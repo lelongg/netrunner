@@ -390,6 +390,13 @@ ones, but 4 in 7 into a nearly free remote and 3 in 7 under the one-point bait r
 ignored the cost of entry. The bait now needs the same four-credit entry: 364 / 385,
 Hyper Velocity 72 / 80, remote steals 72 / 77. Against the 355 / 362 baseline of this
 reference the Corp side is now +32 over 1152 games, at the edge of the interval.
+Replay UWA9WREN (the user's Planning Ahead 8-4 over Hyper Velocity) opened with Hansei
+Review trashing Hedge Fund from a hand of ice and an agenda; the Corp then spent the game
+between zero and six credits. An operation that gains three or more credits net now ranks
+above ice when the Corp trashes a card from HQ. The Corp grid reads 365 / 394 (Hyper
+Velocity 62 / 80, the design row down ten inside its own interval), +42 over 1152 games
+against the 355 / 362 baseline: the first Corp gain outside the interval against this
+reference, which is refrozen on this version ().
 
 The spread between versions is inside the interval of 1152 games (about ±33 on a sum),
 so none of this is a measured gain: the 72-game local batches that motivated v1 (27 to
