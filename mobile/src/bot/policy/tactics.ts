@@ -144,14 +144,23 @@ export interface RunEstimate {
   tags: number;
   etrRisk: boolean;
   failOdds?: number;
+  clicks?: number;
 }
 
 export const CLICK_AS_CREDITS = 2;
 
+export function essentialSubs(ice: any): number {
+  const subs: any[] = ice.subroutines ?? [];
+  if (!subs.length) return (plain(String(ice.text ?? "")).match(/\[subroutine\]/gi) ?? []).length;
+  return subs.filter((x) => !x.broken && !x.fired && !/^install/i.test(String(x.label ?? ""))).length;
+}
+
 export function clickThrough(ice: any, clicks: number): number {
   const subs: any[] = ice.subroutines ?? [];
   const unbroken = subs.length ? subs.filter((x) => !x.broken && !x.fired).length : (plain(String(ice.text ?? "")).match(/\[subroutine\]/gi) ?? []).length;
-  return unbroken > 0 && clicks >= unbroken ? unbroken : 0;
+  if (unbroken > 0 && clicks >= unbroken) return unbroken;
+  const essential = essentialSubs(ice);
+  return essential > 0 && clicks >= essential ? essential : 0;
 }
 
 export function estimateRun(obs: Observation, server: ServerInfo, unrezzedCost = 3, budget = Number(obs.view.runner?.credit ?? 0), extra: BreakerProfile[] = [], unrezzedBlock = 0): RunEstimate {
@@ -162,6 +171,8 @@ export function estimateRun(obs: Observation, server: ServerInfo, unrezzedCost =
   let damage = 0;
   let tags = 0;
   let etrRisk = false;
+  let clicksLeft = Number(obs.clicks ?? 0) - (obs.run ? 0 : 1);
+  let clicks = 0;
   for (const ice of [...server.ices].reverse()) {
     if (!ice.rezzed) {
       unrezzed++;
@@ -177,10 +188,11 @@ export function estimateRun(obs: Observation, server: ServerInfo, unrezzedCost =
       if (tagPunisher(obs) && !(Number(obs.clicks ?? 0) >= 2 && Math.min(budget - credits, Number(obs.view.runner?.credit ?? 0)) >= 4)) blocked = true;
     }
     const facing = threat.etr || threat.tag ? Infinity : threat.damage * 2 + threat.creditLoss;
-    const clickable = (ice.subtypes ?? []).includes("Bioroid") ? clickThrough(ice, Number(obs.clicks ?? 0) - 1) : 0;
+    const clickable = (ice.subtypes ?? []).includes("Bioroid") ? clickThrough(ice, clicksLeft) : 0;
     if (!option || credits + option.cost.value > budget || option.cost.value > facing) {
       if (clickable) {
-        credits += clickable * CLICK_AS_CREDITS;
+        clicks += clickable;
+        clicksLeft -= clickable;
         exact = false;
         continue;
       }
@@ -197,12 +209,13 @@ export function estimateRun(obs: Observation, server: ServerInfo, unrezzedCost =
   const failOdds = unrezzed ? 1 - Math.pow(1 - Math.min(1, unrezzedBlock), unrezzed) : 0;
   if (unrezzed && (coverage(obs).size < 3 || failOdds > 0.3)) etrRisk = true;
   if (unrezzed && unrezzedBlock >= 0.8) blocked = true;
-  return { server, credits, exact, blocked, unrezzed, damage, tags, etrRisk, failOdds };
+  return { server, credits, exact, blocked, unrezzed, damage, tags, etrRisk, failOdds, clicks };
 }
 
 export function runTrialOf(obs: Observation, server: ServerInfo): RunEstimate | null {
   const trial = (obs.memory.notes.runTrials as Record<string, RunTrial | null> | undefined)?.[server.label];
   if (!trial || server.ices.some((i: any) => !i.rezzed)) return null;
+  if (!trial.reached && server.ices.some((i: any) => (i.subtypes ?? []).includes("Bioroid") && clickThrough(i, Number(obs.clicks ?? 0) - 1))) return null;
   return { server, credits: trial.credits, exact: true, blocked: !trial.reached, unrezzed: 0, damage: trial.damage, tags: trial.tags, etrRisk: false };
 }
 

@@ -557,6 +557,14 @@ export class PolicyBot {
         const title = prompt?.card?.title ?? installed?.title;
         if (installed && title) this.memory.seen.set(cid, { cid, title, type: prompt?.card?.type ?? installed.type, zone: "servers", turn: Number(view.turn ?? 0) });
         if (title && !pending.accessed.includes(title)) pending.accessed.push(title);
+        if (pending.key === "hq" && !installed) {
+          const turn = Number(view.turn ?? 0);
+          const size = Number(view.corp?.["hand-count"] ?? 0);
+          const known = this.memory.notes.hqSeen as { turn: number; size: number; cids: string[] } | undefined;
+          const fresh = known && known.turn === turn && known.size === size ? known : { turn, size, cids: [] as string[] };
+          if (!fresh.cids.includes(cid)) fresh.cids.push(cid);
+          this.memory.notes.hqSeen = fresh;
+        }
       }
       return;
     }

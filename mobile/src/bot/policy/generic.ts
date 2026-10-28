@@ -165,7 +165,12 @@ export function corpProposals(obs: Observation): Proposal[] {
 
 export function serverValue(obs: Observation, server: Observation["servers"][number]): number {
   if (server.key === "rd") return obs.memory.notes.rdSeenTurn === obs.turn ? 0 : (centralValue(obs, server) ?? 3);
-  if (server.key === "hq") return centralValue(obs, server) ?? 2 + Number(obs.opp["hand-count"] ?? 0) / 5;
+  if (server.key === "hq") {
+    const size = Number(obs.opp["hand-count"] ?? 0);
+    const known = obs.memory.notes.hqSeen as { turn: number; size: number; cids: string[] } | undefined;
+    const unseen = known && known.turn === obs.turn && known.size === size ? Math.max(0, size - known.cids.length) / Math.max(1, size) : 1;
+    return (centralValue(obs, server) ?? 2 + size / 5) * unseen;
+  }
   if (server.key === "archives") return (obs.opp.discard ?? []).filter((c: any) => !c.seen && !c.title).length >= 2 ? 1.5 : 0;
   if (!server.content.length) return 0;
   const adv = Math.max(0, ...server.content.map((c: any) => agendaProgress(c).have));
@@ -196,10 +201,10 @@ export function runProposals(obs: Observation, limit = 2): Proposal[] {
     const est = runTrialOf(obs, server) ?? estimateRun(obs, server, unrezzedCost, obs.credits + (decisive ? 3 : 0), [], unrezzedBlock);
     if (est.blocked || est.credits > obs.credits + (decisive ? 3 : 0)) continue;
     if (est.damage >= obs.hand.length) continue;
-    if (adv > 1 && obs.hand.length < 1 + adv) continue;
+    if (adv > 1 && obs.hand.length < 1 + adv && !(decisive && obs.hand.length >= 2)) continue;
     const run = byCommand(obs, "run", (c) => (c.args as any)?.server === server.label)[0];
     if (!run) continue;
-    const base = Math.min(40 + (value - est.credits * 0.3 - est.damage * 1.5) * 4, value < 2 ? 32 : 200);
+    const base = Math.min(40 + (value - (est.credits + (est.clicks ?? 0) * 2) * 0.3 - est.damage * 1.5) * 4, value < 2 ? 32 : 200);
     const score = decisive ? Math.max(base, 72) : base;
     out.push(fromCandidate(run, score, `run ${server.label}: value ${value.toFixed(1)}, ${est.exact ? "costs" : "about"} ${est.credits}${est.damage ? `, ${est.damage} damage` : ""}${decisive ? " (decisive: the Corp scores out of there next turn)" : ""}`, "run", est.exact));
   }
