@@ -188,7 +188,8 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[], extra?: (out:
     }
     const hqServer = obs.servers.find((s) => s.key === "hq");
     const hqRisk = hqServer ? serverSafety(obs, hqServer) : null;
-    if (card && target && safety && !safety.safe && hqRisk && !hqRisk.safe && target.ices.length >= 2 && safety.runnerCost >= 4 && safety.runnerCost >= hqRisk.runnerCost && agendasInHand >= 2 && agendasInHand * 2 >= obs.hand.length && target.ices.some((i) => i.rezzed || rezCostOf(i) <= obs.credits - 2)) {
+    const enderOut = cheapestEnder > 0 && cheapestEnder + rezTax > obs.credits;
+    if (card && target && safety && !safety.safe && hqRisk && !hqRisk.safe && runnerPoints >= runnerNeed - 2 && !enderOut && target.ices.length >= 2 && safety.runnerCost >= 4 && safety.runnerCost >= hqRisk.runnerCost && agendasInHand >= 2 && agendasInHand * 2 >= obs.hand.length && target.ices.some((i) => i.rezzed || rezCostOf(i) <= obs.credits - 2)) {
       p.score = Math.max(p.score, 46);
       p.why += ` (HQ is no safer: ${agendasInHand} of ${obs.hand.length} cards there are agendas)`;
     }
