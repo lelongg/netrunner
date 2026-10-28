@@ -396,7 +396,9 @@ between zero and six credits. An operation that gains three or more credits net 
 above ice when the Corp trashes a card from HQ. The Corp grid reads 365 / 394 (Hyper
 Velocity 62 / 80, the design row down ten inside its own interval), +42 over 1152 games
 against the 355 / 362 baseline: the first Corp gain outside the interval against this
-reference, which is refrozen on this version (`9d7a112`).
+reference, which is refrozen on this version (`9d7a112`). Its baseline against itself reads
+Corp 364 / 395 and Runner 241 / 207: the Runner side, unchanged since the previous
+reference, loses 15 games on the test split to the stronger reference Corp.
 
 The spread between versions is inside the interval of 1152 games (about ±33 on a sum),
 so none of this is a measured gain: the 72-game local batches that motivated v1 (27 to
