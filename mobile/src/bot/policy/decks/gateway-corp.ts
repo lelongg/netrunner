@@ -176,9 +176,22 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[], extra?: (out:
     }
     const corpPoints = Number(obs.me["agenda-point"] ?? 0);
     const corpNeed = Number(obs.me["agenda-point-req"] ?? 7);
+    const runnerPoints = Number(obs.opp["agenda-point"] ?? 0);
+    const runnerNeed = Number(obs.opp["agenda-point-req"] ?? 7);
+    const scoresNow = !!card && canScoreNextTurn(obs, card, !!seamless) && obs.clicks >= 3 && scoringCost(card) <= obs.clicks - 1;
     if (card && target && corpPoints + Number(card.agendapoints ?? 0) >= corpNeed && target.ices.length >= 2 && !(safety && safety.runnerCost < 4) && obs.credits >= Math.min(4, scoringCost(card))) {
       p.score = Math.max(p.score, 62);
       p.why += " (match point: scoring it wins the game)";
+    } else if (card && target && safety && !safety.safe && runnerPoints + Number(card.agendapoints ?? 0) >= runnerNeed && !scoresNow) {
+      p.score = Math.min(p.score, 10);
+      p.why += " (the Runner wins if it steals this, and it can get in)";
+    }
+    const hqServer = obs.servers.find((s) => s.key === "hq");
+    const hqRisk = hqServer ? serverSafety(obs, hqServer) : null;
+    const enderOut = cheapestEnder > 0 && cheapestEnder + rezTax > obs.credits;
+    if (card && target && safety && !safety.safe && hqRisk && !hqRisk.safe && runnerPoints >= runnerNeed - 2 && !enderOut && target.ices.length >= 2 && safety.runnerCost >= 4 && safety.runnerCost >= hqRisk.runnerCost && agendasInHand >= 2 && agendasInHand * 2 >= obs.hand.length && target.ices.some((i) => i.rezzed || rezCostOf(i) <= obs.credits - 2)) {
+      p.score = Math.max(p.score, 46);
+      p.why += ` (HQ is no safer: ${agendasInHand} of ${obs.hand.length} cards there are agendas)`;
     }
   };
   for (const p of out) judgeAgendaInstall(p);
@@ -241,7 +254,12 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[], extra?: (out:
   }
 
   const skunk = inHand(obs, "Manegarm Skunkworks");
-  if (skunk && (scoring ?? bait) && (scoring ?? bait)!.ices.length > 0 && obs.credits >= 4) push(proposal(playOf(obs, skunk, (scoring ?? bait)!.label), 46, `Manegarm Skunkworks in ${(scoring ?? bait)!.label}: the Runner pays 2 clicks or 5 credits to get in`, "install-upgrade"));
+  const hq = obs.servers.find((s) => s.key === "hq");
+  const heldPoints = Math.max(0, ...obs.hand.filter((c) => c.type === "Agenda").map((c) => Number(c.agendapoints ?? 0)));
+  const hqWins = heldPoints > 0 && Number(obs.opp["agenda-point"] ?? 0) + heldPoints >= Number(obs.opp["agenda-point-req"] ?? 7);
+  const hqSafety = hq ? serverSafety(obs, hq) : null;
+  if (skunk && hq && hqWins && hqSafety && !hqSafety.safe && !hq.content.some((c: any) => c.title === skunk.title) && obs.credits >= 3 && playOf(obs, skunk, hq.label)) push(proposal(playOf(obs, skunk, hq.label), 84, `Manegarm Skunkworks in HQ: an agenda there wins the game for the Runner and they can get in`, "install-upgrade"));
+  else if (skunk && (scoring ?? bait) && (scoring ?? bait)!.ices.length > 0 && obs.credits >= 4) push(proposal(playOf(obs, skunk, (scoring ?? bait)!.label), 46, `Manegarm Skunkworks in ${(scoring ?? bait)!.label}: the Runner pays 2 clicks or 5 credits to get in`, "install-upgrade"));
 
   for (const s of remotes(obs)) {
     for (const card of s.content) {

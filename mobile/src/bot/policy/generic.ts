@@ -272,8 +272,11 @@ export function corpFreeProposals(obs: Observation): Proposal[] {
       const c = cardAction(obs, card, "rez");
       if (c) out.push(fromCandidate(c, 58, `rez ${card.title} before ending the turn`, "rez-economy"));
     }
+  }
+  for (const server of obs.servers) {
+    const guarded = server.content.some((c: any) => c.type === "Agenda") || (server.key === "hq" && obs.hand.some((c) => c.type === "Agenda"));
     for (const card of server.content) {
-      if (card.rezzed || card.type !== "Upgrade" || rezCostOf(card) > Math.min(1, obs.credits)) continue;
+      if (card.rezzed || card.type !== "Upgrade" || rezCostOf(card) > (guarded ? obs.credits - 3 : Math.min(1, obs.credits))) continue;
       if (!/whenever the runner approaches this server|end the run/i.test(obs.info(card).text ?? "")) continue;
       const c = cardAction(obs, card, "rez");
       if (c) out.push(fromCandidate(c, 58, `rez ${card.title} before ending the turn: it only works rezzed`, "rez"));
