@@ -1,3 +1,4 @@
+import { typeLine } from "../game/labels";
 import type { ComponentChildren } from "preact";
 import { createPortal } from "preact/compat";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "preact/hooks";
@@ -491,7 +492,7 @@ function IdentityInfo({ card }: { card: Card }) {
   return (
     <div class="sheet-info">
       <span class="label">
-        {t("Identity")}{Array.isArray(card.subtypes) && card.subtypes.length ? ` · ${(card.subtypes as string[]).join(" · ")}` : ""}
+        {t("Identity")}{Array.isArray(card.subtypes) && card.subtypes.length ? ` · ${typeLine(card.subtypes as string[])}` : ""}
       </span>
       <h2>{card.title}</h2>
       <span class={`label faction-label faction-${factionKey(card.faction)}`}>
@@ -1117,7 +1118,7 @@ function DeckList({ deck, format, onQty, onOpen, onBrowse }: { deck: Deck; forma
                         {e.card.title}
                       </span>
                       <span class="edit-row-sub">
-                        {Array.isArray(e.card.subtypes) && e.card.subtypes.length > 0 && <span class="edit-row-types">{e.card.subtypes.join(" · ")}</span>}
+                        {Array.isArray(e.card.subtypes) && e.card.subtypes.length > 0 && <span class="edit-row-types">{typeLine(e.card.subtypes as string[])}</span>}
                         <Pips n={influenceOf(deck.identity, e.card) * e.qty} />
                         {l === "banned" && <span class="red">{t("banned")}</span>}
                         {l === "rotated" && <span class="red">{t("not in format")}</span>}
@@ -1146,6 +1147,7 @@ function CardBrowser({ db, deck, format, qtyOf, onQty, onOpen }: { db: CardDb; d
   const [factions, setFactions] = useState<string[]>([]);
   const [inFormat, setInFormat] = useState(true);
   const [onlyInDeck, setOnlyInDeck] = useState(false);
+  const [set, setSet] = useState("");
   const [sort, setSort] = useState<"type" | "name" | "cost" | "influence">("type");
   const [shown, setShown] = useState(PAGE);
   const more = useRef<HTMLDivElement>(null);
@@ -1158,6 +1160,24 @@ function CardBrowser({ db, deck, format, qtyOf, onQty, onOpen }: { db: CardDb; d
     }
     return [...seen.values()];
   }, [sideName, format]);
+  const setsOf = useMemo(() => {
+    const out = new Map<string, Set<string>>();
+    for (const c of db.all) {
+      if (c.side !== sideName || !c.set_code) continue;
+      if (!out.has(c.title)) out.set(c.title, new Set());
+      out.get(c.title)!.add(String(c.set_code));
+    }
+    return out;
+  }, [sideName]);
+  const setList = useMemo(() => {
+    const newest = new Map<string, { name: string; code: number }>();
+    for (const c of db.all) {
+      if (c.side !== sideName || !c.set_code || c.set_code === "draft" || c.type === "Identity") continue;
+      const prev = newest.get(String(c.set_code));
+      if (!prev || Number(c.code) > prev.code) newest.set(String(c.set_code), { name: String(c.setname ?? c.set_code), code: Number(c.code) });
+    }
+    return [...newest.entries()].filter(([key]) => pool.some((c) => setsOf.get(c.title)?.has(key))).sort((a, b) => b[1].code - a[1].code);
+  }, [pool, setsOf]);
   const factionList = useMemo(() => {
     const own = deck.identity.faction ?? "Neutral";
     const all = [...new Set(pool.map((c) => c.faction ?? "Neutral"))];
@@ -1171,6 +1191,7 @@ function CardBrowser({ db, deck, format, qtyOf, onQty, onOpen }: { db: CardDb; d
       if (c.type === "Agenda" && !isNeutral(c) && c.faction !== deck.identity.faction && !qtyOf.get(c.title)) return false;
       if (inFormat && format !== "casual" && !["legal", "restricted"].includes(legality(c, format))) return false;
       if (types.length && !types.includes(c.type)) return false;
+      if (set && !setsOf.get(c.title)?.has(set)) return false;
       if (factions.length && !factions.includes(c.faction ?? "Neutral")) return false;
       if (terms.length) {
         const hay = normalize(`${c.title} ${(c.subtypes as string[] | undefined)?.join(" ") ?? ""} ${c.text ?? ""}`);
@@ -1188,8 +1209,8 @@ function CardBrowser({ db, deck, format, qtyOf, onQty, onOpen }: { db: CardDb; d
             ? inf(a) - inf(b) || a.title.localeCompare(b.title)
             : order.indexOf(a.type) - order.indexOf(b.type) || a.title.localeCompare(b.title),
     );
-  }, [pool, query, types, factions, inFormat, onlyInDeck, sort, format, onlyInDeck && qtyOf]);
-  useEffect(() => setShown(PAGE), [query, types, factions, inFormat, onlyInDeck, sort]);
+  }, [pool, query, types, factions, inFormat, onlyInDeck, sort, format, set, onlyInDeck && qtyOf]);
+  useEffect(() => setShown(PAGE), [query, types, factions, inFormat, onlyInDeck, sort, set]);
   useEffect(() => {
     const el = more.current;
     if (!el) return;
@@ -1219,6 +1240,12 @@ function CardBrowser({ db, deck, format, qtyOf, onQty, onOpen }: { db: CardDb; d
               {FACTION_SHORT[f] ?? f}
             </button>
           ))}
+        </div>
+        <div class="browser-row">
+          <div class="sort-select set-select">
+            <span class="label">{t("Set")}</span>
+            <Picker title={t("Show cards from")} value={set} onChange={setSet} options={[{ key: "", label: t("All sets") }, ...setList.map(([key, v]) => ({ key, label: v.name }))]} />
+          </div>
         </div>
         <div class="browser-row">
           {format !== "casual" && (
@@ -1415,7 +1442,7 @@ function CardInfo({ card, identity, format }: { card: Card; identity: Card; form
     <div class="sheet-info">
       <span class="label">
         {t(card.type)}
-        {Array.isArray(card.subtypes) && card.subtypes.length ? ` · ${(card.subtypes as string[]).join(" · ")}` : ""}
+        {Array.isArray(card.subtypes) && card.subtypes.length ? ` · ${typeLine(card.subtypes as string[])}` : ""}
       </span>
       <h2>{card.title}</h2>
       <span class="label">

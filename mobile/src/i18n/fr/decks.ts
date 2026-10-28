@@ -1,4 +1,7 @@
 export default {
+  "Set": "Set",
+  "Show cards from": "Afficher les cartes de",
+  "All sets": "Tous les sets",
   // Sides, card types, subtypes (displayed labels; logic keeps the English values)
   Corp: "Corpo",
   Runner: "Runner",
