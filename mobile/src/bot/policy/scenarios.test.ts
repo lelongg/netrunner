@@ -1548,3 +1548,15 @@ describe("corp does not sit on a hand of agendas behind an open HQ (Hyper Veloci
     expect(s.last("corp").chosen?.why ?? "").toMatch(/^install .* in Server 3 .*HQ is no safer/);
   });
 });
+
+describe("corp keeps its economy when Hansei Review asks for a card (replay UWA9WREN)", () => {
+  it("trashes an ice rather than Hedge Fund", () => {
+    const s = new Scenario("core-nbn", "core-shaper");
+    s.clearHand("corp");
+    s.summon("corp", "Hansei Review", "Hedge Fund", "Tithe", "Palisade", "Palisade", "Send a Message");
+    s.credits("corp", 5);
+    s.act("corp", "Hansei Review: Play");
+    s.decide("corp");
+    expect(s.last("corp").chosen?.why ?? "").toMatch(/^trash (Tithe|Palisade)/);
+  });
+});
