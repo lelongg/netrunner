@@ -376,6 +376,15 @@ With both, the Corp grid reads 360 / 375 against 366 / 376 before them (Hyper Ve
 against 69 / 73): level, as expected for situations where the Runner sits one steal from the
 win, which the reference Runner rarely reaches.
 
+Local Hyper Velocity games then showed where its rich credit clicks came from: the Runner at
+five or six points, two to four agendas in hand, twelve to twenty-four credits, and every
+agenda install capped because the Runner could get in, so the Corp clicked until the Runner
+took an agenda from HQ or R&D anyway. When the Runner is two points from winning, HQ is not
+safe and half the hand or more are agendas, an install in a remote of two ice or more that
+costs the Runner at least four and as much as HQ (with an ender the Corp can rez) now scores
+46. The Corp grid reads 365 / 381 against 360 / 375, Hyper Velocity 72 / 79 against 68 / 78,
+and its rich credit clicks drop from 62 / 76 to 45 / 32.
+
 The spread between versions is inside the interval of 1152 games (about ±33 on a sum),
 so none of this is a measured gain: the 72-game local batches that motivated v1 (27 to
 22 Runner wins) and condemned v2 were noise. Two things did come out of it. The
