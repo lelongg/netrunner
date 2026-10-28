@@ -167,8 +167,8 @@ export function serverValue(obs: Observation, server: Observation["servers"][num
   if (server.key === "rd") return obs.memory.notes.rdSeenTurn === obs.turn ? 0 : (centralValue(obs, server) ?? 3);
   if (server.key === "hq") {
     const size = Number(obs.opp["hand-count"] ?? 0);
-    const known = obs.memory.notes.hqSeen as { turn: number; size: number; cids: string[] } | undefined;
-    const unseen = known && known.turn === obs.turn && known.size === size ? Math.max(0, size - known.cids.length) / Math.max(1, size) : 1;
+    const known = ((obs.memory.notes.hqKnown ?? []) as string[]).length;
+    const unseen = Math.max(0, size - known) / Math.max(1, size);
     return (centralValue(obs, server) ?? 2 + size / 5) * unseen;
   }
   if (server.key === "archives") return (obs.opp.discard ?? []).filter((c: any) => !c.seen && !c.title).length >= 2 ? 1.5 : 0;

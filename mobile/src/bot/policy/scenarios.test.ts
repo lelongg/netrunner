@@ -1679,5 +1679,16 @@ describe("runner stops running an HQ it has fully seen this turn (replay RXSPQFR
     s.decide("runner");
     expect(s.last("runner").chosen?.why ?? "").not.toMatch(/^run HQ/);
     expect(best(s, "runner", (w) => w.startsWith("run HQ"))).toBeLessThan(35);
+    const hqValue = () => Number(s.considered("runner").find((p) => p.why.startsWith("run HQ"))?.why.match(/value ([\d.]+)/)?.[1] ?? 0);
+    s.clicks("runner", 0);
+    s.endTurn("runner");
+    s.clicks("corp", 0);
+    s.endTurn("corp");
+    expect(Number(s.view("runner").corp["hand-count"])).toBe(2);
+    s.clicks("runner", 4);
+    s.decide("runner");
+    const half = hqValue();
+    expect(half).toBeGreaterThan(0);
+    expect(half).toBeLessThan(2.5);
   });
 });

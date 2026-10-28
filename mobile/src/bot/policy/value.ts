@@ -39,7 +39,8 @@ export function agendaOutlook(obs: Observation): AgendaOutlook | null {
   left = Math.max(0, left);
   points = Math.max(0, points);
   const facedown = obs.servers.filter((s) => s.remote).flatMap((s) => s.content).filter((c: any) => !c.rezzed && !c.title && !obs.memory.seen.has(c.cid)).length;
-  const unknownCards = Math.max(1, Number(obs.opp["deck-count"] ?? 0) + Number(obs.opp["hand-count"] ?? 0) + facedown);
+  const knownHq = Math.min(Number(obs.opp["hand-count"] ?? 0), ((obs.memory.notes.hqKnown ?? []) as string[]).length);
+  const unknownCards = Math.max(1, Number(obs.opp["deck-count"] ?? 0) + Number(obs.opp["hand-count"] ?? 0) - knownHq + facedown);
   return { agendas: left, points, unknownCards, density: Math.min(1, left / unknownCards), averagePoints: left ? points / left : 0 };
 }
 

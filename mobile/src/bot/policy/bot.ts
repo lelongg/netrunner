@@ -539,8 +539,28 @@ export class PolicyBot {
     return econ || breaker ? { keep: true, why: econ ? "economy in hand" : "a breaker in hand" } : { keep: false, why: "neither economy nor breakers" };
   }
 
+  private trackHq(view: any) {
+    const known = this.memory.notes.hqKnown as string[] | undefined;
+    const deck = Number(view.corp?.["deck-count"] ?? 0);
+    const lastDeck = this.memory.notes.hqKnownDeck as number | undefined;
+    this.memory.notes.hqKnownDeck = deck;
+    if (!known?.length) return;
+    if (lastDeck !== undefined && deck > lastDeck) {
+      this.memory.notes.hqKnown = [];
+      return;
+    }
+    const elsewhere = new Set<string>();
+    const add = (c: any) => c?.cid && elsewhere.add(c.cid);
+    for (const server of Object.values(view.corp?.servers ?? {}) as any[]) for (const c of [...(server?.content ?? []), ...(server?.ices ?? [])]) add(c);
+    for (const c of [...(view.corp?.discard ?? []), ...(view.corp?.scored ?? []), ...(view.runner?.scored ?? [])]) add(c);
+    const size = Number(view.corp?.["hand-count"] ?? 0);
+    const kept = known.filter((cid) => !elsewhere.has(cid));
+    this.memory.notes.hqKnown = size > 0 ? kept.slice(-size) : [];
+  }
+
   private trackRun(view: any) {
     if (this.side !== "runner") return;
+    this.trackHq(view);
     if (!this.pendingRun && view.run) {
       const key = String(view.run.server?.[0] ?? "");
       this.pendingRun = { key, server: serverName(key), accessed: [], points: view[this.side]?.["agenda-point"] ?? 0, breached: false, turn: Number(view.turn ?? 0) };
@@ -558,12 +578,8 @@ export class PolicyBot {
         if (installed && title) this.memory.seen.set(cid, { cid, title, type: prompt?.card?.type ?? installed.type, zone: "servers", turn: Number(view.turn ?? 0) });
         if (title && !pending.accessed.includes(title)) pending.accessed.push(title);
         if (pending.key === "hq" && !installed) {
-          const turn = Number(view.turn ?? 0);
-          const size = Number(view.corp?.["hand-count"] ?? 0);
-          const known = this.memory.notes.hqSeen as { turn: number; size: number; cids: string[] } | undefined;
-          const fresh = known && known.turn === turn && known.size === size ? known : { turn, size, cids: [] as string[] };
-          if (!fresh.cids.includes(cid)) fresh.cids.push(cid);
-          this.memory.notes.hqSeen = fresh;
+          const known = (this.memory.notes.hqKnown ??= []) as string[];
+          if (!known.includes(cid)) known.push(cid);
         }
       }
       return;
