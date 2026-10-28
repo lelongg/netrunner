@@ -372,6 +372,9 @@ lost on an HQ run through two Funhouse and a Whitespace at four points, with Sen
 HQ and the Corp spending its last turn on a purge: when an agenda in HQ would win the game for
 the Runner and HQ is not safe, Manegarm Skunkworks goes into HQ first, and a run-ending upgrade
 guarding an agenda is rezzed before the end of the turn whenever three credits remain after it.
+With both, the Corp grid reads 360 / 375 against 366 / 376 before them (Hyper Velocity 68 / 78
+against 69 / 73): level, as expected for situations where the Runner sits one steal from the
+win, which the reference Runner rarely reaches.
 
 The spread between versions is inside the interval of 1152 games (about ±33 on a sum),
 so none of this is a measured gain: the 72-game local batches that motivated v1 (27 to
