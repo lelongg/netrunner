@@ -9,6 +9,7 @@ export interface RunTrial {
   tags: number;
   steps: number;
   prelude: boolean;
+  corpCredits?: number;
 }
 
 export type Trial = (server: string, prelude?: Move[]) => RunTrial | null;
@@ -36,7 +37,7 @@ function act(engine: EngineApi, game: GameHandle, side: Side, move: Move): boole
 
 function runnerCounts(view: any) {
   const r = view.runner ?? {};
-  return { credits: Number(r.credit ?? 0), hand: Number(Array.isArray(r.hand) ? r.hand.length : (r["hand-count"] ?? 0)), tags: Number(r.tag?.total ?? r.tag?.base ?? 0) };
+  return { credits: Number(r.credit ?? 0), hand: Number(r["hand-count"] ?? (Array.isArray(r.hand) ? r.hand.length : 0)), tags: Number(r.tag?.total ?? r.tag?.base ?? 0), corp: Number(view.corp?.credit ?? 0) };
 }
 
 function settle(engine: EngineApi, game: GameHandle, side: Side, step: TrialStep, limit: number): boolean {
@@ -72,8 +73,10 @@ function settle(engine: EngineApi, game: GameHandle, side: Side, step: TrialStep
 export function runTrial(engine: EngineApi, game: GameHandle, side: Side, server: string, step: TrialStep, prelude: Move[] = []): RunTrial | null {
   const snapshot = engine.checkpoint(game);
   try {
+    const ongoing = !!engine.view(game, side).run;
+    const before = runnerCounts(engine.view(game, side));
     for (const m of prelude) if (!act(engine, game, side, m)) return null;
-    if (side === "corp") {
+    if (side === "corp" && !ongoing) {
       if (!settle(engine, game, side, step, 12)) return null;
       for (let i = 0; i < 4; i++) {
         const v = engine.view(game, "corp");
@@ -85,10 +88,8 @@ export function runTrial(engine: EngineApi, game: GameHandle, side: Side, server
       const v = engine.view(game, "runner");
       if (v["active-player"] !== "runner" || !(Number(v.runner?.click ?? 0) > 0) || v.run) return null;
     }
-    const start = engine.view(game, side);
-    const before = runnerCounts(start);
-    const runner: Side = "runner";
-    if (!act(engine, game, runner, { command: "run", args: { server } })) return null;
+    if (!ongoing) Object.assign(before, runnerCounts(engine.view(game, side)));
+    if (!ongoing && !act(engine, game, "runner", { command: "run", args: { server } })) return null;
     let steps = 0;
     let lastKey = "";
     let repeats = 0;
@@ -96,7 +97,7 @@ export function runTrial(engine: EngineApi, game: GameHandle, side: Side, server
       const view = engine.view(game, side);
       const run = view.run;
       const now = runnerCounts(view);
-      const done = (reached: boolean): RunTrial => ({ reached, credits: before.credits - now.credits, damage: Math.max(0, before.hand - now.hand), tags: Math.max(0, now.tags - before.tags), steps, prelude: prelude.length > 0 });
+      const done = (reached: boolean): RunTrial => ({ reached, credits: before.credits - now.credits, damage: Math.max(0, before.hand - now.hand), tags: Math.max(0, now.tags - before.tags), steps, prelude: prelude.length > 0, corpCredits: before.corp - now.corp });
       if (view.winner) return done(false);
       if (!run) return done(false);
       if (run.successful || run.phase === "success") return done(true);

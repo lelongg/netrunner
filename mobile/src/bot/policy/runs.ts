@@ -2,6 +2,7 @@ import { bestBreak, coverage, estimateRun, gainOf, iceThreat, isIcebreaker, rezC
 import { byCommand } from "./observe.ts";
 import type { Candidate } from "../../game/candidates.ts";
 import type { Observation, Proposal } from "./types.ts";
+import type { RunTrial } from "./trial.ts";
 
 export const labelCost = (label: string) => Number(label.match(/(\d+)\s*\[credits?\]/i)?.[1] ?? 0);
 export const fromCandidate = (c: Candidate, score: number, why: string, kind: string, exact = true): Proposal => ({ move: { command: c.command, args: c.args }, score, why, kind, exact });
@@ -30,7 +31,17 @@ export function wastefulRez(obs: Observation, ice: any, server: Observation["ser
 export function taxedRez(obs: Observation, ice: any, threat: { etr: boolean; damage: number; creditLoss: number; tag: boolean }, grip: number): string | null {
   const cost = rezCostOf(ice);
   const premium = cost - Number((obs.info(ice) as any).cost ?? cost);
-  if (premium <= 0 || threat.etr || threat.damage >= grip) return null;
+  if (premium <= 0) return null;
+  const trial = (obs.memory.notes.rezTrials as Record<string, { rez: RunTrial | null; pass: RunTrial | null }> | undefined)?.[ice.cid];
+  if (trial?.rez && trial.pass) {
+    const { rez, pass } = trial;
+    if (!rez.reached && pass.reached) return null;
+    const gained = cost - ((rez.corpCredits ?? cost) - (pass.corpCredits ?? 0));
+    const payoff = rez.credits - pass.credits + gained + (rez.damage - pass.damage) * 1.5 + (rez.tags - pass.tags) * 2;
+    if (payoff >= premium) return null;
+    return `${ice.title} costs ${premium} more than usual and, played out on the engine, ${rez.reached ? "does not stop the run" : "the run stops either way"} and only does ${payoff} worth: rez it later at its normal cost`;
+  }
+  if (threat.etr || threat.damage >= grip) return null;
   const payoff = threat.damage * 1.5 + threat.creditLoss + gainOf(obs.info(ice).text) + (threat.tag ? 2 : 0);
   if (payoff >= premium) return null;
   return `${ice.title} costs ${premium} more than usual and only does ${payoff} worth on this run without stopping it: rez it later at its normal cost`;

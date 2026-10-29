@@ -163,6 +163,8 @@ export class PolicyBot {
 
   decide(view: any): Move | null {
     if (this.trial) for (const [label, key, prelude] of this.trialsWanted(view)) this.storeTrial(label, key, this.trial(label, prelude));
+    const rezWanted = this.trial ? this.rezTrialWanted(view) : null;
+    if (rezWanted && this.trial) this.storeRezTrial(rezWanted, this.trial("", [rezWanted.rez]), this.trial("", [rezWanted.pass]));
     const ctx = this.rank(view);
     if (!ctx) return null;
     if (this.simulate && this.searching(ctx)) this.applySearch(ctx, driveSync(this.turnSearch(ctx), this.simulate));
@@ -172,6 +174,8 @@ export class PolicyBot {
 
   async decideAsync(view: any, tools: AsyncTools): Promise<Move | null> {
     if (tools.trial) for (const [label, key, prelude] of this.trialsWanted(view)) this.storeTrial(label, key, await tools.trial(label, prelude));
+    const rezWanted = tools.trial ? this.rezTrialWanted(view) : null;
+    if (rezWanted && tools.trial) this.storeRezTrial(rezWanted, await tools.trial("", [rezWanted.rez]), await tools.trial("", [rezWanted.pass]));
     const ctx = this.rank(view);
     if (!ctx) return null;
     if (tools.simulate && this.searching(ctx)) this.applySearch(ctx, await driveAsync(this.turnSearch(ctx), tools.simulate));
@@ -236,6 +240,25 @@ export class PolicyBot {
       out.push([label, sig, prelude]);
     }
     return out;
+  }
+
+  private rezTrialWanted(view: any): { cid: string; key: string; rez: Move; pass: Move } | null {
+    if (this.side !== "corp" || !view?.run || view.winner) return null;
+    const run = view.run;
+    const key = String(run.server?.[0] ?? "");
+    const position = Number(run.position ?? 0);
+    const ice = (view.corp?.servers?.[key]?.ices ?? [])[position - 1];
+    if (!ice || ice.rezzed || run.phase !== "approach-ice") return null;
+    const sig = `${ice.cid}:${view.log?.length ?? 0}:${view.corp?.credit}:${view.runner?.credit}`;
+    const known = (this.memory.notes.rezTrials as Record<string, { key: string }> | undefined)?.[ice.cid];
+    if (known?.key === sig) return null;
+    return { cid: ice.cid, key: sig, rez: { command: "rez", args: { card: { cid: ice.cid, zone: ice.zone, side: ice.side, type: ice.type } } }, pass: { command: "continue" } };
+  }
+
+  private storeRezTrial(wanted: { cid: string; key: string }, rez: RunTrial | null, pass: RunTrial | null) {
+    const trials = (this.memory.notes.rezTrials ??= {}) as Record<string, { key: string; rez: RunTrial | null; pass: RunTrial | null }>;
+    for (const cid of Object.keys(trials)) if (cid !== wanted.cid) delete trials[cid];
+    trials[wanted.cid] = { key: wanted.key, rez, pass };
   }
 
   private storeTrial(label: string, key: string, trial: RunTrial | null) {
