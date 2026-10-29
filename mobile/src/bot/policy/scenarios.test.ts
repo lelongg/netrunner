@@ -1908,3 +1908,85 @@ describe("runner without breakers does not hoard credits (replay XZPZR5FA)", () 
     expect(best(s, "runner", (w) => w.startsWith("take a credit"))).toBeLessThanOrEqual(26);
   });
 });
+
+describe("runner takes the long shot when the Corp wins next turn (replay A45J9PEN)", () => {
+  it("runs the remote at five credits instead of clicking for credits with the Corp at six points", () => {
+    const s = new Scenario("core-hb", "core-shaper");
+    s.clearHand("corp");
+    s.summon("corp", "Offworld Office", "Send a Message", "Superconducting Hub");
+    s.credits("corp", 60);
+    for (const a of ["Offworld Office", "Send a Message", "Superconducting Hub"]) {
+      s.say("corp", "/score");
+      s.act("corp", `Select ${a}`);
+      for (let i = 0; i < 3; i++) {
+        const done = s.actions("corp").find((x) => ["Done", "Choose: Done", "Choose: No"].includes(x.label) || x.label.startsWith("Done"));
+        if (!done) break;
+        s.act("corp", done.label);
+      }
+    }
+    s.summon("corp", "Palisade", "Tithe", "Whitespace", "Manegarm Skunkworks", "Send a Message", "Tithe", "Whitespace", "Pharos");
+    for (const [c, srv] of [["Palisade", "New remote"], ["Tithe", "Server 1"], ["Whitespace", "Server 1"], ["Manegarm Skunkworks", "Server 1"], ["Send a Message", "Server 1"], ["Tithe", "R&D"], ["Whitespace", "R&D"], ["Pharos", "HQ"]] as [string, string][]) {
+      s.clicks("corp", 3);
+      s.credits("corp", 60);
+      s.install("corp", c, srv);
+    }
+    for (const t of ["Manegarm Skunkworks", "Pharos"]) s.rez(t);
+    s.clicks("corp", 3);
+    s.act("corp", "Send a Message: Advance");
+    expect(Number(s.view("corp").corp["agenda-point"])).toBe(6);
+    s.credits("corp", 15);
+    s.clicks("corp", 0);
+    s.endTurn("corp");
+    s.clearHand("runner");
+    s.summon("runner", "Echelon", "Cleaver", "Pantograph");
+    s.credits("runner", 30);
+    for (const c of ["Echelon", "Cleaver", "Pantograph"]) {
+      s.clicks("runner", 4);
+      s.install("runner", c);
+    }
+    s.summon("runner", "Tread Lightly", "Tranquilizer", "Conduit", "DZMZ Optimizer", "Mayfly");
+    s.credits("runner", 5);
+    s.clicks("runner", 4);
+    s.decide("runner");
+    expect(s.last("runner").chosen?.command).not.toBe("credit");
+  });
+});
+
+describe("runner breaks the subroutine that matters first on Ansel (replay A45J9PEN)", () => {
+  it("clicks away \"cannot steal\" before the other subroutines", () => {
+    const s = new Scenario("core-hb", "core-shaper");
+    s.clearHand("corp");
+    s.summon("corp", "Ansel 1.0", "Send a Message");
+    s.credits("corp", 40);
+    for (const [c, srv] of [["Ansel 1.0", "New remote"], ["Send a Message", "Server 1"]] as [string, string][]) {
+      s.clicks("corp", 3);
+      s.install("corp", c, srv);
+    }
+    s.rez("Ansel 1.0");
+    s.clicks("corp", 0);
+    s.endTurn("corp");
+    s.clearHand("runner");
+    s.summon("runner", "Cleaver", "Sure Gamble", "Lie Low", "VRcation");
+    s.credits("runner", 30);
+    s.clicks("runner", 4);
+    s.install("runner", "Cleaver");
+    s.credits("runner", 3);
+    s.clicks("runner", 3);
+    s.act("runner", "Run on Server 1");
+    for (let i = 0; i < 30 && s.view("runner").run; i++) {
+      const r = s.decide("runner");
+      if (r) {
+        s.play("runner", r);
+        continue;
+      }
+      const c = s.decide("corp");
+      if (c) {
+        s.play("corp", c);
+        continue;
+      }
+      break;
+    }
+    const breaks = (s.view("runner").log ?? []).map((l: any) => String(l.text?.["raw-text"] ?? "")).filter((t: string) => /to break 1 subroutine on Ansel/.test(t));
+    expect(breaks[0] ?? "").toMatch(/cannot steal/);
+  });
+});

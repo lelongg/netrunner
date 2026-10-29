@@ -198,8 +198,13 @@ export function runProposals(obs: Observation, limit = 2): Proposal[] {
     const adv = Math.max(0, ...server.content.map((c: any) => agendaProgress(c).have));
     const decisive = server.remote && corpPoints + 3 >= corpNeed && adv >= 1 && server.content.some((c: any) => !c.rezzed || c.type === "Agenda");
     const est = runTrialOf(obs, server) ?? estimateRun(obs, server, unrezzedCost, obs.credits + (decisive ? 3 : 0), [], unrezzedBlock);
-    if (est.blocked || est.credits > obs.credits + (decisive ? 3 : 0)) continue;
     if (est.damage >= obs.hand.length) continue;
+    if (est.blocked || est.credits > obs.credits + (decisive ? 3 : 0)) {
+      const longShot = decisive && corpPoints + Math.max(1, adv >= 3 ? 3 : 2) >= corpNeed && (!est.blocked || est.unrezzed > 0);
+      const shot = longShot ? byCommand(obs, "run", (c) => (c.args as any)?.server === server.label)[0] : undefined;
+      if (shot) out.push(fromCandidate(shot, 46, `run ${server.label}: a long shot at ${est.exact ? "" : "about "}${est.credits}, but the Corp wins next turn out of there`, "run", false));
+      continue;
+    }
     if (adv > 1 && obs.hand.length < 1 + adv && !(decisive && obs.hand.length >= 2)) continue;
     const run = byCommand(obs, "run", (c) => (c.args as any)?.server === server.label)[0];
     if (!run) continue;

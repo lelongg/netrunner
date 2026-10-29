@@ -499,6 +499,15 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
     if (plan.kind === "setup" && (p.kind === "economy" || p.kind === "install-economy")) p.score += 6;
     if (p.kind === "install" && plan.kind === "contest") p.score -= 10;
   }
+  const shot = out.find((p) => p.kind === "run" && p.why.includes("but the Corp wins next turn"));
+  if (shot) {
+    shot.score = Math.max(shot.score, 60);
+    for (const p of out) {
+      if (p === shot || p.kind === "run" || p.kind === "run-event" || p.kind === "install-breaker" || p.kind === "economy" || p.score < shot.score) continue;
+      p.score = shot.score - 1;
+      p.why += " (no time to build: the Corp wins next turn)";
+    }
+  }
   return out;
 }
 

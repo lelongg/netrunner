@@ -151,7 +151,7 @@ export function breakSubChoice(obs: Observation): Proposal | null {
   if (!/^break a subroutine/i.test(obs.promptText)) return null;
   const list: any[] = Array.isArray(obs.prompt.choices) ? obs.prompt.choices : [];
   const label = (c: any) => String(typeof c.value === "string" ? c.value : "");
-  const pick = list.find((c) => /end the run/i.test(label(c))) ?? list.find((c) => /damage|tag|lose/i.test(label(c))) ?? list.find((c) => c.value !== "Done" && c.value !== "Hide");
+  const pick = list.find((c) => /end the run|cannot steal/i.test(label(c))) ?? list.find((c) => /damage|tag|lose|trash/i.test(label(c))) ?? list.find((c) => c.value !== "Done" && c.value !== "Hide");
   const done = list.find((c) => c.value === "Done");
   const c = pick ?? done;
   return c ? { move: { command: "choice", args: { eid: obs.prompt.eid, choice: { uuid: c.uuid } } }, score: 80, why: pick ? `break "${label(pick)}"` : "done breaking", kind: "break" } : null;
