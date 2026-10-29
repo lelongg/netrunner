@@ -270,6 +270,22 @@ export function runnerProposals(obs: Observation): Proposal[] {
   return out;
 }
 
+const turnStartAsset = (text = "") => /when your turn begins/i.test(text);
+
+export function corpTurnStartRezzes(obs: Observation): Proposal[] {
+  const out: Proposal[] = [];
+  let budget = obs.credits;
+  for (const card of obs.servers.filter((s) => s.remote).flatMap((s) => s.content)) {
+    const text = obs.info(card).text ?? "";
+    if (card.rezzed || card.type !== "Asset" || !isEconomy(text) || isTrap(text) || !turnStartAsset(text) || rezCostOf(card) > budget) continue;
+    const c = cardAction(obs, card, "rez");
+    if (!c) continue;
+    budget -= rezCostOf(card);
+    out.push(fromCandidate(c, 600, `rez ${card.title} as the Runner's turn ends: it pays out when this turn begins, and the Runner never saw it rezzed`, "rez-economy"));
+  }
+  return out;
+}
+
 export function corpFreeProposals(obs: Observation): Proposal[] {
   const out: Proposal[] = [];
   for (const card of obs.servers.flatMap((s) => s.content)) out.push(...[proposal(cardAction(obs, card, "score"), 100, `score ${card.title}`, "score")].filter((p): p is Proposal => !!p));
@@ -277,7 +293,7 @@ export function corpFreeProposals(obs: Observation): Proposal[] {
     for (const card of server.content) {
       if (card.rezzed || card.type !== "Asset") continue;
       const text = obs.info(card).text;
-      if (isTrap(text) || !isEconomy(text) || rezCostOf(card) > obs.credits) continue;
+      if (isTrap(text) || !isEconomy(text) || rezCostOf(card) > obs.credits || turnStartAsset(text)) continue;
       const c = cardAction(obs, card, "rez");
       if (c) out.push(fromCandidate(c, 58, `rez ${card.title} before ending the turn`, "rez-economy"));
     }

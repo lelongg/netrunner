@@ -2015,3 +2015,69 @@ describe("corp keeps its economy out of reach of a rich Runner (replay 2N9BFAHE)
     expect(best(s, "corp", (w) => w.startsWith("install Nico Campaign"))).toBeLessThan(30);
   });
 });
+
+describe("corp rezzes Nico Campaign as the Runner's turn ends (replay 2N9BFAHE)", () => {
+  it("keeps Nico unrezzed through the Runner's turn, rezzes it before starting its own and takes the first payout", () => {
+    const s = new Scenario("core-hb", "core-shaper");
+    s.clearHand("corp");
+    s.summon("corp", "Nico Campaign", "Hedge Fund", "Palisade", "Tithe");
+    s.credits("corp", 6);
+    s.clicks("corp", 1);
+    s.install("corp", "Nico Campaign", "New remote");
+    for (let i = 0; i < 4; i++) {
+      const c = s.decide("corp");
+      if (!c || !/^rez /.test(s.last("corp").chosen?.why ?? "")) break;
+      s.play("corp", c);
+    }
+    const nico = () => s.server("Server 1")?.content?.[0];
+    expect(nico()?.rezzed).toBeFalsy();
+    s.clicks("corp", 0);
+    s.act("corp", "End turn");
+    s.act("runner", "Start turn");
+    s.clicks("runner", 0);
+    s.act("runner", "End turn");
+    let move = s.decide("corp");
+    for (let i = 0; i < 3 && s.last("corp").chosen?.kind === "toast"; i++) {
+      s.play("corp", move!);
+      move = s.decide("corp");
+    }
+    expect(s.last("corp").chosen?.why ?? "").toMatch(/^rez Nico Campaign as the Runner's turn ends/);
+    s.play("corp", move!);
+    expect(nico()?.rezzed).toBeTruthy();
+    const before = Number(s.view("corp").corp.credit);
+    s.act("corp", "Start turn");
+    expect(Number(s.view("corp").corp.credit)).toBe(before + 3);
+  });
+});
+
+describe("corp answers Brân's install subroutine (replay 2N9BFAHE)", () => {
+  it("installs ice from Archives behind Brân and stops the run", () => {
+    const s = new Scenario("core-hb", "core-shaper");
+    s.clearHand("corp");
+    s.summon("corp", "Brân 1.0", "Palisade", "Tithe");
+    s.credits("corp", 40);
+    s.clicks("corp", 3);
+    s.install("corp", "Brân 1.0", "R&D");
+    s.rez("Brân 1.0");
+    s.say("corp", "/discard #1");
+    s.clicks("corp", 0);
+    s.endTurn("corp");
+    s.clearHand("runner");
+    s.summon("runner", "Sure Gamble", "VRcation");
+    s.credits("runner", 5);
+    s.clicks("runner", 3);
+    s.act("runner", "Run on R&D");
+    const corpWhy: string[] = [];
+    for (let i = 0; i < 30 && s.view("runner").run; i++) {
+      const r = s.decide("runner");
+      if (r) { s.play("runner", r); continue; }
+      const c = s.decide("corp");
+      if (c) { corpWhy.push(s.last("corp").chosen?.why ?? ""); s.play("corp", c); continue; }
+      break;
+    }
+    expect(corpWhy.some((w) => /install Palisade/.test(w))).toBe(true);
+    const ices = s.view("corp").corp.servers.rd.ices.map((c: any) => c.title);
+    expect(ices).toContain("Palisade");
+    expect(s.view("runner").run).toBeFalsy();
+  });
+});

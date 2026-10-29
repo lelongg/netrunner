@@ -1,7 +1,7 @@
 import type { Side } from "../../engine.ts";
 import { basicCommands, promptOf, runCommands } from "../../game/actions.ts";
 import { serverName } from "../../game/describe.ts";
-import { corpFreeProposals, corpProposals, genericPlan, runnerProposals } from "./generic.ts";
+import { corpFreeProposals, corpProposals, corpTurnStartRezzes, genericPlan, runnerProposals } from "./generic.ts";
 import { emptyMemory, noteRun, observe, updateMemory } from "./observe.ts";
 import { type AnyDeck, deckList, fingerprint } from "./registry.ts";
 import { cardPrompt } from "./cards.ts";
@@ -506,7 +506,7 @@ export class PolicyBot {
       return { stage: "prompt", proposals: p, unhandled: p.length ? undefined : `prompt not handled: ${obs.promptType} "${obs.promptText}"${obs.prompt.card?.title ? ` from ${obs.prompt.card.title}` : ""}` };
     }
     const step = basicCommands(obs.view, this.side).find((c) => TURN_COMMANDS.has(c.command) && c.enabled !== false);
-    if (step) return { stage: "turn", proposals: [{ move: { command: step.command, args: step.args }, score: 500, why: step.label, kind: "turn" }] };
+    if (step) return { stage: "turn", proposals: [...(this.side === "corp" && step.command === "start-turn" ? corpTurnStartRezzes(obs) : []), { move: { command: step.command, args: step.args }, score: 500, why: step.label, kind: "turn" }] };
     if (obs.run || obs.encounter) {
       const p = this.policy?.run?.(obs, this.currentPlan(obs)) ?? (this.side === "corp" ? corpRun(obs) : runnerRun(obs));
       const owed = runCommands(obs.view, this.side).some((c) => c.enabled !== false && c.command !== "toggle-auto-no-action");
