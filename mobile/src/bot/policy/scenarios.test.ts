@@ -2237,3 +2237,12 @@ describe("corp protects an HQ full of agendas (replay LTEPL68K)", () => {
     expect(record.chosen?.why ?? "").toMatch(/draw 3/);
   });
 });
+
+describe("runner stays off the centrals when Public Trail and a scorable Orbital Superiority would flatline it (replay WFTWB65W)", () => {
+  it("does not Overclock into HQ with four cards while a four-advanced card waits in the remote", () => {
+    const r = new Replayed(fileURLToPath(new URL("./replays/WFTWB65W.json", import.meta.url)));
+    r.until((e, x) => x.turn === 15 && e.side === "runner" && e.command === "play", true);
+    const { record } = r.decide();
+    expect(record.chosen?.why ?? "").not.toMatch(/^(Overclock|run|Jailbreak)/);
+  });
+});

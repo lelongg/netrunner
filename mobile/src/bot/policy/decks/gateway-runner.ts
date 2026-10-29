@@ -90,6 +90,30 @@ function trapsLeft(obs: Observation): { count: number; damage: (adv: number) => 
   return count ? { count, damage } : none;
 }
 
+function copiesLeft(obs: Observation, deck: DeckList, test: (title: string, text: string) => boolean) {
+  const gone = [...(obs.opp.scored ?? []), ...(obs.me.scored ?? []), ...(obs.opp.discard ?? [])].map((c: any) => String(c.title ?? ""));
+  return deck.cards.filter((c) => test(c.title, obs.info({ title: c.title }).text ?? "")).reduce((n, c) => n + Math.max(0, c.qty - gone.filter((t) => t === c.title).length), 0);
+}
+
+export function meatThreat(obs: Observation): { damage: number; server: string } | null {
+  const deck = opponentDeck(obs);
+  if (!deck) return null;
+  const meat = deck.cards
+    .map((c) => ({ title: c.title, info: obs.info({ title: c.title }) as any }))
+    .map((x) => ({ ...x, m: String(x.info.text ?? "").match(/if the runner is tagged, do (\d+) meat damage/i), need: Number(x.info.advancementcost ?? 99) }))
+    .filter((x) => x.info.type === "Agenda" && x.m && copiesLeft(obs, deck, (title) => title === x.title) > 0);
+  if (!meat.length) return null;
+  const tagged = Number(obs.me.tag?.base ?? obs.me.tag?.total ?? 0) > 0;
+  const trailCost = Math.min(99, ...deck.cards.filter((c) => /made a successful run during their last turn/i.test(obs.info({ title: c.title }).text ?? "")).map((c) => Number((obs.info({ title: c.title }) as any).cost ?? 0)));
+  const trail = copiesLeft(obs, deck, (_, t) => /made a successful run during their last turn/i.test(t) && /give the runner 1 tag/i.test(t)) > 0 && Number(obs.opp.credit ?? 0) >= trailCost;
+  const spike = copiesLeft(obs, deck, (_, t) => /net damage, where x is equal to the sum of the printed agenda points/i.test(t)) > 0;
+  const tagClicks = tagged ? 0 : 1;
+  const server = obs.servers.find((s) => s.remote && s.content.some((c: any) => !c.rezzed && !c.title && meat.some((x) => agendaProgress(c).have + 3 - tagClicks >= x.need)));
+  if (!server || (!tagged && !trail)) return null;
+  const damage = Math.max(...meat.map((x) => Number(x.m![1]))) + (spike ? Math.max(...meat.map((x) => Number(x.info.agendapoints ?? 0))) : 0);
+  return { damage, server: server.label };
+}
+
 function fullyCovered(obs: Observation, t: Target) {
   const cov = coverage(obs);
   const unrezzed = t.server.ices.filter((i: any) => !i.rezzed).length;
@@ -385,6 +409,12 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
     const draw = byCommand(obs, "draw")[0];
     if (draw) push(proposal(draw, 76, "draw: tagged with no credits to clear it, so the grip must absorb meat damage", "draw"));
   }
+  const meat = meatThreat(obs);
+  const exposed = meat && obs.hand.length <= meat.damage && obs.credits < 8;
+  if (exposed && ranSuccessfullyThisTurn(obs) && drawsThisTurn < 4 && (obs.me["deck-count"] ?? 0) > 0) {
+    const draw = byCommand(obs, "draw")[0];
+    if (draw) push(proposal(draw, 77, `draw: ${meat.damage} damage would flatline this grip if the Corp tags and scores ${meat.server}`, "draw"));
+  }
   const thin = obs.hand.length <= 1;
   const floor = reserve(obs);
   const floorNear = floor - obs.credits <= 6;
@@ -456,6 +486,10 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
         p.score -= 14;
         p.why += " (an unrezzed ice may be one the rig cannot break)";
       }
+    }
+    if (exposed && !ranSuccessfullyThisTurn(obs) && (p.kind === "run" || p.kind === "run-event" || p.kind === "click-economy") && !p.why.includes(meat.server) && /\b(run|into)\b/i.test(p.why)) {
+      p.score = Math.min(p.score, 20);
+      p.why += ` (a successful run lets Public Trail tag before ${meat.server} scores for ${meat.damage} damage)`;
     }
     if (p.kind === "run") {
       const t = ts.find((x) => p.why.startsWith(`run ${x.server.label}`));
