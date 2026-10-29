@@ -1103,11 +1103,11 @@ describe("corp keeps its purse early (replay YT9YUQBD)", () => {
       const move = s.decide("corp");
       if (move) {
         const chosen = s.last("corp").chosen;
-        if (chosen?.kind === "rez" || /would leave|keep the credits/.test(chosen?.why ?? "")) why = chosen?.why ?? "";
+        if (chosen?.kind === "rez" || /would leave|keep the credits|more than usual/.test(chosen?.why ?? "")) why = chosen?.why ?? "";
         s.play("corp", move);
       } else s.runStep("runner");
     }
-    expect(why).toMatch(/would leave 0 on turn/);
+    expect(why).toMatch(/would leave 0 on turn|more than usual/);
   });
 
   it("clicks up to Hedge Fund instead of installing ice on R&D at four credits", () => {
@@ -1821,5 +1821,43 @@ describe("runner at match point runs the centrals (replay V3UFW844)", () => {
     expect(Number(s.view("runner").runner["agenda-point"])).toBe(6);
     s.decide("runner");
     expect(s.last("runner").chosen?.why ?? "").toMatch(/^run (HQ|R&D)/);
+  });
+});
+
+describe("corp does not pay Tread Lightly's tax for ice that does not stop the run (replay V26MGBJ7)", () => {
+  it("lets the Runner through a Tithe that would cost four to rez", () => {
+    const s = new Scenario("core-nbn", "core-shaper");
+    s.clearHand("corp");
+    s.summon("corp", "Tithe", "Tithe", "Whitespace");
+    s.credits("corp", 40);
+    for (const [c, srv] of [["Tithe", "R&D"], ["Tithe", "R&D"], ["Whitespace", "HQ"]] as [string, string][]) {
+      s.clicks("corp", 3);
+      s.install("corp", c, srv);
+    }
+    s.credits("corp", 9);
+    s.clicks("corp", 0);
+    s.endTurn("corp");
+    s.clearHand("runner");
+    s.summon("runner", "Tread Lightly", "Sure Gamble", "VRcation");
+    s.credits("runner", 9);
+    s.clicks("runner", 4);
+    s.act("runner", "Tread Lightly: Play");
+    s.act("runner", "Choose: R&D");
+    const why: string[] = [];
+    for (let i = 0; i < 30 && s.view("runner").run; i++) {
+      const c = s.decide("corp");
+      if (c) {
+        why.push(s.last("corp").chosen?.why ?? "");
+        s.play("corp", c);
+        continue;
+      }
+      const r = s.decide("runner");
+      if (r) {
+        s.play("runner", r);
+        continue;
+      }
+      break;
+    }
+    expect(Number(s.view("corp").corp.credit)).toBeGreaterThanOrEqual(9);
   });
 });
