@@ -1861,3 +1861,21 @@ describe("corp does not pay Tread Lightly's tax for ice that does not stop the r
     expect(Number(s.view("corp").corp.credit)).toBeGreaterThanOrEqual(9);
   });
 });
+
+describe("corp does not draw into a discard when poor (replays V26MGBJ7, 9RXH3HQL)", () => {
+  it("takes a credit instead of drawing a sixth card at three credits", () => {
+    const s = new Scenario("core-nbn", "core-shaper");
+    s.clearHand("corp");
+    s.summon("corp", "Tithe", "Tithe", "Whitespace");
+    s.credits("corp", 40);
+    for (const [c, srv] of [["Tithe", "R&D"], ["Tithe", "R&D"], ["Whitespace", "HQ"]] as [string, string][]) {
+      s.clicks("corp", 3);
+      s.install("corp", c, srv);
+    }
+    s.summon("corp", "Send a Message", "Orbital Superiority", "Public Trail", "Neurospike", "AMAZE Amusements");
+    s.credits("corp", 3);
+    s.clicks("corp", 3);
+    s.decide("corp");
+    expect(best(s, "corp", (w) => w.startsWith("draw"))).toBeLessThanOrEqual(25);
+  });
+});

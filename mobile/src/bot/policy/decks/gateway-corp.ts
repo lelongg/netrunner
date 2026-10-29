@@ -3,7 +3,7 @@ import { cardAction, playOf, proposal } from "../generic.ts";
 import { cardWorth, choiceMove, choices, findChoice, promptFrom, selectMove, selectable } from "../prompts.ts";
 import { registerPolicy } from "../registry.ts";
 import { corpRun, fromCandidate, holdRez, ruinousRez, taxedRez, wastefulRez } from "../runs.ts";
-import { agendaProgress, coverage, iceThreat, isTrap, rezCostOf, serverSafety } from "../tactics.ts";
+import { agendaProgress, coverage, handSizeOf, iceThreat, isTrap, rezCostOf, serverSafety } from "../tactics.ts";
 import type { DeckPolicy, Observation, Plan, Proposal } from "../types.ts";
 import { GATEWAY_CORP_BEGINNER, GATEWAY_CORP_INTERMEDIATE } from "./gateway.ts";
 import { knownDeck } from "./known.ts";
@@ -371,6 +371,13 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[], extra?: (out:
         const credit = byCommand(obs, "credit")[0];
         if (credit) push(proposal(credit, 58, `take a credit: ${reserve} needed to rez the ice in front of ${installed.card.title}`, "credit"));
       }
+    }
+  }
+  if (obs.hand.length >= handSizeOf(obs) && obs.credits < 8) {
+    for (const p of out) {
+      if (p.move.command !== "draw" || p.score <= 25) continue;
+      p.score = 25;
+      p.why += " (the hand is full: a card goes to the discard at the end of the turn)";
     }
   }
   return out;
