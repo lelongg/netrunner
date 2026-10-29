@@ -1879,3 +1879,32 @@ describe("corp does not draw into a discard when poor (replays V26MGBJ7, 9RXH3HQ
     expect(best(s, "corp", (w) => w.startsWith("draw"))).toBeLessThanOrEqual(25);
   });
 });
+
+describe("runner without breakers does not hoard credits (replay XZPZR5FA)", () => {
+  it("prefers its cards to a credit click at nine credits with only a fracter", () => {
+    const s = new Scenario("core-jinteki", "core-anarch");
+    s.clearHand("corp");
+    s.summon("corp", "Palisade", "Diviner", "Karunā", "Offworld Office");
+    s.credits("corp", 60);
+    for (const [c, srv] of [["Palisade", "New remote"], ["Diviner", "Server 1"], ["Karunā", "Server 1"], ["Offworld Office", "Server 1"]] as [string, string][]) {
+      s.clicks("corp", 3);
+      s.install("corp", c, srv);
+    }
+    s.credits("corp", 13);
+    s.clicks("corp", 0);
+    s.endTurn("corp");
+    s.clearHand("runner");
+    s.summon("runner", "Cleaver", "Docklands Pass");
+    s.credits("runner", 30);
+    for (const c of ["Cleaver", "Docklands Pass"]) {
+      s.clicks("runner", 4);
+      s.install("runner", c);
+    }
+    s.summon("runner", "Botulus", "Verbal Plasticity", "Cookbook", "DZMZ Optimizer", "Leech");
+    s.credits("runner", 9);
+    s.clicks("runner", 4);
+    s.decide("runner");
+    expect(s.last("runner").chosen?.command).not.toBe("credit");
+    expect(best(s, "runner", (w) => w.startsWith("take a credit"))).toBeLessThanOrEqual(26);
+  });
+});
