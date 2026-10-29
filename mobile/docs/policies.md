@@ -445,6 +445,13 @@ clicks, host Tranquilizer on the costliest rezzed ice and load an empty Smartwar
 Distributor: Runner 280 / 255, the first Runner change above the interval on the design
 split (Planning Ahead 71 to 88 and 71 to 82, Advanced Yomi as Corp losing 51 to 77 and
 47 to 58), Corp unchanged at 362 / 384.
+Replays 3WXLXLDD and LTEPL68K, rebuilt locally from the relay with `replayed.ts`, then had
+the Corp rank its hand-size discards by card worth with surplus ice counted below
+Government Subsidy, install the ice a discard would take on its last click, keep a click
+to play an economy operation it clicks credits for, put Manegarm Skunkworks in HQ once two
+agendas wait there, and draw three with Predictive Planogram when rich and iceless with
+agendas in hand: Corp 358 / 394 after the first and 362 / 384 after both, inside the
+interval.
 
 The spread between versions is inside the interval of 1152 games (about ±33 on a sum),
 so none of this is a measured gain: the 72-game local batches that motivated v1 (27 to
