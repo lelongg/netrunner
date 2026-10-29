@@ -559,9 +559,7 @@ export class PolicyBot {
       hqKept = [];
       rdKept = [];
     } else if (lastDeck !== undefined && deck < lastDeck) {
-      const drawn = Math.max(0, lastDeck - deck - (rd.length - rdKept.length));
-      hqKept = [...hqKept, ...rdKept.slice(0, drawn)];
-      rdKept = rdKept.slice(drawn);
+      rdKept = rdKept.slice(Math.max(0, lastDeck - deck - (rd.length - rdKept.length)));
     }
     const size = Number(view.corp?.["hand-count"] ?? 0);
     notes.hqKnown = size > 0 ? hqKept.slice(-size) : [];

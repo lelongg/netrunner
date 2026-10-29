@@ -1693,8 +1693,8 @@ describe("runner stops running an HQ it has fully seen this turn (replay RXSPQFR
   });
 });
 
-describe("runner remembers the top of R&D and follows it into HQ (replay RXSPQFRJ)", () => {
-  it("counts a card seen on top of R&D as known in HQ once the Corp draws it", () => {
+describe("runner remembers the top of R&D until the Corp draws it (replay RXSPQFRJ)", () => {
+  it("forgets a card seen on top of R&D once the Corp draws it, since a drawn card gets a new identity", () => {
     const s = new Scenario("core-hb", "core-criminal");
     s.clearHand("corp");
     s.summon("corp", "Palisade", "Hedge Fund");
@@ -1739,7 +1739,6 @@ describe("runner remembers the top of R&D and follows it into HQ (replay RXSPQFR
     s.clicks("runner", 4);
     s.decide("runner");
     expect(notes.rdKnown).toHaveLength(0);
-    expect(notes.hqKnown).toHaveLength(1);
-    expect(best(s, "runner", (w) => w.startsWith("run HQ"))).toBeLessThan(35);
+    expect(notes.hqKnown ?? []).toHaveLength(0);
   });
 });
