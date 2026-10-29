@@ -435,6 +435,8 @@ Replays A45J9PEN and 2N9BFAHE then had the Runner break "cannot steal" with the 
 subroutines first and take a long-shot run when the Corp would win by scoring a remote next
 turn, and the Corp keep economy assets out of unprotected remotes the Runner can afford to
 trash: Corp 361 / 384, Runner 240 / 229.
+Rezzing turn-start assets such as Nico Campaign as the Runner's turn ends rather than at
+the end of the Corp's own turn read Corp 362 / 384, Runner 239 / 226.
 
 The spread between versions is inside the interval of 1152 games (about ±33 on a sum),
 so none of this is a measured gain: the 72-game local batches that motivated v1 (27 to
