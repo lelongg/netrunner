@@ -437,6 +437,14 @@ turn, and the Corp keep economy assets out of unprotected remotes the Runner can
 trash: Corp 361 / 384, Runner 240 / 229.
 Rezzing turn-start assets such as Nico Campaign as the Runner's turn ends rather than at
 the end of the Corp's own turn read Corp 362 / 384, Runner 239 / 226.
+Replay QN4NZR4Z then had the Runner contest a twice-advanced remote when the deck-aware
+price says its unrezzed ice cannot stop the run (an empty grip is enough to survive the
+access there, and a bioroid counts only its essential subroutines in clicks), price an
+unrezzed bioroid it can click through at no credits so Conduit runs before the credit
+clicks, host Tranquilizer on the costliest rezzed ice and load an empty Smartware
+Distributor: Runner 280 / 255, the first Runner change above the interval on the design
+split (Planning Ahead 71 to 88 and 71 to 82, Advanced Yomi as Corp losing 51 to 77 and
+47 to 58), Corp unchanged at 362 / 384.
 
 The spread between versions is inside the interval of 1152 games (about ±33 on a sum),
 so none of this is a measured gain: the 72-game local batches that motivated v1 (27 to
