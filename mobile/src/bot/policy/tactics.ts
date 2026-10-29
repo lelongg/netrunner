@@ -171,7 +171,7 @@ export function estimateRun(obs: Observation, server: ServerInfo, unrezzedCost =
   let damage = 0;
   let tags = 0;
   let etrRisk = false;
-  let clicksLeft = Number(obs.clicks ?? 0) - (obs.run && !((obs.memory?.notes?.off ?? []) as string[]).includes("inrun") ? 0 : 1);
+  let clicksLeft = Number(obs.clicks ?? 0) - (obs.run ? 0 : 1);
   let clicks = 0;
   for (const ice of [...server.ices].reverse()) {
     if (!ice.rezzed) {
@@ -193,7 +193,6 @@ export function estimateRun(obs: Observation, server: ServerInfo, unrezzedCost =
       if (clickable) {
         clicks += clickable;
         clicksLeft -= clickable;
-        if (((obs.memory?.notes?.off ?? []) as string[]).includes("clicks")) credits += clickable * CLICK_AS_CREDITS;
         exact = false;
         continue;
       }
@@ -216,7 +215,7 @@ export function estimateRun(obs: Observation, server: ServerInfo, unrezzedCost =
 export function runTrialOf(obs: Observation, server: ServerInfo): RunEstimate | null {
   const trial = (obs.memory.notes.runTrials as Record<string, RunTrial | null> | undefined)?.[server.label];
   if (!trial || server.ices.some((i: any) => !i.rezzed)) return null;
-  if (!trial.reached && !((obs.memory?.notes?.off ?? []) as string[]).includes("clicks") && server.ices.some((i: any) => (i.subtypes ?? []).includes("Bioroid") && clickThrough(i, Number(obs.clicks ?? 0) - 1))) return null;
+  if (!trial.reached && server.ices.some((i: any) => (i.subtypes ?? []).includes("Bioroid") && clickThrough(i, Number(obs.clicks ?? 0) - 1))) return null;
   return { server, credits: trial.credits, exact: true, blocked: !trial.reached, unrezzed: 0, damage: trial.damage, tags: trial.tags, etrRisk: false };
 }
 

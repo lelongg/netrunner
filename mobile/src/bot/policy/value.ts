@@ -45,7 +45,6 @@ export function agendaOutlook(obs: Observation): AgendaOutlook | null {
 }
 
 export function knownCentrals(obs: Observation): { hq: number; rd: number } {
-  if (((obs.memory.notes.off ?? []) as string[]).includes("knowledge")) return { hq: 0, rd: 0 };
   const hq = Math.min(Number(obs.opp["hand-count"] ?? 0), ((obs.memory.notes.hqKnown ?? []) as string[]).length);
   const rd = Math.min(Number(obs.opp["deck-count"] ?? 0), ((obs.memory.notes.rdKnown ?? []) as string[]).length);
   return { hq, rd };

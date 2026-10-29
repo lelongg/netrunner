@@ -200,7 +200,7 @@ export function runProposals(obs: Observation, limit = 2): Proposal[] {
     const est = runTrialOf(obs, server) ?? estimateRun(obs, server, unrezzedCost, obs.credits + (decisive ? 3 : 0), [], unrezzedBlock);
     if (est.blocked || est.credits > obs.credits + (decisive ? 3 : 0)) continue;
     if (est.damage >= obs.hand.length) continue;
-    if (adv > 1 && obs.hand.length < 1 + adv && !(decisive && obs.hand.length >= 2 && !((obs.memory.notes.off ?? []) as string[]).includes("decisive"))) continue;
+    if (adv > 1 && obs.hand.length < 1 + adv && !(decisive && obs.hand.length >= 2)) continue;
     const run = byCommand(obs, "run", (c) => (c.args as any)?.server === server.label)[0];
     if (!run) continue;
     const base = Math.min(40 + (value - (est.credits + (est.clicks ?? 0) * 2) * 0.3 - est.damage * 1.5) * 4, value < 2 ? 32 : 200);

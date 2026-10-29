@@ -400,6 +400,25 @@ reference, which is refrozen on this version (`9d7a112`). Its baseline against i
 Corp 364 / 395 and Runner 241 / 207: the Runner side, unchanged since the previous
 reference, loses 15 games on the test split to the stronger reference Corp.
 
+Replay RXSPQFRJ (the user's Discretion Advised 8-3 over a Zahya Runner bot) showed the
+Runner running HQ three times a turn on a hand it had already seen, and ignoring Send a
+Message at four advancements behind a rezzed Brân 1.0 with the Corp broke. The engine
+trial through rezzed ice does not click-break bioroids and overrode an estimate that
+could pass; the estimate priced bioroid clicks as credits and compared them with the
+purse; inside a run it still took off the click that started the run; and the trap guard
+applied to a decisive run. A bioroid now also counts as passable when the clicks cover
+its subroutines other than "install an ice", which are clicked first. The Runner also
+remembers the cards it has accessed in HQ across turns, and the top of R&D until the Corp
+draws; a central run is worth the accesses that can reach an unknown card, at the density
+of agendas left among the unknown cards.
+
+The first grid read Runner 208 / 201 against the 241 / 207 baseline. One grid with each
+part switched off in turn put the loss on the card memory (248 / 218 without it), and a
+comparison with the Corp's real hand showed why: a card drawn from R&D gets a new identity
+in HQ, so cards seen on R&D were carried into HQ as known while the drawn cards stayed
+unknown. Without that transfer the Runner reads 247 / 231 with the memory and 247 / 217
+without it, +30 over the baseline.
+
 The spread between versions is inside the interval of 1152 games (about ±33 on a sum),
 so none of this is a measured gain: the 72-game local batches that motivated v1 (27 to
 22 Runner wins) and condemned v2 were noise. Two things did come out of it. The

@@ -34,7 +34,6 @@ if (args.help) {
   --max-actions N    actions before a game is declared unfinished (default 3000)
   --out DIR          write games.jsonl, situations.jsonl and situations.md there
   --full             keep every decision record in games.jsonl (large)
-  --off LIST         comma-separated rules to switch off in the policy bots (measurement only)
   --verbose          print one line per game
   --positions FILE   append one JSON line per Corp turn start (features and the game's outcome) for the learned evaluation
   --weights FILE     learned evaluation weights (from scripts/fit-eval.mjs) used as the turn search's leaf value
@@ -182,7 +181,7 @@ function makePlayer(kind, side, precon, random, game) {
   const simulate = kind === "ref" || args.sim === "0" || (typeof args.sim === "string" && args.sim !== side && args.sim !== "both") ? undefined : engineSimulator(engine, game, side);
   const holder = {};
   const trial = simulate && args.trial !== "0" ? engineTrial(engine, game, side, (v, s) => holder.bot.trialMove(v, s)) : undefined;
-  const bot = new tree.PolicyBot(side, match?.policy ?? null, lookup, { random, render, record: true, rescue: false, style: kind === "aggro" ? "aggressive" : undefined, off: kind === "policy" && args.off ? String(args.off).split(",") : undefined, deck: { identity: precon.identity, cards: precon.cards }, simulate, trial, simWeight: args["sim-weight"] != null ? Number(args["sim-weight"]) : undefined, search: args.search === "1" || args.search === side || args.search === "both", searchWeight: args["search-weight"] != null ? Number(args["search-weight"]) : undefined, searchCap: args["search-cap"] != null ? Number(args["search-cap"]) : undefined, measuredBase: args["measured-base"] != null ? Number(args["measured-base"]) : undefined, weights });
+  const bot = new tree.PolicyBot(side, match?.policy ?? null, lookup, { random, render, record: true, rescue: false, style: kind === "aggro" ? "aggressive" : undefined, deck: { identity: precon.identity, cards: precon.cards }, simulate, trial, simWeight: args["sim-weight"] != null ? Number(args["sim-weight"]) : undefined, search: args.search === "1" || args.search === side || args.search === "both", searchWeight: args["search-weight"] != null ? Number(args["search-weight"]) : undefined, searchCap: args["search-cap"] != null ? Number(args["search-cap"]) : undefined, measuredBase: args["measured-base"] != null ? Number(args["measured-base"]) : undefined, weights });
   holder.bot = bot;
   const id = `${kind === "ref" ? `ref@${ref.sha.slice(0, 7)}:` : kind === "aggro" ? "aggro:" : ""}${bot.policyId}${match && !match.exact ? " (nearest deck)" : ""}`;
   return { kind, id, bot, fallback: !match };
