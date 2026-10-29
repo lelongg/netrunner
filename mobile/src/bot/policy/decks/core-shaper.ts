@@ -3,7 +3,7 @@ import { playOf, proposal, serverValue } from "../generic.ts";
 import { choiceMove, findChoice, promptFrom, selectMove, selectable } from "../prompts.ts";
 import { registerPolicy } from "../registry.ts";
 import { fromCandidate } from "../runs.ts";
-import { estimateRun, isIcebreaker, playCostOf } from "../tactics.ts";
+import { isIcebreaker, playCostOf, rezCostOf } from "../tactics.ts";
 import type { DeckPolicy, Observation, Plan, Proposal } from "../types.ts";
 import { CORE_SHAPER } from "./core.ts";
 import { centralPressure } from "./gateway-runner.ts";
@@ -11,31 +11,42 @@ import { centralPressure } from "./gateway-runner.ts";
 const memoryLeft = (obs: Observation) => Number(obs.me.memory?.available ?? 4) - Number(obs.me.memory?.used ?? 0);
 const inRig = (obs: Observation, title: string) => obs.rig.find((c: any) => c.title === title);
 
+function tranquilizerHost(obs: Observation): any | null {
+  const hosts = obs.servers
+    .filter((s) => !s.remote || s.content.length > 0)
+    .flatMap((s) => s.ices)
+    .filter((i: any) => i.rezzed && rezCostOf(i) >= 4 && !(i.hosted ?? []).some((h: any) => h.title === "Tranquilizer"));
+  return hosts.sort((a: any, b: any) => rezCostOf(b) - rezCostOf(a))[0] ?? null;
+}
+
 function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
   const out = centralPressure.proposals(obs, plan, base);
   const push = (p: Proposal | null) => p && out.push(p);
   const mu = memoryLeft(obs);
-  const rd = obs.servers.find((s) => s.key === "rd")!;
-  const rdRun = estimateRun(obs, rd);
-  const rdOpen = !rdRun.blocked && rdRun.damage === 0 && rdRun.credits <= obs.credits;
+  const rdRun = centralPressure.targets(obs, 0, true).find((t) => t.server.key === "rd");
+  const rdOpen = !!rdRun && rdRun.damage === 0 && rdRun.credits <= obs.credits;
   const breakersInstalled = obs.rig.filter((c: any) => isIcebreaker(c)).length;
 
   const conduit = inRig(obs, "Conduit");
   if (conduit && rdOpen && obs.memory.runsThisTurn < 2 && obs.hand.length >= 2) {
     const ability = byCommand(obs, "ability", (c) => (c.args as any)?.card?.cid === conduit.cid)[0];
     const counters = Number(conduit.counter?.virus ?? 0);
-    if (ability) push(proposal(ability, 56 + Math.min(counters, 4) * 6 - rdRun.credits * 2, `Conduit: run R&D for ${1 + counters} accesses`, "run", rdRun.exact));
+    if (ability) push(proposal(ability, 56 + Math.min(counters, 4) * 6 - rdRun!.credits * 2, `Conduit: run R&D for ${1 + counters} accesses`, "run", rdRun!.exact));
   }
   for (const card of obs.hand) {
     const cost = playCostOf(card);
     if (cost > obs.credits) continue;
     if (card.title === "Conduit" && !conduit && mu >= 1 && breakersInstalled >= 1) push(proposal(playOf(obs, card), rdOpen ? 60 : 46, "Conduit: every R&D run digs deeper", "install"));
+    if (card.title === "Tranquilizer" && mu >= 1) {
+      const host = tranquilizerHost(obs);
+      if (host) push(proposal(playOf(obs, card), 40 + rezCostOf(host) * 2, `Tranquilizer on ${host.title}: derezzes ${rezCostOf(host)} credits of ice in three turns`, "install"));
+    }
     if (card.title === "Devadatta Drone" && mu >= 1 && obs.credits >= 3) push(proposal(playOf(obs, card), rdOpen ? 50 : 38, "Devadatta Drone: two extra R&D accesses", "install"));
     if (card.title === "DZMZ Optimizer" && !inRig(obs, "DZMZ Optimizer") && obs.hand.some((c) => c.type === "Program")) push(proposal(playOf(obs, card), 50, "DZMZ Optimizer: memory and cheaper programs", "install"));
     if (card.title === "Pantograph" && !obs.rig.some((c: any) => (c.subtypes ?? []).includes("Console"))) push(proposal(playOf(obs, card), 54, "Pantograph: memory and a free install on every agenda", "install"));
     if (card.title === "GAMEDRAGON™ Pro" && breakersInstalled >= 1 && obs.credits >= 4) push(proposal(playOf(obs, card), 40, "GAMEDRAGON Pro: a stronger breaker", "install"));
     if (card.title === "Ritual" && obs.clicks >= 3 && obs.hand.length <= 3) push(proposal(playOf(obs, card), 58, `Ritual: draw ${obs.clicks - 1} cards`, "draw"));
-    if (card.title === "Illumination" && rdOpen && obs.hand.filter((c) => c.type !== "Event").length >= 2 && obs.memory.runsThisTurn < 2) push(proposal(playOf(obs, card), 62, "Illumination: run R&D and install three cards cheaply", "run-event", rdRun.exact));
+    if (card.title === "Illumination" && rdOpen && obs.hand.filter((c) => c.type !== "Event").length >= 2 && obs.memory.runsThisTurn < 2) push(proposal(playOf(obs, card), 62, "Illumination: run R&D and install three cards cheaply", "run-event", rdRun!.exact));
     if (card.title === "Azimat" && mu >= 2 && !inRig(obs, "Azimat") && obs.credits >= 3) push(proposal(playOf(obs, card), 36, "Azimat: two credits a turn for trashing", "install"));
     if (card.title === "\"Knickknack\" O'Brian" && !inRig(obs, "\"Knickknack\" O'Brian") && obs.credits >= 4) push(proposal(playOf(obs, card), 34, "Knickknack: sell the rig's leftovers", "install"));
   }
@@ -60,6 +71,11 @@ function prompt(obs: Observation, plan: Plan): Proposal | null {
     const done = findChoice(obs, /^done$/i);
     if (pick && playCostOf(pick) - 1 <= obs.credits) return { move: selectMove(obs, pick), score: 70, why: `Illumination: install ${pick.title}`, kind: "select" };
     if (done) return { move: choiceMove(obs, done), score: 60, why: "Illumination: nothing more to install", kind: "select" };
+  }
+  if (from === "Tranquilizer" && obs.promptType === "select") {
+    const best = tranquilizerHost(obs);
+    const pick = [...selectable(obs)].find((c: any) => best && c.cid === best.cid) ?? [...selectable(obs)].sort((a: any, b: any) => rezCostOf(b) - rezCostOf(a))[0];
+    if (pick) return { move: selectMove(obs, pick), score: 70, why: `Tranquilizer: host it on ${pick.title}`, kind: "select" };
   }
   if (from === "Devadatta Drone" && obs.promptType !== "select") {
     const yes = findChoice(obs, /^yes$/i);

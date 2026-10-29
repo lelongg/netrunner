@@ -250,7 +250,7 @@ export function runnerProposals(obs: Observation): Proposal[] {
       const stored = Number(card.counter?.credit ?? 0) + (added ? Number(added[1]) : 0);
       if (all) push(proposal(c, stored >= 3 ? Math.min(74, 44 + stored * 3) : stored * 10, `${card.title}: take ${stored} credits`, "click-economy"));
       else if (take) push(proposal(c, 56, `${card.title}: take ${take[1]} credits`, "click-economy"));
-      else if (place && Number(card.counter?.credit ?? 0) < 3) push(proposal(c, 22, `${card.title}: place ${place[1]} credits for later`, "click-economy"));
+      else if (place && Number(card.counter?.credit ?? 0) < 3) push(proposal(c, Number(card.counter?.credit ?? 0) === 0 ? 44 : 22, `${card.title}: place ${place[1]} credits for later`, "click-economy"));
     }
   }
   for (const card of obs.hand) {
