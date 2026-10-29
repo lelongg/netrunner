@@ -6,7 +6,7 @@ export interface Command {
   args?: unknown;
   enabled?: boolean;
   hint?: string;
-  kind?: "primary" | "danger" | "normal";
+  kind?: "primary" | "danger" | "normal" | "score";
   then?: "install-list";
   choose?: string;
   confirm?: string;
@@ -168,7 +168,7 @@ export function cardCommands(card: any, view: any, side: Side): Command[] {
         const rezCost = card["current-rez-cost"] ?? card.cost;
         const guess = a === "advance" ? me.click > 0 && me.credit > 0 : a === "rez" ? (me.credit ?? 0) >= Number(rezCost ?? 0) : undefined;
         const label = a === "rez" && rezCost != null ? `${ACTION_LABELS[a]} · ${rezCost}[credit]` : a === "advance" ? `${ACTION_LABELS[a]} · 1[click] 1[credit]` : ACTION_LABELS[a];
-        out.push({ label, command: a, args: { card: ref }, kind: a === "trash" ? "danger" : "normal", guess, check: a === "trash" ? undefined : "disable" });
+        out.push({ label, command: a, args: { card: ref }, kind: a === "trash" ? "danger" : a === "score" ? "score" : "normal", guess, check: a === "trash" ? undefined : "disable" });
       }
     } else if (card.type === "Program" && z === "rig") {
       out.push({ label: ACTION_LABELS.trash, command: "trash", args: { card: ref }, kind: "danger" });

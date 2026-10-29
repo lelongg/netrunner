@@ -272,7 +272,7 @@ export function CardSheet({ confirm, card, view, stamp, probe, side, db, send, o
               </button>
             )}
             {commands.map((c) => (
-              <button class={c.kind === "danger" ? "danger" : c.kind === "primary" ? "primary" : ""} disabled={disabled || c.enabled === false} onClick={() => run(c)}>
+              <button class={c.kind === "danger" ? "danger" : c.kind === "primary" ? "primary" : c.kind === "score" ? "primary score" : ""} disabled={disabled || c.enabled === false} onClick={() => run(c)}>
                 {glyphs(iconize(labelText(c.label, c.command)))}
               </button>
             ))}
