@@ -402,7 +402,8 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
   for (const p of out) {
     const cost = spend(p);
     const cheapRun = (p.kind === "run" || p.kind === "run-event") && cost <= 3;
-    if (cost > 0 && !cheapRun && floorNear && obs.credits - cost < floor && !(plan.kind === "contest" && p.why.includes(String(plan.detail?.server))) && !(plan.kind === "closing" && (p.kind === "run" || p.kind === "run-event")) && p.kind !== "install-breaker" && !p.why.includes("(decisive:")) {
+    const remoteRun = (p.kind === "run" || p.kind === "run-event") && /Server \d/.test(p.why);
+    if (cost > 0 && !cheapRun && !remoteRun && cov.size >= 2 && floorNear && obs.credits - cost < floor && !(plan.kind === "contest" && p.why.includes(String(plan.detail?.server))) && !(plan.kind === "closing" && (p.kind === "run" || p.kind === "run-event")) && p.kind !== "install-breaker" && !p.why.includes("(decisive:")) {
       p.score -= aggressive ? 6 : 15;
       p.why += ` (would drop below the ${floor} needed for the remote)`;
     }
@@ -417,6 +418,10 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
   for (const p of out) {
     if (thin && (p.kind === "install" || p.kind === "install-breaker" || p.kind === "install-economy") && obs.clicks <= 2) p.score -= 20;
     if (p.kind === "credit" && (obs.credits < 8 || (floorNear && obs.credits < floor)) && cov.size >= 2) p.score += 12;
+    if (p.kind === "credit" && cov.size < 2 && obs.credits >= 8 && (obs.me["deck-count"] ?? 0) > 0) {
+      p.score = Math.min(p.score, 26);
+      p.why += " (credits are not what is missing: the rig lacks breakers)";
+    }
     if (p.kind === "run" || p.kind === "run-event") {
       const t = ts.find((x) => p.why.includes(x.server.label));
       if (t && t.credits > 0 && obs.credits - t.credits < 3 && t.value < 5 && plan.kind !== "closing" && !p.why.includes("(decisive:")) {
@@ -493,6 +498,15 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
     }
     if (plan.kind === "setup" && (p.kind === "economy" || p.kind === "install-economy")) p.score += 6;
     if (p.kind === "install" && plan.kind === "contest") p.score -= 10;
+  }
+  const shot = out.find((p) => p.kind === "run" && p.why.includes("but the Corp wins next turn"));
+  if (shot) {
+    shot.score = Math.max(shot.score, 60);
+    for (const p of out) {
+      if (p === shot || p.kind === "run" || p.kind === "run-event" || p.kind === "install-breaker" || p.kind === "economy" || p.score < shot.score) continue;
+      p.score = shot.score - 1;
+      p.why += " (no time to build: the Corp wins next turn)";
+    }
   }
   return out;
 }

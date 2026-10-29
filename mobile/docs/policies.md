@@ -421,6 +421,21 @@ without it, +30 over the baseline. The final grid on both sides reads Runner 245
 Corp 365 / 391 (364 / 395 at the baseline): the Corp's own use of the bioroid rule in
 its server safety leaves it level.
 
+The next replays (V3UFW844, V26MGBJ7, 9RXH3HQL, XZPZR5FA) brought: agendas the Runner had
+seen installed and then stole no longer counted twice among those gone, and an access that
+can win the game worth seven points; the Corp playing the rest of a run out on the engine,
+with and without a rez, before paying more than an ice's printed cost (and never falling
+back to the rez when its own hold had no "continue" to use); trials counting the
+Runner's grip from its card count, which had made every Corp-side trial report no damage;
+no draw into a discard below eight credits; and a Runner short of breakers neither saving
+for a remote it cannot enter nor clicking for credits at eight or more. The grid read
+Runner 233 / 232 after the first and Corp 357 / 387, Runner 235 / 224 after all of them,
+inside the interval of the previous 365 / 391 and 245 / 230.
+Replays A45J9PEN and 2N9BFAHE then had the Runner break "cannot steal" with the end-the-run
+subroutines first and take a long-shot run when the Corp would win by scoring a remote next
+turn, and the Corp keep economy assets out of unprotected remotes the Runner can afford to
+trash: Corp 361 / 384, Runner 240 / 229.
+
 The spread between versions is inside the interval of 1152 games (about ±33 on a sum),
 so none of this is a measured gain: the 72-game local batches that motivated v1 (27 to
 22 Runner wins) and condemned v2 were noise. Two things did come out of it. The

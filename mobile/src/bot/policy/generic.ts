@@ -73,7 +73,7 @@ export function corpProposals(obs: Observation): Proposal[] {
     if (card.type !== "Asset" || !isEconomy(obs.info(card).text) || isTrap(obs.info(card).text)) continue;
     const target = openRemotes.find((s) => !s.ices.length)?.label ?? (obs.servers.filter((s) => s.remote).length < 4 ? "New remote" : undefined);
     const exposed = runnerCredits >= Number(card.trash ?? 2) + 4;
-    if (target) push(proposal(playOf(obs, card, target), (obs.credits < 6 ? 55 : 35) - (exposed ? 12 : 0), `install ${card.title} in ${target}${exposed ? " (the Runner can afford to trash it)" : ""}`, "install-economy"));
+    if (target) push(proposal(playOf(obs, card, target), (obs.credits < 6 ? 55 : 35) - (exposed ? 30 : 0), `install ${card.title} in ${target}${exposed ? " (unprotected, and the Runner can afford to trash it)" : ""}`, "install-economy"));
   }
   for (const server of obs.servers.filter((s) => s.remote)) {
     for (const card of server.content) {
@@ -198,8 +198,13 @@ export function runProposals(obs: Observation, limit = 2): Proposal[] {
     const adv = Math.max(0, ...server.content.map((c: any) => agendaProgress(c).have));
     const decisive = server.remote && corpPoints + 3 >= corpNeed && adv >= 1 && server.content.some((c: any) => !c.rezzed || c.type === "Agenda");
     const est = runTrialOf(obs, server) ?? estimateRun(obs, server, unrezzedCost, obs.credits + (decisive ? 3 : 0), [], unrezzedBlock);
-    if (est.blocked || est.credits > obs.credits + (decisive ? 3 : 0)) continue;
     if (est.damage >= obs.hand.length) continue;
+    if (est.blocked || est.credits > obs.credits + (decisive ? 3 : 0)) {
+      const longShot = decisive && corpPoints + Math.max(1, adv >= 3 ? 3 : 2) >= corpNeed && (!est.blocked || est.unrezzed > 0);
+      const shot = longShot ? byCommand(obs, "run", (c) => (c.args as any)?.server === server.label)[0] : undefined;
+      if (shot) out.push(fromCandidate(shot, 46, `run ${server.label}: a long shot at ${est.exact ? "" : "about "}${est.credits}, but the Corp wins next turn out of there`, "run", false));
+      continue;
+    }
     if (adv > 1 && obs.hand.length < 1 + adv && !(decisive && obs.hand.length >= 2)) continue;
     const run = byCommand(obs, "run", (c) => (c.args as any)?.server === server.label)[0];
     if (!run) continue;
@@ -265,6 +270,22 @@ export function runnerProposals(obs: Observation): Proposal[] {
   return out;
 }
 
+const turnStartAsset = (text = "") => /when your turn begins/i.test(text);
+
+export function corpTurnStartRezzes(obs: Observation): Proposal[] {
+  const out: Proposal[] = [];
+  let budget = obs.credits;
+  for (const card of obs.servers.filter((s) => s.remote).flatMap((s) => s.content)) {
+    const text = obs.info(card).text ?? "";
+    if (card.rezzed || card.type !== "Asset" || !isEconomy(text) || isTrap(text) || !turnStartAsset(text) || rezCostOf(card) > budget) continue;
+    const c = cardAction(obs, card, "rez");
+    if (!c) continue;
+    budget -= rezCostOf(card);
+    out.push(fromCandidate(c, 600, `rez ${card.title} as the Runner's turn ends: it pays out when this turn begins, and the Runner never saw it rezzed`, "rez-economy"));
+  }
+  return out;
+}
+
 export function corpFreeProposals(obs: Observation): Proposal[] {
   const out: Proposal[] = [];
   for (const card of obs.servers.flatMap((s) => s.content)) out.push(...[proposal(cardAction(obs, card, "score"), 100, `score ${card.title}`, "score")].filter((p): p is Proposal => !!p));
@@ -272,7 +293,7 @@ export function corpFreeProposals(obs: Observation): Proposal[] {
     for (const card of server.content) {
       if (card.rezzed || card.type !== "Asset") continue;
       const text = obs.info(card).text;
-      if (isTrap(text) || !isEconomy(text) || rezCostOf(card) > obs.credits) continue;
+      if (isTrap(text) || !isEconomy(text) || rezCostOf(card) > obs.credits || turnStartAsset(text)) continue;
       const c = cardAction(obs, card, "rez");
       if (c) out.push(fromCandidate(c, 58, `rez ${card.title} before ending the turn`, "rez-economy"));
     }

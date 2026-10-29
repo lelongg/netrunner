@@ -1,10 +1,15 @@
-import { bestBreak, coverage, estimateRun, iceThreat, isIcebreaker, rezCostOf, strengthOf, hostedBreaker } from "./tactics.ts";
+import { bestBreak, coverage, estimateRun, gainOf, iceThreat, isIcebreaker, rezCostOf, strengthOf, hostedBreaker } from "./tactics.ts";
 import { byCommand } from "./observe.ts";
 import type { Candidate } from "../../game/candidates.ts";
 import type { Observation, Proposal } from "./types.ts";
+import type { RunTrial } from "./trial.ts";
 
 export const labelCost = (label: string) => Number(label.match(/(\d+)\s*\[credits?\]/i)?.[1] ?? 0);
 export const fromCandidate = (c: Candidate, score: number, why: string, kind: string, exact = true): Proposal => ({ move: { command: c.command, args: c.args }, score, why, kind, exact });
+export const holdRez = (obs: Observation, score: number, why: string): Proposal | null => {
+  const next = byCommand(obs, "continue")[0];
+  return next ? fromCandidate(next, score, why, "pass") : null;
+};
 
 export const runCredits = (obs: Observation) => Number(obs.view.runner?.["run-credit"] ?? 0) + (obs.view.runner?.["play-area"] ?? []).reduce((n: number, c: any) => n + Number(c?.counter?.credit ?? 0), 0);
 export const leechCounters = (obs: Observation) => (obs.view.runner?.rig?.program ?? []).filter((c: any) => /give -1 strength/i.test(obs.info(c).text ?? "")).reduce((n: number, c: any) => n + Number(c?.counter?.virus ?? 0), 0);
@@ -21,6 +26,25 @@ export function wastefulRez(obs: Observation, ice: any, server: Observation["ser
   const tax = bestBreak(obs, { ...ice, rezzed: true, subroutines: ice.subroutines ?? [] })?.cost.value ?? 0;
   const wasteful = getsIn && cost >= 5 && cost > tax && obs.credits - cost < 3;
   return { wasteful, why: `${ice.title} costs ${cost} to rez and ${tax} to break: the Runner gets through ${server.label} anyway with ${purse} for the run, keep the credits` };
+}
+
+export function taxedRez(obs: Observation, ice: any, threat: { etr: boolean; damage: number; creditLoss: number; tag: boolean }, grip: number): string | null {
+  const cost = rezCostOf(ice);
+  const premium = cost - Number((obs.info(ice) as any).cost ?? cost);
+  if (premium <= 0) return null;
+  const trial = (obs.memory.notes.rezTrials as Record<string, { rez: RunTrial | null; pass: RunTrial | null }> | undefined)?.[ice.cid];
+  if (trial?.rez && trial.pass) {
+    const { rez, pass } = trial;
+    if (!rez.reached && pass.reached) return null;
+    const gained = cost - ((rez.corpCredits ?? cost) - (pass.corpCredits ?? 0));
+    const payoff = rez.credits - pass.credits + gained + (rez.damage - pass.damage) * 1.5 + (rez.tags - pass.tags) * 2;
+    if (payoff >= premium) return null;
+    return `${ice.title} costs ${premium} more than usual and, played out on the engine, ${rez.reached ? "does not stop the run" : "the run stops either way"} and only does ${payoff} worth: rez it later at its normal cost`;
+  }
+  if (threat.etr || threat.damage >= grip) return null;
+  const payoff = threat.damage * 1.5 + threat.creditLoss + gainOf(obs.info(ice).text) + (threat.tag ? 2 : 0);
+  if (payoff >= premium) return null;
+  return `${ice.title} costs ${premium} more than usual and only does ${payoff} worth on this run without stopping it: rez it later at its normal cost`;
 }
 
 export function ruinousRez(obs: Observation, cost: number, server: Observation["servers"][number], stops: boolean, kills = false): string | null {
@@ -53,12 +77,14 @@ export function corpRun(obs: Observation, reserve = 0): Proposal | null {
     const agendaBehind = !!server && (server.content.some((c: any) => c.type === "Agenda") || (server.key === "hq" && obs.hand.some((c) => c.type === "Agenda")));
     const bites = threat.etr || threat.damage > 0 || threat.tag || threat.encounterTags > 0 || threat.creditLoss >= Math.max(2, cost - 1) || !threat.exact;
     const affordable = cost <= obs.credits - reserve && (obs.credits - cost >= 2 || threat.etr || agendaBehind);
+    const taxed = taxedRez(obs, ice, threat, grip);
+    if (protects && taxed) return holdRez(obs, 14, taxed);
     const ruin = server ? ruinousRez(obs, cost, server, threat.etr, threat.damage >= grip) : null;
-    if (protects && ruin) return fromCandidate(byCommand(obs, "continue")[0] ?? rez, 14, ruin, "pass");
+    if (protects && ruin) return holdRez(obs, 14, ruin);
     const waste = server ? wastefulRez(obs, ice, server) : null;
     if (affordable && protects && bites && !waste?.wasteful) return fromCandidate(rez, 80, `rez ${ice.title} for ${cost} to protect ${server?.label}`, "rez");
-    if (protects && waste?.wasteful) return fromCandidate(byCommand(obs, "continue")[0] ?? rez, 14, waste.why, "pass");
-    if (protects && cost <= obs.credits - reserve && !bites) return fromCandidate(byCommand(obs, "continue")[0] ?? rez, 12, `${ice.title} would not stop or hurt the Runner at ${runnerCredits} credits: keep ${cost} credits`, "pass");
+    if (protects && waste?.wasteful) return holdRez(obs, 14, waste.why);
+    if (protects && cost <= obs.credits - reserve && !bites) return holdRez(obs, 12, `${ice.title} would not stop or hurt the Runner at ${runnerCredits} credits: keep ${cost} credits`);
   }
   const next = byCommand(obs, "continue")[0];
   return next ? fromCandidate(next, 10, "nothing to do during this run step", "pass") : null;
@@ -125,7 +151,7 @@ export function breakSubChoice(obs: Observation): Proposal | null {
   if (!/^break a subroutine/i.test(obs.promptText)) return null;
   const list: any[] = Array.isArray(obs.prompt.choices) ? obs.prompt.choices : [];
   const label = (c: any) => String(typeof c.value === "string" ? c.value : "");
-  const pick = list.find((c) => /end the run/i.test(label(c))) ?? list.find((c) => /damage|tag|lose/i.test(label(c))) ?? list.find((c) => c.value !== "Done" && c.value !== "Hide");
+  const pick = list.find((c) => /end the run|cannot steal/i.test(label(c))) ?? list.find((c) => /damage|tag|lose|trash/i.test(label(c))) ?? list.find((c) => c.value !== "Done" && c.value !== "Hide");
   const done = list.find((c) => c.value === "Done");
   const c = pick ?? done;
   return c ? { move: { command: "choice", args: { eid: obs.prompt.eid, choice: { uuid: c.uuid } } }, score: 80, why: pick ? `break "${label(pick)}"` : "done breaking", kind: "break" } : null;
