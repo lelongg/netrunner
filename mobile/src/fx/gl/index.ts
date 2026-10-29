@@ -267,7 +267,18 @@ let ok: boolean | undefined;
 const hidden = new WeakMap<HTMLElement, number>();
 const LIMIT = 6000;
 const CAP = 1.28;
-const live = new Set<(fade?: boolean) => void>();
+const live = new Set<() => void>();
+const landed = new WeakMap<Element, Element>();
+
+export function handOff(from: Element, to: Element) {
+  landed.set(from, to);
+}
+
+function seen(el: Element) {
+  const at = el.isConnected ? el : landed.get(el);
+  const r = at?.isConnected ? at.getBoundingClientRect() : null;
+  return r && r.width > 0 && r.bottom > 0 && r.top < innerHeight && r.right > 0 && r.left < innerWidth ? r : null;
+}
 
 export function letGoEffects() {
   for (const f of live) f();
@@ -305,7 +316,7 @@ function boardFor(owner: string | undefined, self: Element | null | undefined, s
     others,
     radius,
     dim: !!self?.classList.contains("unrezzed"),
-    track: self ? () => self.getBoundingClientRect() : undefined,
+    track: self ? () => seen(self) : undefined,
     advanced: a.advanced.map(tile).filter((r): r is DOMRect => !!r),
     gone: a.gone,
     host: host ? tile(host) : null,
@@ -346,7 +357,7 @@ export function glEffect(kind: Kind, title: string | undefined, at: DOMRect, cod
   let freed: () => void = () => {};
   const early = new Promise<void>((r) => (freed = r));
   if (!strike) {
-    let release: ((fade?: boolean) => void) | null = null;
+    let release: (() => void) | null = null;
     const shown = kind === "play" || kind === "install" || kind === "score";
     if (shown) board.cap = CAP;
     board.free = () => {
@@ -356,12 +367,12 @@ export function glEffect(kind: Kind, title: string | undefined, at: DOMRect, cod
     board.hook = (letGo) => {
       live.add(letGo);
       release = letGo;
-      if (over) letGo(true);
+      if (over) letGo();
     };
     if (shown && !(window as any).__fxManual)
       setTimeout(() => {
         over = true;
-        if (release) release(true);
+        if (release) release();
         else freed();
       }, CAP * 1000);
   }

@@ -1,5 +1,5 @@
 import { cardImage } from "../engine";
-import { letGoEffects } from "./gl";
+import { handOff, letGoEffects } from "./gl";
 import { installSignature, orbitalStrike, scoreGl, scoreSignature, signature } from "./signatures";
 import type { Side } from "../engine";
 import { anchor, animate, creditChange, tapToSkip, points, scoreSegments, banner, burst, buzz, done, flash, floater, layer, mid, node, place, punch, rays, rectOf, reduced, ring, shake, tileEl, visible, type Point, type Tone } from "./core";
@@ -354,6 +354,7 @@ async function showcase(m: Move, kind: Kind, me: Side) {
   }
   const anim = animate(ghost, { x: [0, dest.left - big.left], y: [0, dest.top - big.top], scaleX: [1.04, dest.width / big.width], scaleY: [1.04, dest.height / big.height], rotate: [0, 6, 0] }, { duration: 0.42, ease: [0.5, 0, 0.3, 1] });
   await anim.finished;
+  if (destEl) handOff(ghost, destEl);
   ghost.remove();
   if (kind === "play" || kind === "install") {
     show(destEl);
