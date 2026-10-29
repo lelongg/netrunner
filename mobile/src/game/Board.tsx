@@ -498,7 +498,7 @@ function CorpArea({ view, side, mine, onTap, onZone, selectable, runServer }: { 
     return (
       <span class="server-name">
         {serverTitle(key)}
-        {n != null && <b> {key === "hq" ? `${n}/${handMax(corp)}` : n}</b>}
+        {n != null && <b> {n}</b>}
       </span>
     );
   };
