@@ -3,7 +3,7 @@ import { byCommand } from "./observe.ts";
 import { fromCandidate } from "./runs.ts";
 import { ICE_TYPES, type IceType, agendaProgress, coverage, estimateRun, gainOf, iceThreat, isEconomy, isIcebreaker, isTrap, iceTypes, playCostOf, rezCostOf, strengthOf, subtypes, tagged, runTrialOf, serverSafety } from "./tactics.ts";
 import type { Observation, Plan, Proposal } from "./types.ts";
-import { centralValue, unrezzedPrice } from "./value.ts";
+import { centralValue, knownCentrals, unrezzedPrice } from "./value.ts";
 
 export const playOf = (obs: Observation, card: any, server?: string): Candidate | undefined => byCommand(obs, "play", (c) => (c.args as any)?.card?.cid === card.cid && (server === undefined || (c.args as any)?.server === server))[0];
 export const cardAction = (obs: Observation, card: any, command: string, label?: RegExp): Candidate | undefined => byCommand(obs, command, (c) => (c.args as any)?.card?.cid === card.cid && (!label || label.test(c.label)))[0];
@@ -167,7 +167,7 @@ export function serverValue(obs: Observation, server: Observation["servers"][num
   if (server.key === "rd") return obs.memory.notes.rdSeenTurn === obs.turn ? 0 : (centralValue(obs, server) ?? 3);
   if (server.key === "hq") {
     const size = Number(obs.opp["hand-count"] ?? 0);
-    const unseen = Math.max(0, size - ((obs.memory.notes.hqKnown ?? []) as string[]).length) / Math.max(1, size);
+    const unseen = Math.max(0, size - knownCentrals(obs).hq) / Math.max(1, size);
     return centralValue(obs, server) ?? (2 + size / 5) * unseen;
   }
   if (server.key === "archives") return (obs.opp.discard ?? []).filter((c: any) => !c.seen && !c.title).length >= 2 ? 1.5 : 0;
@@ -200,7 +200,7 @@ export function runProposals(obs: Observation, limit = 2): Proposal[] {
     const est = runTrialOf(obs, server) ?? estimateRun(obs, server, unrezzedCost, obs.credits + (decisive ? 3 : 0), [], unrezzedBlock);
     if (est.blocked || est.credits > obs.credits + (decisive ? 3 : 0)) continue;
     if (est.damage >= obs.hand.length) continue;
-    if (adv > 1 && obs.hand.length < 1 + adv && !(decisive && obs.hand.length >= 2)) continue;
+    if (adv > 1 && obs.hand.length < 1 + adv && !(decisive && obs.hand.length >= 2 && !((obs.memory.notes.off ?? []) as string[]).includes("decisive"))) continue;
     const run = byCommand(obs, "run", (c) => (c.args as any)?.server === server.label)[0];
     if (!run) continue;
     const base = Math.min(40 + (value - (est.credits + (est.clicks ?? 0) * 2) * 0.3 - est.damage * 1.5) * 4, value < 2 ? 32 : 200);
