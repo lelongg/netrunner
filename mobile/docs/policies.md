@@ -417,7 +417,9 @@ part switched off in turn put the loss on the card memory (248 / 218 without it)
 comparison with the Corp's real hand showed why: a card drawn from R&D gets a new identity
 in HQ, so cards seen on R&D were carried into HQ as known while the drawn cards stayed
 unknown. Without that transfer the Runner reads 247 / 231 with the memory and 247 / 217
-without it, +30 over the baseline.
+without it, +30 over the baseline. The final grid on both sides reads Runner 245 / 230 and
+Corp 365 / 391 (364 / 395 at the baseline): the Corp's own use of the bioroid rule in
+its server safety leaves it level.
 
 The spread between versions is inside the interval of 1152 games (about ±33 on a sum),
 so none of this is a measured gain: the 72-game local batches that motivated v1 (27 to
