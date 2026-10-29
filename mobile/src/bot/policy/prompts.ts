@@ -1,5 +1,5 @@
 import { cardRef, findCard } from "../../game/actions.ts";
-import { agendaProgress, isIcebreaker, playCostOf, rezCostOf, strengthOf } from "./tactics.ts";
+import { agendaProgress, gainOf, isIcebreaker, playCostOf, rezCostOf, strengthOf } from "./tactics.ts";
 import type { Observation, Plan, Proposal } from "./types.ts";
 
 export const choiceMove = (obs: Observation, c: any): Proposal["move"] => ({ command: "choice", args: { eid: obs.prompt.eid, choice: { uuid: c.uuid } } });
@@ -18,6 +18,8 @@ export function cardWorth(obs: Observation, card: any): number {
     if (type === "Agenda") return 100;
     if (type === "ICE") return 40 + strengthOf(card);
     if (type === "Asset" || type === "Upgrade") return 25;
+    const net = type === "Operation" ? gainOf(obs.info(card).text) - playCostOf(card) : 0;
+    if (net >= 3) return 50 + net;
     return 15 + playCostOf(card);
   }
   if (isIcebreaker(card)) return 60;

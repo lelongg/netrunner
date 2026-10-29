@@ -3,7 +3,7 @@ import { playOf, proposal, serverValue } from "../generic.ts";
 import { choiceLabel, choiceMove, choices, findChoice, promptFrom, selectMove, selectable } from "../prompts.ts";
 import { registerPolicy } from "../registry.ts";
 import { fromCandidate, labelCost, runServer, runnerRun } from "../runs.ts";
-import { agendaProgress, bestBreak, breakerProfile, clickThrough, coverage, estimateRun, iceThreat, isIcebreaker, playCostOf, runTrialOf, tagPunisher } from "../tactics.ts";
+import { agendaProgress, bestBreak, breakerProfile, clickThrough, coverage, essentialSubs, estimateRun, iceThreat, isIcebreaker, playCostOf, runTrialOf, tagPunisher } from "../tactics.ts";
 const ICE_TYPES = new Set(["Barrier", "Code Gate", "Sentry"]);
 import type { DeckList, DeckPolicy, Observation, Plan, Proposal, ServerInfo } from "../types.ts";
 import { CORE_CORP_DECKS } from "./core.ts";
@@ -31,6 +31,7 @@ interface Target {
   damage: number;
   tags: number;
   viaMayfly?: boolean;
+  clicks?: number;
 }
 
 function targets(obs: Observation, extra = 0, includeWorthless = false, corpTax = 0): Target[] {
@@ -48,7 +49,7 @@ function targets(obs: Observation, extra = 0, includeWorthless = false, corpTax 
     const est = runTrialOf(obs, server) ?? estimateRun(obs, server, unrezzedCost, obs.credits + extra, [], unrezzedBlock);
     const noSteal = server.ices.some((i: any) => i.rezzed && /cannot steal/i.test(obs.info(i).text ?? "") && !bestBreak(obs, i) && !clickThrough(i, obs.clicks - 1));
     if (!est.blocked && !noSteal) {
-      out.push({ server, value: value * (1 - 0.5 * (est.failOdds ?? 0)), credits: est.credits, exact: est.exact, damage: est.damage, tags: est.tags });
+      out.push({ server, value: value * (1 - 0.5 * (est.failOdds ?? 0)), credits: est.credits, exact: est.exact, damage: est.damage, tags: est.tags, clicks: est.clicks });
       continue;
     }
     const worthMayfly = server.remote ? server.content.some((c: any) => c.type === "Agenda" || agendaProgress(c).have > 0 || (!c.rezzed && !c.title)) : value >= 4;
@@ -304,7 +305,7 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
   if (plan.kind === "contest") {
     const target = ts.find((t) => t.server.label === plan.detail?.server);
     const plan_ = target ? readiness(obs, target) : null;
-    if (target && plan_ && plan_.cost <= obs.credits && plan_.installs.length + plan_.draws + 1 <= obs.clicks) {
+    if (target && plan_ && plan_.cost <= obs.credits && plan_.installs.length + plan_.draws + 1 + (target.clicks ?? 0) <= obs.clicks) {
       planned = true;
       const label = target.server.label;
       for (const inst of plan_.installs) {
@@ -570,7 +571,8 @@ function restOfRun(obs: Observation) {
 
 function run(obs: Observation, plan: Plan): Proposal | null {
   const ice = obs.currentIce;
-  const unbrokenSubs = (ice?.subroutines ?? []).filter((s: any) => !s.broken && !s.fired).length;
+  const allSubs = (ice?.subroutines ?? []).filter((s: any) => !s.broken && !s.fired).length;
+  const unbrokenSubs = ice && obs.clicks < allSubs ? essentialSubs(ice) : allSubs;
   if (obs.encounter && ice?.rezzed && (ice.subtypes ?? []).includes("Bioroid") && unbrokenSubs > 0) {
     const click = byCommand(obs, "runner-ability", (c) => (c.args as any)?.card?.cid === ice.cid)[0];
     const full = byCommand(obs, "dynamic-ability", (c) => /fully break/i.test(c.label)).map((c) => labelCost(c.label)).sort((a, b) => a - b)[0];

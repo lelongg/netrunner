@@ -3,7 +3,7 @@ import { byCommand } from "./observe.ts";
 import { fromCandidate } from "./runs.ts";
 import { ICE_TYPES, type IceType, agendaProgress, coverage, estimateRun, gainOf, iceThreat, isEconomy, isIcebreaker, isTrap, iceTypes, playCostOf, rezCostOf, strengthOf, subtypes, tagged, runTrialOf, serverSafety } from "./tactics.ts";
 import type { Observation, Plan, Proposal } from "./types.ts";
-import { centralValue, unrezzedPrice } from "./value.ts";
+import { centralValue, knownCentrals, unrezzedPrice } from "./value.ts";
 
 export const playOf = (obs: Observation, card: any, server?: string): Candidate | undefined => byCommand(obs, "play", (c) => (c.args as any)?.card?.cid === card.cid && (server === undefined || (c.args as any)?.server === server))[0];
 export const cardAction = (obs: Observation, card: any, command: string, label?: RegExp): Candidate | undefined => byCommand(obs, command, (c) => (c.args as any)?.card?.cid === card.cid && (!label || label.test(c.label)))[0];
@@ -165,7 +165,11 @@ export function corpProposals(obs: Observation): Proposal[] {
 
 export function serverValue(obs: Observation, server: Observation["servers"][number]): number {
   if (server.key === "rd") return obs.memory.notes.rdSeenTurn === obs.turn ? 0 : (centralValue(obs, server) ?? 3);
-  if (server.key === "hq") return centralValue(obs, server) ?? 2 + Number(obs.opp["hand-count"] ?? 0) / 5;
+  if (server.key === "hq") {
+    const size = Number(obs.opp["hand-count"] ?? 0);
+    const unseen = Math.max(0, size - knownCentrals(obs).hq) / Math.max(1, size);
+    return centralValue(obs, server) ?? (2 + size / 5) * unseen;
+  }
   if (server.key === "archives") return (obs.opp.discard ?? []).filter((c: any) => !c.seen && !c.title).length >= 2 ? 1.5 : 0;
   if (!server.content.length) return 0;
   const adv = Math.max(0, ...server.content.map((c: any) => agendaProgress(c).have));
@@ -196,10 +200,10 @@ export function runProposals(obs: Observation, limit = 2): Proposal[] {
     const est = runTrialOf(obs, server) ?? estimateRun(obs, server, unrezzedCost, obs.credits + (decisive ? 3 : 0), [], unrezzedBlock);
     if (est.blocked || est.credits > obs.credits + (decisive ? 3 : 0)) continue;
     if (est.damage >= obs.hand.length) continue;
-    if (adv > 1 && obs.hand.length < 1 + adv) continue;
+    if (adv > 1 && obs.hand.length < 1 + adv && !(decisive && obs.hand.length >= 2)) continue;
     const run = byCommand(obs, "run", (c) => (c.args as any)?.server === server.label)[0];
     if (!run) continue;
-    const base = Math.min(40 + (value - est.credits * 0.3 - est.damage * 1.5) * 4, value < 2 ? 32 : 200);
+    const base = Math.min(40 + (value - (est.credits + (est.clicks ?? 0) * 2) * 0.3 - est.damage * 1.5) * 4, value < 2 ? 32 : 200);
     const score = decisive ? Math.max(base, 72) : base;
     out.push(fromCandidate(run, score, `run ${server.label}: value ${value.toFixed(1)}, ${est.exact ? "costs" : "about"} ${est.credits}${est.damage ? `, ${est.damage} damage` : ""}${decisive ? " (decisive: the Corp scores out of there next turn)" : ""}`, "run", est.exact));
   }

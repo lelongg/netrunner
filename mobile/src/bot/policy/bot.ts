@@ -539,8 +539,34 @@ export class PolicyBot {
     return econ || breaker ? { keep: true, why: econ ? "economy in hand" : "a breaker in hand" } : { keep: false, why: "neither economy nor breakers" };
   }
 
+  private trackHidden(view: any) {
+    const notes = this.memory.notes;
+    const hq = (notes.hqKnown ?? []) as string[];
+    const rd = (notes.rdKnown ?? []) as string[];
+    const deck = Number(view.corp?.["deck-count"] ?? 0);
+    const lastDeck = notes.knownDeck as number | undefined;
+    notes.knownDeck = deck;
+    if (!hq.length && !rd.length) return;
+    const elsewhere = new Set<string>();
+    const add = (c: any) => c?.cid && elsewhere.add(c.cid);
+    for (const server of Object.values(view.corp?.servers ?? {}) as any[]) for (const c of [...(server?.content ?? []), ...(server?.ices ?? [])]) add(c);
+    for (const c of [...(view.corp?.discard ?? []), ...(view.corp?.scored ?? []), ...(view.runner?.scored ?? [])]) add(c);
+    let hqKept = hq.filter((cid) => !elsewhere.has(cid));
+    let rdKept = rd.filter((cid) => !elsewhere.has(cid));
+    if (lastDeck !== undefined && deck > lastDeck) {
+      hqKept = [];
+      rdKept = [];
+    } else if (lastDeck !== undefined && deck < lastDeck) {
+      rdKept = rdKept.slice(Math.max(0, lastDeck - deck - (rd.length - rdKept.length)));
+    }
+    const size = Number(view.corp?.["hand-count"] ?? 0);
+    notes.hqKnown = size > 0 ? hqKept.slice(-size) : [];
+    notes.rdKnown = rdKept.slice(0, deck);
+  }
+
   private trackRun(view: any) {
     if (this.side !== "runner") return;
+    this.trackHidden(view);
     if (!this.pendingRun && view.run) {
       const key = String(view.run.server?.[0] ?? "");
       this.pendingRun = { key, server: serverName(key), accessed: [], points: view[this.side]?.["agenda-point"] ?? 0, breached: false, turn: Number(view.turn ?? 0) };
@@ -557,6 +583,10 @@ export class PolicyBot {
         const title = prompt?.card?.title ?? installed?.title;
         if (installed && title) this.memory.seen.set(cid, { cid, title, type: prompt?.card?.type ?? installed.type, zone: "servers", turn: Number(view.turn ?? 0) });
         if (title && !pending.accessed.includes(title)) pending.accessed.push(title);
+        if ((pending.key === "hq" || pending.key === "rd") && !installed) {
+          const known = (this.memory.notes[pending.key === "hq" ? "hqKnown" : "rdKnown"] ??= []) as string[];
+          if (!known.includes(cid)) known.push(cid);
+        }
       }
       return;
     }

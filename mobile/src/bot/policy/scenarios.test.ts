@@ -1548,3 +1548,197 @@ describe("corp does not sit on a hand of agendas behind an open HQ (Hyper Veloci
     expect(s.last("corp").chosen?.why ?? "").toMatch(/^install .* in Server 3 .*HQ is no safer/);
   });
 });
+
+describe("corp keeps its economy when Hansei Review asks for a card (replay UWA9WREN)", () => {
+  it("trashes an ice rather than Hedge Fund", () => {
+    const s = new Scenario("core-nbn", "core-shaper");
+    s.clearHand("corp");
+    s.summon("corp", "Hansei Review", "Hedge Fund", "Tithe", "Palisade", "Palisade", "Send a Message");
+    s.credits("corp", 5);
+    s.act("corp", "Hansei Review: Play");
+    s.decide("corp");
+    expect(s.last("corp").chosen?.why ?? "").toMatch(/^trash (Tithe|Palisade)/);
+  });
+});
+
+describe("runner clicks through a rezzed Brân to the agenda that wins the game (replay RXSPQFRJ)", () => {
+  function branBoard(clicks: number) {
+    const s = new Scenario("core-hb", "core-criminal");
+    s.clearHand("corp");
+    s.summon("corp", "Brân 1.0", "Tithe", "Whitespace", "Send a Message", "Palisade", "Offworld Office", "Luminal Transubstantiation");
+    s.credits("corp", 40);
+    for (const [c, srv] of [["Palisade", "R&D"], ["Brân 1.0", "New remote"], ["Tithe", "Server 1"], ["Whitespace", "Server 1"], ["Send a Message", "Server 1"]] as [string, string][]) {
+      s.clicks("corp", 3);
+      s.credits("corp", 40);
+      s.install("corp", c, srv);
+    }
+    for (const t of ["Brân 1.0", "Tithe", "Whitespace"]) s.rez(t);
+    for (const a of ["Offworld Office", "Luminal Transubstantiation"]) {
+      s.say("corp", "/score");
+      s.act("corp", `Select ${a}`);
+      for (let i = 0; i < 3; i++) {
+        const done = s.actions("corp").find((x) => ["Done", "Choose: Done", "Choose: No"].includes(x.label));
+        if (!done) break;
+        s.act("corp", done.label);
+      }
+    }
+    s.say("corp", "/adv-counter 4");
+    s.act("corp", "Select Send a Message");
+    expect(Number(s.view("corp").corp["agenda-point"])).toBe(4);
+    s.credits("corp", 0);
+    s.endTurn("corp");
+    s.clearHand("runner");
+    s.summon("runner", "Sang Kancil", "Carmen");
+    s.credits("runner", 30);
+    for (const c of ["Sang Kancil", "Carmen"]) {
+      s.clicks("runner", 4);
+      s.install("runner", c);
+    }
+    s.clicks("runner", clicks);
+    s.summon("runner", "Fransofia Ward", "Chromatophores", "Lie Low", "Gourmand");
+    s.credits("runner", 7);
+    return s;
+  }
+
+  function runIt(s: Scenario) {
+    const move = s.decide("runner");
+    expect(s.last("runner").chosen?.why ?? "").toMatch(/^run Server 1/);
+    s.play("runner", move!);
+    for (let i = 0; i < 40 && s.view("runner").run; i++) {
+      const c = s.decide("corp");
+      if (c) {
+        s.play("corp", c);
+        continue;
+      }
+      const r = s.decide("runner");
+      if (r) {
+        s.play("runner", r);
+        continue;
+      }
+      break;
+    }
+    for (let i = 0; i < 4 && s.view("runner").runner.prompt; i++) {
+      const m = s.decide("runner");
+      if (m) s.play("runner", m);
+    }
+    expect(Number(s.view("runner").runner["agenda-point"])).toBe(3);
+  }
+
+  it("runs the remote with Send a Message at four advancements when the Corp is broke", () => {
+    runIt(branBoard(4));
+  });
+
+  it("breaks only the two end-the-run subroutines when three clicks are left", () => {
+    runIt(branBoard(3));
+  });
+});
+
+describe("runner stops running an HQ it has fully seen this turn (replay RXSPQFRJ)", () => {
+  it("does not run HQ again after accessing its only card", () => {
+    const s = new Scenario("core-hb", "core-criminal");
+    s.clearHand("corp");
+    s.summon("corp", "Palisade", "Palisade", "Hedge Fund");
+    s.credits("corp", 40);
+    for (const [c, srv] of [["Palisade", "R&D"], ["Palisade", "New remote"]] as [string, string][]) {
+      s.clicks("corp", 3);
+      s.install("corp", c, srv);
+    }
+    s.rez("Palisade");
+    s.credits("corp", 2);
+    s.endTurn("corp");
+    s.clearHand("runner");
+    s.summon("runner", "Sang Kancil", "Carmen");
+    s.credits("runner", 30);
+    for (const c of ["Sang Kancil", "Carmen"]) {
+      s.clicks("runner", 4);
+      s.install("runner", c);
+    }
+    s.summon("runner", "Fransofia Ward", "Chromatophores", "Lie Low", "Gourmand");
+    s.credits("runner", 8);
+    s.clicks("runner", 4);
+    expect(Number(s.view("runner").corp["hand-count"])).toBe(1);
+    s.act("runner", "Run on HQ");
+    for (let i = 0; i < 20 && s.view("runner").run; i++) {
+      const r = s.decide("runner");
+      if (r) {
+        s.play("runner", r);
+        continue;
+      }
+      const c = s.decide("corp");
+      if (c) {
+        s.play("corp", c);
+        continue;
+      }
+      break;
+    }
+    for (let i = 0; i < 6; i++) {
+      const m = s.decide("runner");
+      if (!m || !/toast|optional effect|decline/.test(s.last("runner").chosen?.why ?? "")) break;
+      s.play("runner", m);
+    }
+    s.decide("runner");
+    expect(s.last("runner").chosen?.why ?? "").not.toMatch(/^run HQ/);
+    expect(best(s, "runner", (w) => w.startsWith("run HQ"))).toBeLessThan(35);
+    const hqValue = () => Number(s.considered("runner").find((p) => p.why.startsWith("run HQ"))?.why.match(/value ([\d.]+)/)?.[1] ?? 0);
+    s.clicks("runner", 0);
+    s.endTurn("runner");
+    s.clicks("corp", 0);
+    s.endTurn("corp");
+    expect(Number(s.view("runner").corp["hand-count"])).toBe(2);
+    s.clicks("runner", 4);
+    s.decide("runner");
+    const half = hqValue();
+    expect(half).toBeGreaterThan(0);
+    expect(half).toBeLessThan(2.5);
+  });
+});
+
+describe("runner remembers the top of R&D until the Corp draws it (replay RXSPQFRJ)", () => {
+  it("forgets a card seen on top of R&D once the Corp draws it, since a drawn card gets a new identity", () => {
+    const s = new Scenario("core-hb", "core-criminal");
+    s.clearHand("corp");
+    s.summon("corp", "Palisade", "Hedge Fund");
+    s.credits("corp", 40);
+    s.clicks("corp", 3);
+    s.install("corp", "Palisade", "New remote");
+    s.say("corp", "/move-deck");
+    s.act("corp", "Select Hedge Fund");
+    s.credits("corp", 2);
+    s.endTurn("corp");
+    s.clearHand("runner");
+    s.summon("runner", "Sang Kancil", "Carmen", "Lie Low", "Gourmand");
+    s.credits("runner", 8);
+    s.clicks("runner", 4);
+    s.act("runner", "Run on R&D");
+    for (let i = 0; i < 20 && s.view("runner").run; i++) {
+      const r = s.decide("runner");
+      if (r) {
+        s.play("runner", r);
+        continue;
+      }
+      const c = s.decide("corp");
+      if (c) {
+        s.play("corp", c);
+        continue;
+      }
+      break;
+    }
+    for (let i = 0; i < 6; i++) {
+      const m = s.decide("runner");
+      if (!m || !/toast|optional effect|decline/.test(s.last("runner").chosen?.why ?? "")) break;
+      s.play("runner", m);
+    }
+    const notes = (s.bots.runner as any).memory.notes;
+    expect(notes.rdKnown).toHaveLength(1);
+    expect(Number(s.view("runner").corp["hand-count"])).toBe(0);
+    s.clicks("runner", 0);
+    s.endTurn("runner");
+    s.clicks("corp", 0);
+    s.endTurn("corp");
+    expect(Number(s.view("runner").corp["hand-count"])).toBe(1);
+    s.clicks("runner", 4);
+    s.decide("runner");
+    expect(notes.rdKnown).toHaveLength(0);
+    expect(notes.hqKnown ?? []).toHaveLength(0);
+  });
+});
