@@ -452,6 +452,9 @@ to play an economy operation it clicks credits for, put Manegarm Skunkworks in H
 agendas wait there, and draw three with Predictive Planogram when rich and iceless with
 agendas in hand: Corp 358 / 394 after the first and 362 / 384 after both, inside the
 interval.
+Replay WFTWB65W then had the Runner stay off the centrals while Public Trail and an
+Orbital Superiority advanced enough to score next turn could flatline its grip: Runner
+273 / 256 (against Hyper Velocity 84 / 84 instead of 88 / 84), inside the interval.
 
 The spread between versions is inside the interval of 1152 games (about ±33 on a sum),
 so none of this is a measured gain: the 72-game local batches that motivated v1 (27 to
