@@ -1742,3 +1742,84 @@ describe("runner remembers the top of R&D until the Corp draws it (replay RXSPQF
     expect(notes.hqKnown ?? []).toHaveLength(0);
   });
 });
+
+describe("runner at match point runs the centrals (replay V3UFW844)", () => {
+  it("runs HQ or R&D at six points instead of clicking for credits, with three agendas left in the Corp's deck", () => {
+    const s = new Scenario("core-hb", "core-criminal");
+    s.clearHand("corp");
+    s.summon("corp", "Ansel 1.0", "Ansel 1.0", "Tithe", "Brân 1.0", "Pharos", "Palisade", "Urtica Cipher", "Nico Campaign", "Send a Message", "Offworld Office", "Luminal Transubstantiation");
+    s.credits("corp", 60);
+    for (const [c, srv] of [["Ansel 1.0", "R&D"], ["Tithe", "HQ"], ["Brân 1.0", "HQ"], ["Ansel 1.0", "New remote"], ["Urtica Cipher", "Server 1"], ["Pharos", "New remote"], ["Palisade", "Server 2"], ["Nico Campaign", "Server 2"]] as [string, string][]) {
+      s.clicks("corp", 3);
+      s.credits("corp", 60);
+      s.install("corp", c, srv);
+    }
+    for (const t of ["Ansel 1.0", "Tithe", "Pharos", "Palisade"]) s.rez(t);
+    for (const a of ["Send a Message", "Luminal Transubstantiation"]) {
+      s.say("corp", "/score");
+      s.act("corp", `Select ${a}`);
+      for (let i = 0; i < 3; i++) {
+        const done = s.actions("corp").find((x) => ["Done", "Choose: Done", "Choose: No"].includes(x.label) || x.label.startsWith("Done"));
+        if (!done) break;
+        s.act("corp", done.label);
+      }
+    }
+    s.summon("corp", "Offworld Office", "Send a Message", "Superconducting Hub");
+    for (const a of ["Offworld Office", "Send a Message", "Superconducting Hub"]) {
+      s.clicks("corp", 3);
+      s.credits("corp", 60);
+      s.install("corp", a, "New remote");
+    }
+    s.rez("Ansel 1.0");
+    s.clearHand("corp");
+    s.credits("corp", 5);
+    s.clicks("corp", 0);
+    s.endTurn("corp");
+    s.summon("corp", "Palisade", "Tithe", "Whitespace", "Send a Message", "Hedge Fund", "Tithe");
+    s.clearHand("runner");
+    s.summon("runner", "Carmen", "Sang Kancil");
+    s.credits("runner", 30);
+    for (const c of ["Carmen", "Sang Kancil"]) {
+      s.clicks("runner", 4);
+      s.install("runner", c);
+    }
+    for (const srv of ["Server 3", "Server 4", "Server 5"]) {
+      s.clicks("runner", 4);
+      s.act("runner", `Run on ${srv}`);
+      for (let i = 0; i < 20 && s.view("runner").run; i++) {
+        const r = s.decide("runner");
+        if (r) {
+          s.play("runner", r);
+          continue;
+        }
+        const c = s.decide("corp");
+        if (c) {
+          s.play("corp", c);
+          continue;
+        }
+        break;
+      }
+      for (let i = 0; i < 6; i++) {
+        const m = s.decide("runner");
+        if (!m || !/toast|optional effect|decline|steal/.test(s.last("runner").chosen?.why ?? "")) break;
+        s.play("runner", m);
+      }
+    }
+    s.clicks("runner", 0);
+    s.endTurn("runner");
+    s.say("corp", "/derez");
+    s.act("corp", "Select Brân 1.0");
+    s.clearHand("corp");
+    s.credits("corp", 5);
+    s.clicks("corp", 0);
+    s.endTurn("corp");
+    s.summon("corp", "Palisade", "Tithe", "Whitespace", "Send a Message", "Hedge Fund", "Tithe");
+    s.clearHand("runner");
+    s.summon("runner", "Lie Low", "Chromatophores", "Maglectric Rapid (748 Mod)", "Chromatophores", "Lie Low");
+    s.credits("runner", 6);
+    s.clicks("runner", 4);
+    expect(Number(s.view("runner").runner["agenda-point"])).toBe(6);
+    s.decide("runner");
+    expect(s.last("runner").chosen?.why ?? "").toMatch(/^run (HQ|R&D)/);
+  });
+});
