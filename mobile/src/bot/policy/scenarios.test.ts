@@ -1990,3 +1990,28 @@ describe("runner breaks the subroutine that matters first on Ansel (replay A45J9
     expect(breaks[0] ?? "").toMatch(/cannot steal/);
   });
 });
+
+describe("corp keeps its economy out of reach of a rich Runner (replay 2N9BFAHE)", () => {
+  it("does not install Nico Campaign in an unprotected remote at five credits against a Runner with eleven", () => {
+    const s = new Scenario("core-hb", "core-shaper");
+    s.clearHand("corp");
+    s.summon("corp", "Palisade", "Tithe", "Whitespace");
+    s.credits("corp", 40);
+    for (const [c, srv] of [["Palisade", "HQ"], ["Tithe", "R&D"], ["Whitespace", "R&D"]] as [string, string][]) {
+      s.clicks("corp", 3);
+      s.install("corp", c, srv);
+    }
+    s.clicks("corp", 0);
+    s.endTurn("corp");
+    s.credits("runner", 11);
+    s.clicks("runner", 0);
+    s.endTurn("runner");
+    s.clearHand("corp");
+    s.summon("corp", "Nico Campaign", "Nico Campaign", "Send a Message", "Seamless Launch", "Brân 1.0");
+    s.credits("corp", 5);
+    s.clicks("corp", 3);
+    s.decide("corp");
+    expect(s.last("corp").chosen?.why ?? "").not.toMatch(/^install Nico Campaign/);
+    expect(best(s, "corp", (w) => w.startsWith("install Nico Campaign"))).toBeLessThan(30);
+  });
+});

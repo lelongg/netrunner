@@ -73,7 +73,7 @@ export function corpProposals(obs: Observation): Proposal[] {
     if (card.type !== "Asset" || !isEconomy(obs.info(card).text) || isTrap(obs.info(card).text)) continue;
     const target = openRemotes.find((s) => !s.ices.length)?.label ?? (obs.servers.filter((s) => s.remote).length < 4 ? "New remote" : undefined);
     const exposed = runnerCredits >= Number(card.trash ?? 2) + 4;
-    if (target) push(proposal(playOf(obs, card, target), (obs.credits < 6 ? 55 : 35) - (exposed ? 12 : 0), `install ${card.title} in ${target}${exposed ? " (the Runner can afford to trash it)" : ""}`, "install-economy"));
+    if (target) push(proposal(playOf(obs, card, target), (obs.credits < 6 ? 55 : 35) - (exposed ? 30 : 0), `install ${card.title} in ${target}${exposed ? " (unprotected, and the Runner can afford to trash it)" : ""}`, "install-economy"));
   }
   for (const server of obs.servers.filter((s) => s.remote)) {
     for (const card of server.content) {
