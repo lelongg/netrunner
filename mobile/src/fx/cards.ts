@@ -285,6 +285,7 @@ async function showcase(m: Move, kind: Kind, me: Side) {
   const big = stage(260);
   hide(destEl);
   const ghost = ghostFrom(bigFace(info, m.clone ?? synth(info, true)), big, "fx-showcase");
+  ghost.dataset.until = String(performance.now() + 1580);
   const sx = src.width / big.width;
   const sy = src.height / big.height;
   const tone: Tone = kind === "score" ? "gold" : kind === "steal" ? "red" : sideTone(info?.owner);

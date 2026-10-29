@@ -5,7 +5,7 @@ import { serverName } from "../game/text";
 import { t as tr } from "../i18n";
 import { type Plan, accessStage, collect, moveKinds, pendingGain, play, prepare } from "./cards";
 import { setAim } from "./gl/aim";
-import { hasGl, letGoEffects } from "./gl";
+import { handOff, hasGl, letGoEffects } from "./gl";
 import { cleaver, fireSignature, leech, planogramResult, regolith, rezSignature, snare, transmission, useSignature, hasUseEffect } from "./signatures";
 import { cue, play as sound } from "../sound";
 import { type Point, type Tone, anchor, animate, banner, burst, buzz, haptics, creditChange, tapToSkip, done, flash, floater, gate, glitch, layer, lunge, mid, node, place, pointOf, punch, rays, rectOf, reduced, ring, shake, slash, split, stamp, tileEl, vignette, visible, wrapEl, scoreSegment } from "./core";
@@ -975,6 +975,9 @@ function showdown(ice: any, kind: "rez" | "fire", run: (big: DOMRect, ghost: HTM
   const from = visible(r) ? r! : big;
   const stageEl = node(`fx-showdown tone-${tone}`);
   const ghost = node("fx-ghost fx-showcase fx-big", stageEl);
+  const until = performance.now() + 1650;
+  ghost.dataset.until = String(until);
+  const left = () => Math.max(0, until - performance.now());
   place(ghost, big);
   const img = document.createElement("img");
   img.className = "fx-ice-img";
@@ -1004,9 +1007,9 @@ function showdown(ice: any, kind: "rez" | "fire", run: (big: DOMRect, ghost: HTM
   Promise.all([arrive.finished.catch(() => {}), loaded])
     .then(() => {
       const tap = tapToSkip(() => rectOf(ghost));
-      return Promise.race([Promise.resolve(run(big, ghost)), tap.promise.then(letGoEffects), new Promise((res) => setTimeout(res, 4000))]).finally(tap.dispose);
+      return Promise.race([Promise.resolve(run(big, ghost)), tap.promise.then(letGoEffects), new Promise((res) => setTimeout(res, left()))]).finally(tap.dispose);
     })
-    .then(() => new Promise((res) => setTimeout(res, 250)))
+    .then(() => new Promise((res) => setTimeout(res, Math.min(250, left()))))
     .then(() => {
       animate(label, { opacity: 0 }, { duration: 0.2 });
       animate(aura, { opacity: 0 }, { duration: 0.2 });
@@ -1016,9 +1019,10 @@ function showdown(ice: any, kind: "rez" | "fire", run: (big: DOMRect, ghost: HTM
       return animate(ghost, { x: to.left - big.left, y: to.top - big.top, scaleX: to.width / big.width, scaleY: to.height / big.height }, { duration: 0.35, ease: [0.5, 0, 0.3, 1] }).finished.catch(() => {});
     })
     .then(() => {
+      const cur = tileEl(ice.cid);
+      if (cur) handOff(ghost, cur);
       stageEl.remove();
       staged.delete(ice.cid);
-      const cur = tileEl(ice.cid);
       if (cur) {
         cur.style.opacity = "";
         punch(cur, 1.1);

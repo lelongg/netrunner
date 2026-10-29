@@ -266,7 +266,6 @@ export const FX: Record<Kind, Record<string, string>> = {
 let ok: boolean | undefined;
 const hidden = new WeakMap<HTMLElement, number>();
 const LIMIT = 6000;
-const CAP = 1.28;
 const live = new Set<() => void>();
 const landed = new WeakMap<Element, Element>();
 
@@ -358,8 +357,10 @@ export function glEffect(kind: Kind, title: string | undefined, at: DOMRect, cod
   const early = new Promise<void>((r) => (freed = r));
   if (!strike) {
     let release: (() => void) | null = null;
-    const shown = kind === "play" || kind === "install" || kind === "score";
-    if (shown) board.cap = CAP;
+    const until = Number(hide?.dataset.until) || 0;
+    const shown = until > 0;
+    const cap = Math.max(0, until - performance.now()) / 1000;
+    if (shown) board.cap = cap;
     board.free = () => {
       restore();
       freed();
@@ -374,7 +375,7 @@ export function glEffect(kind: Kind, title: string | undefined, at: DOMRect, cod
         over = true;
         if (release) release();
         else freed();
-      }, CAP * 1000);
+      }, cap * 1000);
   }
   const play = import("./cards").then((m) => (m as unknown as Record<string, (...a: unknown[]) => Promise<void>>)[name](at, code, ready, board)).catch((e) => console.error("fx", name, e));
   return Promise.race([play, early, new Promise<void>((r) => setTimeout(r, (window as any).__fxManual ? 6e5 : LIMIT))]).finally(() => {

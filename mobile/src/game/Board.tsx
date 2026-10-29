@@ -187,7 +187,7 @@ function Opponent({ view, side, name }: { view: any; side: Side; name: string })
           <span class="label stats">
             <span data-anchor={side === "runner" ? "runner-hand" : undefined}>
               <Stat icon="hand" label={side === "runner" ? t("Grip") : t("HQ")}>
-                {p["hand-count"] ?? 0}
+                {p["hand-count"] ?? 0}/{handMax(p)}
               </Stat>
             </span>
             {extras(p, side).map((x) => [" · ", x])}
@@ -339,7 +339,7 @@ function Piles({ view, zoneOwner, viewer, onTap, onZone, selectable, centrals = 
           <Stacked n={zoneOwner === "runner" ? (p["hand-count"] ?? (p.hand ?? []).length) : 0} small>
             <CardTile card={p.identity} owner={owner} onTap={onTap} size="sm" selectable={selectable.has(p.identity.cid)} />
           </Stacked>
-          {zoneOwner === "runner" && <span>{t("Grip")} {p["hand-count"] ?? (p.hand ?? []).length}</span>}
+          {zoneOwner === "runner" && <span>{t("Grip")} {p["hand-count"] ?? (p.hand ?? []).length}/{handMax(p)}</span>}
         </div>
       )}
       {centrals && <Pile label={zoneOwner === "corp" ? "R&D" : "Stack"} count={p["deck-count"] ?? 0} owner={owner} side={zoneOwner} selectable={selectable} anchor={`${zoneOwner}-deck`} />}
@@ -706,6 +706,8 @@ function Log({ view, render, names, onSay, onClose }: { view: any; render: (m: u
     </div>
   );
 }
+
+const handMax = (p: any) => Number(p?.["hand-size"]?.total ?? p?.["hand-size"] ?? 5);
 
 function useLastIce(view: any, ice: any) {
   const last = useRef<any>(null);
@@ -1495,7 +1497,7 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
       </div>
       <footer class="dock">
         <div class="enc-zone">
-          {!view.winner && (ice?.rezzed ? <Encounter view={view} render={render} onTap={tap} ice={lastIce?.cid === ice.cid && (view.encounters || view.run?.phase === "encounter-ice") ? lastIce : ice} skip={skipped} onToggle={!watching && side === "runner" && view.encounters && !(prompt && ptype !== "run") ? toggleSub : undefined} /> : lastIce && <Encounter view={view} render={render} onTap={tap} ice={lastIce} passed />)}
+          {!view.winner && (ice?.rezzed ? <Encounter view={view} render={render} onTap={tap} ice={lastIce?.cid === ice.cid && (view.encounters || view.run?.phase === "encounter-ice") ? lastIce : ice} skip={skipped} onToggle={!watching && side === "runner" && view.encounters && !(prompt && ptype !== "run") ? toggleSub : undefined} /> : lastIce && view.run?.phase !== "success" && <Encounter view={view} render={render} onTap={tap} ice={lastIce} passed />)}
           {!view.winner && !watching && side === "runner" && view.encounters && ice?.rezzed && !(prompt && ptype !== "run") && <Breakers view={view} stamp={live} probe={prober} side={side} ice={ice} send={send} onTap={tap} disabled={disabled} skip={skipped} onPartial={breakSome} />}
         </div>
         {respond?.done ? (

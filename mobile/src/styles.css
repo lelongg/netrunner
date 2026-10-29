@@ -94,6 +94,10 @@ button.primary {
   color: var(--text);
 }
 
+button.primary.score {
+  border-bottom-color: var(--yellow);
+}
+
 button.danger {
   border-color: var(--red);
   color: var(--red-soft);
