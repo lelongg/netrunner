@@ -31,7 +31,8 @@ export function agendaOutlook(obs: Observation): AgendaOutlook | null {
     left--;
     points -= Number(c.agendapoints ?? (obs.info(c) as any).agendapoints ?? 0);
   }
-  const seenInstalled = [...obs.memory.seen.values()].filter((s) => s.type === "Agenda" && s.zone === "servers");
+  const installed = new Set(obs.servers.flatMap((s) => s.content.map((c: any) => c.cid)));
+  const seenInstalled = [...obs.memory.seen.values()].filter((s) => s.type === "Agenda" && s.zone === "servers" && installed.has(s.cid));
   for (const s of seenInstalled) {
     left--;
     points -= Number((obs.info({ title: s.title }) as any).agendapoints ?? 0);
@@ -71,11 +72,11 @@ export function centralValue(obs: Observation, server: ServerInfo): number | nul
   if (!outlook) return null;
   const accesses = accessesOn(obs, server);
   const need = Number(obs.me["agenda-point-req"] ?? 7) - Number(obs.me["agenda-point"] ?? 0);
-  const closing = outlook.averagePoints >= need ? 1.5 : 1;
+  const perAgenda = outlook.averagePoints >= need ? 7 : outlook.averagePoints;
   const known = knownCentrals(obs);
   const size = Number(obs.opp["hand-count"] ?? 0);
   const fresh = server.key === "hq" ? accesses * (Math.max(0, size - known.hq) / Math.max(1, size)) : server.key === "rd" ? Math.max(0, accesses - known.rd) : accesses;
-  const expectedPoints = Math.min(1, outlook.density * fresh) * outlook.averagePoints * closing;
+  const expectedPoints = Math.min(1, outlook.density * fresh) * perAgenda;
   const credits = passiveGains(obs, server, accesses);
   return expectedPoints * 7 + credits * 0.6;
 }
