@@ -266,8 +266,8 @@ export const FX: Record<Kind, Record<string, string>> = {
 let ok: boolean | undefined;
 const hidden = new WeakMap<HTMLElement, number>();
 const LIMIT = 6000;
-const CAP = 1.7;
-const live = new Set<() => void>();
+const CAP = 1.28;
+const live = new Set<(fade?: boolean) => void>();
 
 export function letGoEffects() {
   for (const f of live) f();
@@ -330,8 +330,9 @@ export function glEffect(kind: Kind, title: string | undefined, at: DOMRect, cod
   if (!name || !code || motionOff() || !glOk()) return null;
   const board = boardFor(owner, hide, strike);
   let restore = () => {};
+  let over = false;
   const ready = () => {
-    if (!hide) return;
+    if (!hide || over) return;
     hidden.set(hide, (hidden.get(hide) ?? 0) + 1);
     hide.style.visibility = "hidden";
     restore = () => {
@@ -345,12 +346,24 @@ export function glEffect(kind: Kind, title: string | undefined, at: DOMRect, cod
   let freed: () => void = () => {};
   const early = new Promise<void>((r) => (freed = r));
   if (!strike) {
-    if (kind === "play") board.cap = CAP;
+    let release: ((fade?: boolean) => void) | null = null;
+    const shown = kind === "play" || kind === "install" || kind === "score";
+    if (shown) board.cap = CAP;
     board.free = () => {
       restore();
       freed();
     };
-    board.hook = (letGo) => live.add(letGo);
+    board.hook = (letGo) => {
+      live.add(letGo);
+      release = letGo;
+      if (over) letGo(true);
+    };
+    if (shown && !(window as any).__fxManual)
+      setTimeout(() => {
+        over = true;
+        if (release) release(true);
+        else freed();
+      }, CAP * 1000);
   }
   const play = import("./cards").then((m) => (m as unknown as Record<string, (...a: unknown[]) => Promise<void>>)[name](at, code, ready, board)).catch((e) => console.error("fx", name, e));
   return Promise.race([play, early, new Promise<void>((r) => setTimeout(r, (window as any).__fxManual ? 6e5 : LIMIT))]).finally(() => {

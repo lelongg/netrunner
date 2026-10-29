@@ -22,7 +22,7 @@ export interface Board {
   strikeTrack?: () => DOMRect | null;
   cap?: number;
   free?: () => void;
-  hook?: (letGo: () => void) => void;
+  hook?: (letGo: (fade?: boolean) => void) => void;
   advanced?: DOMRect[];
   gone?: DOMRect[];
   host?: DOMRect | null;
@@ -186,7 +186,7 @@ export async function scene(rect: DOMRect, code: string, ready?: Ready, board?: 
     if (board?.cap && alive >= board.cap) letGo();
   };
   if (board?.cap) app.ticker.add(release);
-  board?.hook?.(() => letGo(false));
+  board?.hook?.((fade) => letGo(!!fade));
   world = layer(app.stage);
   const glide = (to: number) => {
     const from = reach;
