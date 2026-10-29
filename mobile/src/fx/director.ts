@@ -1226,6 +1226,8 @@ export function useFx(view: any, me: Side, render: (m: unknown) => string, quiet
     }
     heard.current = Math.max(heard.current ?? 0, Number(view?.["sfx-current-id"] ?? 0));
     persistent(view);
+    const asked = view?.[me]?.["prompt-state"]?.["prompt-type"];
+    if (accessing && me === "corp" && asked && asked !== "run" && asked !== "waiting") accessing.stop();
   }, [view]);
 
   useLayoutEffect(
