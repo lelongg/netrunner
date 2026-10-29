@@ -1495,7 +1495,7 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
       </div>
       <footer class="dock">
         <div class="enc-zone">
-          {!view.winner && (ice?.rezzed ? <Encounter view={view} render={render} onTap={tap} ice={lastIce?.cid === ice.cid && (view.encounters || view.run?.phase === "encounter-ice") ? lastIce : ice} skip={skipped} onToggle={!watching && side === "runner" && view.encounters && !(prompt && ptype !== "run") ? toggleSub : undefined} /> : lastIce && <Encounter view={view} render={render} onTap={tap} ice={lastIce} passed />)}
+          {!view.winner && (ice?.rezzed ? <Encounter view={view} render={render} onTap={tap} ice={lastIce?.cid === ice.cid && (view.encounters || view.run?.phase === "encounter-ice") ? lastIce : ice} skip={skipped} onToggle={!watching && side === "runner" && view.encounters && !(prompt && ptype !== "run") ? toggleSub : undefined} /> : lastIce && view.run?.phase !== "success" && <Encounter view={view} render={render} onTap={tap} ice={lastIce} passed />)}
           {!view.winner && !watching && side === "runner" && view.encounters && ice?.rezzed && !(prompt && ptype !== "run") && <Breakers view={view} stamp={live} probe={prober} side={side} ice={ice} send={send} onTap={tap} disabled={disabled} skip={skipped} onPartial={breakSome} />}
         </div>
         {respond?.done ? (
