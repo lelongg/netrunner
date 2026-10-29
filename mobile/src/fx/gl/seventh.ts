@@ -255,7 +255,7 @@ export async function mycoweb(rect: DOMRect, code: string, ready?: Ready, board?
       g.moveTo(...at(...br.a))
         .lineTo(...at(u, v))
         .stroke({ width: 1.3, color: 0xe8ff5a, alpha: 0.8 * fade });
-      if (k >= 1 && Math.random() < 0.02) spores.add(sparkTexture(), ...at(u, v), { vy: -unit * 0.1, life: 0.6, tint: 0xe8ff5a, scale: (unit / 180) * 0.25 });
+      if (t < 1.4 && k >= 1 && Math.random() < 0.02) spores.add(sparkTexture(), ...at(u, v), { vy: -unit * 0.1, life: 0.6, tint: 0xe8ff5a, scale: (unit / 180) * 0.25 });
     }
     spores.step(dt);
     return t < 1.8 || spores.list.length > 0;
