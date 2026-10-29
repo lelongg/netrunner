@@ -2221,3 +2221,19 @@ describe("corp keeps its economy over surplus ice (replay 3WXLXLDD)", () => {
     expect(s.considered("corp").some((p) => /playable this turn/.test(p.why))).toBe(false);
   });
 });
+
+describe("corp protects an HQ full of agendas (replay LTEPL68K)", () => {
+  const replay = () => new Replayed(fileURLToPath(new URL("./replays/LTEPL68K.json", import.meta.url)));
+
+  it("installs Manegarm Skunkworks in HQ while four agendas wait there, instead of purging", () => {
+    const r = replay().until((e, x) => x.turn === 5 && e.side === "corp" && e.command === "purge", true);
+    const { record } = r.decide();
+    expect(record.chosen?.why ?? "").toMatch(/^Manegarm Skunkworks in HQ/);
+  });
+
+  it("draws three with Predictive Planogram when rich, iceless and holding agendas", () => {
+    const r = replay().until((e, x) => x.turn === 7 && e.side === "corp" && e.command === "choice", true);
+    const { record } = r.decide();
+    expect(record.chosen?.why ?? "").toMatch(/draw 3/);
+  });
+});

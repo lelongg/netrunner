@@ -258,7 +258,9 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[], extra?: (out:
   const heldPoints = Math.max(0, ...obs.hand.filter((c) => c.type === "Agenda").map((c) => Number(c.agendapoints ?? 0)));
   const hqWins = heldPoints > 0 && Number(obs.opp["agenda-point"] ?? 0) + heldPoints >= Number(obs.opp["agenda-point-req"] ?? 7);
   const hqSafety = hq ? serverSafety(obs, hq) : null;
+  const heldAgendas = obs.hand.filter((c) => c.type === "Agenda").length;
   if (skunk && hq && hqWins && hqSafety && !hqSafety.safe && !hq.content.some((c: any) => c.title === skunk.title) && obs.credits >= 3 && playOf(obs, skunk, hq.label)) push(proposal(playOf(obs, skunk, hq.label), 84, `Manegarm Skunkworks in HQ: an agenda there wins the game for the Runner and they can get in`, "install-upgrade"));
+  else if (skunk && hq && hqSafety && !hqSafety.safe && heldAgendas >= 2 && !hq.content.some((c: any) => c.title === skunk.title) && obs.credits >= 3 && playOf(obs, skunk, hq.label)) push(proposal(playOf(obs, skunk, hq.label), 46 + Math.min(heldAgendas, 4) * 2, `Manegarm Skunkworks in HQ: ${heldAgendas} agendas wait there and the Runner can get in`, "install-upgrade"));
   else if (skunk && (scoring ?? bait) && (scoring ?? bait)!.ices.length > 0 && obs.credits >= 4) push(proposal(playOf(obs, skunk, (scoring ?? bait)!.label), 46, `Manegarm Skunkworks in ${(scoring ?? bait)!.label}: the Runner pays 2 clicks or 5 credits to get in`, "install-upgrade"));
 
   for (const s of remotes(obs)) {
@@ -441,8 +443,9 @@ function prompt(obs: Observation, plan: Plan): Proposal | null {
     const draw = findChoice(obs, /draw/i);
     const gain = findChoice(obs, /gain/i);
     const both = findChoice(obs, /both/i);
-    const pick = both ?? (obs.hand.length <= 2 && draw ? draw : (gain ?? draw));
-    if (pick) return { move: choiceMove(obs, pick), score: 70, why: "Predictive Planogram choice", kind: "choice" };
+    const hunting = obs.credits >= 10 && !obs.hand.some((c) => c.type === "ICE") && obs.hand.some((c) => c.type === "Agenda");
+    const pick = both ?? ((obs.hand.length <= 2 || hunting) && draw ? draw : (gain ?? draw));
+    if (pick) return { move: choiceMove(obs, pick), score: 70, why: pick === both ? "Predictive Planogram: both" : pick === draw ? `Predictive Planogram: draw 3${hunting ? ", rich and hunting for ice to protect the agendas in hand" : ""}` : "Predictive Planogram: gain 3", kind: "choice" };
   }
   if (/discard down/i.test(text) && obs.promptType === "select") {
     const cards = selectable(obs);
