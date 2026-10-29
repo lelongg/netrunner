@@ -207,7 +207,7 @@ export async function lionsmane(rect: DOMRect, code: string, ready?: Ready, boar
         pts.push([c[0] + Math.cos(a) * r, c[1] + Math.sin(a) * r]);
       }
       strand(g, pts, unit * 0.035, td.color, 0.75 * fade, 0xffd8b0);
-      if (grow > 0.3 && Math.random() < 0.05) embers.add(sparkTexture(), ...pts[pts.length - 1], { vx: rnd(-1, 1) * unit * 0.1, vy: -unit * rnd(0.05, 0.2), life: 0.6, tint: 0xffb070, scale: (unit / 180) * 0.2 });
+      if (t < 1.4 && grow > 0.3 && Math.random() < 0.05) embers.add(sparkTexture(), ...pts[pts.length - 1], { vx: rnd(-1, 1) * unit * 0.1, vy: -unit * rnd(0.05, 0.2), life: 0.6, tint: 0xffb070, scale: (unit / 180) * 0.2 });
     }
     core.alpha = 0.35 * Math.sin(Math.PI * span(t, 0, 1.8));
     core.scale.set((unit / 128) * 0.25);

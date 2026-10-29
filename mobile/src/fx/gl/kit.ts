@@ -147,9 +147,17 @@ export async function scene(rect: DOMRect, code: string, ready?: Ready, board?: 
   root.pivot.set(x0, y0);
   let world: Container | null = null;
   let last: DOMRect | null = null;
+  let lost = false;
   const follow = () => {
+    if (lost) return;
     const now = board?.track?.();
     if (now && now.width) last = now;
+    else if (board?.track) {
+      lost = true;
+      root.visible = false;
+      if (world) world.visible = false;
+      return;
+    }
     const r = last;
     const [x, y] = r ? mid(r) : [x0, y0];
     const sr = board?.strikeTrack?.();
@@ -161,32 +169,26 @@ export async function scene(rect: DOMRect, code: string, ready?: Ready, board?: 
     const tx = nx + ((x - hx) / len) * gap;
     const ty = ny + ((y - hy) / len) * gap;
     root.position.set(x + (tx - x) * k, y + (ty - y) * k);
-    const rs = r ? r.width / rect.width : 1;
+    const rs = r ? Math.min(r.width / rect.width, r.height / rect.height) : 1;
     root.scale.set(rs * (1 + (grow - 1) * k));
   };
   follow();
   app.ticker.add(follow, undefined, 1);
   let alive = 0;
   let released = false;
-  const letGo = (fadeOut = true) => {
+  const letGo = () => {
     if (released) return;
     released = true;
     app.ticker.remove(release);
     card.visible = false;
     board?.free?.();
-    if (!fadeOut) return;
-    const fade = (tk: { deltaMS: number }) => {
-      root.alpha = Math.max(0, root.alpha - ((window as any).__fxManual ? 1 / 30 : tk.deltaMS / 1000) / 0.55);
-      if (root.alpha <= 0) app.ticker.remove(fade);
-    };
-    app.ticker.add(fade);
   };
   const release = (ticker: { deltaMS: number }) => {
     alive += (window as any).__fxManual ? 1 / 30 : ticker.deltaMS / 1000;
-    if (board?.cap && alive >= board.cap) letGo();
+    if (lost || (board?.cap && alive >= board.cap)) letGo();
   };
-  if (board?.cap) app.ticker.add(release);
-  board?.hook?.(() => letGo(false));
+  app.ticker.add(release);
+  board?.hook?.(letGo);
   world = layer(app.stage);
   const glide = (to: number) => {
     const from = reach;
