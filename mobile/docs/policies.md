@@ -431,6 +431,10 @@ no draw into a discard below eight credits; and a Runner short of breakers neith
 for a remote it cannot enter nor clicking for credits at eight or more. The grid read
 Runner 233 / 232 after the first and Corp 357 / 387, Runner 235 / 224 after all of them,
 inside the interval of the previous 365 / 391 and 245 / 230.
+Replays A45J9PEN and 2N9BFAHE then had the Runner break "cannot steal" with the end-the-run
+subroutines first and take a long-shot run when the Corp would win by scoring a remote next
+turn, and the Corp keep economy assets out of unprotected remotes the Runner can afford to
+trash: Corp 361 / 384, Runner 240 / 229.
 
 The spread between versions is inside the interval of 1152 games (about ±33 on a sum),
 so none of this is a measured gain: the 72-game local batches that motivated v1 (27 to
