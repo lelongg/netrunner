@@ -1,4 +1,6 @@
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { Replayed } from "./replayed.ts";
 import { Scenario } from "./scenario.ts";
 
 const best = (s: Scenario, side: "corp" | "runner", pred: (why: string) => boolean) => Math.max(-1000, ...s.considered(side).filter((p) => pred(p.why)).map((p) => p.score));
@@ -528,7 +530,7 @@ describe("corp economy before thin installs", () => {
     s.credits("corp", 7);
     const move = s.decide("corp");
     expect(move?.command).toBe("credit");
-    expect(s.last("corp").chosen?.why).toContain("playable this turn");
+    expect(s.last("corp").chosen?.why).toContain("economy operation in hand");
     expect(best(s, "corp", (w) => w.startsWith("install Offworld Office"))).toBeLessThan(40);
   });
 });
@@ -2184,5 +2186,38 @@ describe("runner plays its turn against a Haas-Bioroid board (replay QN4NZR4Z)",
     expect((pharos.hosted ?? []).map((h: any) => h.title)).toContain("Tranquilizer");
     const smartware = v.runner.rig.resource.find((c: any) => c.title === "Smartware Distributor");
     expect(Number(smartware.counter?.credit ?? 0)).toBeGreaterThan(0);
+  });
+});
+
+describe("corp keeps its economy over surplus ice (replay 3WXLXLDD)", () => {
+  const surplus = ["Government Subsidy", "Ballista", "Funhouse", "Funhouse", "Whitespace", "Pharos"];
+
+  it("discards a third spare ice rather than Government Subsidy", () => {
+    const s = new Scenario("core-weyland", "core-criminal");
+    s.clearHand("corp");
+    s.summon("corp", ...surplus);
+    s.credits("corp", 9);
+    s.clicks("corp", 0);
+    s.act("corp", "End turn");
+    const move = s.decide("corp");
+    expect(move?.command).toBe("select");
+    expect(s.last("corp").chosen?.why ?? "").not.toMatch(/Government Subsidy/);
+  });
+
+  it("spends the last click of turn 8 installing an ice the end of turn would discard", () => {
+    const r = new Replayed(fileURLToPath(new URL("./replays/3WXLXLDD.json", import.meta.url)));
+    r.until((e, x) => x.turn === 8 && e.side === "corp" && Number(x.view().corp.click) === 1, true);
+    const { record } = r.decide();
+    expect(record.chosen?.kind).toBe("install-ice");
+  });
+
+  it("does not call Government Subsidy playable this turn when the credit clicks leave no click to play it", () => {
+    const s = new Scenario("core-weyland", "core-criminal");
+    s.clearHand("corp");
+    s.summon("corp", "Government Subsidy", "Ballista");
+    s.credits("corp", 7);
+    s.clicks("corp", 3);
+    s.decide("corp");
+    expect(s.considered("corp").some((p) => /playable this turn/.test(p.why))).toBe(false);
   });
 });

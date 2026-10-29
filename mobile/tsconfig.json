@@ -24,6 +24,7 @@
   ],
   "exclude": [
     "src/**/*.test.ts",
-    "src/bot/policy/scenario.ts"
+    "src/bot/policy/scenario.ts",
+    "src/bot/policy/replayed.ts"
   ]
 }

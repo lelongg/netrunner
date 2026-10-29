@@ -373,6 +373,16 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[], extra?: (out:
       }
     }
   }
+  const overflow = obs.hand.length - handSizeOf(obs);
+  const dropped = overflow > 0 && overflow >= obs.clicks ? [...obs.hand].sort((a, b) => discardWorth(obs, a) - discardWorth(obs, b))[0] : null;
+  if (dropped?.type === "ICE") {
+    const credit = Math.max(0, ...out.filter((p) => p.move.command === "credit").map((p) => p.score));
+    const keep = out.filter((p) => p.kind === "install-ice" && p.score > 0).sort((a, b) => b.score - a.score)[0];
+    if (keep && keep.score <= credit) {
+      keep.score = credit + 2;
+      keep.why += ` (rather than discard ${dropped.title} at the end of the turn)`;
+    }
+  }
   if (obs.hand.length >= handSizeOf(obs) && obs.credits < 8) {
     for (const p of out) {
       if (p.move.command !== "draw" || p.score <= 25) continue;
@@ -381,6 +391,12 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[], extra?: (out:
     }
   }
   return out;
+}
+
+function discardWorth(obs: Observation, card: any): number {
+  if (card.type !== "ICE") return cardWorth(obs, card);
+  const better = obs.hand.filter((c) => c.type === "ICE" && c.cid !== card.cid && cardWorth(obs, c) >= cardWorth(obs, card)).length;
+  return cardWorth(obs, card) - (better >= 2 ? 20 : 0);
 }
 
 function prompt(obs: Observation, plan: Plan): Proposal | null {
@@ -430,8 +446,7 @@ function prompt(obs: Observation, plan: Plan): Proposal | null {
   }
   if (/discard down/i.test(text) && obs.promptType === "select") {
     const cards = selectable(obs);
-    const order = (c: any) => (c.type === "Agenda" ? 5 : c.type === "ICE" ? 3 : isEconomyCard(obs, c) ? 2 : c.type === "Operation" ? 1 : 2);
-    const pick = [...cards].sort((a, b) => order(a) - order(b))[0];
+    const pick = [...cards].sort((a, b) => discardWorth(obs, a) - discardWorth(obs, b))[0];
     if (pick) return { move: selectMove(obs, pick), score: 60, why: `discard ${pick.title}`, kind: "select" };
   }
   return null;

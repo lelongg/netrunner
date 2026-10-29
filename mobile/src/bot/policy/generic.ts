@@ -86,7 +86,7 @@ export function corpProposals(obs: Observation): Proposal[] {
   const ice = obs.hand.filter((c) => c.type === "ICE").sort((a, b) => strengthOf(b) - strengthOf(a));
   const wantCredits = obs.hand.some((c) => c.type === "Operation" && gainOf(obs.info(c).text) > playCostOf(c) && playCostOf(c) > obs.credits);
   const econOp = obs.hand.filter((c) => c.type === "Operation" && gainOf(obs.info(c).text) > playCostOf(c) + 3 && playCostOf(c) > obs.credits && playCostOf(c) <= obs.credits + obs.clicks - 1).sort((a, b) => playCostOf(a) - playCostOf(b))[0];
-  const nearly = obs.hand.some((c) => c.type === "Operation" && gainOf(obs.info(c).text) > playCostOf(c) + 3 && playCostOf(c) > obs.credits && playCostOf(c) <= obs.credits + obs.clicks);
+  const nearly = obs.hand.some((c) => c.type === "Operation" && gainOf(obs.info(c).text) > playCostOf(c) + 3 && playCostOf(c) > obs.credits && playCostOf(c) <= obs.credits + obs.clicks - 1);
   if (ice.length) {
     const hq = obs.servers.find((s) => s.key === "hq")!;
     const rd = obs.servers.find((s) => s.key === "rd")!;
