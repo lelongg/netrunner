@@ -105,6 +105,11 @@ export function CardTile({
             {card.cost != null && shownCost > card.cost && <span class="cost-delta up">▴</span>}
           </span>
         )}
+        {playable && !usable && !rezzable && (
+          <span class="usable-mark" aria-hidden="true">
+            <Icon name="play" />
+          </span>
+        )}
         {(usable || rezzable) && (
           <span class="usable-mark" aria-hidden="true">
             <Icon name="bolt" />
