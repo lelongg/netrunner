@@ -1528,7 +1528,7 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
           {hand.map((c) => (
             <CardTile key={c.cid} card={c} owner onTap={tap} selectable={selectable.has(c.cid)} />
           ))}
-          {watching && hand.length === 0 && Array.from({ length: me["hand-count"] ?? 0 }, () => <div class={`tile back ${side}`}><span class="back-label">{side === "corp" ? t("CORP") : t("RUN")}</span></div>)}
+          {watching && hand.length === 0 && Array.from({ length: me["hand-count"] ?? 0 }, () => <div class={`tile back ${side}`} />)}
           {hand.length === 0 && !(watching && me["hand-count"]) && <span class="hint">{side === "runner" ? t("Empty grip") : t("HQ is empty")}</span>}
         </div>
       </footer>

@@ -78,7 +78,7 @@ export function CardTile({
   return (
     <div class="tile-wrap">
       <button key={`${card.cid}:${code ?? ""}:${card.rezzed ? 1 : 0}`} class={classes} data-cid={card.cid} onClick={tap} {...peek.handlers} aria-label={card.title ?? t("Hidden card")}>
-        {code ? <CardImage code={code} alt={card.title} size={size === "lg" ? "large" : "small"} lazy /> : <span class="back-label">{card.side === "Corp" ? t("CORP") : t("RUN")}</span>}
+        {code && <CardImage code={code} alt={card.title} size={size === "lg" ? "large" : "small"} lazy />}
         <div class="badges">
           {counters(card).map(([icon, n]) => (
             <span class="badge">

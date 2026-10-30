@@ -122,13 +122,7 @@ function synth(info: Info | undefined, faceUp: boolean): HTMLElement {
     img.alt = "";
     img.className = "fx-card-img";
     el.appendChild(img);
-  } else {
-    el.className = `tile back ${side}`;
-    const label = document.createElement("span");
-    label.className = "back-label";
-    label.textContent = side === "corp" ? "CORP" : "RUN";
-    el.appendChild(label);
-  }
+  } else el.className = `tile back ${side}`;
   return el;
 }
 

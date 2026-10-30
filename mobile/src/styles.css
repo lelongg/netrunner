@@ -1201,12 +1201,6 @@ textarea:focus {
   background: repeating-linear-gradient(135deg, #1d0d0b 0 4px, #2c1210 4px 8px);
 }
 
-.back-label {
-  font-size: 8px;
-  letter-spacing: 0.2em;
-  color: #fff6;
-}
-
 .tile.unrezzed img {
   filter: grayscale(0.85) brightness(0.55);
 }
