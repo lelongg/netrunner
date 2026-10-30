@@ -107,7 +107,7 @@ function decrypt(back: HTMLElement | null | undefined) {
   const frame = q(".back-frame");
   if (frame) animate(frame, { opacity: [1, 0.2, 1, 0.4, 1] }, { duration: 0.4, ease: "linear" });
   const stamp = q(".back-stamp");
-  if (stamp) animate(stamp, { scale: [2.2, 0.92, 1], rotate: [-24, -6, -8], opacity: [0, 1, 1] }, { duration: 0.45, delay: 0.18, ease: [0.2, 0.9, 0.3, 1] });
+  if (stamp) animate(stamp, { scale: [1, 1.22, 0.96, 1], rotate: [-8, -3, -10, -8], boxShadow: ["0 0 0 0 rgb(255 59 48 / 0)", "0 0 18px 2px rgb(255 59 48 / 0.7)", "0 0 0 0 rgb(255 59 48 / 0)"] }, { duration: 0.45, delay: 0.12, ease: "easeOut" });
   back.querySelectorAll<HTMLElement>(".back-redacted i").forEach((bar, i) => animate(bar, { scaleX: [1, 0, 1] }, { duration: 0.4, delay: 0.1 + i * 0.08, ease: "easeInOut" }));
 }
 
