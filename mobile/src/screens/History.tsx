@@ -578,6 +578,7 @@ const STEP_MS = 900;
 function ReplayPlayer({ replay, engine, db, script, onClose }: { replay: Replay; engine: EngineApi; db: CardDb; script: Script; onClose: () => void }) {
   const [index, setIndex] = useState(0);
   const resume = useRef(readNav().step);
+  const [wake, setWake] = useState(0);
   const [playing, setPlaying] = useState(resume.current == null);
   const [speed, setSpeed] = useState(1);
   const [skipIdle, setSkipIdle] = useState(true);
@@ -614,7 +615,7 @@ function ReplayPlayer({ replay, engine, db, script, onClose }: { replay: Replay;
       return;
     }
     if (index + 1 >= frames.length) {
-      const t = setTimeout(() => setTick((n) => n + 1), 200);
+      const t = setTimeout(() => setWake((n) => n + 1), 200);
       return () => clearTimeout(t);
     }
     const next = frames[index + 1];
@@ -623,7 +624,7 @@ function ReplayPlayer({ replay, engine, db, script, onClose }: { replay: Replay;
     const delay = (skipIdle && idle ? 40 : turnBreak ? STEP_MS * 1.6 : STEP_MS) / speed;
     const t = setTimeout(() => go(index + 1, speed <= 2), delay);
     return () => clearTimeout(t);
-  }, [playing, index, speed, skipIdle, frames.length, replay.done]);
+  }, [playing, index, speed, skipIdle, wake, replay.done]);
   const frame = frames[index] ?? frames[0];
   const turnMarks = useMemo(() => {
     const out: { at: number; turn: number }[] = [];
