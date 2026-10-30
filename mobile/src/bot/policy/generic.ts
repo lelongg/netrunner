@@ -65,7 +65,7 @@ export function corpProposals(obs: Observation): Proposal[] {
   const purge = byCommand(obs, "purge")[0];
   const derezzing = obs.servers.flatMap((s) => s.ices.flatMap((i: any) => (i.hosted ?? []).filter((h: any) => h.side === "Runner" && derezzesSoon(obs, h)).map(() => i)));
   const saved = derezzing.filter((i: any) => i.rezzed).reduce((n: number, i: any) => n + rezCostOf(i), 0);
-  if (purge && obs.clicks >= 3 && derezzing.length && (saved >= 3 || derezzing.some((i: any) => rezCostOf(i) >= 3))) push(proposal(purge, saved >= 3 ? 46 + Math.min(20, saved * 2) : 38, saved >= 3 ? `purge: ${saved} credits of rezzed ice would be derezzed when the Runner's turn begins` : `purge: ${derezzing.length} ice would be derezzed whenever they are rezzed`, "purge"));
+  if (purge && obs.clicks >= 3 && derezzing.length && (saved >= 3 || derezzing.some((i: any) => rezCostOf(i) >= 3))) push(proposal(purge, saved >= 5 ? 46 + Math.min(20, saved * 2) : 36, saved >= 3 ? `purge: ${saved} credits of rezzed ice would be derezzed when the Runner's turn begins` : `purge: ${derezzing.length} ice would be derezzed whenever they are rezzed`, "purge"));
   else if (purge && obs.clicks >= 3 && (digging.length || virusCounters >= 6)) {
     const worst = digging.sort((a: any, b: any) => b.counters - a.counters)[0];
     push(proposal(purge, Math.min(worst ? 52 + Math.min(30, worst.counters * 6) : 46, obs.credits < 4 ? 28 : 99), worst ? `purge: ${worst.title} holds ${worst.counters} virus counters` : `purge ${virusCounters} virus counters`, "purge"));

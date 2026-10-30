@@ -1,6 +1,6 @@
 import { byCommand, installedThisTurn } from "../observe.ts";
 import { cardAction, playOf, proposal } from "../generic.ts";
-import { cardWorth, choiceMove, choices, findChoice, promptFrom, selectMove, selectable } from "../prompts.ts";
+import { cardWorth, choiceMove, choices, findChoice, keepWorth, promptFrom, selectMove, selectable } from "../prompts.ts";
 import { registerPolicy } from "../registry.ts";
 import { corpRun, fromCandidate, holdRez, ruinousRez, taxedRez, wastefulRez } from "../runs.ts";
 import { agendaProgress, coverage, handSizeOf, iceThreat, isTrap, rezCostOf, serverSafety } from "../tactics.ts";
@@ -395,11 +395,7 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[], extra?: (out:
   return out;
 }
 
-function discardWorth(obs: Observation, card: any): number {
-  if (card.type !== "ICE") return cardWorth(obs, card);
-  const better = obs.hand.filter((c) => c.type === "ICE" && c.cid !== card.cid && cardWorth(obs, c) >= cardWorth(obs, card)).length;
-  return cardWorth(obs, card) - (better >= 2 ? 20 : 0);
-}
+const discardWorth = keepWorth;
 
 function prompt(obs: Observation, plan: Plan): Proposal | null {
   const from = promptFrom(obs);

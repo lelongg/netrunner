@@ -2256,10 +2256,24 @@ describe("corp stops paying for an ice the Runner breaks for one and Tranquilize
     expect(record.chosen?.why ?? "").toMatch(/Tranquilizer derezzes it again/);
   });
 
-  it("purges on turn 12 while the rezzed Palisade would be derezzed when the Runner's turn begins", () => {
+  it("purges on turn 6 while the rezzed Ballista would be derezzed when the Runner's turn begins", () => {
     const r = new Replayed(fileURLToPath(new URL("./replays/7R9JBQRY.json", import.meta.url)));
-    r.until((e, x) => x.turn === 12 && e.side === "corp" && e.command === "credit", true);
+    r.until((e, x) => x.turn === 6 && e.side === "corp" && e.command === "credit", true);
     const { move } = r.decide();
     expect(move?.command).toBe("purge");
+  });
+});
+
+describe("corp keeps what it can use when poor (replay PB3SHFG2)", () => {
+  const replay = () => new Replayed(fileURLToPath(new URL("./replays/PB3SHFG2.json", import.meta.url)));
+
+  it("does not spend turn 4 purging to save a three-credit Palisade at two credits", () => {
+    const r = replay().until((e, x) => x.turn === 4 && e.side === "corp" && e.command === "purge", true);
+    expect(r.decide().move?.command).not.toBe("purge");
+  });
+
+  it("discards the Government Subsidy it cannot reach rather than the Ballista or the Hedge Fund it can play", () => {
+    const r = replay().until((e, x) => x.turn === 8 && e.side === "corp" && e.command === "select", true);
+    expect(r.decide().record.chosen?.why ?? "").toMatch(/Government Subsidy/);
   });
 });
