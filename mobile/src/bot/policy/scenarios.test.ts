@@ -2255,4 +2255,11 @@ describe("corp stops paying for an ice the Runner breaks for one and Tranquilize
     expect(move?.command).not.toBe("rez");
     expect(record.chosen?.why ?? "").toMatch(/Tranquilizer derezzes it again/);
   });
+
+  it("purges on turn 12 while the rezzed Palisade would be derezzed when the Runner's turn begins", () => {
+    const r = new Replayed(fileURLToPath(new URL("./replays/7R9JBQRY.json", import.meta.url)));
+    r.until((e, x) => x.turn === 12 && e.side === "corp" && e.command === "credit", true);
+    const { move } = r.decide();
+    expect(move?.command).toBe("purge");
+  });
 });
