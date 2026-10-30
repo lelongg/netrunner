@@ -24,8 +24,11 @@ export function wastefulRez(obs: Observation, ice: any, server: Observation["ser
   const est = estimateRun(obs, ahead, 0, purse);
   const getsIn = est.exact && !est.blocked && est.damage < grip && est.credits - leechCounters(obs) <= purse;
   const tax = bestBreak(obs, { ...ice, rezzed: true, subroutines: ice.subroutines ?? [] })?.cost.value ?? 0;
-  const wasteful = getsIn && cost >= 5 && cost > tax && obs.credits - cost < 3;
-  return { wasteful, why: `${ice.title} costs ${cost} to rez and ${tax} to break: the Runner gets through ${server.label} anyway with ${purse} for the run, keep the credits` };
+  const derezzed = (ice.hosted ?? []).some((h: any) => /derez host ice/i.test(obs.info(h).text ?? ""));
+  const bites = iceThreat({ ...ice, rezzed: true, subroutines: ice.subroutines ?? [] }, obs.info(ice), purse, grip);
+  const cheapPass = tax * 2 <= cost && obs.credits - cost < 4 && bites.damage === 0 && !bites.tag && gainOf(obs.info(ice).text) === 0;
+  const wasteful = getsIn && cost > tax && ((cost >= 5 && obs.credits - cost < 3) || cheapPass || derezzed);
+  return { wasteful, why: `${ice.title} costs ${cost} to rez and ${tax} to break${derezzed ? `, and ${ice.hosted.find((h: any) => /derez host ice/i.test(obs.info(h).text ?? "")).title} derezzes it again` : ""}: the Runner gets through ${server.label} anyway with ${purse} for the run, keep the credits` };
 }
 
 export function taxedRez(obs: Observation, ice: any, threat: { etr: boolean; damage: number; creditLoss: number; tag: boolean }, grip: number): string | null {

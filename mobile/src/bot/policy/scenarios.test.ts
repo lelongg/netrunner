@@ -2246,3 +2246,13 @@ describe("runner stays off the centrals when Public Trail and a scorable Orbital
     expect(record.chosen?.why ?? "").not.toMatch(/^(Overclock|run|Jailbreak)/);
   });
 });
+
+describe("corp stops paying for an ice the Runner breaks for one and Tranquilizer derezzes (replay 7R9JBQRY)", () => {
+  it("leaves Palisade unrezzed on R&D on turn 12", () => {
+    const r = new Replayed(fileURLToPath(new URL("./replays/7R9JBQRY.json", import.meta.url)));
+    r.until((e, x) => x.turn === 12 && e.side === "corp" && e.command === "rez", true);
+    const { move, record } = r.decide();
+    expect(move?.command).not.toBe("rez");
+    expect(record.chosen?.why ?? "").toMatch(/Tranquilizer derezzes it again/);
+  });
+});
