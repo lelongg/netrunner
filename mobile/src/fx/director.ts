@@ -457,7 +457,7 @@ export interface Hit {
   power?: number;
 }
 
-let accessing: { title: string; unseen: boolean; stop: () => void; resolve: (verb: string, title?: string) => void; away: (where: "stolen" | "trashed") => void } | null = null;
+let accessing: { title: string; zone: string; unseen: boolean; stop: () => void; resolve: (verb: string, title?: string) => void; away: (where: "stolen" | "trashed") => void } | null = null;
 let stageFreeAt = 0;
 let accessLog: { seq: number; lines: string[]; run: boolean }[] = [];
 let accessSeq = 0;
@@ -506,10 +506,11 @@ function readLog(view: any, from: number, render: (m: unknown) => string, before
   accessLog = [...accessLog.slice(-20), { seq: ++accessSeq, lines: texts, run: !!view.run }];
   if (accessing) {
     const pending = accessing;
-    const line = texts.find((t) => movesCard(t, pending.title) || (pending.unseen && /\b(?:steals?|trash(?:es)?)\b/i.test(t)));
+    const trashedFrom = new RegExp(`\\btrash(?:es)?\\s+(.+?)\\s+from\\s+${pending.zone.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i");
+    const line = texts.find((t) => (pending.unseen ? /\bsteals?\b/i.test(t) || trashedFrom.test(t) : movesCard(t, pending.title)));
     if (line) {
       const stolen = /\bsteals?\b/i.test(line);
-      const named = line.match(/\b(?:steals?|trash(?:es)?)\s+(.+?)(?:\s+from\b.*)?\.?$/i)?.[1];
+      const named = stolen ? line.match(/\bsteals?\s+(.+?)(?:\s+and gains\b.*|\s+from\b.*)?\.?$/i)?.[1] : line.match(trashedFrom)?.[1];
       const trashed = !stolen && /\btrash/i.test(line);
       if (stolen || trashed) pending.resolve(stolen ? "Stolen" : "Trashed", pending.unseen ? named : undefined);
       setTimeout(() => accessing === pending && (stolen ? pending.away("stolen") : trashed ? pending.away("trashed") : pending.stop()), stolen ? 2500 : 1600);
@@ -1145,7 +1146,7 @@ function accessShow(view: any, title: string, zone: string) {
     });
   };
   const timer = setTimeout(stop, 45000);
-  accessing = { title, unseen, stop, resolve, away };
+  accessing = { title, zone, unseen, stop, resolve, away };
   accessStage.current = { title, at: [big.left + big.width / 2, big.top + big.height / 2], end: stop };
 }
 
