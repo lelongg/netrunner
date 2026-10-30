@@ -1,6 +1,6 @@
 import { byCommand, installedThisTurn } from "../observe.ts";
 import { cardAction, playOf, proposal } from "../generic.ts";
-import { cardWorth, choiceMove, choices, findChoice, promptFrom, selectMove, selectable } from "../prompts.ts";
+import { cardWorth, choiceMove, choices, findChoice, keepWorth, promptFrom, selectMove, selectable } from "../prompts.ts";
 import { registerPolicy } from "../registry.ts";
 import { corpRun, fromCandidate, holdRez, ruinousRez, taxedRez, wastefulRez } from "../runs.ts";
 import { agendaProgress, coverage, handSizeOf, iceThreat, isTrap, rezCostOf, serverSafety } from "../tactics.ts";
@@ -258,7 +258,9 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[], extra?: (out:
   const heldPoints = Math.max(0, ...obs.hand.filter((c) => c.type === "Agenda").map((c) => Number(c.agendapoints ?? 0)));
   const hqWins = heldPoints > 0 && Number(obs.opp["agenda-point"] ?? 0) + heldPoints >= Number(obs.opp["agenda-point-req"] ?? 7);
   const hqSafety = hq ? serverSafety(obs, hq) : null;
+  const heldAgendas = obs.hand.filter((c) => c.type === "Agenda").length;
   if (skunk && hq && hqWins && hqSafety && !hqSafety.safe && !hq.content.some((c: any) => c.title === skunk.title) && obs.credits >= 3 && playOf(obs, skunk, hq.label)) push(proposal(playOf(obs, skunk, hq.label), 84, `Manegarm Skunkworks in HQ: an agenda there wins the game for the Runner and they can get in`, "install-upgrade"));
+  else if (skunk && hq && hqSafety && !hqSafety.safe && heldAgendas >= 2 && !hq.content.some((c: any) => c.title === skunk.title) && obs.credits >= 3 && playOf(obs, skunk, hq.label)) push(proposal(playOf(obs, skunk, hq.label), 46 + Math.min(heldAgendas, 4) * 2, `Manegarm Skunkworks in HQ: ${heldAgendas} agendas wait there and the Runner can get in`, "install-upgrade"));
   else if (skunk && (scoring ?? bait) && (scoring ?? bait)!.ices.length > 0 && obs.credits >= 4) push(proposal(playOf(obs, skunk, (scoring ?? bait)!.label), 46, `Manegarm Skunkworks in ${(scoring ?? bait)!.label}: the Runner pays 2 clicks or 5 credits to get in`, "install-upgrade"));
 
   for (const s of remotes(obs)) {
@@ -373,6 +375,16 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[], extra?: (out:
       }
     }
   }
+  const overflow = obs.hand.length - handSizeOf(obs);
+  const dropped = overflow > 0 && overflow >= obs.clicks ? [...obs.hand].sort((a, b) => discardWorth(obs, a) - discardWorth(obs, b))[0] : null;
+  if (dropped?.type === "ICE") {
+    const credit = Math.max(0, ...out.filter((p) => p.move.command === "credit").map((p) => p.score));
+    const keep = out.filter((p) => p.kind === "install-ice" && p.score > 0).sort((a, b) => b.score - a.score)[0];
+    if (keep && keep.score <= credit) {
+      keep.score = credit + 2;
+      keep.why += ` (rather than discard ${dropped.title} at the end of the turn)`;
+    }
+  }
   if (obs.hand.length >= handSizeOf(obs) && obs.credits < 8) {
     for (const p of out) {
       if (p.move.command !== "draw" || p.score <= 25) continue;
@@ -382,6 +394,8 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[], extra?: (out:
   }
   return out;
 }
+
+const discardWorth = keepWorth;
 
 function prompt(obs: Observation, plan: Plan): Proposal | null {
   const from = promptFrom(obs);
@@ -425,13 +439,13 @@ function prompt(obs: Observation, plan: Plan): Proposal | null {
     const draw = findChoice(obs, /draw/i);
     const gain = findChoice(obs, /gain/i);
     const both = findChoice(obs, /both/i);
-    const pick = both ?? (obs.hand.length <= 2 && draw ? draw : (gain ?? draw));
-    if (pick) return { move: choiceMove(obs, pick), score: 70, why: "Predictive Planogram choice", kind: "choice" };
+    const hunting = obs.credits >= 10 && !obs.hand.some((c) => c.type === "ICE") && obs.hand.some((c) => c.type === "Agenda");
+    const pick = both ?? ((obs.hand.length <= 2 || hunting) && draw ? draw : (gain ?? draw));
+    if (pick) return { move: choiceMove(obs, pick), score: 70, why: pick === both ? "Predictive Planogram: both" : pick === draw ? `Predictive Planogram: draw 3${hunting ? ", rich and hunting for ice to protect the agendas in hand" : ""}` : "Predictive Planogram: gain 3", kind: "choice" };
   }
   if (/discard down/i.test(text) && obs.promptType === "select") {
     const cards = selectable(obs);
-    const order = (c: any) => (c.type === "Agenda" ? 5 : c.type === "ICE" ? 3 : isEconomyCard(obs, c) ? 2 : c.type === "Operation" ? 1 : 2);
-    const pick = [...cards].sort((a, b) => order(a) - order(b))[0];
+    const pick = [...cards].sort((a, b) => discardWorth(obs, a) - discardWorth(obs, b))[0];
     if (pick) return { move: selectMove(obs, pick), score: 60, why: `discard ${pick.title}`, kind: "select" };
   }
   return null;

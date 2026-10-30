@@ -125,8 +125,8 @@ export function unrezzedPrice(obs: Observation, budget = obs.credits, corpBudget
     const option = profiles.filter((p) => canBreak(p, ice)).map((p) => breakCost(p, ice)).sort((a, b) => a.value - b.value)[0];
     weight += copies;
     const clickable = (ice.subtypes ?? []).includes("Bioroid") ? clickThrough({ ...ice, text: c.info.text }, Number(obs.clicks ?? 0) - 1) : 0;
+    if (clickable && (!option || option.value > budget || option.value >= clickable * CLICK_AS_CREDITS)) continue;
     if (option && option.value <= budget) cost += copies * option.value;
-    else if (clickable) cost += copies * clickable * CLICK_AS_CREDITS;
     else if (option) {
       blocked += copies;
       cost += copies * option.value;

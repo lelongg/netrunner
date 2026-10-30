@@ -14,6 +14,11 @@ export const holdRez = (obs: Observation, score: number, why: string): Proposal 
 export const runCredits = (obs: Observation) => Number(obs.view.runner?.["run-credit"] ?? 0) + (obs.view.runner?.["play-area"] ?? []).reduce((n: number, c: any) => n + Number(c?.counter?.credit ?? 0), 0);
 export const leechCounters = (obs: Observation) => (obs.view.runner?.rig?.program ?? []).filter((c: any) => /give -1 strength/i.test(obs.info(c).text ?? "")).reduce((n: number, c: any) => n + Number(c?.counter?.virus ?? 0), 0);
 
+export function derezzesSoon(obs: Observation, hosted: any): boolean {
+  const m = (obs.info(hosted).text ?? "").match(/if there are (\d+) or more hosted virus counters, derez host ice/i);
+  return !!m && Number(hosted.counter?.virus ?? 0) + 1 >= Number(m[1]);
+}
+
 export function wastefulRez(obs: Observation, ice: any, server: Observation["servers"][number]): { wasteful: boolean; why: string } {
   const cost = rezCostOf(ice);
   const grip = Number(obs.view.runner?.["hand-count"] ?? obs.view.runner?.hand?.length ?? 5);
@@ -24,8 +29,12 @@ export function wastefulRez(obs: Observation, ice: any, server: Observation["ser
   const est = estimateRun(obs, ahead, 0, purse);
   const getsIn = est.exact && !est.blocked && est.damage < grip && est.credits - leechCounters(obs) <= purse;
   const tax = bestBreak(obs, { ...ice, rezzed: true, subroutines: ice.subroutines ?? [] })?.cost.value ?? 0;
-  const wasteful = getsIn && cost >= 5 && cost > tax && obs.credits - cost < 3;
-  return { wasteful, why: `${ice.title} costs ${cost} to rez and ${tax} to break: the Runner gets through ${server.label} anyway with ${purse} for the run, keep the credits` };
+  const derezzer = (ice.hosted ?? []).find((h: any) => derezzesSoon(obs, h));
+  const derezzed = !!derezzer;
+  const bites = iceThreat({ ...ice, rezzed: true, subroutines: ice.subroutines ?? [] }, obs.info(ice), purse, grip);
+  const cheapPass = tax * 2 <= cost && obs.credits - cost < 4 && bites.damage === 0 && !bites.tag && gainOf(obs.info(ice).text) === 0;
+  const wasteful = getsIn && cost > tax && ((cost >= 5 && obs.credits - cost < 3) || cheapPass || derezzed);
+  return { wasteful, why: `${ice.title} costs ${cost} to rez and ${tax} to break${derezzed ? `, and ${derezzer.title} derezzes it again when the Runner's turn begins` : ""}: the Runner gets through ${server.label} anyway with ${purse} for the run, keep the credits` };
 }
 
 export function taxedRez(obs: Observation, ice: any, threat: { etr: boolean; damage: number; creditLoss: number; tag: boolean }, grip: number): string | null {

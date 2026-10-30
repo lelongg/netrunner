@@ -32,6 +32,7 @@ interface Target {
   tags: number;
   viaMayfly?: boolean;
   clicks?: number;
+  failOdds?: number;
 }
 
 function targets(obs: Observation, extra = 0, includeWorthless = false, corpTax = 0): Target[] {
@@ -49,7 +50,7 @@ function targets(obs: Observation, extra = 0, includeWorthless = false, corpTax 
     const est = runTrialOf(obs, server) ?? estimateRun(obs, server, unrezzedCost, obs.credits + extra, [], unrezzedBlock);
     const noSteal = server.ices.some((i: any) => i.rezzed && /cannot steal/i.test(obs.info(i).text ?? "") && !bestBreak(obs, i) && !clickThrough(i, obs.clicks - 1));
     if (!est.blocked && !noSteal) {
-      out.push({ server, value: value * (1 - 0.5 * (est.failOdds ?? 0)), credits: est.credits, exact: est.exact, damage: est.damage, tags: est.tags, clicks: est.clicks });
+      out.push({ server, value: value * (1 - 0.5 * (est.failOdds ?? 0)), credits: est.credits, exact: est.exact, damage: est.damage, tags: est.tags, clicks: est.clicks, failOdds: est.failOdds ?? 0 });
       continue;
     }
     const worthMayfly = server.remote ? server.content.some((c: any) => c.type === "Agenda" || agendaProgress(c).have > 0 || (!c.rezzed && !c.title)) : value >= 4;
@@ -87,6 +88,30 @@ function trapsLeft(obs: Observation): { count: number; damage: (adv: number) => 
   const count = Math.max(0, total - known.size);
   const damage = (adv: number) => Math.max(...inDeck.map((c) => TRAP_DAMAGE[c.title](adv)));
   return count ? { count, damage } : none;
+}
+
+function copiesLeft(obs: Observation, deck: DeckList, test: (title: string, text: string) => boolean) {
+  const gone = [...(obs.opp.scored ?? []), ...(obs.me.scored ?? []), ...(obs.opp.discard ?? [])].map((c: any) => String(c.title ?? ""));
+  return deck.cards.filter((c) => test(c.title, obs.info({ title: c.title }).text ?? "")).reduce((n, c) => n + Math.max(0, c.qty - gone.filter((t) => t === c.title).length), 0);
+}
+
+export function meatThreat(obs: Observation): { damage: number; server: string } | null {
+  const deck = opponentDeck(obs);
+  if (!deck) return null;
+  const meat = deck.cards
+    .map((c) => ({ title: c.title, info: obs.info({ title: c.title }) as any }))
+    .map((x) => ({ ...x, m: String(x.info.text ?? "").match(/if the runner is tagged, do (\d+) meat damage/i), need: Number(x.info.advancementcost ?? 99) }))
+    .filter((x) => x.info.type === "Agenda" && x.m && copiesLeft(obs, deck, (title) => title === x.title) > 0);
+  if (!meat.length) return null;
+  const tagged = Number(obs.me.tag?.base ?? obs.me.tag?.total ?? 0) > 0;
+  const trailCost = Math.min(99, ...deck.cards.filter((c) => /made a successful run during their last turn/i.test(obs.info({ title: c.title }).text ?? "")).map((c) => Number((obs.info({ title: c.title }) as any).cost ?? 0)));
+  const trail = copiesLeft(obs, deck, (_, t) => /made a successful run during their last turn/i.test(t) && /give the runner 1 tag/i.test(t)) > 0 && Number(obs.opp.credit ?? 0) >= trailCost;
+  const spike = copiesLeft(obs, deck, (_, t) => /net damage, where x is equal to the sum of the printed agenda points/i.test(t)) > 0;
+  const tagClicks = tagged ? 0 : 1;
+  const server = obs.servers.find((s) => s.remote && s.content.some((c: any) => !c.rezzed && !c.title && meat.some((x) => agendaProgress(c).have + 3 - tagClicks >= x.need)));
+  if (!server || (!tagged && !trail)) return null;
+  const damage = Math.max(...meat.map((x) => Number(x.m![1]))) + (spike ? Math.max(...meat.map((x) => Number(x.info.agendapoints ?? 0))) : 0);
+  return { damage, server: server.label };
 }
 
 function fullyCovered(obs: Observation, t: Target) {
@@ -140,7 +165,7 @@ function readiness(obs: Observation, t: Target): { installs: { title: string; co
   if (t.viaMayfly) {
     if (!mayflyInHand || memoryLeft < 1) return null;
     installs = [{ title: "Mayfly", cost: playCostOf(mayflyInHand) }];
-  } else if (unrezzed > 0 && cov.size < 3) {
+  } else if (unrezzed > 0 && cov.size < 3 && (t.failOdds ?? 1) > 0.1) {
     const mayfly = inHand(obs, "Mayfly");
     if (mayfly && unrezzed === 1 && memoryLeft >= 1) installs = [{ title: "Mayfly", cost: playCostOf(mayfly) }];
     else {
@@ -150,19 +175,29 @@ function readiness(obs: Observation, t: Target): { installs: { title: string; co
       installs = cards.map((c) => ({ title: c!.title, cost: playCostOf(c!) }));
     }
   } else if (unrezzed === 0 && t.damage > 0) return null;
-  const draws = Math.max(0, accessRisk(obs, t) + 1 - (obs.hand.length - installs.length));
+  const draws = Math.max(0, handToSurvive(obs, t) - (obs.hand.length - installs.length));
   if (draws > 3 || accessRisk(obs, t) >= 7) return null;
   const cost = installs.reduce((n, c) => n + c.cost, 0) + (t.viaMayfly ? t.credits - installs[0].cost : t.credits);
   return { installs, draws, cost };
 }
 
-function safeHand(obs: Observation, t: Target) {
+function handToSurvive(obs: Observation, t: Target) {
   const adv = Math.max(0, ...t.server.content.map((c: any) => agendaProgress(c).have));
   const corpPoints = Number(obs.opp["agenda-point"] ?? 0);
   const need = Number(obs.opp["agenda-point-req"] ?? 7);
   const desperate = t.server.remote && ((adv >= 2 && corpPoints + 3 >= need) || (adv >= 1 && corpPoints + 2 >= need));
   const required = desperate ? Math.min(2, requiredHand(obs, t)) : requiredHand(obs, t);
-  return obs.hand.length > required;
+  return t.server.remote && adv >= 2 ? Math.max(1, required) : required + 1;
+}
+
+function safeHand(obs: Observation, t: Target) {
+  return obs.hand.length >= handToSurvive(obs, t);
+}
+
+function bioroidClicks(t: Target) {
+  if (!t.clicks) return 0;
+  const essential = t.server.ices.filter((i: any) => i.rezzed && (i.subtypes ?? []).includes("Bioroid")).reduce((n: number, i: any) => n + essentialSubs(i), 0);
+  return essential > 0 ? Math.min(t.clicks, essential) : t.clicks;
 }
 
 function plan(obs: Observation, current: Plan | null): Plan {
@@ -172,7 +207,7 @@ function plan(obs: Observation, current: Plan | null): Plan {
   const cov = coverage(obs);
   const overclock = obs.hand.some((c) => c.title === "Overclock") ? 5 : 0;
   const handMax = Number(obs.me["hand-size"]?.total ?? obs.me["hand-size"] ?? 5);
-  const reach = new Set(targets(obs, overclock, true).filter((t) => t.credits <= obs.credits + overclock + 2 && requiredHand(obs, t) < handMax).map((t) => t.server.label));
+  const reach = new Set(targets(obs, overclock, true).filter((t) => t.credits <= obs.credits + overclock + 2 && handToSurvive(obs, t) <= handMax).map((t) => t.server.label));
   const threat = obs.servers.find((s) => s.remote && reach.has(s.label) && s.content.some((c: any) => agendaProgress(c).have >= 1 || (!c.rezzed && !c.title && s.ices.length > 0 && obs.turn >= 3 && cov.size >= 1)));
   if (threat && obs.credits >= 3 && (obs.hand.length >= 2 || Number(obs.opp["agenda-point"] ?? 0) + 3 >= need)) return keep("contest", `the Corp is setting up ${threat.label}: get into it before it scores`, { server: threat.label });
   if (points >= need - 2 && obs.credits >= 4) return keep("closing", "two points away: hit R&D and HQ every turn");
@@ -305,7 +340,7 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
   if (plan.kind === "contest") {
     const target = ts.find((t) => t.server.label === plan.detail?.server);
     const plan_ = target ? readiness(obs, target) : null;
-    if (target && plan_ && plan_.cost <= obs.credits && plan_.installs.length + plan_.draws + 1 + (target.clicks ?? 0) <= obs.clicks) {
+    if (target && plan_ && plan_.cost <= obs.credits && plan_.installs.length + plan_.draws + 1 + bioroidClicks(target) <= obs.clicks) {
       planned = true;
       const label = target.server.label;
       for (const inst of plan_.installs) {
@@ -324,7 +359,7 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
       }
     } else if (target) {
       for (const p of out) if (p.kind === "install-breaker" && !p.why.startsWith("install Mayfly") && target.server.ices.some((i: any) => !i.rezzed)) p.score = Math.max(p.score, 68);
-      if (drawsThisTurn < 2 && !safeHand(obs, target) && obs.hand.length < 5 && requiredHand(obs, target) <= 5) {
+      if (drawsThisTurn < 2 && !safeHand(obs, target) && obs.hand.length < 5 && handToSurvive(obs, target) <= 5) {
         const draw = byCommand(obs, "draw")[0];
         if (draw) push(proposal(draw, 59, `draw up before contesting ${target.server.label}`, "draw"));
         if (vrcation && obs.credits >= 1) push(proposal(playOf(obs, vrcation), 66, `VRcation to refill the grip before contesting ${target.server.label}`, "draw"));
@@ -373,6 +408,12 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
   if (punisher && myTags > 0 && obs.credits < 2 && obs.hand.length < 5 && drawsThisTurn < 3 && (obs.me["deck-count"] ?? 0) > 0) {
     const draw = byCommand(obs, "draw")[0];
     if (draw) push(proposal(draw, 76, "draw: tagged with no credits to clear it, so the grip must absorb meat damage", "draw"));
+  }
+  const meat = meatThreat(obs);
+  const exposed = meat && obs.hand.length <= meat.damage && obs.credits < 8;
+  if (exposed && ranSuccessfullyThisTurn(obs) && drawsThisTurn < 4 && (obs.me["deck-count"] ?? 0) > 0) {
+    const draw = byCommand(obs, "draw")[0];
+    if (draw) push(proposal(draw, 77, `draw: ${meat.damage} damage would flatline this grip if the Corp tags and scores ${meat.server}`, "draw"));
   }
   const thin = obs.hand.length <= 1;
   const floor = reserve(obs);
@@ -446,6 +487,10 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
         p.why += " (an unrezzed ice may be one the rig cannot break)";
       }
     }
+    if (exposed && !ranSuccessfullyThisTurn(obs) && (p.kind === "run" || p.kind === "run-event" || p.kind === "click-economy") && !p.why.includes(meat.server) && /\b(run|into)\b/i.test(p.why)) {
+      p.score = Math.min(p.score, 20);
+      p.why += ` (a successful run lets Public Trail tag before ${meat.server} scores for ${meat.damage} damage)`;
+    }
     if (p.kind === "run") {
       const t = ts.find((x) => p.why.startsWith(`run ${x.server.label}`));
       if (!t && !p.why.startsWith("run Archives")) {
@@ -454,7 +499,7 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
       }
       if (t && !safeHand(obs, t)) {
         p.score -= 40;
-        p.why += ` (the grip cannot survive the access: ${requiredHand(obs, t)} cards needed)`;
+        p.why += ` (the grip cannot survive the access: ${handToSurvive(obs, t)} cards needed)`;
       }
       if (t && t.tags > 0 && punisher && !(obs.clicks >= 2 && obs.credits - t.credits >= 2) && !(plan.kind === "contest" && plan.detail?.server === t.server.label)) {
         p.score -= 30;
@@ -489,7 +534,7 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
       if (plan.kind === "contest" && t?.server.label === plan.detail?.server) p.score += 20;
       if (t && !safeHand(obs, t)) {
         p.score = Math.min(p.score, 12);
-        p.why += ` (the grip cannot survive the access: ${requiredHand(obs, t)} cards needed)`;
+        p.why += ` (the grip cannot survive the access: ${handToSurvive(obs, t)} cards needed)`;
       }
     }
     if (p.kind === "draw" && obs.hand.length >= Number(obs.me["hand-size"]?.total ?? obs.me["hand-size"] ?? 5) && p.score > 30) {

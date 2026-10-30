@@ -1,6 +1,6 @@
 import type { Candidate } from "../../game/candidates.ts";
 import { byCommand } from "./observe.ts";
-import { fromCandidate } from "./runs.ts";
+import { derezzesSoon, fromCandidate } from "./runs.ts";
 import { ICE_TYPES, type IceType, agendaProgress, coverage, estimateRun, gainOf, iceThreat, isEconomy, isIcebreaker, isTrap, iceTypes, playCostOf, rezCostOf, strengthOf, subtypes, tagged, runTrialOf, serverSafety } from "./tactics.ts";
 import type { Observation, Plan, Proposal } from "./types.ts";
 import { centralValue, knownCentrals, unrezzedPrice } from "./value.ts";
@@ -63,7 +63,10 @@ export function corpProposals(obs: Observation): Proposal[] {
   const digger = virus.some((v: any) => /access|additional card/i.test(v.text));
   const digging = virus.filter((v: any) => v.counters >= 3 && /access|additional card/i.test(v.text));
   const purge = byCommand(obs, "purge")[0];
-  if (purge && obs.clicks >= 3 && (digging.length || virusCounters >= 6)) {
+  const derezzing = obs.servers.flatMap((s) => s.ices.flatMap((i: any) => (i.hosted ?? []).filter((h: any) => h.side === "Runner" && derezzesSoon(obs, h)).map(() => i)));
+  const saved = derezzing.filter((i: any) => i.rezzed).reduce((n: number, i: any) => n + rezCostOf(i), 0);
+  if (purge && obs.clicks >= 3 && derezzing.length && (saved >= 3 || derezzing.some((i: any) => rezCostOf(i) >= 3))) push(proposal(purge, saved >= 5 ? 46 + Math.min(20, saved * 2) : 36, saved >= 3 ? `purge: ${saved} credits of rezzed ice would be derezzed when the Runner's turn begins` : `purge: ${derezzing.length} ice would be derezzed whenever they are rezzed`, "purge"));
+  else if (purge && obs.clicks >= 3 && (digging.length || virusCounters >= 6)) {
     const worst = digging.sort((a: any, b: any) => b.counters - a.counters)[0];
     push(proposal(purge, Math.min(worst ? 52 + Math.min(30, worst.counters * 6) : 46, obs.credits < 4 ? 28 : 99), worst ? `purge: ${worst.title} holds ${worst.counters} virus counters` : `purge ${virusCounters} virus counters`, "purge"));
   }
@@ -86,7 +89,7 @@ export function corpProposals(obs: Observation): Proposal[] {
   const ice = obs.hand.filter((c) => c.type === "ICE").sort((a, b) => strengthOf(b) - strengthOf(a));
   const wantCredits = obs.hand.some((c) => c.type === "Operation" && gainOf(obs.info(c).text) > playCostOf(c) && playCostOf(c) > obs.credits);
   const econOp = obs.hand.filter((c) => c.type === "Operation" && gainOf(obs.info(c).text) > playCostOf(c) + 3 && playCostOf(c) > obs.credits && playCostOf(c) <= obs.credits + obs.clicks - 1).sort((a, b) => playCostOf(a) - playCostOf(b))[0];
-  const nearly = obs.hand.some((c) => c.type === "Operation" && gainOf(obs.info(c).text) > playCostOf(c) + 3 && playCostOf(c) > obs.credits && playCostOf(c) <= obs.credits + obs.clicks);
+  const nearly = obs.hand.some((c) => c.type === "Operation" && gainOf(obs.info(c).text) > playCostOf(c) + 3 && playCostOf(c) > obs.credits && playCostOf(c) <= obs.credits + obs.clicks - 1);
   if (ice.length) {
     const hq = obs.servers.find((s) => s.key === "hq")!;
     const rd = obs.servers.find((s) => s.key === "rd")!;
@@ -250,7 +253,7 @@ export function runnerProposals(obs: Observation): Proposal[] {
       const stored = Number(card.counter?.credit ?? 0) + (added ? Number(added[1]) : 0);
       if (all) push(proposal(c, stored >= 3 ? Math.min(74, 44 + stored * 3) : stored * 10, `${card.title}: take ${stored} credits`, "click-economy"));
       else if (take) push(proposal(c, 56, `${card.title}: take ${take[1]} credits`, "click-economy"));
-      else if (place && Number(card.counter?.credit ?? 0) < 3) push(proposal(c, 22, `${card.title}: place ${place[1]} credits for later`, "click-economy"));
+      else if (place && Number(card.counter?.credit ?? 0) < 3) push(proposal(c, Number(card.counter?.credit ?? 0) === 0 ? 44 : 22, `${card.title}: place ${place[1]} credits for later`, "click-economy"));
     }
   }
   for (const card of obs.hand) {

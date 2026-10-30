@@ -1,4 +1,6 @@
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { Replayed } from "./replayed.ts";
 import { Scenario } from "./scenario.ts";
 
 const best = (s: Scenario, side: "corp" | "runner", pred: (why: string) => boolean) => Math.max(-1000, ...s.considered(side).filter((p) => pred(p.why)).map((p) => p.score));
@@ -528,7 +530,7 @@ describe("corp economy before thin installs", () => {
     s.credits("corp", 7);
     const move = s.decide("corp");
     expect(move?.command).toBe("credit");
-    expect(s.last("corp").chosen?.why).toContain("playable this turn");
+    expect(s.last("corp").chosen?.why).toContain("economy operation in hand");
     expect(best(s, "corp", (w) => w.startsWith("install Offworld Office"))).toBeLessThan(40);
   });
 });
@@ -2079,5 +2081,199 @@ describe("corp answers Brân's install subroutine (replay 2N9BFAHE)", () => {
     const ices = s.view("corp").corp.servers.rd.ices.map((c: any) => c.title);
     expect(ices).toContain("Palisade");
     expect(s.view("runner").run).toBeFalsy();
+  });
+});
+
+describe("runner plays its turn against a Haas-Bioroid board (replay QN4NZR4Z)", () => {
+  function botTurn(s: Scenario) {
+    const whys: string[] = [];
+    for (let i = 0; i < 80; i++) {
+      const r = s.decide("runner");
+      if (r) {
+        whys.push(s.last("runner").chosen?.why ?? "");
+        if (r.command === "end-turn") break;
+        s.play("runner", r);
+        continue;
+      }
+      const c = s.decide("corp");
+      if (c) {
+        s.play("corp", c);
+        continue;
+      }
+      break;
+    }
+    return whys;
+  }
+
+  function rig(s: Scenario, cards: string[], hand: string[], credits: number) {
+    s.clearHand("runner");
+    s.summon("runner", ...cards);
+    s.credits("runner", 40);
+    for (const c of cards) {
+      s.clicks("runner", 4);
+      s.install("runner", c);
+    }
+    s.summon("runner", ...hand);
+    s.credits("runner", credits);
+    s.clicks("runner", 4);
+  }
+
+  it("draws one card, then clicks through Brân to steal the twice-advanced agenda the Corp cannot protect", () => {
+    const s = new Scenario("core-hb", "core-shaper", 3);
+    s.clearHand("corp");
+    s.summon("corp", "Whitespace", "Manegarm Skunkworks", "Brân 1.0", "Whitespace", "Palisade", "Luminal Transubstantiation");
+    for (const [c, srv] of [["Whitespace", "R&D"], ["Manegarm Skunkworks", "HQ"], ["Brân 1.0", "New remote"], ["Whitespace", "Server 1"], ["Palisade", "Server 1"], ["Luminal Transubstantiation", "Server 1"]] as [string, string][]) {
+      s.clicks("corp", 3);
+      s.credits("corp", 40);
+      s.install("corp", c, srv);
+    }
+    s.rez("Brân 1.0");
+    s.rez("Manegarm Skunkworks");
+    s.say("corp", "/adv-counter 2");
+    s.act("corp", "Select Luminal Transubstantiation");
+    s.credits("corp", 4);
+    s.clicks("corp", 0);
+    s.endTurn("corp");
+    rig(s, ["Cleaver", "Unity", "Telework Contract"], ["DZMZ Optimizer", "Tranquilizer", "Verbal Plasticity", "Smartware Distributor"], 7);
+    const whys = botTurn(s);
+    expect(whys[0]).toMatch(/^draw up to survive the access in Server 1/);
+    expect(whys[1]).toMatch(/^run Server 1/);
+    expect(Number(s.view("runner").runner["agenda-point"])).toBe(2);
+  });
+
+  it("runs R&D with Conduit while its clicks can still break an Ansel, instead of clicking for credits first", () => {
+    const s = new Scenario("core-hb", "core-shaper", 3);
+    s.clearHand("corp");
+    s.summon("corp", "Whitespace", "Pharos", "Ansel 1.0");
+    for (const c of ["Whitespace", "Pharos", "Ansel 1.0"]) {
+      s.clicks("corp", 3);
+      s.credits("corp", 40);
+      s.install("corp", c, "R&D");
+    }
+    s.rez("Whitespace");
+    s.rez("Pharos");
+    s.credits("corp", 11);
+    s.clicks("corp", 0);
+    s.endTurn("corp");
+    rig(s, ["DZMZ Optimizer", "Cleaver", "Unity", "Echelon", "Conduit", "Smartware Distributor"], ["Verbal Plasticity", "Tranquilizer", "Tranquilizer", "Echelon", "Tranquilizer"], 9);
+    s.say("runner", "/counter virus 2");
+    s.act("runner", "Select Conduit");
+    const whys = botTurn(s);
+    expect(whys[0]).toMatch(/^Conduit: run R&D/);
+    expect(whys.some((w) => /^spend a click on Ansel/.test(w))).toBe(true);
+    const log = (s.view("runner").log ?? []).map((l: any) => String(l.text?.["raw-text"] ?? ""));
+    expect(log.some((l) => /breaches R&D/.test(l))).toBe(true);
+  });
+
+  it("hosts Tranquilizer on Pharos and loads Smartware Distributor instead of clicking for single credits", () => {
+    const s = new Scenario("core-hb", "core-shaper", 3);
+    s.clearHand("corp");
+    s.summon("corp", "Whitespace", "Pharos", "Ansel 1.0");
+    for (const c of ["Whitespace", "Pharos", "Ansel 1.0"]) {
+      s.clicks("corp", 3);
+      s.credits("corp", 40);
+      s.install("corp", c, "R&D");
+    }
+    s.rez("Whitespace");
+    s.rez("Pharos");
+    s.credits("corp", 8);
+    s.clicks("corp", 0);
+    s.endTurn("corp");
+    rig(s, ["DZMZ Optimizer", "Cleaver", "Unity", "Echelon", "Conduit", "Smartware Distributor"], ["Verbal Plasticity", "Tranquilizer", "Tranquilizer", "Echelon", "Tranquilizer"], 5);
+    botTurn(s);
+    const v = s.view("runner");
+    const pharos = v.corp.servers.rd.ices.find((i: any) => i.title === "Pharos");
+    expect((pharos.hosted ?? []).map((h: any) => h.title)).toContain("Tranquilizer");
+    const smartware = v.runner.rig.resource.find((c: any) => c.title === "Smartware Distributor");
+    expect(Number(smartware.counter?.credit ?? 0)).toBeGreaterThan(0);
+  });
+});
+
+describe("corp keeps its economy over surplus ice (replay 3WXLXLDD)", () => {
+  const surplus = ["Government Subsidy", "Ballista", "Funhouse", "Funhouse", "Whitespace", "Pharos"];
+
+  it("discards a third spare ice rather than Government Subsidy", () => {
+    const s = new Scenario("core-weyland", "core-criminal");
+    s.clearHand("corp");
+    s.summon("corp", ...surplus);
+    s.credits("corp", 9);
+    s.clicks("corp", 0);
+    s.act("corp", "End turn");
+    const move = s.decide("corp");
+    expect(move?.command).toBe("select");
+    expect(s.last("corp").chosen?.why ?? "").not.toMatch(/Government Subsidy/);
+  });
+
+  it("spends the last click of turn 8 installing an ice the end of turn would discard", () => {
+    const r = new Replayed(fileURLToPath(new URL("./replays/3WXLXLDD.json", import.meta.url)));
+    r.until((e, x) => x.turn === 8 && e.side === "corp" && Number(x.view().corp.click) === 1, true);
+    const { record } = r.decide();
+    expect(record.chosen?.kind).toBe("install-ice");
+  });
+
+  it("does not call Government Subsidy playable this turn when the credit clicks leave no click to play it", () => {
+    const s = new Scenario("core-weyland", "core-criminal");
+    s.clearHand("corp");
+    s.summon("corp", "Government Subsidy", "Ballista");
+    s.credits("corp", 7);
+    s.clicks("corp", 3);
+    s.decide("corp");
+    expect(s.considered("corp").some((p) => /playable this turn/.test(p.why))).toBe(false);
+  });
+});
+
+describe("corp protects an HQ full of agendas (replay LTEPL68K)", () => {
+  const replay = () => new Replayed(fileURLToPath(new URL("./replays/LTEPL68K.json", import.meta.url)));
+
+  it("installs Manegarm Skunkworks in HQ while four agendas wait there, instead of purging", () => {
+    const r = replay().until((e, x) => x.turn === 5 && e.side === "corp" && e.command === "purge", true);
+    const { record } = r.decide();
+    expect(record.chosen?.why ?? "").toMatch(/^Manegarm Skunkworks in HQ/);
+  });
+
+  it("draws three with Predictive Planogram when rich, iceless and holding agendas", () => {
+    const r = replay().until((e, x) => x.turn === 7 && e.side === "corp" && e.command === "choice", true);
+    const { record } = r.decide();
+    expect(record.chosen?.why ?? "").toMatch(/draw 3/);
+  });
+});
+
+describe("runner stays off the centrals when Public Trail and a scorable Orbital Superiority would flatline it (replay WFTWB65W)", () => {
+  it("does not Overclock into HQ with four cards while a four-advanced card waits in the remote", () => {
+    const r = new Replayed(fileURLToPath(new URL("./replays/WFTWB65W.json", import.meta.url)));
+    r.until((e, x) => x.turn === 15 && e.side === "runner" && e.command === "play", true);
+    const { record } = r.decide();
+    expect(record.chosen?.why ?? "").not.toMatch(/^(Overclock|run|Jailbreak)/);
+  });
+});
+
+describe("corp stops paying for an ice the Runner breaks for one and Tranquilizer derezzes (replay 7R9JBQRY)", () => {
+  it("leaves Palisade unrezzed on R&D on turn 12", () => {
+    const r = new Replayed(fileURLToPath(new URL("./replays/7R9JBQRY.json", import.meta.url)));
+    r.until((e, x) => x.turn === 12 && e.side === "corp" && e.command === "rez", true);
+    const { move, record } = r.decide();
+    expect(move?.command).not.toBe("rez");
+    expect(record.chosen?.why ?? "").toMatch(/Tranquilizer derezzes it again/);
+  });
+
+  it("purges on turn 6 while the rezzed Ballista would be derezzed when the Runner's turn begins", () => {
+    const r = new Replayed(fileURLToPath(new URL("./replays/7R9JBQRY.json", import.meta.url)));
+    r.until((e, x) => x.turn === 6 && e.side === "corp" && e.command === "credit", true);
+    const { move } = r.decide();
+    expect(move?.command).toBe("purge");
+  });
+});
+
+describe("corp keeps what it can use when poor (replay PB3SHFG2)", () => {
+  const replay = () => new Replayed(fileURLToPath(new URL("./replays/PB3SHFG2.json", import.meta.url)));
+
+  it("does not spend turn 4 purging to save a three-credit Palisade at two credits", () => {
+    const r = replay().until((e, x) => x.turn === 4 && e.side === "corp" && e.command === "purge", true);
+    expect(r.decide().move?.command).not.toBe("purge");
+  });
+
+  it("discards the Government Subsidy it cannot reach rather than the Ballista or the Hedge Fund it can play", () => {
+    const r = replay().until((e, x) => x.turn === 8 && e.side === "corp" && e.command === "select", true);
+    expect(r.decide().record.chosen?.why ?? "").toMatch(/Government Subsidy/);
   });
 });

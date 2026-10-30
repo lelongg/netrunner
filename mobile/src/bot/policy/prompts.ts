@@ -26,6 +26,23 @@ export function cardWorth(obs: Observation, card: any): number {
   return type === "Hardware" ? 35 : type === "Resource" ? 30 : type === "Program" ? 40 : 15 + playCostOf(card);
 }
 
+export function keepWorth(obs: Observation, card: any): number {
+  const base = cardWorth(obs, card);
+  if (obs.side !== "corp") return base;
+  const others = obs.hand.filter((c) => c.cid !== card.cid);
+  if (card.type === "ICE") {
+    const better = others.filter((c) => c.type === "ICE" && cardWorth(obs, c) >= base).length;
+    const lone = !others.some((c) => c.type === "ICE") && others.some((c) => c.type === "Agenda");
+    return base + (lone ? 15 : 0) - (better >= 2 ? 20 : 0);
+  }
+  if (card.type === "Operation" && base >= 50) {
+    const out = Math.max(0, playCostOf(card) - obs.credits - 3) * 3;
+    const twin = others.some((c) => c.title === card.title && c.cid < card.cid) ? 10 : 0;
+    return base - out - twin;
+  }
+  return base;
+}
+
 function trace(obs: Observation): Proposal {
   const max = Number(obs.prompt.choices ?? 0);
   let spend = 0;
@@ -52,8 +69,8 @@ export function genericSelect(obs: Observation): Proposal[] {
     return out;
   }
   if (/discard/i.test(msg)) {
-    pick = [...cards].sort((a, b) => cardWorth(obs, a) - cardWorth(obs, b))[0];
-    why = "discard the least valuable card";
+    pick = [...cards].sort((a, b) => keepWorth(obs, a) - keepWorth(obs, b))[0];
+    why = `discard ${pick?.title ?? "the least valuable card"}`;
   } else if (/ice/i.test(msg) && obs.side === "corp" && /install/i.test(msg)) {
     pick = [...cards].filter(mine).sort((a, b) => strengthOf(b) - strengthOf(a))[0];
     why = "install the strongest ice";

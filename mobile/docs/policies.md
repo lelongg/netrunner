@@ -435,6 +435,31 @@ Replays A45J9PEN and 2N9BFAHE then had the Runner break "cannot steal" with the 
 subroutines first and take a long-shot run when the Corp would win by scoring a remote next
 turn, and the Corp keep economy assets out of unprotected remotes the Runner can afford to
 trash: Corp 361 / 384, Runner 240 / 229.
+Rezzing turn-start assets such as Nico Campaign as the Runner's turn ends rather than at
+the end of the Corp's own turn read Corp 362 / 384, Runner 239 / 226.
+Replay QN4NZR4Z then had the Runner contest a twice-advanced remote when the deck-aware
+price says its unrezzed ice cannot stop the run (an empty grip is enough to survive the
+access there, and a bioroid counts only its essential subroutines in clicks), price an
+unrezzed bioroid it can click through at no credits so Conduit runs before the credit
+clicks, host Tranquilizer on the costliest rezzed ice and load an empty Smartware
+Distributor: Runner 280 / 255, the first Runner change above the interval on the design
+split (Planning Ahead 71 to 88 and 71 to 82, Advanced Yomi as Corp losing 51 to 77 and
+47 to 58), Corp unchanged at 362 / 384.
+Replays 3WXLXLDD and LTEPL68K, rebuilt locally from the relay with `replayed.ts`, then had
+the Corp rank its hand-size discards by card worth with surplus ice counted below
+Government Subsidy, install the ice a discard would take on its last click, keep a click
+to play an economy operation it clicks credits for, put Manegarm Skunkworks in HQ once two
+agendas wait there, and draw three with Predictive Planogram when rich and iceless with
+agendas in hand: Corp 358 / 394 after the first and 362 / 384 after both, inside the
+interval.
+Replay WFTWB65W then had the Runner stay off the centrals while Public Trail and an
+Orbital Superiority advanced enough to score next turn could flatline its grip: Runner
+273 / 256 (against Hyper Velocity 84 / 84 instead of 88 / 84), inside the interval.
+Replays 7R9JBQRY and PB3SHFG2 then had the Corp hold a rez the Runner gets through anyway
+when Tranquilizer will derez the ice again or breaking it costs at most half the rez on a
+thin purse, purge Tranquilizer counters only when they would derez at least 5 credits of
+rezzed ice, and rank its discards by what it can still play: Corp 353 / 389, 354 / 388 and
+358 / 388 after each step, inside the interval of 362 / 384.
 
 The spread between versions is inside the interval of 1152 games (about ±33 on a sum),
 so none of this is a measured gain: the 72-game local batches that motivated v1 (27 to
