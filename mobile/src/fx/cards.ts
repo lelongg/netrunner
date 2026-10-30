@@ -1,4 +1,5 @@
 import { cardImage } from "../engine";
+import { t as tr } from "../i18n";
 import { handOff, letGoEffects } from "./gl";
 import { installSignature, orbitalStrike, scoreGl, scoreSignature, signature } from "./signatures";
 import type { Side } from "../engine";
@@ -258,7 +259,7 @@ async function showcase(m: Move, kind: Kind, me: Side) {
   const staged = accessStage.current;
   if (kind === "steal" && staged && staged.title === info?.title) {
     accessStage.current = null;
-    banner("Stolen", info?.title ?? "", "red", { size: "lg", hold: 0.6 });
+    banner(tr("Stolen"), info?.title ?? "", "red", { size: "lg", hold: 0.6 });
     ring(staged.at, "red", 180);
     burst(staged.at, "red", 26, 100, { size: 6, gravity: 0, shards: true });
     points(staged.at, scoreSegments("runner", info?.points ?? 1), "red");
@@ -269,7 +270,7 @@ async function showcase(m: Move, kind: Kind, me: Side) {
   if (kind === "steal" && (m.to?.holder ?? m.from?.holder) === me) {
     const seen = rectOf(document.querySelector(".prompt img"));
     const from = visible(seen) ? mid(seen) : visible(src) ? mid(src) : ([innerWidth / 2, innerHeight / 2] as Point);
-    banner("Stolen", info?.title ?? "", "red", { size: "lg", hold: 0.4 });
+    banner(tr("Stolen"), info?.title ?? "", "red", { size: "lg", hold: 0.4 });
     ring(from, "red", 160);
     burst(from, "red", 24, 90, { size: 6, gravity: 0, shards: true });
     points(from, scoreSegments("runner", info?.points ?? 1), "red");
@@ -295,7 +296,7 @@ async function showcase(m: Move, kind: Kind, me: Side) {
   const special = kind === "play" ? signature(info?.title, big, info?.code, ghost, info?.owner) : kind === "install" ? (installSignature(info?.title, big, info?.code, ghost, info?.owner) ?? undefined) : scored ? scoreGl(info?.title, big, info?.code, ghost, info?.owner) : undefined;
   if (scored && !special) setTimeout(() => scoreSignature(info?.title, big), 1400);
   if (scored && special) {
-    banner(kind === "steal" ? "Stolen" : "Scored", info?.title ?? "", kind === "steal" ? "red" : "gold", { size: "xl", hold: 1.2 });
+    banner(tr(kind === "steal" ? "Stolen" : "Scored"), info?.title ?? "", kind === "steal" ? "red" : "gold", { size: "xl", hold: 1.2 });
     ring(center, tone, big.width * 1.4);
     buzz([40, 40, 120]);
   }
@@ -318,7 +319,7 @@ async function showcase(m: Move, kind: Kind, me: Side) {
     flash(kind === "steal" ? "red" : "gold", 0.35);
     shake(0.6);
     buzz([40, 40, 40, 40, 120]);
-    banner(kind === "steal" ? "Stolen" : "Scored", info?.title ?? "", kind === "steal" ? "red" : "gold", { size: "xl", hold: hold + 0.2 });
+    banner(tr(kind === "steal" ? "Stolen" : "Scored"), info?.title ?? "", kind === "steal" ? "red" : "gold", { size: "xl", hold: hold + 0.2 });
   }
   if (!special) {
     animate(glow, { opacity: [0, 1, 0.75] }, { duration: hold + 0.3, times: [0, 0.4, 1], ease: "easeOut", keep: true });

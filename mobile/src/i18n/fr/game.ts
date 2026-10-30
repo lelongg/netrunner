@@ -190,5 +190,6 @@ export default {
   "Runner accesses": "Lae Runner accède",
   "Unseen card": "Carte inconnue",
   "Stolen": "Volé",
+  "Scored": "Finalisé",
   "Trashed": "Effacé",
 } as Record<string, string>;
