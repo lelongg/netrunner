@@ -455,6 +455,11 @@ interval.
 Replay WFTWB65W then had the Runner stay off the centrals while Public Trail and an
 Orbital Superiority advanced enough to score next turn could flatline its grip: Runner
 273 / 256 (against Hyper Velocity 84 / 84 instead of 88 / 84), inside the interval.
+Replays 7R9JBQRY and PB3SHFG2 then had the Corp hold a rez the Runner gets through anyway
+when Tranquilizer will derez the ice again or breaking it costs at most half the rez on a
+thin purse, purge Tranquilizer counters only when they would derez at least 5 credits of
+rezzed ice, and rank its discards by what it can still play: Corp 353 / 389, 354 / 388 and
+358 / 388 after each step, inside the interval of 362 / 384.
 
 The spread between versions is inside the interval of 1152 games (about ±33 on a sum),
 so none of this is a measured gain: the 72-game local batches that motivated v1 (27 to
