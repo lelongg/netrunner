@@ -40,6 +40,7 @@ import { applySettings, motionOff, onSettings, settings } from "./settings";
 import { useLanguage } from "./cardtext";
 import { MotionGlobalConfig } from "motion";
 import { t } from "./i18n";
+import { readNav, resetNav } from "./nav";
 
 const joinParam = new URLSearchParams(location.search).get("join")?.toUpperCase() ?? undefined;
 const gameParam = new URLSearchParams(location.search).get("game") ?? undefined;
@@ -63,6 +64,7 @@ if (agentParam)
     sessionStorage.setItem("nsg.agent", "1");
   } catch {}
 if (joinParam || watchParam || replayParam) history.replaceState(null, "", location.pathname);
+const restored = joinParam || gameParam || watchParam || replayParam ? {} : readNav();
 
 function useSession(session: Session | null) {
   const [, setTick] = useState(0);
@@ -171,11 +173,17 @@ function App() {
   openCredits = session ? undefined : () => setCredits(true);
   const [matching, setMatching] = useState(false);
   const [seeking, setSeeking] = useState(() => !!pendingSeek());
-  const [guide, setGuide] = useState(() => !joinParam && !gameParam && !watchParam && !replayParam && tutorialState() === null);
+  const [guide, setGuide] = useState(() => !joinParam && !gameParam && !watchParam && !replayParam && !restored.tab && tutorialState() === null);
   const firstRun = guide && tutorialState() === null;
-  const [archive, setArchive] = useState<string | boolean>(false);
-  const [decks, setDecks] = useState<false | { id?: string; side?: Side }>(false);
-  const [sharedReplay, setSharedReplay] = useState(replayParam ? { code: replayParam, relay: replayRelay } : undefined);
+  const [archive, setArchive] = useState<string | boolean>(restored.tab === "history" && !restored.shared ? (restored.game ?? true) : false);
+  const [decks, setDecks] = useState<false | { id?: string; side?: Side; resume?: string }>(restored.tab === "decks" ? { side: restored.side, resume: restored.deck } : false);
+  const [sharedReplay, setSharedReplay] = useState(replayParam ? { code: replayParam, relay: replayRelay } : restored.tab === "history" ? restored.shared : undefined);
+  useEffect(() => {
+    const tab = decks ? "decks" : archive || sharedReplay ? "history" : undefined;
+    const now = readNav();
+    if (now.tab === tab && now.shared?.code === sharedReplay?.code) return;
+    resetNav(tab ? { tab, shared: sharedReplay, side: decks ? decks.side : undefined, deck: decks ? (decks.id ?? decks.resume) : undefined } : {});
+  }, [decks, archive, sharedReplay]);
   const [opening, setOpeningState] = useState<string | null>(joinParam ?? watchParam ?? gameParam?.replace(/^local:.*/, "local game") ?? null);
   const [held, setHeld] = useState<string | null>(null);
   const [diving, setDiving] = useState(false);
@@ -335,7 +343,7 @@ function App() {
   if (decks && loaded && !session)
     return (
       <>
-        <Decks db={loaded.db} matchups={loaded.matchups} initialDeck={decks.id} initialSide={decks.side} onClose={() => setDecks(false)} />
+        <Decks db={loaded.db} matchups={loaded.matchups} initialDeck={decks.id} initialSide={decks.side} resume={decks.resume} onClose={() => setDecks(false)} />
         {tabs("decks")}
       </>
     );

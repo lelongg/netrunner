@@ -23,6 +23,7 @@ import { cardText } from "../cardtext";
 import { Swipe } from "../swipe";
 import { french, t } from "../i18n";
 import { ordinal } from "./DeckBrowser";
+import { saveNav } from "../nav";
 
 const SIDE_NAME: Record<Side, "Corp" | "Runner"> = { corp: "Corp", runner: "Runner" };
 
@@ -61,7 +62,7 @@ function Pips({ n, max = 5 }: { n: number; max?: number }) {
   );
 }
 
-export function Decks({ db, matchups, onClose, initialSide, initialDeck }: { db: CardDb; matchups: Matchup[]; onClose: () => void; initialSide?: Side; initialDeck?: string }) {
+export function Decks({ db, matchups, onClose, initialSide, initialDeck, resume }: { db: CardDb; matchups: Matchup[]; onClose: () => void; initialSide?: Side; initialDeck?: string; resume?: string }) {
   const [side, setSide] = useState<Side>(() => {
     if (initialSide) return initialSide;
     try {
@@ -73,7 +74,11 @@ export function Decks({ db, matchups, onClose, initialSide, initialDeck }: { db:
   const [decks, setDecks] = useState(savedDecks);
   const [defaultId, setDefaultId] = useState(() => defaultDeckId(side));
   useEffect(() => setDefaultId(defaultDeckId(side)), [side]);
-  const [editing, setEditing] = useState<StoredDeck | null>(() => (initialDeck ? (savedDecks().find((d) => d.id === initialDeck) ?? null) : null));
+  const [editing, setEditing] = useState<StoredDeck | null>(() => {
+    const id = initialDeck ?? resume;
+    return id ? (savedDecks().find((d) => d.id === id) ?? null) : null;
+  });
+  useEffect(() => saveNav({ deck: editing?.id, side }), [editing?.id, side]);
   const [creating, setCreating] = useState(false);
   const [importing, setImporting] = useState(false);
   const [pending, setPending] = useState<{ deck: Deck; source?: DeckSource } | null>(null);

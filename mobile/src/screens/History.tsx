@@ -16,6 +16,7 @@ import { animate } from "../fx/core";
 import { motionOff } from "../settings";
 import { uiSound } from "../uisound";
 import { t } from "../i18n";
+import { readNav, saveNav } from "../nav";
 
 const SIDES: Side[] = ["corp", "runner"];
 const other = (side: Side): Side => (side === "corp" ? "runner" : "corp");
@@ -379,7 +380,12 @@ async function upload(head: Head, script: Script): Promise<string> {
 function Report({ head, engine, db, onClose }: { head: Head; engine: EngineApi; db: CardDb; onClose: () => void }) {
   const [, setTick] = useState(0);
   const [replay, setReplay] = useState<Replay | null>(null);
-  const [watching, setWatching] = useState(false);
+  const [watching, setWatching] = useState(() => {
+    const nav = readNav();
+    return nav.game === head.id && !!nav.watching;
+  });
+  useEffect(() => saveNav({ game: head.id, watching }), [watching]);
+  useEffect(() => () => saveNav({ game: undefined, watching: false, step: undefined }), []);
   const [deck, setDeck] = useState<Deck | null>(null);
   const [logOpen, setLogOpen] = useState(false);
   const [sharing, setSharing] = useState(false);
@@ -571,7 +577,8 @@ const STEP_MS = 900;
 
 function ReplayPlayer({ replay, engine, db, script, onClose }: { replay: Replay; engine: EngineApi; db: CardDb; script: Script; onClose: () => void }) {
   const [index, setIndex] = useState(0);
-  const [playing, setPlaying] = useState(true);
+  const resume = useRef(readNav().step);
+  const [playing, setPlaying] = useState(resume.current == null);
   const [speed, setSpeed] = useState(1);
   const [skipIdle, setSkipIdle] = useState(true);
   const [side, setSide] = useState<Side>(script.mySide);
@@ -589,6 +596,17 @@ function ReplayPlayer({ replay, engine, db, script, onClose }: { replay: Replay;
     setQuiet(!animated);
     setIndex(next);
   };
+  useEffect(() => {
+    const at = resume.current;
+    if (at == null || (frames.length <= at && !replay.done)) return;
+    resume.current = undefined;
+    setPlaying(false);
+    go(at, false);
+  }, [frames.length]);
+  useEffect(() => {
+    if (resume.current == null) saveNav({ step: index });
+  }, [index]);
+  useEffect(() => () => saveNav({ step: undefined }), []);
   useEffect(() => {
     if (!playing) return;
     if (index >= last) {
