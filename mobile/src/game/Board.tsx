@@ -512,11 +512,11 @@ function CorpArea({ view, side, mine, onTap, onZone, selectable, runServer }: { 
   };
   return (
     <div class="area corp-area">
+      {!mine && <Piles view={view} zoneOwner="corp" viewer={side} onTap={onTap} onZone={onZone} selectable={selectable} centrals={false} />}
       <div class="row">
         <span class="label">{t("Servers")}</span>
         <span class="label">サーバー</span>
       </div>
-      {!mine && <Piles view={view} zoneOwner="corp" viewer={side} onTap={onTap} onZone={onZone} selectable={selectable} centrals={false} />}
       <Overflow class={`servers ${mine ? "mine" : "theirs"}`}>
         {serverOrder(servers).map((key) => {
           const s = servers[key] ?? { content: [], ices: [] };
