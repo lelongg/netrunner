@@ -1,4 +1,7 @@
+import { createPortal } from "preact/compat";
 import { useEffect, useRef, useState } from "preact/hooks";
+import { animate, reduced } from "../fx/core";
+import { useHold } from "../hold";
 import { useLoop } from "../fx/ui";
 import { type Side, faceIndex } from "../engine";
 import { type Command, cardCommands, cardRef, pendingChoice } from "./actions";
@@ -93,6 +96,51 @@ function cardFacts(card: any, viewer: Side, view: any, known: boolean): Facts {
   const hosted: any[] = card.hosted ?? [];
   if (hosted.length) facts.chips.push({ text: t("hosting {cards}", { cards: hosted.map((h) => (h.title && (h.seen || h.rezzed || h.side === "Runner" || mine) ? h.title : t("facedown card"))).join(", ") }), tip: t("Hosted cards · they sit on this card and are trashed if it leaves play.") });
   return facts;
+}
+
+function decrypt(back: HTMLElement | null | undefined) {
+  if (!back || reduced()) return;
+  const q = (sel: string) => back.querySelector<HTMLElement>(sel);
+  animate(back, { scale: [1, 1.04, 1], filter: ["brightness(1)", "brightness(1.8)", "brightness(1)"] }, { duration: 0.6, ease: "easeOut" });
+  const name = q(".back-name");
+  if (name) animate(name, { x: [0, -6, 8, -4, 3, 0], skewX: [0, 14, -10, 6, 0, 0], opacity: [1, 0.3, 1, 0.5, 1, 1] }, { duration: 0.5, ease: "linear" });
+  const frame = q(".back-frame");
+  if (frame) animate(frame, { opacity: [1, 0.2, 1, 0.4, 1] }, { duration: 0.4, ease: "linear" });
+  const stamp = q(".back-stamp");
+  if (stamp) animate(stamp, { scale: [2.2, 0.92, 1], rotate: [-24, -6, -8], opacity: [0, 1, 1] }, { duration: 0.45, delay: 0.18, ease: [0.2, 0.9, 0.3, 1] });
+  back.querySelectorAll<HTMLElement>(".back-redacted i").forEach((bar, i) => animate(bar, { scaleX: [1, 0, 1] }, { duration: 0.4, delay: 0.1 + i * 0.08, ease: "easeInOut" }));
+}
+
+function BackPeek({ side, onClose }: { side: string; onClose: () => void }) {
+  const root = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const timer = setTimeout(() => decrypt(root.current?.querySelector<HTMLElement>(".card-back")), 320);
+    return () => clearTimeout(timer);
+  }, []);
+  return (
+    <div class="card-peek" ref={root}>
+      <div class="card-zoom" onClick={onClose}>
+        <div class="card-zoom-stage">
+          <div class="card-zoom-frame current loaded">
+            <CardBack side={side} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ZoomableCardBack({ side }: { side: string }) {
+  const [held, setHeld] = useState(false);
+  const { handlers, consumed } = useHold(setHeld);
+  return (
+    <>
+      <button class="card-zoom-trigger sheet-img" onClick={(e) => consumed() || decrypt((e.currentTarget as HTMLElement).querySelector<HTMLElement>(".card-back"))} aria-label={t("Hidden card")} {...handlers}>
+        <CardBack side={side} />
+      </button>
+      {held && createPortal(<BackPeek side={side} onClose={() => setHeld(false)} />, document.body)}
+    </>
+  );
 }
 
 function CardBack({ side }: { side: string }) {
@@ -241,7 +289,7 @@ export function CardSheet({ confirm, card, view, stamp, probe, side, db, send, o
               onGallery={(i) => onJump?.(gallery[i].card)}
             />
           ) : (
-            <CardBack side={card.side} />
+            <ZoomableCardBack side={card.side} />
           )}
           <SheetInfo card={card} code={code} full={full} side={side} view={view} />
         </div>

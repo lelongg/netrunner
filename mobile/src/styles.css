@@ -1723,6 +1723,7 @@ textarea:focus {
 }
 
 .back-redacted i {
+  transform-origin: 0 50%;
   height: 5px;
   width: 100%;
   background: color-mix(in srgb, var(--back-ink) 35%, transparent);
@@ -1969,6 +1970,42 @@ form.chat input {
     --tile-w: 74px;
     --tile-h: 103px;
   }
+}
+
+.card-zoom-trigger .card-back {
+  width: 100%;
+  max-width: none;
+}
+
+.card-zoom-frame .card-back {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  max-width: none;
+  gap: 6%;
+}
+
+.card-zoom-frame .back-name {
+  font-size: clamp(56px, 20vw, 120px);
+  -webkit-text-stroke-width: 3px;
+}
+
+.card-zoom-frame .back-name::after {
+  -webkit-text-stroke-width: 3px;
+}
+
+.card-zoom-frame .back-stamp {
+  font-size: 18px;
+  padding: 6px 16px;
+  border-width: 3px;
+}
+
+.card-zoom-frame .back-redacted i {
+  height: 12px;
+}
+
+.card-zoom-frame .back-frame {
+  inset: 18px;
 }
 
 .card-zoom-trigger {
