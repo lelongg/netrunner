@@ -185,6 +185,10 @@ function Opponent({ view, side, name }: { view: any; side: Side; name: string })
         <div class="opp-stats">
           <Meter value={active ? (p.click ?? 0) : 0} max={Math.max(active ? (p.click ?? 0) : 0, side === "runner" ? 4 : 3)} anchor={`${side}-clicks`} />
           <span class="label stats">
+            <Stat icon="click" label={t("Clicks")}>
+              {active ? (p.click ?? 0) : 0}
+            </Stat>
+            {" · "}
             <span data-anchor={side === "runner" ? "runner-hand" : undefined}>
               <Stat icon="hand" label={side === "runner" ? t("Grip") : t("HQ")}>
                 {p["hand-count"] ?? 0}/{handMax(p)}
@@ -268,6 +272,10 @@ function MeBar({ view, side, name, onUndo }: { view: any; side: Side; name: stri
           <span class="label">
             <Stat icon="click" label={t("Clicks")}>
               {clicks}
+            </Stat>
+            {" · "}
+            <Stat icon="hand" label={side === "runner" ? t("Grip") : t("HQ")}>
+              {p["hand-count"] ?? (p.hand ?? []).length}/{handMax(p)}
             </Stat>
             {extras(p, side).map((x) => [" · ", x])}
           </span>
