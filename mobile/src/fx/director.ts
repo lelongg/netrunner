@@ -752,7 +752,7 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
     const flip = () => {
       rezFlip(cid, isIce ? KIND_TONE[iceKind(card)] : "blue", isIce && !!now.server);
       setTimeout(() => {
-        if (isIce && card) return showdown(card, "rez", (big, ghost) => rezSignature(card.title, big, card.code, ghost, "corp"));
+        if (card?.code) return showdown(card, "rez", (big, ghost) => rezSignature(card.title, big, card.code, ghost, "corp"));
         const r = rectOf(tileEl(cid));
         if (visible(r)) rezSignature(card?.title, r, card?.code, tileEl(cid) as HTMLElement | null, "corp");
       }, 450);
@@ -1081,10 +1081,11 @@ function showdown(ice: any, kind: "rez" | "fire", run: (big: DOMRect, ghost: HTM
   staged.add(ice.cid);
   const el = tileEl(ice.cid);
   const r = rectOf(el);
-  const tone = KIND_TONE[iceKind(ice)];
+  const sideways = ice.type === "ICE";
+  const tone: Tone = sideways ? KIND_TONE[iceKind(ice)] : "blue";
   quietUntil = performance.now() + 2200;
-  const w = Math.min(innerWidth * 0.8, 320);
-  const h = w * (63 / 88);
+  const w = sideways ? Math.min(innerWidth * 0.8, 320) : Math.min(innerWidth * 0.5, 220);
+  const h = sideways ? w * (63 / 88) : w * (88 / 63);
   const big = new DOMRect((innerWidth - w) / 2, Math.max(70, innerHeight * 0.42 - h / 2), w, h);
   const from = visible(r) ? r! : big;
   const stageEl = node(`fx-showdown tone-${tone}`);
@@ -1094,17 +1095,19 @@ function showdown(ice: any, kind: "rez" | "fire", run: (big: DOMRect, ghost: HTM
   const left = () => Math.max(0, until - performance.now());
   place(ghost, big);
   const img = document.createElement("img");
-  img.className = "fx-ice-img";
+  img.className = sideways ? "fx-ice-img" : "fx-card-img";
   img.src = `https://card-images.netrunnerdb.com/v2/large/${ice.code}.jpg`;
   img.alt = ice.title ?? "";
-  img.style.width = `${h}px`;
-  img.style.height = `${w}px`;
+  if (sideways) {
+    img.style.width = `${h}px`;
+    img.style.height = `${w}px`;
+  }
   ghost.appendChild(img);
   const aura = node(`fx-aura tone-${tone}`, ghost);
   const label = node("fx-showdown-label", stageEl);
   const t1 = document.createElement("span");
   t1.className = "fx-showdown-kind";
-  t1.textContent = kind === "rez" ? `${tr("Rez")} · ${(ice.subtypes ?? []).slice(0, 2).join(" · ")}` : caption || tr("Subroutine");
+  t1.textContent = kind === "rez" ? [tr("Rez"), ...(ice.subtypes ?? []).slice(0, 2)].join(" · ") : caption || tr("Subroutine");
   const t2 = document.createElement("span");
   t2.className = "fx-showdown-title";
   t2.textContent = ice.title ?? "";

@@ -205,7 +205,7 @@ const box = (el: Element | null | undefined) => el?.getBoundingClientRect() ?? n
 
 const VIEW = "nsg.fxlab";
 type Mode = "isolated" | "game";
-type View = { title?: string; kind?: Kind; query?: string; speed?: number; tile?: boolean; aimed?: boolean; todo?: boolean; mode?: Mode; dom?: boolean };
+type View = { title?: string; kind?: Kind; query?: string; speed?: number; tile?: boolean; aimed?: boolean; todo?: boolean; mode?: Mode; dom?: boolean; type?: string; set?: string; gl?: "all" | "gl" | "dom" };
 
 function loadView(): View {
   try {
@@ -230,9 +230,9 @@ export interface CardSets {
 
 export function FxGlLab({ groups, byPlain, sets }: { groups: CardGroup[]; byPlain: Map<string, Card>; sets: CardSets }) {
   const [saved] = useState(loadView);
-  const [type, setType] = useState(() => new URLSearchParams(location.search).get("type") ?? "all");
-  const [set, setSet] = useState("");
-  const [gl, setGl] = useState<"all" | "gl" | "dom">("all");
+  const [type, setType] = useState(() => new URLSearchParams(location.search).get("type") ?? saved.type ?? "all");
+  const [set, setSet] = useState(saved.set ?? "");
+  const [gl, setGl] = useState<"all" | "gl" | "dom">(saved.gl ?? "all");
   const group = groups.find((g) => g.key === type) ?? groups[0];
   const inSet = (c: LabCard, key = set, g = gl) => (!key || !!sets.of.get(c.title)?.has(key)) && (g === "all" || (g === "gl") === c.gl.size > 0);
   const CARDS = useMemo(() => {
@@ -242,13 +242,13 @@ export function FxGlLab({ groups, byPlain, sets }: { groups: CardGroup[]; byPlai
   const setOptions = useMemo(() => sets.list.filter((s) => group.cards.some((c) => inSet(c, s.key))), [group, sets]);
   const [pick, setPick] = useState(() => Math.max(0, CARDS.findIndex((c) => c.title === saved.title)));
   const [kind, setKind] = useState<Kind>(() => (saved.kind && CARDS[pick]?.kinds.includes(saved.kind) ? saved.kind : CARDS[pick].kinds[0]));
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(saved.query ?? "");
   const [busy, setBusy] = useState(false);
   const [loop, setLoop] = useState(false);
   const [speed, setSpeed] = useState(saved.speed && SPEEDS.includes(saved.speed) ? saved.speed : 1);
   const [tile, setTile] = useState(!!saved.tile);
   const [aimed, setAimed] = useState(!!saved.aimed);
-  const [todo, setTodo] = useState(false);
+  const [todo, setTodo] = useState(!!saved.todo);
   const [mode, setMode] = useState<Mode>(saved.mode === "game" ? "game" : "isolated");
   const [preferDom, setPreferDom] = useState(!!saved.dom);
   const [nonce, setNonce] = useState(0);
@@ -303,9 +303,9 @@ export function FxGlLab({ groups, byPlain, sets }: { groups: CardGroup[]; byPlai
   useEffect(() => setFxSpeed(speed), [speed]);
   useEffect(() => {
     try {
-      localStorage.setItem(VIEW, JSON.stringify({ title: card.title, kind, speed, tile, aimed, mode, dom: preferDom }));
+      localStorage.setItem(VIEW, JSON.stringify({ title: card.title, kind, speed, tile, aimed, mode, dom: preferDom, type: group.key, set, gl, query, todo }));
     } catch {}
-  }, [card, kind, speed, tile, aimed, mode, preferDom]);
+  }, [card, kind, speed, tile, aimed, mode, preferDom, group.key, set, gl, query, todo]);
   useEffect(() => () => setFxSpeed(1), []);
 
   useEffect(() => {
