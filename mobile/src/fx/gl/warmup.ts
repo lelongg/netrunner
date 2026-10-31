@@ -43,6 +43,7 @@ const FILTERS: (() => Filter[])[] = [
 ];
 
 const later = (f: () => void) => ("requestIdleCallback" in window ? requestIdleCallback(f) : setTimeout(f, 50));
+const animating = () => (document.querySelector(".fx-layer")?.childElementCount ?? 0) > 1;
 
 export function precompile(app: Application) {
   const target = RenderTexture.create({ width: 16, height: 16 });
@@ -69,7 +70,7 @@ export function precompile(app: Application) {
   let i = 0;
   const step = () => {
     if (!app.renderer) return;
-    if (app.stage.children.length) return later(step);
+    if (app.stage.children.length || animating()) return setTimeout(() => later(step), 400);
     if (i >= steps.length) {
       scene.destroy({ children: true });
       return;

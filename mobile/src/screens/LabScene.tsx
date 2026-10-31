@@ -152,7 +152,7 @@ export function LabScene({ scene, byPlain }: { scene: Scene | undefined; byPlain
     timers.push(setTimeout(start, 80 + (then?.after ?? 0) + 3600));
     return () => timers.forEach(clearTimeout);
   }, [scene, env, byPlain]);
-  const fake = useMemo(() => session(state?.me ?? "runner"), [state?.me, state?.take]);
+  const fake = useMemo(() => session(state?.me ?? "runner"), [state?.me]);
   if (!env || !state) return <div class="lab-loading label">Loading…</div>;
-  return <Board key={`${state.me}:${state.take}`} session={fake} engine={env.engine} db={env.db} side={state.me} view={state.view} quiet={state.quiet} controls={<i class="lab-no-controls" />} onLeave={() => {}} onExit={() => {}} />;
+  return <Board key={state.me} session={fake} engine={env.engine} db={env.db} side={state.me} view={state.view} quiet={state.quiet} controls={<i class="lab-no-controls" />} onLeave={() => {}} onExit={() => {}} />;
 }
