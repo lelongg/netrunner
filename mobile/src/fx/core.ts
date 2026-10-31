@@ -123,7 +123,8 @@ export function points(from: Point, segments: Element[], tone: Tone = "gold") {
     el.style.top = `${from[1]}px`;
     el.style.opacity = "0";
     const delay = i * 0.14;
-    animate(el, { x: [0, dx], y: [0, dy], rotate: [angle, angle], scaleX: [0.4, 1.8, 0.9], opacity: [0, 1, 1] }, { duration: 0.6, delay, ease: [0.55, 0, 0.85, 0.45] }).finished.then(
+    animate(el, { opacity: [0, 1] }, { duration: 0.1, delay, keep: true });
+    animate(el, { x: [0, dx], y: [0, dy], rotate: [angle, angle], scaleX: [0.4, 1.8, 0.9] }, { duration: 0.6, delay, ease: [0.55, 0, 0.85, 0.45] }).finished.then(
       () => {
         el.remove();
         ring(to, tone, 70);
