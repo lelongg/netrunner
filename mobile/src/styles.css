@@ -5084,15 +5084,18 @@ button.armed {
   gap: 8px;
 }
 
-.side-switch button.on.corp {
-  color: var(--corp);
-  background: rgb(127 176 255 / 0.08);
+.side-tabs button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.side-tabs button.on.corp {
   box-shadow: inset 0 -2px 0 var(--corp);
 }
 
-.side-switch button.on.runner {
-  color: var(--runner);
-  background: rgb(255 106 95 / 0.08);
+.side-tabs button.on.runner {
   box-shadow: inset 0 -2px 0 var(--runner);
 }
 

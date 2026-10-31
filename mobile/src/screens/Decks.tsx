@@ -144,7 +144,7 @@ export function Decks({ db, matchups, onClose, initialSide, initialDeck, resume 
           </button>
           <h1>{t("DECKS")}</h1>
         </header>
-        <div class="side-switch" role="tablist">
+        <div class="tabs side-tabs" role="tablist">
           {(["corp", "runner"] as Side[]).map((s) => (
             <button role="tab" aria-selected={side === s} class={`${s} ${side === s ? "on" : ""}`} onClick={() => setSide(s)}>
               {t(SIDE_NAME[s])}

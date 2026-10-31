@@ -71,6 +71,17 @@ function storedSide(): Side {
   }
 }
 
+const MODE_KEY = "nsg.homeMode";
+
+function storedMode(): Mode {
+  try {
+    const m = localStorage.getItem(MODE_KEY);
+    return m === "solo" || m === "local" ? m : "online";
+  } catch {
+    return "online";
+  }
+}
+
 function Art({ card, class: cls, sharp }: { card?: Card; class?: string; sharp?: boolean }) {
   const large = cardImage(card?.code, "large");
   const style = large ? { backgroundImage: sharp ? `url(${cardImage(card!.code, "xlarge")}), url(${large})` : `url(${large})` } : undefined;
@@ -215,7 +226,13 @@ function useFeed(props: Props, hero: { deck?: string; card?: Card }) {
 export function HomeArena(props: Props) {
   const { ready, error, initialJoin, db, onFind, seeking, onDecks, onHistory, onGuide } = props;
   const go = startGame(props.onStart);
-  const [mode, setMode] = useState<Mode>("online");
+  const [mode, setModeState] = useState<Mode>(storedMode);
+  const setMode = (next: Mode) => {
+    setModeState(next);
+    try {
+      localStorage.setItem(MODE_KEY, next);
+    } catch {}
+  };
   const [joining, setJoining] = useState(!!initialJoin);
   useBackClose(joining, () => setJoining(false));
   const [scanning, setScanning] = useState(false);
