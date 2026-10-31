@@ -1,5 +1,5 @@
 import type { ComponentChildren } from "preact";
-import { useEffect, useMemo, useRef, useState } from "preact/hooks";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "preact/hooks";
 import { type CardDb, type EngineApi, type Side, loadEngine } from "../engine";
 import { Board } from "../game/Board";
 import { Icon, type IconName } from "../icons";
@@ -129,13 +129,19 @@ export function LabScene({ scene, byPlain }: { scene: Scene | undefined; byPlain
   const [env, setEnv] = useState<{ engine: EngineApi; db: CardDb } | null>(null);
   const [state, setState] = useState<{ view: any; quiet: boolean; me: Side; take: number } | null>(null);
   const takes = useRef(0);
+  const scroll = useRef(0);
   useEffect(() => {
     void loadEngine().then(setEnv);
   }, []);
+  useLayoutEffect(() => {
+    const field = document.querySelector<HTMLElement>(".lab-stage .playfield");
+    if (field) field.scrollTop = scroll.current;
+  }, [state?.take]);
   useEffect(() => {
     if (!scene || !env || !byPlain.size) return;
     const me = scene.me ?? "runner";
     const take = ++takes.current;
+    scroll.current = document.querySelector<HTMLElement>(".lab-stage .playfield")?.scrollTop ?? 0;
     const lines = scene.lines ?? [];
     const start = () => setState({ view: gameView(scene.before, me, [], byPlain), quiet: true, me, take });
     document.querySelector(".fx-layer")?.replaceChildren();
