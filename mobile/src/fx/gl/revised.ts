@@ -1,7 +1,7 @@
 import { type Container, Graphics, Sprite } from "pixi.js";
 import { GlitchFilter, GlowFilter, GodrayFilter, RGBSplitFilter } from "pixi-filters";
 import { Emitter, ease, filterPoint, glowTexture, layer, run, span, sparkTexture } from "./stage";
-import { type Board, type Ready, Smoke, WHITE, burst, painted, scene } from "./kit";
+import { type Board, type Ready, Smoke, WHITE, burst, coinTexture, painted, scene } from "./kit";
 import { type Pt, cubeTexture, glowSprite, lerp, quad, rnd } from "./more";
 import { bezier, jolt, runnerAt, triTexture } from "./sixth";
 
@@ -111,8 +111,15 @@ export async function clearinghouse(rect: DOMRect, code: string, ready?: Ready, 
 }
 
 export async function aboveTheLaw(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
+  const { app, root, world, fx, done, unit, at } = await scene(rect, code, ready, board);
   const sat = at(0.69, 0.165);
+  const gone = board?.gone?.[0];
+  const prey: Pt | null = gone ? [gone.left + gone.width / 2, gone.top + gone.height / 2] : null;
+  const shot = new Graphics();
+  shot.blendMode = "add";
+  world.addChild(shot);
+  const debris = new Emitter(world);
+  let hit = false;
   const consoleAt = at(0.45, 0.34);
   const beacon = glowSprite(fx, sparkTexture(), 0xbfe8ff);
   beacon.position.set(...sat);
@@ -120,7 +127,7 @@ export async function aboveTheLaw(rect: DOMRect, code: string, ready?: Ready, bo
   g.blendMode = "add";
   fx.addChild(g);
   root.addChild(fx);
-  await run(app, (t) => {
+  await run(app, (t, dt) => {
     g.clear();
     const fade = 1 - span(t, 1.5, 1.9);
     const blink = Math.floor(t * 6) % 2 ? 1 : 0.4;
@@ -152,7 +159,28 @@ export async function aboveTheLaw(rect: DOMRect, code: string, ready?: Ready, bo
           .stroke({ width: 1, color: 0x9ef0ff, alpha: 0.6 * fade * lock });
       }
     }
-    return t < 1.9;
+    shot.clear();
+    if (prey) {
+      const from = root.toGlobal({ x: sat[0], y: sat[1] });
+      const s = span(t, 1.15, 1.32);
+      if (s > 0 && s < 1) {
+        const tip = lerp([from.x, from.y], prey, ease.out(s));
+        shot.moveTo(from.x, from.y).lineTo(...tip).stroke({ width: unit * 0.03, color: 0x8fd8ff, alpha: 0.35 });
+        shot.moveTo(from.x, from.y).lineTo(...tip).stroke({ width: unit * 0.008, color: WHITE, alpha: 0.95 });
+      }
+      if (s >= 1 && !hit) {
+        hit = true;
+        for (let i = 0; i < 26; i++) {
+          const a = rnd(0, Math.PI * 2);
+          const v = unit * rnd(0.6, 1.6);
+          debris.add(sparkTexture(), ...prey, { vx: Math.cos(a) * v, vy: Math.sin(a) * v, drag: 2.5, gravity: unit * 1.2, life: rnd(0.35, 0.7), tint: i % 3 ? 0x8fd8ff : 0xff8a6a, scale: (unit / 180) * rnd(0.18, 0.32) });
+        }
+      }
+      const boom = 1 - span(t, 1.32, 1.8);
+      if (hit && boom > 0) shot.circle(...prey, unit * (0.06 + 0.22 * (1 - boom))).stroke({ width: 2, color: 0x8fd8ff, alpha: 0.9 * boom });
+      debris.step(dt);
+    }
+    return t < (prey ? 2 : 1.9) || debris.list.length > 0;
   });
   await done();
 }
@@ -353,43 +381,57 @@ const vignetteTexture = () =>
 
 export async function knickknack(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const palm = at(0.26, 0.31);
-  const eyes = at(0.63, 0.205);
-  const bowl = at(0.48, 0.36);
+  const hand = at(0.27, 0.31);
+  const trader = at(0.6, 0.29);
   root.addChild(fx);
-  const soft = calm(root);
   const g = new Graphics();
-  soft.addChild(g);
-  const steam = new Smoke(soft);
-  const glint = glowSprite(fx, sparkTexture(), 0xbfefff);
-  glint.position.set(...eyes);
+  g.blendMode = "add";
+  fx.addChild(g);
+  const flare = glowSprite(fx, glowTexture(), 0xffd36a);
+  flare.position.set(...trader);
+  flare.alpha = 0;
+  const coins = [0, 1, 2].map(() => {
+    const c = new Sprite(coinTexture());
+    c.anchor.set(0.5);
+    c.scale.set((unit * 0.075) / 64);
+    c.alpha = 0;
+    fx.addChild(c);
+    return c;
+  });
+  const sparks = new Emitter(fx);
+  const card = (c: Pt, w: number, h: number, a: number, color: number, alpha: number) => {
+    const pts = [
+      [-w, -h],
+      [w, -h],
+      [w, h],
+      [-w, h],
+    ].flatMap(([x, y]) => [c[0] + x * Math.cos(a) - y * Math.sin(a), c[1] + x * Math.sin(a) + y * Math.cos(a)]);
+    g.poly(pts).fill({ color, alpha: 0.25 * alpha });
+    g.poly(pts).stroke({ width: 1.5, color, alpha: 0.9 * alpha });
+  };
   await run(app, (t, dt) => {
     g.clear();
-    const fade = 1 - span(t, 1.2, 1.5);
-    const h = Math.sin(Math.PI * span(t, 0, 0.7));
-    for (let i = 0; i < 6; i++) {
-      const a = (i / 6) * Math.PI * 2 + t * 2;
-      const r = unit * 0.035;
-      g.moveTo(palm[0] + Math.cos(a) * r, palm[1] + Math.sin(a) * r).lineTo(palm[0] + Math.cos(a + Math.PI / 3) * r, palm[1] + Math.sin(a + Math.PI / 3) * r);
+    const go = ease.inOut(span(t, 0.1, 0.6));
+    const gone = 1 - span(t, 0.6, 0.72);
+    if (go > 0 && gone > 0) {
+      const p = bezier(hand, at(0.44, 0.15), trader, go);
+      card(p, unit * 0.035, unit * 0.025, go * 2.5, 0x6fe0ff, gone);
+      if (Math.random() < 0.5) sparks.add(sparkTexture(), ...p, { life: 0.3, tint: 0x6fe0ff, scale: (unit / 180) * 0.18, grow: -0.4, alpha: 0.6 });
     }
-    g.stroke({ width: 1.6, color: 0x6fe0ff, alpha: 0.9 * h });
-    const k = ease.inOut(span(t, 0.35, 1.05));
-    if (k > 0 && k < 1) {
-      const ctrl = at(0.44, 0.13);
-      for (let i = 0; i < 8; i++) {
-        const s = k - i * 0.035;
-        if (s <= 0) continue;
-        const p = bezier(palm, ctrl, eyes, s);
-        g.circle(p[0], p[1], unit * 0.011 * (1 - i / 10)).fill({ color: 0x8fe8ff, alpha: 0.9 * (1 - i / 10) });
-      }
-    }
-    const gl = Math.sin(Math.PI * span(t, 1.0, 1.35));
-    glint.alpha = 0.55 * gl;
-    glint.rotation = t;
-    glint.scale.set((unit / 120) * 0.14 * gl);
-    if (t < 1.1 && Math.random() < 0.35) steam.puff(bowl[0] + rnd(-1, 1) * unit * 0.07, bowl[1] - unit * 0.03, { vy: -unit * rnd(0.12, 0.22), vx: rnd(-1, 1) * unit * 0.02, size: unit * 0.09, life: 1.1, grow: 2, tint: 0xd9d2c6, alpha: 0.22 * fade });
-    steam.step(dt);
-    return t < 1.5 || steam.list.length > 0;
+    const deal = Math.sin(Math.PI * span(t, 0.58, 0.95));
+    flare.alpha = 0.7 * deal;
+    flare.scale.set((unit / 128) * (0.15 + 0.15 * deal));
+    if (deal > 0) g.circle(...trader, unit * (0.04 + 0.1 * span(t, 0.58, 0.95))).stroke({ width: 2, color: 0xffd36a, alpha: 0.8 * deal });
+    coins.forEach((c, i) => {
+      const k = ease.inOut(span(t, 0.75 + i * 0.1, 1.3 + i * 0.1));
+      c.alpha = k > 0 && k < 1 ? 1 : 0;
+      c.position.set(...bezier(trader, at(0.44, 0.1 - i * 0.03), hand, k));
+      c.rotation = k * 5;
+    });
+    const draw = ease.inOut(span(t, 1.15, 1.65));
+    if (draw > 0 && draw < 1) card(bezier(trader, at(0.42, 0.04), hand, draw), unit * 0.03, unit * 0.042, -0.3 + draw * 0.3, WHITE, Math.sin(Math.PI * draw));
+    sparks.step(dt);
+    return t < 1.7 || sparks.list.length > 0;
   });
   await done();
 }

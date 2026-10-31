@@ -52,7 +52,7 @@ export async function stage(): Promise<Application> {
 }
 
 let shared: AdvancedBloomFilter | null = null;
-export const bloomFilter = () => (shared ??= new AdvancedBloomFilter({ threshold: 0.25, bloomScale: 1.4, brightness: 1.05, blur: 5, quality: 4 }));
+export const bloomFilter = () => (shared ??= new AdvancedBloomFilter({ threshold: 0.38, bloomScale: 1.1, brightness: 1, blur: 5, quality: 4 }));
 
 export function layer(parent: Container, bloom = true) {
   const c = new Container();
@@ -178,6 +178,7 @@ export interface Particle {
   drag: number;
   gravity: number;
   fade: number;
+  max: number;
 }
 
 export class Emitter {
@@ -189,10 +190,11 @@ export class Emitter {
     s.position.set(x, y);
     s.tint = o.tint ?? 0xffffff;
     s.scale.set(o.scale ?? 1);
-    s.alpha = o.alpha ?? 1;
+    const max = o.alpha ?? (o.blend === "normal" ? 1 : 0.75);
+    s.alpha = max;
     s.blendMode = o.blend === "normal" ? "normal" : "add";
     this.parent.addChild(s);
-    this.list.push({ s, vx: o.vx ?? 0, vy: o.vy ?? 0, life: o.life ?? 1, age: 0, spin: o.spin ?? 0, grow: o.grow ?? 0, drag: o.drag ?? 0, gravity: o.gravity ?? 0, fade: o.fade ?? 1 });
+    this.list.push({ s, vx: o.vx ?? 0, vy: o.vy ?? 0, life: o.life ?? 1, age: 0, spin: o.spin ?? 0, grow: o.grow ?? 0, drag: o.drag ?? 0, gravity: o.gravity ?? 0, fade: o.fade ?? 1, max });
   }
   step(dt: number) {
     for (let i = this.list.length - 1; i >= 0; i--) {
@@ -211,7 +213,7 @@ export class Emitter {
       p.s.y += p.vy * dt;
       p.s.rotation += p.spin * dt;
       if (p.grow) p.s.scale.set(Math.max(0, p.s.scale.y + p.grow * dt));
-      p.s.alpha = Math.min(1, (1 - k) * p.fade * 1.4);
+      p.s.alpha = Math.min(p.max, (1 - k) * p.fade * 1.4);
     }
     return this.list.length > 0;
   }

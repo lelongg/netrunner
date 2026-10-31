@@ -132,9 +132,6 @@ export function quad(g: Graphics, at: (u: number, v: number) => Pt, u0: number, 
 export function pose(color: number, glint: Pt) {
   return async (rect: DOMRect, code: string, ready?: Ready, board?: Board) => {
     const { app, root, card, fx, done, unit, at } = await scene(rect, code, ready, board);
-    const mask = new Graphics();
-    root.addChild(mask);
-    card.mask = mask;
     const glow = new GlowFilter({ color, distance: 6, outerStrength: 0, innerStrength: 0, quality: 0.2 });
     addFilter(card, glow);
     const line = new Graphics();
@@ -149,8 +146,6 @@ export function pose(color: number, glint: Pt) {
     await run(app, (t, dt) => {
       const k = ease.inOut(span(t, 0.05, 0.75));
       const v = -0.03 + k * 1.06;
-      mask.clear();
-      quad(mask, at, -0.02, -0.02, 1.02, Math.max(0, v)).fill(0xffffff);
       line.clear();
       frame.clear();
       const f = 1 - span(t, 0.7, 1.1);
@@ -1322,7 +1317,64 @@ export async function pingFire(rect: DOMRect, code: string, ready?: Ready, board
 }
 
 export const echelonPose = pose(VIOLET, [0.85, 0.38]);
-export const carmenPose = pose(CYAN, [0.67, 0.16]);
+function hexagon(g: Graphics, c: Pt, r: number) {
+  g.poly(Array.from({ length: 6 }, (_, i) => [c[0] + Math.cos((i * Math.PI) / 3) * r, c[1] + Math.sin((i * Math.PI) / 3) * r]).flat());
+}
+
+export async function carmenPose(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
+  const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
+  const body = at(0.58, 0.27);
+  const split = new RGBSplitFilter({ red: { x: 0, y: 0 }, green: { x: 0, y: 0 }, blue: { x: 0, y: 0 } });
+  const bands = new Graphics();
+  bands.blendMode = "add";
+  const hexes = new Graphics();
+  hexes.blendMode = "add";
+  fx.addChild(hexes, bands);
+  const halo = glowSprite(fx, glowTexture(), 0x7fe0ff);
+  halo.position.set(...body);
+  halo.alpha = 0;
+  const motes = new Emitter(fx);
+  root.addChild(fx);
+  const hexAt = [at(0.1, 0.47), at(0.18, 0.51), at(0.26, 0.47), at(0.86, 0.42), at(0.93, 0.46)];
+  await run(app, (t, dt) => {
+    if (t < 0.6)
+      for (let n = 0; n < 3; n++) {
+        const a = rnd(0, Math.PI * 2);
+        const d = unit * rnd(0.35, 0.6);
+        const x = body[0] + Math.cos(a) * d;
+        const y = body[1] + Math.sin(a) * d * 0.8;
+        motes.add(sparkTexture(), x, y, { vx: (body[0] - x) * 2.2, vy: (body[1] - y) * 2.2, life: 0.45, tint: Math.random() < 0.5 ? 0x7fe0ff : WHITE, scale: 0.2 * (unit / 180), alpha: 0.7 });
+      }
+    motes.step(dt);
+    const flicker = t > 0.55 && t < 1.2 && Math.random() < 0.25 ? 0.4 : 1;
+    const glow = Math.sin(Math.PI * span(t, 0.5, 1.6));
+    halo.alpha = 0.55 * glow * flicker;
+    halo.scale.set((unit / 128) * (0.45 + 0.15 * glow));
+    const s = unit * 0.01 * Math.sin(Math.PI * span(t, 0.55, 1));
+    root.filters = s > 0.2 ? [split] : [];
+    split.red = { x: s, y: 0 };
+    split.blue = { x: -s, y: 0 };
+    bands.clear();
+    const bk = span(t, 0.55, 1.35);
+    if (bk > 0 && bk < 1) {
+      for (let i = 0; i < 3; i++) {
+        const v = 0.08 + ((bk * 1.4 + i * 0.33) % 1) * 0.42;
+        bands.moveTo(...at(0.4, v)).lineTo(...at(0.78, v));
+      }
+      bands.stroke({ width: unit * 0.01, color: 0x9ff0ff, alpha: 0.55 * (1 - bk) });
+    }
+    hexes.clear();
+    hexAt.forEach((h, i) => {
+      const k = Math.sin(Math.PI * span(t, 0.9 + i * 0.08, 1.5 + i * 0.08));
+      if (k <= 0) return;
+      hexagon(hexes, h, unit * 0.045);
+      hexes.stroke({ width: 1.5, color: 0x7fe0ff, alpha: 0.8 * k });
+    });
+    return t < 1.7 || motes.list.length > 0;
+  });
+  root.filters = [];
+  await done();
+}
 export const risingTidePose = pose(0x6ad8ff, [0.5, 0.3]);
 export const fermenterPose = pose(PINK, [0.48, 0.3]);
 export const pingPose = pose(0xfff36a, [0.41, 0.74]);

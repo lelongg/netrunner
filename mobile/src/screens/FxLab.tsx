@@ -114,10 +114,19 @@ const BREAKS: [string, string, number, string][] = [
   ["Killer", "ice-sentry", 3, "Archer"],
 ];
 
+function ability(card: Card) {
+  const text = (card.text ?? "").replace(/<[^>]+>/g, "");
+  const raw = text.match(/\[click\][^:\n]*:\s*([^.\n]+)/i)?.[1] ?? text.match(/(?:^|\n)(?:[^:\n]{0,40}):\s*([^.\n]+)/)?.[1] ?? text.match(/you may ([^.\n]+)/i)?.[1];
+  if (!raw) return { line: "use its ability", credits: 0 };
+  const line = raw.charAt(0).toLowerCase() + raw.slice(1);
+  return { line: line.replace(/\[credit\]/gi, " [Credits]"), credits: Number(line.match(/(?:gain|take) (\d+)\s*\[credit/i)?.[1] ?? 0) };
+}
+
 function useScene(card: Card, m: Model): Scene {
+  const { line, credits } = ability(card);
   if (card.side === "Corp") {
     const before = edit(m, (x) => x.slots.push({ cid: "subject", title: card.title, type: card.type, subtypes: card.subtypes, side: "Corp", zone: ["servers", "remote1", "content"], rezzed: true }));
-    return { before, after: edit(before, (x) => (x.credits.corp += 1)), me: "runner", lines: [`Corp uses ${card.title} to gain 1 [Credits].`] };
+    return { before, after: edit(before, (x) => (x.credits.corp += credits)), me: "runner", lines: [`Corp uses ${card.title} to ${line}.`] };
   }
   const zone = ["rig", card.type === "Hardware" ? "hardware" : card.type === "Resource" ? "resource" : "program"];
   const subject: Slot = { cid: "subject", title: card.title, type: card.type, subtypes: card.subtypes, side: "Runner", zone, strength: 3 };
@@ -131,7 +140,7 @@ function useScene(card: Card, m: Model): Scene {
     return { before, after: before, me: "runner", lines: [`Gerald pays 1 [Credits] to use ${card.title} to break 1 subroutine on ${iceTitle}.`] };
   }
   const before = edit(m, (x) => x.slots.push(subject));
-  return { before, after: edit(before, (x) => (x.credits.runner += 1)), me: "runner", lines: [`Gerald uses ${card.title} to gain 1 [Credits].`] };
+  return { before, after: edit(before, (x) => (x.credits.runner += credits)), me: "runner", lines: [`Gerald uses ${card.title} to ${line}.`] };
 }
 
 export function cardScene(card: Card, kind: string): Scene {
@@ -188,6 +197,20 @@ export function extraScenes(byPlain: Map<string, Card>): Entry[] {
   const out: Entry[] = [];
   const orbital = real("Orbital Superiority");
   if (orbital) out.push({ id: "c:orbital", label: orbital.title, group: "Score", code: orbital.code, scene: () => cardScene(orbital, "score") });
+  const atl = real("Above the Law");
+  if (atl)
+    out.push({
+      id: "c:atl",
+      label: atl.title,
+      group: "Score",
+      code: atl.code,
+      scene: () => {
+        const s = cardScene(atl, "score");
+        s.after = edit(s.after, (x) => (slot(x, "res").zone = ["discard"]));
+        s.lines = [...(s.lines ?? []), "Corp uses Above the Law to trash Daily Casts."];
+        return s;
+      },
+    });
   const sam = real("Send a Message");
   if (sam)
     out.push({

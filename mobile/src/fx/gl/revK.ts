@@ -151,28 +151,22 @@ export async function cookbook(rect: DOMRect, code: string, ready?: Ready, board
   clip(root, glow, [at(0.1, 0.1), at(0.9, 0.1), at(0.9, 0.52), at(0.1, 0.52)]);
   const g = new Graphics();
   layer(root, false).addChild(g);
-  const depth: Pt = [book[3][0] - book[0][0], book[3][1] - book[0][1]];
-  const lift = Math.hypot(...depth) * 1.1;
+  const lift = Math.hypot(book[3][0] - book[0][0], book[3][1] - book[0][1]) * 2.4;
+  const cells = [0, 1, 2].flatMap((c) => [0, 1].map((r) => ({ s0: 0.06 + c * 0.31, r0: 0.08 + r * 0.46, delay: 0.1 + (c + r * 3) * 0.1, rise: 0.55 + 0.45 * ((c * 2 + r * 5) % 3) / 2 })));
   await run(app, (t) => {
     glow.alpha = 0.45 * Math.sin(Math.PI * span(t, 0, 1.7));
     g.clear();
-    for (let i = 0; i < 4; i++) {
-      const k = ease.inOut(span(t, 0.1 + i * 0.16, 0.85 + i * 0.16));
+    for (const cell of cells) {
+      const k = span(t, cell.delay, cell.delay + 1);
       if (k <= 0 || k >= 1) continue;
-      const th = k * Math.PI * 0.92;
-      const inset = 0.06 + i * 0.015;
-      const back0 = bi(book, inset, 0.02);
-      const back1 = bi(book, 1 - inset, 0.02);
-      const f0 = bi(book, inset, 0.97);
-      const f1 = bi(book, 1 - inset, 0.97);
-      const free = (b: Pt, f: Pt): Pt => [b[0] + (f[0] - b[0]) * Math.cos(th), b[1] + (f[1] - b[1]) * Math.cos(th) - lift * Math.sin(th)];
-      const page: Quad = [back0, back1, free(back1, f1), free(back0, f0)];
+      const up = lift * cell.rise * ease.out(k);
+      const page = [bi(book, cell.s0, cell.r0), bi(book, cell.s0 + 0.27, cell.r0), bi(book, cell.s0 + 0.27, cell.r0 + 0.4), bi(book, cell.s0, cell.r0 + 0.4)].map(([x, y]) => [x, y - up] as Pt) as Quad;
       const a = Math.sin(Math.PI * k);
-      g.poly(page.flat()).fill({ color: 0xffd890, alpha: 0.16 * a });
+      g.poly(page.flat()).fill({ color: 0xffd890, alpha: 0.18 * a });
       g.poly(page.flat()).stroke({ width: 1.2, color: 0xffe8b8, alpha: 0.85 * a, join: "round" });
-      for (let l = 0; l < 4; l++) {
-        const r = 0.25 + l * 0.17;
-        g.moveTo(...bi(page, 0.12, r)).lineTo(...bi(page, l === 3 ? 0.55 : 0.85, r));
+      for (let l = 0; l < 3; l++) {
+        const r = 0.25 + l * 0.22;
+        g.moveTo(...bi(page, 0.12, r)).lineTo(...bi(page, l === 2 ? 0.55 : 0.85, r));
       }
       g.stroke({ width: 1, color: 0xffe8b8, alpha: 0.45 * a });
     }

@@ -434,7 +434,7 @@ export async function creativeCommission(rect: DOMRect, code: string, ready?: Re
           .moveTo(sx, sy)
           .lineTo(hx, hy)
           .stroke({ width: unit * 0.006, color: st.color, alpha: 0.55 });
-        if (Math.random() < 0.6) motes.add(sparkTexture(), hx, hy, { vx: (Math.random() - 0.5) * unit * 0.3, vy: (Math.random() - 0.5) * unit * 0.3, life: 0.5, drag: 2, tint: st.color, scale: 0.22 * (unit / 180), grow: -0.3 });
+        if (Math.random() < 0.3) motes.add(sparkTexture(), hx, hy, { vx: (Math.random() - 0.5) * unit * 0.3, vy: (Math.random() - 0.5) * unit * 0.3, life: 0.5, drag: 2, tint: st.color, scale: 0.22 * (unit / 180), grow: -0.3, alpha: 0.6 });
       }
     }
     if (!shed && t > 2.1) {

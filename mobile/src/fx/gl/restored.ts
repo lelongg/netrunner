@@ -107,7 +107,7 @@ export async function scrounge(rect: DOMRect, code: string, ready?: Ready, board
   fx.addChild(g);
   const led = glowSprite(fx, glowTexture(), 0x6ae8ff);
   led.position.set(...device);
-  const finds = [at(0.778, 0.428), at(0.885, 0.355), at(0.656, 0.465)].map((p, i) => ({ p, s: glowSprite(fx, sparkTexture(), 0xbff4ff), d: 0.6 + i * 0.2 }));
+  const finds = [at(0.72, 0.505), at(0.9, 0.495), at(0.58, 0.515)].map((p, i) => ({ p, s: glowSprite(fx, sparkTexture(), 0xbff4ff), d: 0.6 + i * 0.2 }));
   const motes = new Emitter(fx);
   root.addChild(fx);
   await run(app, (t, dt) => {
@@ -116,9 +116,12 @@ export async function scrounge(rect: DOMRect, code: string, ready?: Ready, board
     const on = span(t, 0.2, 0.4) * (1 - span(t, 1.5, 1.9));
     led.alpha = 0.6 * on;
     led.scale.set((unit / 128) * 0.1);
-    const sweep = Math.sin(t * 2.4) * 0.12;
-    const far = at(0.78 + sweep, 0.44);
-    g.poly([...device, far[0] - unit * 0.12, far[1], far[0] + unit * 0.12, far[1]]).fill({ color: 0x6ae8ff, alpha: 0.1 * on });
+    const sweep = Math.sin(t * 2.4) * 0.16;
+    const far = at(0.74 + sweep, 0.515);
+    const half = unit * 0.11;
+    g.poly([...device, far[0] - half, far[1], far[0] + half, far[1]]).fill({ color: 0x6ae8ff, alpha: 0.1 * on });
+    g.ellipse(far[0], far[1], half, half * 0.22).fill({ color: 0x6ae8ff, alpha: 0.16 * on });
+    g.ellipse(far[0], far[1], half, half * 0.22).stroke({ width: 1, color: 0xbff4ff, alpha: 0.6 * on });
     g.moveTo(...device)
       .lineTo(...far)
       .stroke({ width: 1, color: 0xbff4ff, alpha: 0.5 * on, cap: "round" });
