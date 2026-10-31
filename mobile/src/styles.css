@@ -6848,97 +6848,318 @@ h1.deck-name.long {
   flex: none;
 }
 
-.lab > .board,
-.lab > .fxgl,
-.lab > .lab-loading {
-  flex: 1;
-  min-height: 0;
-}
-
-.lab > .fxgl {
-  width: 100%;
-  overflow-y: auto;
+.lab-tabs button {
+  min-height: 38px;
 }
 
 .lab-loading {
+  flex: 1;
   display: grid;
   place-items: center;
 }
 
-.lab-tabs button {
-  min-height: 40px;
-}
-
-.lab .actions.replay-controls {
-  max-height: 60dvh;
-  overflow-y: auto;
-}
-
-.lab-controls .fxgl-head {
-  grid-template-columns: 36px minmax(0, 1fr) 36px;
-}
-
-.lab-controls .fxgl-nav {
-  min-height: 36px;
-}
-
-.lab-controls .fxgl-name strong {
-  font-size: 18px;
-}
-
-.lab-controls .fxgl-kinds button,
-.lab-controls .fxgl-controls button {
-  min-height: 34px;
-}
-
-.lab-more {
+.lab-view {
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
 }
 
-.lab-more > summary {
-  cursor: pointer;
-  color: var(--muted);
-  font-size: 10px;
-  letter-spacing: 0.24em;
-  text-transform: uppercase;
-  padding: 6px 0;
+.lab-bar {
+  flex: none;
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) 48px;
+  align-items: stretch;
+  border-bottom: 1px solid var(--line);
 }
 
-.lab-more[open] > summary {
+.lab-nav {
+  border: none;
+  background: transparent;
+  color: var(--text);
+  display: grid;
+  place-items: center;
+}
+
+.lab-nav .icon {
+  width: 18px;
+  height: 18px;
+}
+
+.lab-title {
+  border: none;
+  background: transparent;
+  min-width: 0;
+  padding: 6px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
   color: var(--text);
 }
 
-.lab-controls {
+.lab-title .label {
+  font-size: 9px;
+}
+
+.lab-title strong {
+  max-width: 100%;
+  font-family: var(--display);
+  font-size: 20px;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lab-stage {
+  flex: 1;
+  min-height: 0;
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 10px;
 }
 
-.lab-scene-dot {
-  width: 100%;
-  aspect-ratio: 63 / 88;
-  background: repeating-linear-gradient(135deg, var(--line) 0 6px, transparent 6px 12px);
+.lab-stage > .board,
+.lab-stage > .lab-loading {
+  flex: 1;
+  min-height: 0;
 }
 
-.lab-types {
+.lab-stage .actions.replay-controls {
+  display: none;
+}
+
+.lab-stage .fxgl-stage {
+  flex: 1;
+  height: auto;
+  min-height: 0;
+  border: none;
+}
+
+.lab-kinds {
+  flex: none;
+  display: flex;
+  gap: 6px;
+  padding: 8px 12px 0;
   overflow-x: auto;
   scrollbar-width: none;
-  border-top: none;
 }
 
-.lab-types button {
-  flex: none;
-  min-height: 34px;
+.lab-kinds button {
+  flex: 1 0 auto;
+  min-height: 40px;
   padding: 0 12px;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+}
+
+.lab-kinds button.on {
+  border-color: var(--cyan);
+  color: var(--cyan);
+  background: rgb(34 211 238 / 0.08);
+}
+
+.lab-kinds button.playing {
+  box-shadow: inset 0 -2px 0 var(--cyan);
+}
+
+.lab-dock {
+  flex: none;
+  display: flex;
+  padding: 8px 6px calc(8px + env(safe-area-inset-bottom));
+  gap: 2px;
+}
+
+.lab-dock-btn {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  min-height: 54px;
+  padding: 4px 2px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+}
+
+.lab-dock-btn .icon {
+  width: 20px;
+  height: 20px;
+}
+
+.lab-dock-btn.on {
+  color: var(--cyan);
+}
+
+.lab-dock-btn:disabled {
+  opacity: 0.3;
+}
+
+.lab-dock-btn.ok::after,
+.lab-dock-btn.issue::after,
+.lab-dock-btn.noted::after,
+.lab-dock-btn.changed::after {
+  content: "";
+  position: absolute;
+  top: 8px;
+  right: calc(50% - 16px);
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--cyan);
+}
+
+.lab-dock-btn.issue::after {
+  background: var(--red);
+}
+
+.lab-dock-btn.changed::after {
+  background: var(--yellow);
+}
+
+.lab-sheet-backdrop {
+  z-index: 60;
+}
+
+.lab-sheet {
+  max-height: 80dvh;
+}
+
+.lab-sheet-head {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.lab-sheet-head .label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lab-chips {
+  display: flex;
+  flex-wrap: wrap;
   gap: 6px;
 }
 
-.lab-count {
+.lab-chips button {
+  min-height: 36px;
+  padding: 0 12px;
+  font-size: 10px;
+}
+
+.lab-chips button span {
   color: var(--muted);
+}
+
+.lab-chips button.on {
+  border-color: var(--cyan);
+  color: var(--cyan);
+}
+
+.lab-filter {
+  min-height: 40px;
+  font-size: 10px;
+}
+
+.lab-filter.on {
+  border-color: var(--yellow);
+  color: var(--yellow);
+}
+
+.lab-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 8px;
+}
+
+.lab-grid button {
+  position: relative;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 9px;
+  text-align: left;
+}
+
+.lab-grid img {
+  width: 100%;
+  aspect-ratio: 63 / 88;
+  object-fit: cover;
+}
+
+.lab-grid span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lab-grid button.on,
+.lab-rows button.on {
+  border-color: var(--cyan);
+}
+
+.lab-grid button.ok,
+.lab-rows button.ok {
+  box-shadow: inset 3px 0 0 var(--green, #3ddc84);
+}
+
+.lab-grid button.issue,
+.lab-rows button.issue {
+  box-shadow: inset 3px 0 0 var(--red);
+}
+
+.lab-grid button.changed,
+.lab-rows button.changed {
+  box-shadow: inset 3px 0 0 var(--yellow);
+}
+
+.lab-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lab-rows button {
+  min-height: 48px;
+  padding: 6px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  text-align: left;
+  font-size: 12px;
+}
+
+.lab-rows small {
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.lab-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.lab-options button {
+  min-height: 52px;
+}
+
+.lab-options button.on {
+  border-color: var(--cyan);
+  color: var(--cyan);
 }
 
 .fxlab {

@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from "preact/hooks";
-import { cardImage, type Side } from "../engine";
+import { useEffect, useMemo, useState } from "preact/hooks";
+import type { Side } from "../engine";
 import { FIRE, INSTALL, PLAY, REZ, SCORE } from "../fx/signatures";
 import { motionOff, settings } from "../settings";
-import { LabScene, useSwipe } from "./LabScene";
+import { Icon } from "../icons";
+import { DockButton, LabScene, LabSheet, useSwipe } from "./LabScene";
 import { ReviewBox, useReviews } from "./labReview";
 
 export interface Card {
@@ -386,7 +387,7 @@ export function FxLab({ scope }: { scope: SceneScope }) {
   const [current, setCurrent] = useState(0);
   const [nonce, setNonce] = useState(0);
   const [auto, setAuto] = useState(false);
-  const strip = useRef<HTMLDivElement>(null);
+  const [sheet, setSheet] = useState<"list" | "review" | null>(null);
 
   const entries = useMemo<Entry[]>(() => {
     if (!cards) return [];
@@ -413,57 +414,58 @@ export function FxLab({ scope }: { scope: SceneScope }) {
     return () => clearTimeout(t);
   }, [auto, current, nonce]);
 
-  useEffect(() => {
-    const el = strip.current?.querySelector<HTMLElement>(".on");
-    if (el && strip.current) strip.current.scrollTo({ left: el.offsetLeft - (strip.current.clientWidth - el.offsetWidth) / 2, behavior: "smooth" });
-  }, [current, group]);
-
-  if (!entry) return null;
-  const controls = (
-    <div class="lab-controls">
-      <div class="fxgl-head" {...swipe}>
-        <button class="fxgl-nav" onClick={() => go(current - 1)} aria-label="Previous scene">
-          ‹
+  if (!entry) return <div class="lab-loading label">Loading…</div>;
+  const at = Math.min(current, shown.length - 1);
+  return (
+    <div class="lab-view">
+      <header class="lab-bar">
+        <button class="lab-nav" onClick={() => go(current - 1)} aria-label="Previous scene">
+          <Icon name="chevron-left" />
         </button>
-        <div class="fxgl-name">
+        <button class="lab-title" onClick={() => setSheet("list")}>
           <span class="label">
-            {entry.group} · {Math.min(current, shown.length - 1) + 1}/{shown.length}
+            {entry.group} · {at + 1}/{shown.length}
           </span>
           <strong>{entry.label}</strong>
-        </div>
-        <button class="fxgl-nav" onClick={() => go(current + 1)} aria-label="Next scene">
-          ›
         </button>
-      </div>
-      <div class="fxgl-controls">
-        <button onClick={() => setNonce((n) => n + 1)}>Replay</button>
-        <button class={auto ? "on" : ""} onClick={() => setAuto(!auto)}>
-          {auto ? "Stop" : "Play all"}
+        <button class="lab-nav" onClick={() => go(current + 1)} aria-label="Next scene">
+          <Icon name="chevron-right" />
         </button>
+      </header>
+      <div class="lab-stage" {...swipe}>
+        <LabScene scene={scene} byPlain={byPlain} />
       </div>
-      <details class="lab-more">
-        <summary>Review · scenes</summary>
-        <ReviewBox reviews={reviews} k={keyOf(entry)} keys={entries.map(keyOf)} />
-        <div class="fxlab-groups">
-          {groups.map((g) => (
-            <button class={g === group ? "on" : ""} onClick={() => (setGroup(g), setCurrent(0), setNonce((n) => n + 1))}>
-              {g}
-            </button>
-          ))}
-        </div>
-        <div class="fxgl-strip lab-scenes" ref={strip}>
-          {shown.map((e, i) => (
-            <button class={[e === entry ? "on" : "", reviews.tag(keyOf(e))].join(" ")} onClick={() => go(i)} aria-label={e.label}>
-              {e.code ? <img src={cardImage(e.code, "small")} alt="" loading="lazy" crossOrigin="anonymous" /> : <i class="lab-scene-dot" />}
-              <span>{e.label}</span>
-              <small>{e.group}</small>
-            </button>
-          ))}
-        </div>
-      </details>
-      {motionOff() && <p class="fxlab-note">Animations are turned off in Settings, so only sounds will play.</p>}
-      {!settings.sound && <p class="fxlab-note">Sounds are turned off in Settings.</p>}
+      {(motionOff() || !settings.sound) && <p class="fxlab-note">{motionOff() ? "Animations are turned off in Settings, so only sounds will play." : "Sounds are turned off in Settings."}</p>}
+      <nav class="lab-dock">
+        <DockButton icon="play" label="Replay" onClick={() => setNonce((n) => n + 1)} />
+        <DockButton icon="step-forward" label={auto ? "Stop" : "Play all"} on={auto} onClick={() => setAuto(!auto)} />
+        <DockButton icon="search" label="Scenes" onClick={() => setSheet("list")} />
+        <DockButton icon="star" label="Review" mark={reviews.tag(keyOf(entry))} onClick={() => setSheet("review")} />
+      </nav>
+      {sheet === "list" && (
+        <LabSheet title={`${label} scenes`} onClose={() => setSheet(null)}>
+          <div class="lab-chips">
+            {groups.map((g) => (
+              <button class={g === group ? "on" : ""} onClick={() => (setGroup(g), setCurrent(0), setNonce((n) => n + 1))}>
+                {g}
+              </button>
+            ))}
+          </div>
+          <div class="lab-rows">
+            {shown.map((e, i) => (
+              <button class={[i === at ? "on" : "", reviews.tag(keyOf(e))].join(" ")} onClick={() => (go(i), setSheet(null))}>
+                <span>{e.label}</span>
+                <small>{e.group}</small>
+              </button>
+            ))}
+          </div>
+        </LabSheet>
+      )}
+      {sheet === "review" && (
+        <LabSheet title={keyOf(entry)} onClose={() => setSheet(null)}>
+          <ReviewBox reviews={reviews} k={keyOf(entry)} keys={entries.map(keyOf)} />
+        </LabSheet>
+      )}
     </div>
   );
-  return <LabScene scene={scene} byPlain={byPlain} controls={controls} />;
 }

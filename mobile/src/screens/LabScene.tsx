@@ -2,6 +2,7 @@ import type { ComponentChildren } from "preact";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { type CardDb, type EngineApi, type Side, loadEngine } from "../engine";
 import { Board } from "../game/Board";
+import { Icon, type IconName } from "../icons";
 import { type Card, type Model, type Scene, type Slot, plain } from "./FxLab";
 
 const IDENTITY: Record<Side, string> = { corp: "Nebula Talent Management: Making Stars", runner: "Tao Salonga: Telepresence Magician" };
@@ -99,7 +100,32 @@ export function useSwipe(go: (dir: 1 | -1) => void) {
   };
 }
 
-export function LabScene({ scene, byPlain, controls }: { scene: Scene | undefined; byPlain: Map<string, Card>; controls: ComponentChildren }) {
+export function LabSheet({ title, onClose, children }: { title: string; onClose: () => void; children: ComponentChildren }) {
+  return (
+    <div class="sheet-backdrop lab-sheet-backdrop" onClick={onClose}>
+      <div class="sheet panel lab-sheet" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={title}>
+        <div class="lab-sheet-head">
+          <span class="label">{title}</span>
+          <button class="ghost" onClick={onClose} aria-label="Close">
+            <Icon name="close" />
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+export function DockButton({ icon, label, on, disabled, onClick, mark }: { icon: IconName; label: string; on?: boolean; disabled?: boolean; onClick: () => void; mark?: string }) {
+  return (
+    <button class={`lab-dock-btn ${on ? "on" : ""} ${mark ?? ""}`} disabled={disabled} onClick={onClick}>
+      <Icon name={icon} />
+      <span>{label}</span>
+    </button>
+  );
+}
+
+export function LabScene({ scene, byPlain }: { scene: Scene | undefined; byPlain: Map<string, Card> }) {
   const [env, setEnv] = useState<{ engine: EngineApi; db: CardDb } | null>(null);
   const [state, setState] = useState<{ view: any; quiet: boolean; me: Side } | null>(null);
   useEffect(() => {
@@ -118,5 +144,5 @@ export function LabScene({ scene, byPlain, controls }: { scene: Scene | undefine
   }, [scene, env, byPlain]);
   const fake = useMemo(() => session(state?.me ?? "runner"), [state?.me]);
   if (!env || !state) return <div class="lab-loading label">Loading…</div>;
-  return <Board key={state.me} session={fake} engine={env.engine} db={env.db} side={state.me} view={state.view} quiet={state.quiet} controls={controls} onLeave={() => {}} onExit={() => {}} />;
+  return <Board key={state.me} session={fake} engine={env.engine} db={env.db} side={state.me} view={state.view} quiet={state.quiet} controls={<i class="lab-no-controls" />} onLeave={() => {}} onExit={() => {}} />;
 }

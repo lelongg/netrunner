@@ -33,29 +33,12 @@ export function labMode(): LabMode | null {
 
 function Cards() {
   const { cards, byPlain } = useLabCards();
-  const [type, setType] = useState(() => new URLSearchParams(location.search).get("type") ?? "all");
   const groups = useMemo(() => {
     const all = labCards(byPlain);
-    return TYPES.map((g) => ({ ...g, cards: g.types.length ? all.filter((c) => g.types.includes(c.card?.type ?? "")) : all })).filter((g) => g.cards.length);
+    return TYPES.map((g) => ({ key: g.key, label: g.label, cards: g.types.length ? all.filter((c) => g.types.includes(c.card?.type ?? "")) : all })).filter((g) => g.cards.length);
   }, [byPlain]);
-  const current = groups.find((g) => g.key === type) ?? groups[0];
-  useEffect(() => {
-    if (current) history.replaceState(null, "", `${location.pathname}?lab${current.key === "all" ? "" : `&type=${current.key}`}`);
-  }, [current?.key]);
-  if (!cards || !current) return null;
-  return (
-    <>
-      <div class="tabs lab-types" role="tablist">
-        {groups.map((g) => (
-          <button role="tab" aria-selected={g.key === current.key} class={g.key === current.key ? "on" : ""} onClick={() => setType(g.key)}>
-            {g.label}
-            <span class="lab-count">{g.cards.length}</span>
-          </button>
-        ))}
-      </div>
-      <FxGlLab key={current.key} cards={current.cards} byPlain={byPlain} />
-    </>
-  );
+  if (!cards || !groups.length) return <div class="lab-loading label">Loading…</div>;
+  return <FxGlLab groups={groups} byPlain={byPlain} />;
 }
 
 export function Lab({ initial }: { initial: LabMode }) {
