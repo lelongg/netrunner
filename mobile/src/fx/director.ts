@@ -386,6 +386,18 @@ function digitize(el: HTMLElement | null, tone: Tone) {
   if (visible(r)) burst(mid(r), tone, 10, 50, { size: 3, gravity: 0, shards: true });
 }
 
+function derezFx(cid: unknown) {
+  const el = tileEl(cid) as HTMLElement | null;
+  const pt = pointOf(el);
+  if (!pt) return;
+  digitize(el, "violet");
+  if (el) animate(el, { filter: ["brightness(2.2)", "brightness(0.4) grayscale(1)", "brightness(1)"], scale: [1.06, 0.96, 1] }, { duration: 0.7, ease: "easeOut" });
+  ring(pt, "violet", 130);
+  burst(pt, "violet", 14, 50, { size: 3, gravity: 80 });
+  shake(0.3);
+  buzz([40, 30, 40]);
+}
+
 function rezFlip(cid: unknown, tone: Tone, dramatic: boolean) {
   const el = tileEl(cid);
   const r = rectOf(el);
@@ -750,9 +762,9 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
     const card = findIn(view, cid);
     const isIce = card?.type === "ICE";
     const flip = () => {
+      if (card?.code && !reduced()) return showdown(card, "rez", (big, ghost) => rezSignature(card.title, big, card.code, ghost, "corp"));
       rezFlip(cid, isIce ? KIND_TONE[iceKind(card)] : "blue", isIce && !!now.server);
       setTimeout(() => {
-        if (card?.code) return showdown(card, "rez", (big, ghost) => rezSignature(card.title, big, card.code, ghost, "corp"));
         const r = rectOf(tileEl(cid));
         if (visible(r)) rezSignature(card?.title, r, card?.code, tileEl(cid) as HTMLElement | null, "corp");
       }, 450);
@@ -788,16 +800,8 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
     burst(pt, "cyan", 12, 40, { size: 4, gravity: -50 });
   }
 
-  for (const [cid, up] of now.rezzed) {
-    if (up || !prev.rezzed.get(cid)) continue;
-    const el = tileEl(cid) as HTMLElement | null;
-    const pt = pointOf(el);
-    if (!pt) continue;
-    digitize(el, "violet");
-    if (el) animate(el, { filter: ["brightness(2.2)", "brightness(0.4) grayscale(1)", "brightness(1)"], scale: [1.06, 0.96, 1] }, { duration: 0.7, ease: "easeOut" });
-    ring(pt, "violet", 130);
-    burst(pt, "violet", 14, 50, { size: 3, gravity: 80 });
-  }
+  const derezByIce = hits.some((h) => h.kind === "fire" && /\bderez/i.test(h.text ?? ""));
+  for (const [cid, up] of now.rezzed) if (!up && prev.rezzed.get(cid) && !derezByIce) derezFx(cid);
 
   if (now.tags < prev.tags) {
     const at = runnerTarget(me);
@@ -855,7 +859,9 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
     used.add(card.cid);
     setTimeout(() => {
       const el = tileEl(card.cid) as HTMLElement | null;
-      useSignature(card.title, el ? rectOf(el) : null, card.code, el, owner);
+      const r = rectOf(el);
+      if (visible(r)) useSignature(card.title, r, card.code, el, owner) ?? fireSignature(card.title, r, runnerTarget(me));
+      else if (card.code && hasUseEffect(card.title)) showdown(card, "use", (big, ghost) => useSignature(card.title, big, card.code, ghost, owner));
     }, delay * 1000);
   };
   for (const h of hits) {
@@ -899,7 +905,7 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
         const at = runnerTarget(me);
         const icePoint = pointOf(iceEl);
         setTimeout(() => fireSignature(h.ice.title, rectOf(tileEl(h.ice.cid)), runnerTarget(me)), 380);
-        if (hasGl("use", h.ice.title)) showdown(h.ice, "fire", (big, ghost) => useSignature(h.ice.title, big, h.ice.code, ghost, "corp"), shortText(text));
+        if (hasGl("use", h.ice.title)) showdown(h.ice, "fire", (big, ghost) => useSignature(h.ice.title, big, h.ice.code, ghost, "corp"));
         if (/end the run/i.test(text)) {
           punch(iceEl, 1.12);
           gate(wrapEl(h.ice.cid) ?? iceEl, tone);
@@ -923,6 +929,7 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
             reach: 0.9,
             onHit: () => {
               if (damage) return damageHit(damage.toLowerCase());
+              if (/\bderez/i.test(text) && derezzed != null) return derezFx(derezzed);
               ring(target, "red", 170);
               burst(target, "red", 22, 90, { size: 6, gravity: 30 });
               if (!quiet) floater([target[0], target[1] - 30], shortText(text), "red", 50, true);
@@ -1076,13 +1083,13 @@ function findIn(view: any, cid: unknown): any {
 
 const staged = new Set<unknown>();
 
-function showdown(ice: any, kind: "rez" | "fire", run: (big: DOMRect, ghost: HTMLElement) => Promise<void> | void, caption = "") {
+function showdown(ice: any, kind: "rez" | "fire" | "use", run: (big: DOMRect, ghost: HTMLElement) => Promise<void> | void, caption = "") {
   if (reduced() || staged.has(ice.cid) || !ice.code) return;
   staged.add(ice.cid);
   const el = tileEl(ice.cid);
   const r = rectOf(el);
   const sideways = ice.type === "ICE";
-  const tone: Tone = sideways ? KIND_TONE[iceKind(ice)] : "blue";
+  const tone: Tone = sideways ? KIND_TONE[iceKind(ice)] : ice.side === "Runner" ? "cyan" : "blue";
   quietUntil = performance.now() + 2200;
   const w = sideways ? Math.min(innerWidth * 0.8, 320) : Math.min(innerWidth * 0.5, 220);
   const h = sideways ? w * (63 / 88) : w * (88 / 63);
@@ -1107,7 +1114,7 @@ function showdown(ice: any, kind: "rez" | "fire", run: (big: DOMRect, ghost: HTM
   const label = node("fx-showdown-label", stageEl);
   const t1 = document.createElement("span");
   t1.className = "fx-showdown-kind";
-  t1.textContent = kind === "rez" ? [tr("Rez"), ...(ice.subtypes ?? []).slice(0, 2)].join(" · ") : caption || tr("Subroutine");
+  t1.textContent = kind === "rez" ? [tr("Rez"), ...(ice.subtypes ?? []).slice(0, 2)].join(" · ") : kind === "use" ? tr("Ability") : caption || tr("Subroutine");
   const t2 = document.createElement("span");
   t2.className = "fx-showdown-title";
   t2.textContent = ice.title ?? "";

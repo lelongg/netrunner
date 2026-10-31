@@ -296,7 +296,6 @@ async function showcase(m: Move, kind: Kind, me: Side) {
   const special = kind === "play" ? signature(info?.title, big, info?.code, ghost, info?.owner) : kind === "install" ? (installSignature(info?.title, big, info?.code, ghost, info?.owner) ?? undefined) : scored ? scoreGl(info?.title, big, info?.code, ghost, info?.owner) : undefined;
   if (scored && !special) setTimeout(() => scoreSignature(info?.title, big), 1400);
   if (scored && special) {
-    banner(tr(kind === "steal" ? "Stolen" : "Scored"), info?.title ?? "", kind === "steal" ? "red" : "gold", { size: "xl", hold: 1.2 });
     ring(center, tone, big.width * 1.4);
     buzz([40, 40, 120]);
   }
@@ -319,7 +318,6 @@ async function showcase(m: Move, kind: Kind, me: Side) {
     flash(kind === "steal" ? "red" : "gold", 0.35);
     if (kind === "steal") shake(0.6);
     buzz([40, 40, 40, 40, 120]);
-    banner(tr(kind === "steal" ? "Stolen" : "Scored"), info?.title ?? "", kind === "steal" ? "red" : "gold", { size: "xl", hold: hold + 0.2 });
   }
   if (!special) {
     animate(glow, { opacity: [0, 1, 0.75] }, { duration: hold + 0.3, times: [0, 0.4, 1], ease: "easeOut", keep: true });
@@ -333,6 +331,7 @@ async function showcase(m: Move, kind: Kind, me: Side) {
     delete pendingGain[owner];
   }
   if (kind === "score" || kind === "steal") {
+    banner(tr(kind === "steal" ? "Stolen" : "Scored"), info?.title ?? "", kind === "steal" ? "red" : "gold", { size: "xl", hold: 0.9 });
     points(center, scoreSegments(m.to?.holder ?? "corp", info?.points ?? 1), kind === "steal" ? "red" : "gold");
     burst(center, tone, 36, big.width * 0.9, { size: 6, gravity: 0, shards: true });
     await animate(ghost, { scaleX: [1.04, 1.5], scaleY: [1.04, 1.5], opacity: [1, 0], filter: ["brightness(1)", "brightness(3)"] }, { duration: 0.35, ease: "easeOut" }).finished;
