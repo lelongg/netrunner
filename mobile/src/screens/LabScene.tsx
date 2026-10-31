@@ -5,7 +5,7 @@ import { Board } from "../game/Board";
 import { Icon, type IconName } from "../icons";
 import { type Card, type Model, type Scene, type Slot, plain } from "./FxLab";
 
-const IDENTITY: Record<Side, string> = { corp: "Nebula Talent Management: Making Stars", runner: "Tao Salonga: Telepresence Magician" };
+const IDENTITY: Record<Side, string> = { corp: "Nebula Talent Management: Making Stars", runner: "Hoshiko Shiro: Untold Protagonist" };
 
 function gameView(m: Model, me: Side, lines: string[], byPlain: Map<string, Card>) {
   const owner = (s: Slot): Side => s.holder ?? (s.side === "Corp" ? "corp" : "runner");
@@ -14,13 +14,13 @@ function gameView(m: Model, me: Side, lines: string[], byPlain: Map<string, Card
     const base = { cid: s.cid, side: s.side, zone: s.zone, rezzed: s.rezzed, "advance-counter": s.adv, facedown: false };
     if (hidden) return { ...base, type: s.type === "ICE" ? "ICE" : undefined };
     const c = byPlain.get(plain(s.title));
-    return { ...base, title: s.title, code: c?.code, type: s.type, subtypes: s.subtypes ?? c?.subtypes ?? [], "current-strength": s.strength, strength: s.strength, agendapoints: c?.agendapoints, subroutines: [] };
+    return { ...base, counter: s.virus ? { virus: s.virus } : undefined, title: s.title, code: c?.code, type: s.type, subtypes: s.subtypes ?? c?.subtypes ?? [], "current-strength": s.strength, strength: s.strength, agendapoints: c?.agendapoints, subroutines: [] };
   };
   const at = (zone: string[], who?: Side) => m.slots.filter((s) => zone.every((z, i) => s.zone[i] === z) && (!who || owner(s) === who)).map(card);
   const identity = (side: Side) => {
     const c = byPlain.get(plain(IDENTITY[side]));
-    const back = side === "corp" && m.face === "back";
-    return { cid: `id-${side}`, title: c?.title ?? IDENTITY[side], code: c?.code && back ? `${c.code}-0` : c?.code, type: "Identity", side: side === "corp" ? "Corp" : "Runner", zone: ["identity"] };
+    const back = side === "runner" && m.face === "back";
+    return { cid: `id-${side}`, face: side === "runner" ? (back ? "back" : "front") : undefined, title: c?.title ?? IDENTITY[side], code: c?.code, type: "Identity", side: side === "corp" ? "Corp" : "Runner", zone: ["identity"] };
   };
   const server = (key: string) => ({ ices: at(["servers", key, "ices"]), content: at(["servers", key, "content"]) });
   const hand = (side: Side) => at(["hand"], side);
@@ -127,22 +127,26 @@ export function DockButton({ icon, label, on, disabled, onClick, mark }: { icon:
 
 export function LabScene({ scene, byPlain }: { scene: Scene | undefined; byPlain: Map<string, Card> }) {
   const [env, setEnv] = useState<{ engine: EngineApi; db: CardDb } | null>(null);
-  const [state, setState] = useState<{ view: any; quiet: boolean; me: Side } | null>(null);
+  const [state, setState] = useState<{ view: any; quiet: boolean; me: Side; take: number } | null>(null);
+  const takes = useRef(0);
   useEffect(() => {
     void loadEngine().then(setEnv);
   }, []);
   useEffect(() => {
     if (!scene || !env || !byPlain.size) return;
     const me = scene.me ?? "runner";
+    const take = ++takes.current;
     const lines = scene.lines ?? [];
+    const start = () => setState({ view: gameView(scene.before, me, [], byPlain), quiet: true, me, take });
     document.querySelector(".fx-layer")?.replaceChildren();
-    setState({ view: gameView(scene.before, me, [], byPlain), quiet: true, me });
-    const timers = [setTimeout(() => setState({ view: gameView(scene.after, me, lines, byPlain), quiet: false, me }), 80)];
+    start();
     const then = scene.then;
-    if (then) timers.push(setTimeout(() => setState({ view: gameView(scene.after, me, [...lines, ...then.lines], byPlain), quiet: false, me }), 80 + then.after));
+    const timers = [setTimeout(() => setState({ view: gameView(scene.after, me, lines, byPlain), quiet: false, me, take }), 80)];
+    if (then) timers.push(setTimeout(() => setState({ view: gameView(scene.after, me, [...lines, ...then.lines], byPlain), quiet: false, me, take }), 80 + then.after));
+    timers.push(setTimeout(start, 80 + (then?.after ?? 0) + 3600));
     return () => timers.forEach(clearTimeout);
   }, [scene, env, byPlain]);
-  const fake = useMemo(() => session(state?.me ?? "runner"), [state?.me]);
+  const fake = useMemo(() => session(state?.me ?? "runner"), [state?.me, state?.take]);
   if (!env || !state) return <div class="lab-loading label">Loading…</div>;
-  return <Board key={state.me} session={fake} engine={env.engine} db={env.db} side={state.me} view={state.view} quiet={state.quiet} controls={<i class="lab-no-controls" />} onLeave={() => {}} onExit={() => {}} />;
+  return <Board key={`${state.me}:${state.take}`} session={fake} engine={env.engine} db={env.db} side={state.me} view={state.view} quiet={state.quiet} controls={<i class="lab-no-controls" />} onLeave={() => {}} onExit={() => {}} />;
 }

@@ -184,7 +184,7 @@ export default {
   "+{n} str": "+{n} force",
   "Jacked out": "Déconnecté·e",
   "Run ended": "Piratage terminé",
-  "Breached": "Serveur percé",
+  "Breached": "Percé",
   "Breach": "Percée",
   "Subroutine": "Routine",
   "Runner accesses": "Lae Runner accède",

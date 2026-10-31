@@ -1,5 +1,6 @@
 import { animate as motion } from "motion";
 import { motionOff } from "../settings";
+import { type IconName, iconElement } from "../icons";
 
 const TRANSFORMS = ["transformPerspective", "x", "y", "rotate", "rotateY", "skewX", "scale", "scaleX", "scaleY"] as const;
 
@@ -243,12 +244,13 @@ export function rays(at: Point, tone: Tone = "gold", size = 520, duration = 1.4)
   done(animate(el, { scale: [0.3, 1.1, 1.2], opacity: [0, 0.9, 0], rotate: [0, 50] }, { duration, ease: "easeOut" }), el);
 }
 
-export function floater(at: Point, text: string, tone: Tone = "cyan", rise = 60, big = false) {
+export function floater(at: Point, text: string, tone: Tone = "cyan", rise = 60, big = false, icon?: IconName) {
   if (reduced()) return;
   const el = node(`fx-floater tone-${tone} ${big ? "big" : ""}`);
   el.textContent = text;
-  el.style.left = `${at[0]}px`;
-  el.style.top = `${at[1]}px`;
+  if (icon) el.appendChild(iconElement(icon));
+  el.style.left = `${Math.max(8, Math.min(innerWidth - el.offsetWidth - 8, at[0] - el.offsetWidth / 2))}px`;
+  el.style.top = `${at[1] - el.offsetHeight / 2}px`;
   done(animate(el, { y: [10, -rise * 0.4, -rise], scale: [0.4, 1.2, 1], opacity: [0, 1, 0] }, { duration: 1.1, times: [0, 0.25, 1], ease: "easeOut" }), el);
 }
 
@@ -275,8 +277,10 @@ export function stamp(at: Point, text: string, tone: Tone = "red") {
   if (reduced()) return;
   const el = node(`fx-stamp tone-${tone}`);
   el.textContent = text;
-  el.style.left = `${at[0]}px`;
-  el.style.top = `${at[1]}px`;
+  const w = Math.min(el.offsetWidth, innerWidth - 24);
+  el.style.maxWidth = `${innerWidth - 24}px`;
+  el.style.left = `${Math.max(12, Math.min(innerWidth - w - 12, at[0] - w / 2))}px`;
+  el.style.top = `${at[1] - el.offsetHeight / 2}px`;
   done(animate(el, { scale: [2.6, 0.92, 1, 1], rotate: [-14, -8, -8, -8], opacity: [0, 1, 1, 0] }, { duration: 1.3, times: [0, 0.16, 0.3, 1], ease: "easeOut" }), el);
 }
 

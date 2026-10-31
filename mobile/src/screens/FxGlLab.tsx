@@ -6,6 +6,7 @@ import { setFxSpeed } from "../fx/gl/stage";
 import { type Card, cardScene, extraScenes, plain } from "./FxLab";
 import { DockButton, LabScene, LabSheet, useSwipe } from "./LabScene";
 import { Icon } from "../icons";
+import { Picker } from "../ui";
 import { KINDS, KIND_LABEL, ReviewBox, noteKey, useReviews } from "./labReview";
 
 const CODES: Record<string, string> = {
@@ -222,11 +223,23 @@ export interface CardGroup {
 
 type Sheet = "list" | "options" | "review" | null;
 
-export function FxGlLab({ groups, byPlain }: { groups: CardGroup[]; byPlain: Map<string, Card> }) {
+export interface CardSets {
+  of: Map<string, Set<string>>;
+  list: { key: string; name: string }[];
+}
+
+export function FxGlLab({ groups, byPlain, sets }: { groups: CardGroup[]; byPlain: Map<string, Card>; sets: CardSets }) {
   const [saved] = useState(loadView);
   const [type, setType] = useState(() => new URLSearchParams(location.search).get("type") ?? "all");
+  const [set, setSet] = useState("");
+  const [gl, setGl] = useState<"all" | "gl" | "dom">("all");
   const group = groups.find((g) => g.key === type) ?? groups[0];
-  const CARDS = group.cards;
+  const inSet = (c: LabCard, key = set, g = gl) => (!key || !!sets.of.get(c.title)?.has(key)) && (g === "all" || (g === "gl") === c.gl.size > 0);
+  const CARDS = useMemo(() => {
+    const list = group.cards.filter((c) => inSet(c));
+    return list.length ? list : group.cards;
+  }, [group, set, gl]);
+  const setOptions = useMemo(() => sets.list.filter((s) => group.cards.some((c) => inSet(c, s.key))), [group, sets]);
   const [pick, setPick] = useState(() => Math.max(0, CARDS.findIndex((c) => c.title === saved.title)));
   const [kind, setKind] = useState<Kind>(() => (saved.kind && CARDS[pick]?.kinds.includes(saved.kind) ? saved.kind : CARDS[pick].kinds[0]));
   const [query, setQuery] = useState("");
@@ -319,12 +332,27 @@ export function FxGlLab({ groups, byPlain }: { groups: CardGroup[]; byPlain: Map
     if (!CARDS[next].kinds.includes(kind)) setKind(CARDS[next].kinds[0]);
     if (mode === "game") setNonce((n) => n + 1);
   };
+  const refilter = (list: LabCard[]) => {
+    const at = list.findIndex((c) => c.title === card.title);
+    setPick(Math.max(0, at));
+    if (at < 0 && list[0] && !list[0].kinds.includes(kind)) setKind(list[0].kinds[0]);
+  };
   const pickType = (key: string) => {
     const next = groups.find((g) => g.key === key) ?? groups[0];
     setType(next.key);
-    const at = next.cards.findIndex((c) => c.title === card.title);
-    setPick(Math.max(0, at));
-    if (at < 0 && !next.cards[0].kinds.includes(kind)) setKind(next.cards[0].kinds[0]);
+    const list = next.cards.filter((c) => inSet(c));
+    if (!list.length) setSet("");
+    refilter(list.length ? list : next.cards);
+  };
+  const pickGl = (g: "all" | "gl" | "dom") => {
+    setGl(g);
+    const list = group.cards.filter((c) => inSet(c, set, g));
+    refilter(list.length ? list : group.cards);
+  };
+  const pickSet = (key: string) => {
+    setSet(key);
+    const list = group.cards.filter((c) => inSet(c, key));
+    refilter(list.length ? list : group.cards);
   };
   const swipe = useSwipe((dir) => choose(pick + dir));
 
@@ -352,21 +380,6 @@ export function FxGlLab({ groups, byPlain }: { groups: CardGroup[]; byPlain: Map
 
   return (
     <div class="lab-view">
-      <header class="lab-bar">
-        <button class="lab-nav" onClick={() => choose(pick - 1)} aria-label="Previous card">
-          <Icon name="chevron-left" />
-        </button>
-        <button class="lab-title" onClick={() => setSheet("list")}>
-          <span class="label">
-            {group.label} · {pick + 1}/{CARDS.length}
-            {card.gl.size ? "" : " · no WebGL"}
-          </span>
-          <strong>{card.title}</strong>
-        </button>
-        <button class="lab-nav" onClick={() => choose(pick + 1)} aria-label="Next card">
-          <Icon name="chevron-right" />
-        </button>
-      </header>
       <div class="lab-stage" {...swipe}>
         {mode === "game" ? (
           <LabScene scene={scene} byPlain={byPlain} />
@@ -397,6 +410,21 @@ export function FxGlLab({ groups, byPlain }: { groups: CardGroup[]; byPlain: Map
           </div>
         )}
       </div>
+      <header class="lab-bar">
+        <button class="lab-nav" onClick={() => choose(pick - 1)} aria-label="Previous card">
+          <Icon name="chevron-left" />
+        </button>
+        <button class="lab-title" onClick={() => setSheet("list")}>
+          <span class="label">
+            {set ? (sets.list.find((s) => s.key === set)?.name ?? group.label) : group.label} · {pick + 1}/{CARDS.length}
+            {card.gl.size ? "" : " · no WebGL"}
+          </span>
+          <strong>{card.title}</strong>
+        </button>
+        <button class="lab-nav" onClick={() => choose(pick + 1)} aria-label="Next card">
+          <Icon name="chevron-right" />
+        </button>
+      </header>
       <div class="lab-kinds" role="tablist">
         {card.kinds.map((k) => (
           <button role="tab" aria-selected={k === kind} class={[k === kind ? "on" : "", k === kind && busy ? "playing" : "", tag(keyOf(card, k))].join(" ")} onClick={() => (k === kind ? void play() : (setKind(k), mode === "game" && setNonce((n) => n + 1)))}>
@@ -420,6 +448,16 @@ export function FxGlLab({ groups, byPlain }: { groups: CardGroup[]; byPlain: Map
                 {g.label} <span>{g.cards.length}</span>
               </button>
             ))}
+          </div>
+          <div class="lab-chips">
+            {(["all", "gl", "dom"] as const).map((g) => (
+              <button class={g === gl ? "on" : ""} onClick={() => pickGl(g)}>
+                {g === "all" ? "Any effect" : g === "gl" ? "WebGL" : "No WebGL"} <span>{group.cards.filter((c) => inSet(c, set, g)).length}</span>
+              </button>
+            ))}
+          </div>
+          <div class="sort-select lab-set">
+            <Picker title="Set" value={set} onChange={pickSet} options={[{ key: "", label: "All sets" }, ...setOptions.map((s) => ({ key: s.key, label: s.name }))]} />
           </div>
           <input class="fxgl-search" type="search" placeholder={`Search ${CARDS.length} cards`} value={query} onInput={(e) => setQuery((e.target as HTMLInputElement).value)} />
           <button class={`lab-filter ${todo ? "on" : ""}`} disabled={!pendingCount} onClick={() => setTodo(!todo)}>

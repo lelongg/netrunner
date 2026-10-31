@@ -6870,7 +6870,7 @@ h1.deck-name.long {
   display: grid;
   grid-template-columns: 48px minmax(0, 1fr) 48px;
   align-items: stretch;
-  border-bottom: 1px solid var(--line);
+  border-top: 1px solid var(--line);
 }
 
 .lab-nav {
@@ -6928,6 +6928,10 @@ h1.deck-name.long {
 
 .lab-stage .actions.replay-controls {
   display: none;
+}
+
+.lab-stage .board {
+  animation: none;
 }
 
 .lab-stage .fxgl-stage {

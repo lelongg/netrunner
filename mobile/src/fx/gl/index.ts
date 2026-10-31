@@ -278,10 +278,16 @@ export function handOff(from: Element, to: Element) {
   landed.set(from, to);
 }
 
+function covered(at: Element, r: DOMRect) {
+  if (at.closest(".fx-layer")) return false;
+  const top = document.elementFromPoint(Math.min(innerWidth - 1, Math.max(0, r.left + r.width / 2)), Math.min(innerHeight - 1, Math.max(0, r.top + r.height / 2)));
+  return !!top && !at.contains(top) && !top.contains(at);
+}
+
 function seen(el: Element) {
   const at = el.isConnected ? el : landed.get(el);
   const r = at?.isConnected ? at.getBoundingClientRect() : null;
-  return r && r.width > 0 && r.bottom > 0 && r.top < innerHeight && r.right > 0 && r.left < innerWidth ? r : null;
+  return r && r.width > 0 && r.bottom > 0 && r.top < innerHeight && r.right > 0 && r.left < innerWidth && !covered(at!, r) ? r : null;
 }
 
 export function letGoEffects() {

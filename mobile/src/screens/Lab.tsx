@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "preact/hooks";
 import { silence } from "../sound";
 import { FxGlLab, labCards } from "./FxGlLab";
-import { FxLab, useLabCards } from "./FxLab";
+import { FxLab, plain, useLabCards } from "./FxLab";
 
 export type LabMode = "cards" | "game" | "runs";
 
@@ -37,8 +37,21 @@ function Cards() {
     const all = labCards(byPlain);
     return TYPES.map((g) => ({ key: g.key, label: g.label, cards: g.types.length ? all.filter((c) => g.types.includes(c.card?.type ?? "")) : all })).filter((g) => g.cards.length);
   }, [byPlain]);
+  const sets = useMemo(() => {
+    const of = new Map<string, Set<string>>();
+    const newest = new Map<string, { name: string; code: number }>();
+    for (const c of cards ?? []) {
+      if (!c.set_code || c.set_code === "draft") continue;
+      const title = plain(c.title);
+      if (!of.has(title)) of.set(title, new Set());
+      of.get(title)!.add(String(c.set_code));
+      const prev = newest.get(String(c.set_code));
+      if (!prev || Number(c.code) > prev.code) newest.set(String(c.set_code), { name: String(c.setname ?? c.set_code), code: Number(c.code) });
+    }
+    return { of, list: [...newest.entries()].sort((a, b) => b[1].code - a[1].code).map(([key, v]) => ({ key, name: v.name })) };
+  }, [cards]);
   if (!cards || !groups.length) return <div class="lab-loading label">Loading…</div>;
-  return <FxGlLab groups={groups} byPlain={byPlain} />;
+  return <FxGlLab groups={groups} byPlain={byPlain} sets={sets} />;
 }
 
 export function Lab({ initial }: { initial: LabMode }) {

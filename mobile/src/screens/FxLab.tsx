@@ -8,6 +8,9 @@ import { ReviewBox, useReviews } from "./labReview";
 
 export interface Card {
   title: string;
+  text?: string;
+  set_code?: string;
+  setname?: string;
   code?: string;
   type: string;
   side: string;
@@ -25,6 +28,7 @@ export interface Slot {
   zone: string[];
   holder?: Side;
   rezzed?: boolean;
+  virus?: number;
   strength?: number;
   adv?: number;
 }
@@ -77,8 +81,8 @@ export function base(): Model {
       { cid: "ice-sentry", title: "Archer", type: "ICE", subtypes: ["Sentry"], side: "Corp", zone: ["servers", "remote1", "ices"], rezzed: true },
       { cid: "asset", title: "PAD Campaign", type: "Asset", side: "Corp", zone: ["servers", "remote1", "content"], rezzed: false },
       { cid: "brk-fracter", title: "Corroder", type: "Program", subtypes: ["Icebreaker", "Fracter"], side: "Runner", zone: ["rig", "program"], strength: 2 },
-      { cid: "brk-decoder", title: "Unity", type: "Program", subtypes: ["Icebreaker", "Decoder"], side: "Runner", zone: ["rig", "program"], strength: 1 },
-      { cid: "brk-killer", title: "Carmen", type: "Program", subtypes: ["Icebreaker", "Killer"], side: "Runner", zone: ["rig", "program"], strength: 2 },
+      { cid: "brk-decoder", title: "Gordian Blade", type: "Program", subtypes: ["Icebreaker", "Decoder"], side: "Runner", zone: ["rig", "program"], strength: 2 },
+      { cid: "brk-killer", title: "Mimic", type: "Program", subtypes: ["Icebreaker", "Killer"], side: "Runner", zone: ["rig", "program"], strength: 3 },
       { cid: "res", title: "Daily Casts", type: "Resource", side: "Runner", zone: ["rig", "resource"] },
       { cid: "hand-1", title: "Sure Gamble", type: "Event", side: "Runner", zone: ["hand"] },
       { cid: "hand-2", title: "Diesel", type: "Event", side: "Runner", zone: ["hand"] },
@@ -170,7 +174,8 @@ export function cardScene(card: Card, kind: string): Scene {
     };
     const before = edit(m, running);
     const after = edit(before, () => {});
-    const text = card.title === "Tithe" ? "do 1 net damage" : card.title === "Anoetic Void" ? "end the run" : "do 2 net damage";
+    const sub = card.text?.match(/\[subroutine\]\s*([^\n]+)/i)?.[1].replace(/<[^>]+>/g, "").replace(/\.$/, "");
+    const text = sub ? sub.charAt(0).toLowerCase() + sub.slice(1) : "end the run";
     return { before, after, me: "runner", lines: [`Corp uses ${card.title} to ${text}.`] };
   }
   if (kind === "use") return useScene(card, m);
@@ -332,17 +337,24 @@ export function generic(byPlain: Map<string, Card>, plainEvent: string, plainAge
       const after = edit(before, (x) => (slot(x, "brk-fracter").strength = 4));
       return { before, after, me: "runner", lines: ["Gerald pays 2 [Credits] to use Corroder to add 2 strength."] };
     }),
-    g("Break with a killer", "Run", () => ({ before: edit(base(), (x) => run(x)), after: edit(base(), (x) => run(x)), me: "runner", lines: ["Gerald pays 1 [Credits] to use Carmen to break 1 subroutine on Archer."] })),
+    g("Break with a killer", "Run", () => ({ before: edit(base(), (x) => run(x)), after: edit(base(), (x) => run(x)), me: "runner", lines: ["Gerald pays 1 [Credits] to use Mimic to break 1 subroutine on Archer."] })),
     g("Break with a fracter", "Run", () => ({ before: edit(base(), (x) => run(x, 1, "ice-barrier")), after: edit(base(), (x) => run(x, 1, "ice-barrier")), me: "runner", lines: ["Gerald pays 1 [Credits] to use Corroder to break 1 subroutine on Ice Wall."] })),
-    g("Break with a decoder", "Run", () => ({ before: edit(base(), (x) => run(x, 2, "ice-gate")), after: edit(base(), (x) => run(x, 2, "ice-gate")), me: "runner", lines: ["Gerald pays 1 [Credits] to use Unity to break 1 subroutine on Enigma."] })),
-    g("Break every subroutine", "Run", () => ({ before: edit(base(), (x) => run(x)), after: edit(base(), (x) => run(x)), me: "runner", lines: ["Gerald pays 3 [Credits] to use Carmen to break all 3 subroutines on Archer."] })),
+    g("Break with a decoder", "Run", () => ({ before: edit(base(), (x) => run(x, 2, "ice-gate")), after: edit(base(), (x) => run(x, 2, "ice-gate")), me: "runner", lines: ["Gerald pays 1 [Credits] to use Gordian Blade to break 1 subroutine on Enigma."] })),
+    g("Break every subroutine", "Run", () => ({ before: edit(base(), (x) => run(x)), after: edit(base(), (x) => run(x)), me: "runner", lines: ["Gerald pays 2 [Credits] to use Mimic to break all 2 subroutines on Archer."] })),
     g("Pass a piece of ice", "Run", () => ({ before: edit(base(), (x) => run(x, 3)), after: edit(base(), (x) => ((x.run = { server: "remote1", position: 2, phase: "approach-ice" }), (x.encounter = { cid: "ice-gate", count: 1 }))), me: "runner" })),
     g("Subroutine: end the run", "Subroutines", () => ({ before: edit(base(), (x) => run(x, 1, "ice-barrier")), after: edit(base(), (x) => run(x, 1, "ice-barrier")), me: "runner", lines: ["Corp uses Ice Wall to end the run."] })),
     g("Subroutine: net damage", "Subroutines", () => ({ before: edit(base(), (x) => run(x)), after: edit(base(), (x) => run(x)), me: "runner", lines: ["Corp uses Archer to do 2 net damage."] })),
-    g("Subroutine: trash a program", "Subroutines", () => ({ before: edit(base(), (x) => run(x)), after: edit(base(), (x) => run(x)), me: "runner", lines: ["Corp uses Archer to trash 1 installed program."] })),
+    g("Subroutine: trash a program", "Subroutines", () => {
+      const before = edit(base(), (x) => run(x));
+      const after = edit(before, (x) => (slot(x, "brk-decoder").zone = ["discard"]));
+      return { before, after, me: "runner", lines: ["Corp uses Archer to trash Gordian Blade."], move: { cid: "brk-decoder", from: ["rig", "program"], to: ["discard"], holder: "runner" } };
+    }),
     g("Subroutine: lose credits", "Subroutines", () => ({ before: edit(base(), (x) => run(x)), after: edit(base(), (x) => ((x.credits.runner -= 3), run(x))), me: "runner", lines: ["Corp uses Archer to make the Runner lose 3 [Credits]."] })),
     g("Subroutine: give a tag", "Subroutines", () => ({ before: edit(base(), (x) => run(x)), after: edit(base(), (x) => ((x.tags += 1), run(x))), me: "runner", lines: ["Corp uses Archer to give the Runner 1 tag."] })),
-    g("Subroutine: derez", "Subroutines", () => ({ before: edit(base(), (x) => run(x)), after: edit(base(), (x) => run(x)), me: "runner", lines: ["Corp uses Archer to derez Daily Casts."] })),
+    g("Subroutine: derez", "Subroutines", () => {
+      const before = edit(base(), (x) => run(x));
+      return { before, after: edit(before, (x) => (slot(x, "ice-gate").rezzed = false)), me: "runner", lines: ["Corp uses Archer to derez Enigma."] };
+    }),
     g("Net damage", "Damage", () => ({ before: base(), after: base(), me: "runner", lines: ["Corp does 2 net damage."] })),
     g("Meat damage", "Damage", () => ({ before: base(), after: base(), me: "runner", lines: ["Corp does 2 meat damage."] })),
     g("Core damage", "Damage", () => ({ before: base(), after: base(), me: "runner", lines: ["Corp does 1 core damage."] })),
@@ -356,9 +368,13 @@ export function generic(byPlain: Map<string, Card>, plainEvent: string, plainAge
     g("R&D card left in place (Corp view)", "Run end", () => ({ before: base(), after: base(), me: "corp", lines: [`Gerald accesses ${agenda.title} from R&D.`], then: { lines: ["Gerald's run on R&D ends."], after: 2000 } })),
     g("Unseen R&D card trashed (Corp view)", "Run end", () => ({ before: base(), after: base(), me: "corp", lines: ["Gerald accesses an unseen card from R&D."], then: { lines: ["Gerald pays 0 [Credits] to trash Hedge Fund from R&D."], after: 2000 } })),
     g("Unseen R&D card stolen (Corp view)", "Run end", () => ({ before: base(), after: base(), me: "corp", lines: ["Gerald accesses an unseen card from R&D."], then: { lines: [`Gerald steals ${agenda.title} from R&D.`], after: 2000 } })),
-    g("Purge virus counters", "Other", () => ({ before: base(), after: base(), me: "runner", lines: ["Corp purges virus counters."] })),
+    g("Purge virus counters", "Other", () => {
+      const sucker: Slot = { cid: "virus", title: "Datasucker", type: "Program", subtypes: ["Virus"], side: "Runner", zone: ["rig", "program"], virus: 3 };
+      const before = edit(base(), (x) => x.slots.push(sucker));
+      return { before, after: edit(base(), (x) => x.slots.push({ ...sucker, virus: 0 })), me: "runner", lines: ["Corp purges virus counters."] };
+    }),
     g("Expose a card", "Other", () => ({ before: base(), after: base(), me: "runner", lines: ["Gerald exposes PAD Campaign."] })),
-    g("Identity flips", "Other", () => ({ before: base(), after: edit(base(), (x) => (x.face = "back")), me: "runner" })),
+    g("Identity flips", "Other", () => ({ before: base(), after: edit(base(), (x) => (x.face = "back")), me: "corp" })),
     g("Victory", "Game end", () => ({ before: base(), after: edit(base(), (x) => (x.winner = "runner")), me: "runner" })),
     g("Defeat", "Game end", () => ({ before: base(), after: edit(base(), (x) => (x.winner = "corp")), me: "runner" })),
   ];
@@ -418,6 +434,9 @@ export function FxLab({ scope }: { scope: SceneScope }) {
   const at = Math.min(current, shown.length - 1);
   return (
     <div class="lab-view">
+      <div class="lab-stage" {...swipe}>
+        <LabScene scene={scene} byPlain={byPlain} />
+      </div>
       <header class="lab-bar">
         <button class="lab-nav" onClick={() => go(current - 1)} aria-label="Previous scene">
           <Icon name="chevron-left" />
@@ -432,9 +451,6 @@ export function FxLab({ scope }: { scope: SceneScope }) {
           <Icon name="chevron-right" />
         </button>
       </header>
-      <div class="lab-stage" {...swipe}>
-        <LabScene scene={scene} byPlain={byPlain} />
-      </div>
       {(motionOff() || !settings.sound) && <p class="fxlab-note">{motionOff() ? "Animations are turned off in Settings, so only sounds will play." : "Sounds are turned off in Settings."}</p>}
       <nav class="lab-dock">
         <DockButton icon="play" label="Replay" onClick={() => setNonce((n) => n + 1)} />
