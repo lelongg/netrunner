@@ -234,11 +234,12 @@ export function FxGlLab({ groups, byPlain, sets }: { groups: CardGroup[]; byPlai
   const [set, setSet] = useState(saved.set ?? "");
   const [gl, setGl] = useState<"all" | "gl" | "dom">(saved.gl ?? "all");
   const group = groups.find((g) => g.key === type) ?? groups[0];
-  const inSet = (c: LabCard, key = set, g = gl) => (!key || !!sets.of.get(c.title)?.has(key)) && (g === "all" || (g === "gl") === c.gl.size > 0);
-  const CARDS = useMemo(() => {
-    const list = group.cards.filter((c) => inSet(c));
-    return list.length ? list : group.cards;
-  }, [group, set, gl]);
+  const [todo, setTodo] = useState(!!saved.todo);
+  const reviews = useReviews();
+  const stale = (c: LabCard) => c.kinds.some((k) => reviews.changed(noteKey(c.title, k)));
+  const inSet = (c: LabCard, key = set, g = gl, t = todo) => (!key || !!sets.of.get(c.title)?.has(key)) && (g === "all" || (g === "gl") === c.gl.size > 0) && (!t || stale(c));
+  const filtered = group.cards.filter((c) => inSet(c));
+  const CARDS = filtered.length ? filtered : group.cards;
   const setOptions = useMemo(() => sets.list.filter((s) => group.cards.some((c) => inSet(c, s.key))), [group, sets]);
   const [pick, setPick] = useState(() => Math.max(0, CARDS.findIndex((c) => c.title === saved.title)));
   const [kind, setKind] = useState<Kind>(() => (saved.kind && CARDS[pick]?.kinds.includes(saved.kind) ? saved.kind : CARDS[pick].kinds[0]));
@@ -248,12 +249,10 @@ export function FxGlLab({ groups, byPlain, sets }: { groups: CardGroup[]; byPlai
   const [speed, setSpeed] = useState(saved.speed && SPEEDS.includes(saved.speed) ? saved.speed : 1);
   const [tile, setTile] = useState(!!saved.tile);
   const [aimed, setAimed] = useState(!!saved.aimed);
-  const [todo, setTodo] = useState(!!saved.todo);
   const [mode, setMode] = useState<Mode>(saved.mode === "game" ? "game" : "isolated");
   const [preferDom, setPreferDom] = useState(!!saved.dom);
   const [nonce, setNonce] = useState(0);
   const [sheet, setSheet] = useState<Sheet>(null);
-  const reviews = useReviews();
   const img = useRef<HTMLImageElement>(null);
   const stage = useRef<HTMLDivElement>(null);
   const run = useRef(0);
@@ -344,6 +343,11 @@ export function FxGlLab({ groups, byPlain, sets }: { groups: CardGroup[]; byPlai
     if (!list.length) setSet("");
     refilter(list.length ? list : next.cards);
   };
+  const pickTodo = (t: boolean) => {
+    setTodo(t);
+    const list = group.cards.filter((c) => inSet(c, set, gl, t));
+    refilter(list.length ? list : group.cards);
+  };
   const pickGl = (g: "all" | "gl" | "dom") => {
     setGl(g);
     const list = group.cards.filter((c) => inSet(c, set, g));
@@ -372,8 +376,8 @@ export function FxGlLab({ groups, byPlain, sets }: { groups: CardGroup[]; byPlai
   const keyOf = (c: LabCard, k: Kind, d = c.dom.has(k) && (preferDom || !c.gl.has(k))) => noteKey(c.title, k, d);
   const key = keyOf(card, kind, dom);
   const { tag, changed } = reviews;
-  const pendingCount = CARDS.reduce((n, c) => n + c.kinds.filter((k) => changed(noteKey(c.title, k))).length, 0);
-  const shown = CARDS.map((c, i) => ({ c, i })).filter(({ c }) => c.title.toLowerCase().includes(query.trim().toLowerCase()) && (!todo || c.kinds.some((k) => changed(noteKey(c.title, k)))));
+  const pendingCount = group.cards.filter((c) => inSet(c, set, gl, false)).reduce((n, c) => n + c.kinds.filter((k) => changed(noteKey(c.title, k))).length, 0);
+  const shown = CARDS.map((c, i) => ({ c, i })).filter(({ c }) => c.title.toLowerCase().includes(query.trim().toLowerCase()));
   const allKeys = CARDS.flatMap((c) => c.kinds.map((k) => noteKey(c.title, k)));
   const cardMark = (c: LabCard) => ["changed", "issue"].find((m) => c.kinds.some((k) => tag(keyOf(c, k)) === m)) ?? c.kinds.map((k) => tag(keyOf(c, k))).find(Boolean) ?? "";
   const classes = ["fxgl-card", card.ice ? "ice" : "", card.ice && kind === "install" ? "unrezzed" : "", tile ? "tile-size" : ""].join(" ");
@@ -417,6 +421,7 @@ export function FxGlLab({ groups, byPlain, sets }: { groups: CardGroup[]; byPlai
         <button class="lab-title" onClick={() => setSheet("list")}>
           <span class="label">
             {set ? (sets.list.find((s) => s.key === set)?.name ?? group.label) : group.label} · {pick + 1}/{CARDS.length}
+            {todo && CARDS === filtered ? " · to review" : ""}
             {card.gl.size ? "" : " · no WebGL"}
           </span>
           <strong>{card.title}</strong>
@@ -460,7 +465,7 @@ export function FxGlLab({ groups, byPlain, sets }: { groups: CardGroup[]; byPlai
             <Picker title="Set" value={set} onChange={pickSet} options={[{ key: "", label: "All sets" }, ...setOptions.map((s) => ({ key: s.key, label: s.name }))]} />
           </div>
           <input class="fxgl-search" type="search" placeholder={`Search ${CARDS.length} cards`} value={query} onInput={(e) => setQuery((e.target as HTMLInputElement).value)} />
-          <button class={`lab-filter ${todo ? "on" : ""}`} disabled={!pendingCount} onClick={() => setTodo(!todo)}>
+          <button class={`lab-filter ${todo ? "on" : ""}`} disabled={!pendingCount} onClick={() => pickTodo(!todo)}>
             Changed, not reviewed ({pendingCount})
           </button>
           <div class="lab-grid">
