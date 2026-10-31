@@ -210,15 +210,12 @@ function ScoreHalf({ side, points, req }: { side: Side; points: number; req: num
     shown.current = points;
     if (points <= before || !row.current || motionOff()) return;
     const segs = [...row.current.children].slice(before, points) as HTMLElement[];
-    for (const seg of segs) {
-      seg.style.opacity = "0";
-      seg.dataset.pending = "1";
-    }
+    for (const seg of segs) seg.dataset.pending = "1";
     setTimeout(() => {
       segs.forEach((seg, i) => {
         if (!seg.dataset.pending) return;
         delete seg.dataset.pending;
-        animate(seg, { scaleY: [4, 1], opacity: [0, 1] }, { duration: 0.5, delay: i * 0.12, ease: [0.2, 1.4, 0.4, 1] }).finished.then(() => (seg.style.opacity = ""));
+        animate(seg, { scaleY: [4, 1] }, { duration: 0.5, delay: i * 0.12, ease: [0.2, 1.4, 0.4, 1] });
       });
     }, 5000);
   }, [points]);

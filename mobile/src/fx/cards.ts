@@ -283,7 +283,7 @@ async function showcase(m: Move, kind: Kind, me: Side) {
   ghost.dataset.until = String(performance.now() + 1580);
   const sx = src.width / big.width;
   const sy = src.height / big.height;
-  const tone: Tone = kind === "score" ? "gold" : kind === "steal" ? "red" : sideTone(info?.owner);
+  const tone: Tone = kind === "score" ? "gold" : kind === "steal" ? "red" : info?.owner === "corp" ? "blue" : "cyan";
   const mine = (m.to?.holder ?? m.from?.holder ?? info?.owner) === me;
   const hold = kind === "play" || kind === "install" ? (mine ? 0.35 : 0.9) : 0.9;
   ghost.style.transformOrigin = "0 0";
@@ -317,7 +317,7 @@ async function showcase(m: Move, kind: Kind, me: Side) {
     ring(center, tone, big.width * 1.4, 0.12);
     burst(center, tone, 30, big.width * 1.1, { size: 7, gravity: 30 });
     flash(kind === "steal" ? "red" : "gold", 0.35);
-    shake(0.6);
+    if (kind === "steal") shake(0.6);
     buzz([40, 40, 40, 40, 120]);
     banner(tr(kind === "steal" ? "Stolen" : "Scored"), info?.title ?? "", kind === "steal" ? "red" : "gold", { size: "xl", hold: hold + 0.2 });
   }

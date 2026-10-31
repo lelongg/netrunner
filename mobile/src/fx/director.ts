@@ -8,7 +8,7 @@ import { aim, setAim } from "./gl/aim";
 import { handOff, hasGl, letGoEffects } from "./gl";
 import { cleaver, fireSignature, leech, planogramResult, regolith, rezSignature, snare, transmission, useSignature, hasUseEffect } from "./signatures";
 import { cue, play as sound } from "../sound";
-import { type Point, type Tone, anchor, animate, banner, burst, buzz, haptics, creditChange, tapToSkip, done, flash, floater, gate, glitch, layer, lunge, mid, node, place, pointOf, punch, rays, rectOf, reduced, ring, shake, slash, split, stamp, tileEl, vignette, visible, wrapEl, scoreSegment } from "./core";
+import { type Point, type Tone, anchor, animate, banner, burst, buzz, haptics, creditChange, tapToSkip, done, flash, floater, gate, glitch, layer, lunge, mid, node, place, pointOf, punch, rectOf, reduced, ring, shake, slash, split, stamp, tileEl, vignette, visible, wrapEl, scoreSegment } from "./core";
 
 export type IceKind = "sentry" | "gate" | "barrier" | "other";
 
@@ -407,16 +407,18 @@ function rezFlip(cid: unknown, tone: Tone, dramatic: boolean) {
   }, 260);
 }
 
-function confetti() {
-  const colors = ["#f6e03a", "#22d3ee", "#ff3b30", "#ffffff", "#c792ff"];
-  for (let i = 0; i < 70; i++) {
-    const el = node("fx-confetti");
-    el.style.left = `${Math.random() * innerWidth}px`;
-    el.style.top = `-20px`;
-    el.style.background = colors[i % colors.length];
-    const fall = innerHeight * (0.7 + Math.random() * 0.5);
-    done(animate(el, { y: [0, fall], x: [0, (Math.random() - 0.5) * 160], rotate: [0, (Math.random() - 0.5) * 900], opacity: [1, 1, 0] }, { duration: 1.8 + Math.random() * 1.4, delay: Math.random() * 0.6, ease: [0.2, 0.5, 0.4, 1] }), el);
-  }
+const NOISE = "01#$%&*+=<>/\\|{}[]?ABCDEFX";
+
+function decode(s: HTMLElement, ch: string, delay: number, steps = 9) {
+  s.textContent = "\u00a0";
+  let n = 0;
+  const step = () => {
+    if (!s.isConnected) return;
+    if (n++ >= steps) return void (s.textContent = ch);
+    s.textContent = NOISE[Math.floor(Math.random() * NOISE.length)];
+    setTimeout(step, 45);
+  };
+  setTimeout(step, delay);
 }
 
 let spectating = false;
@@ -426,7 +428,8 @@ const clicksText = (n: number) => (n === 1 ? tr("1 click") : tr("{n} clicks", { 
 function finale(won: boolean, label?: string) {
   if (reduced()) return;
   const el = node(`fx-finale ${won ? "won" : "lost"}`);
-  const word = node("fx-finale-word", el);
+  const frame = node("fx-finale-frame", el);
+  const word = node("fx-finale-word", frame);
   const text = label ?? (won ? tr("VICTORY") : tr("DEFEAT"));
   const letters = [...text].map((ch) => {
     const s = document.createElement("span");
@@ -434,27 +437,36 @@ function finale(won: boolean, label?: string) {
     word.appendChild(s);
     return s;
   });
-  animate(el, { opacity: [0, 1] }, { duration: 0.4 });
-  letters.forEach((s, i) =>
-    animate(s, won ? { y: [-160, 0], rotate: [(i % 2 ? 1 : -1) * 40, 0], opacity: [0, 1] } : { y: [0, 0], scale: [2.4, 1], opacity: [0, 1], filter: ["blur(10px)", "blur(0px)"] }, {
-      type: "spring",
-      visualDuration: 0.5,
-      bounce: won ? 0.45 : 0.1,
-      delay: 0.2 + i * 0.07,
-    }),
-  );
+  animate(el, { opacity: [0, 1] }, { duration: 0.3 });
   const center: Point = [innerWidth / 2, innerHeight / 2];
   if (won) {
+    letters.forEach((s, i) => {
+      decode(s, s.textContent ?? "", 150 + i * 70);
+      animate(s, { opacity: [0, 1], scaleY: [2.2, 1] }, { duration: 0.25, delay: 0.15 + i * 0.07, ease: "easeOut" });
+    });
+    const scan = node("fx-finale-scan", el);
+    animate(scan, { y: ["-10vh", "110vh"], opacity: [0, 1, 1, 0] }, { duration: 1.1, delay: 0.5, ease: "easeInOut" });
     setTimeout(() => {
-      rays(center, "gold", Math.max(innerWidth, innerHeight) * 1.1, 2.6);
-      ring(center, "gold", 420);
-      flash("gold", 0.4);
-      confetti();
-      buzz([60, 60, 60, 60, 200]);
-    }, 650);
+      ring(center, "cyan", 420);
+      ring(center, "gold", 260, 0.12);
+      flash("cyan", 0.3);
+      for (let i = 0; i < 4; i++) setTimeout(() => burst([innerWidth * (0.2 + Math.random() * 0.6), innerHeight * (0.35 + Math.random() * 0.3)], i % 2 ? "gold" : "cyan", 14, 120, { size: 3, gravity: 0 }), i * 140);
+      buzz([40, 40, 40, 40, 160]);
+    }, 150 + letters.length * 70 + 400);
   } else {
+    letters.forEach((s, i) =>
+      animate(s, { opacity: [0, 1, 0.2, 1, 0.5, 1], x: [0, (Math.random() - 0.5) * 30, (Math.random() - 0.5) * 16, 0], filter: ["blur(8px)", "blur(0px)"] }, { duration: 0.6, delay: 0.2 + i * 0.06, ease: "linear" }),
+    );
+    for (let k = 0; k < 4; k++) {
+      const slice = word.cloneNode(true) as HTMLElement;
+      slice.classList.add("fx-finale-slice");
+      const top = 12 + k * 20;
+      slice.style.clipPath = `inset(${top}% 0 ${100 - top - 12}% 0)`;
+      frame.appendChild(slice);
+      animate(slice, { x: [0, (k % 2 ? 1 : -1) * (14 + Math.random() * 20), 0, (k % 2 ? -1 : 1) * 10, 0], opacity: [0, 1, 0, 1, 0] }, { duration: 0.45, delay: 0.75 + k * 0.4, ease: "linear" });
+    }
+    [650, 1000, 1500, 2100].forEach((ms, i) => setTimeout(() => glitch(i ? 1.4 : 2.2), ms));
     setTimeout(() => {
-      glitch(2);
       flash("red", 0.45, 0.9);
       shake(1.4);
       buzz([200, 80, 300]);

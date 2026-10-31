@@ -121,6 +121,7 @@ export function points(from: Point, segments: Element[], tone: Tone = "gold") {
     const el = node(`fx-comet tone-${tone}`);
     el.style.left = `${from[0]}px`;
     el.style.top = `${from[1]}px`;
+    el.style.opacity = "0";
     const delay = i * 0.14;
     animate(el, { x: [0, dx], y: [0, dy], rotate: [angle, angle], scaleX: [0.4, 1.8, 0.9], opacity: [0, 1, 1] }, { duration: 0.6, delay, ease: [0.55, 0, 0.85, 0.45] }).finished.then(
       () => {
@@ -129,9 +130,7 @@ export function points(from: Point, segments: Element[], tone: Tone = "gold") {
         burst(to, tone, 10, 40, { size: 4, gravity: 0 });
         const pending = seg instanceof HTMLElement && !!seg.dataset.pending;
         if (pending) delete (seg as HTMLElement).dataset.pending;
-        animate(seg, { scaleY: [pending ? 3.5 : 1, 3, 1], opacity: [pending ? 0 : 1, 1, 1], filter: ["brightness(1)", "brightness(2.5)", "brightness(1)"] }, { duration: 0.5, ease: "easeOut" }).finished.then(() => {
-          if (pending) (seg as HTMLElement).style.opacity = "";
-        });
+        animate(seg, { scaleY: [pending ? 3.5 : 1, 3, 1], filter: ["brightness(1)", "brightness(2.5)", "brightness(1)"] }, { duration: 0.5, ease: "easeOut" });
       },
       () => el.remove(),
     );
@@ -231,6 +230,7 @@ export function ring(at: Point, tone: Tone = "cyan", size = 120, delay = 0) {
   el.style.top = `${at[1] - size / 2}px`;
   el.style.width = `${size}px`;
   el.style.height = `${size}px`;
+  el.style.opacity = "0";
   done(animate(el, { scale: [0.15, 1], opacity: [1, 0] }, { duration: 0.6, delay, ease: [0.2, 0.8, 0.3, 1] }), el);
 }
 
@@ -304,6 +304,7 @@ export function coins(from: Point, to: Point, n: number, tone: Tone = "gold", de
     const el = node(`fx-coin tone-${tone}`);
     el.style.left = `${from[0] - 7}px`;
     el.style.top = `${from[1] - 7}px`;
+    el.style.opacity = "0";
     const dx = to[0] - from[0];
     const dy = to[1] - from[1];
     const lift = -40 - Math.random() * 50;

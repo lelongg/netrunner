@@ -3665,7 +3665,7 @@ button:active:not(:disabled) {
   background: color-mix(in srgb, var(--seat) 24%, transparent);
 }
 
-.score-half i.on {
+.score-half i.on:not([data-pending]) {
   background: var(--seat);
   box-shadow: 0 0 6px var(--seat);
 }

@@ -346,19 +346,45 @@
   display: inline-block;
 }
 
+.fx-finale-frame {
+  position: relative;
+}
+
+.fx-finale-slice {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
 .fx-finale.won .fx-finale-word {
-  color: #f6e03a;
+  color: #22d3ee;
   text-shadow:
-    0 0 40px #f6e03a,
-    4px 0 0 rgb(255 59 48 / 0.6),
-    -4px 0 0 rgb(34 211 238 / 0.6);
+    0 0 36px rgb(34 211 238 / 0.8),
+    3px 0 0 rgb(246 224 58 / 0.75),
+    -3px 0 0 rgb(199 146 255 / 0.5);
+}
+
+.fx-finale-scan {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 3px;
+  background: #22d3ee;
+  box-shadow: 0 0 24px 6px rgb(34 211 238 / 0.6);
 }
 
 .fx-finale.lost .fx-finale-word {
   color: #ff3b30;
   text-shadow:
     0 0 40px #ff3b30,
-    5px 0 0 rgb(34 211 238 / 0.5);
+    5px 0 0 rgb(34 211 238 / 0.55),
+    -4px 0 0 rgb(199 146 255 / 0.4);
+}
+
+.fx-finale.lost .fx-finale-slice {
+  color: #22d3ee;
+  mix-blend-mode: screen;
 }
 
 .fx-showdown {
