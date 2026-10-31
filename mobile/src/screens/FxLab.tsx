@@ -464,7 +464,17 @@ function Board({ m, codes }: { m: Model; codes: Map<string, Card> }) {
 
 const frame = () => new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
 
-export function FxLab() {
+export type SceneScope = "signatures" | "game" | "runs";
+
+const RUN_GROUPS = new Set(["Run", "Subroutines", "Run end"]);
+
+function inScope(e: Entry, scope?: SceneScope) {
+  if (!scope) return true;
+  if (scope === "signatures") return e.id.startsWith("c:");
+  return e.id.startsWith("g:") && RUN_GROUPS.has(e.group) === (scope === "runs");
+}
+
+export function FxLab({ scope }: { scope?: SceneScope } = {}) {
   const [cards, setCards] = useState<Card[]>();
   const [model, setModel] = useState<Model>(base);
   const [query, setQuery] = useState("");
@@ -505,8 +515,8 @@ export function FxLab() {
     add(Object.keys(SCORE), "score", "Score");
     add(FIRE, "fire", "Subroutine");
     list.push(...extraScenes(byPlain));
-    return list;
-  }, [cards, byPlain]);
+    return list.filter((e) => inScope(e, scope));
+  }, [cards, byPlain, scope]);
 
   const groups = useMemo(() => ["All", ...new Set(entries.map((e) => e.group))], [entries]);
   const shown = entries.filter((e) => (group === "All" || e.group === group) && (!query || e.label.toLowerCase().includes(query.toLowerCase())));

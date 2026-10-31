@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "preact/hooks";
+import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { INSTALL, PLAY, REZ, SCORE } from "../fx/signatures";
 import { FX, type Kind, glEffect } from "../fx/gl";
 import { setAim } from "../fx/gl/aim";
@@ -172,10 +172,12 @@ const KIND_LABEL: Record<Kind, string> = { play: "Play", install: "Install", rez
 const SPEEDS = [1, 0.5, 0.25];
 const OLD: Partial<Record<Kind, Record<string, (r: DOMRect) => void>>> = { play: PLAY, install: INSTALL, rez: REZ, score: SCORE };
 
-const CARDS = Object.keys(CODES)
+const ALL_CARDS = Object.keys(CODES)
   .map((title) => ({ title, code: CODES[title], ice: ICE.has(title), kinds: KINDS.filter((k) => FX[k][title]) }))
   .filter((c) => c.kinds.length)
   .sort((a, b) => a.title.localeCompare(b.title));
+
+export const glTitles = () => ALL_CARDS.map((c) => c.title);
 
 const art = (code: string) => `https://card-images.netrunnerdb.com/v2/large/${code}.jpg`;
 const thumb = (code: string) => `https://card-images.netrunnerdb.com/v2/small/${code}.jpg`;
@@ -238,7 +240,8 @@ function saveNotes(n: Notes) {
   } catch {}
 }
 
-export function FxGlLab() {
+export function FxGlLab({ only }: { only?: Set<string> } = {}) {
+  const CARDS = useMemo(() => (only ? ALL_CARDS.filter((c) => only.has(c.title)) : ALL_CARDS), [only]);
   const [saved] = useState(loadView);
   const [pick, setPick] = useState(() => Math.max(0, CARDS.findIndex((c) => c.title === saved.title)));
   const [kind, setKind] = useState<Kind>(() => (saved.kind && CARDS[pick]?.kinds.includes(saved.kind) ? saved.kind : CARDS[pick].kinds[0]));

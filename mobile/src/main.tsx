@@ -10,7 +10,7 @@ import { installTips } from "./tips";
 import { PeekHost, installCardPeek } from "./peek";
 import { installCardPresent } from "./fx/present";
 import { installMotion, useLoop } from "./fx/ui";
-import { silence, unlockSound } from "./sound";
+import { unlockSound } from "./sound";
 import { dive } from "./fx/dive";
 import { Credits } from "./screens/Credits";
 import { Profile } from "./screens/Profile";
@@ -29,8 +29,7 @@ import { Home } from "./screens/Home";
 import { type Tab, TabBar } from "./screens/HomeModern";
 import { Lobby } from "./screens/Lobby";
 import { Guide } from "./screens/Guide";
-import { FxLab } from "./screens/FxLab";
-import { FxGlLab } from "./screens/FxGlLab";
+import { Lab, labMode } from "./screens/Lab";
 import { markTutorial, skipTutorial, tutorialState } from "./tutorial";
 import { fromPrecon, seedStarters, toWire } from "./decks";
 import { type Role, type SavedGame, Session, clearSave, listSaves, loadSave, newRoomCode, saveId } from "./session";
@@ -617,8 +616,7 @@ installTips();
 installCardPeek();
 installCardPresent();
 installMotion();
-const lab = new URLSearchParams(location.search).has("fxgl");
-if (lab) silence();
+const lab = labMode();
 unlockSound();
 if (!lab) {
   initMusic();
@@ -629,12 +627,7 @@ startEngineWorker();
 render(
   lab ? (
     <>
-      <FxGlLab />
-      <UpdateBanner />
-    </>
-  ) : new URLSearchParams(location.search).has("animations") ? (
-    <>
-      <FxLab />
+      <Lab initial={lab} />
       <UpdateBanner />
     </>
   ) : (

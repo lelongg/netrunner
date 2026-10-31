@@ -6833,6 +6833,40 @@ h1.deck-name.long {
   }
 }
 
+.lab-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--bg);
+}
+
+.lab-tabs button {
+  min-height: 40px;
+}
+
+.lab .fxlab {
+  height: calc(100dvh - 42px);
+}
+
+.lab-types {
+  overflow-x: auto;
+  scrollbar-width: none;
+  border-top: none;
+}
+
+.lab-types button {
+  flex: none;
+  min-height: 34px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.lab-count {
+  color: var(--muted);
+}
+
 .fxlab {
   display: flex;
   flex-direction: column;

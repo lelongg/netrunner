@@ -68,8 +68,8 @@ function load(file: string): Promise<AudioBuffer | null> {
 
 let silenced = false;
 
-export function silence() {
-  silenced = true;
+export function silence(on = true) {
+  silenced = on;
 }
 
 export function soundOn() {
