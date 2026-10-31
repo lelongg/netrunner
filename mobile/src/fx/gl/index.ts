@@ -264,6 +264,11 @@ export const FX: Record<Kind, Record<string, string>> = {
 };
 
 let ok: boolean | undefined;
+let off = false;
+
+export function setGlOff(value: boolean) {
+  off = value;
+}
 const hidden = new WeakMap<HTMLElement, number>();
 const LIMIT = 6000;
 const live = new Set<() => void>();
@@ -285,6 +290,7 @@ export function letGoEffects() {
 }
 
 function glOk() {
+  if (off) return false;
   if (ok === undefined) {
     try {
       ok = !!document.createElement("canvas").getContext("webgl2");

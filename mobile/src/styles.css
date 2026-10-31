@@ -6833,19 +6833,93 @@ h1.deck-name.long {
   }
 }
 
-.lab-tabs {
-  position: sticky;
-  top: 0;
-  z-index: 5;
+.lab {
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
   background: var(--bg);
+}
+
+.lab > * {
+  min-width: 0;
+}
+
+.lab > .tabs {
+  flex: none;
+}
+
+.lab > .board,
+.lab > .fxgl,
+.lab > .lab-loading {
+  flex: 1;
+  min-height: 0;
+}
+
+.lab > .fxgl {
+  width: 100%;
+  overflow-y: auto;
+}
+
+.lab-loading {
+  display: grid;
+  place-items: center;
 }
 
 .lab-tabs button {
   min-height: 40px;
 }
 
-.lab .fxlab {
-  height: calc(100dvh - 42px);
+.lab .actions.replay-controls {
+  max-height: 60dvh;
+  overflow-y: auto;
+}
+
+.lab-controls .fxgl-head {
+  grid-template-columns: 36px minmax(0, 1fr) 36px;
+}
+
+.lab-controls .fxgl-nav {
+  min-height: 36px;
+}
+
+.lab-controls .fxgl-name strong {
+  font-size: 18px;
+}
+
+.lab-controls .fxgl-kinds button,
+.lab-controls .fxgl-controls button {
+  min-height: 34px;
+}
+
+.lab-more {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.lab-more > summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  padding: 6px 0;
+}
+
+.lab-more[open] > summary {
+  color: var(--text);
+}
+
+.lab-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.lab-scene-dot {
+  width: 100%;
+  aspect-ratio: 63 / 88;
+  background: repeating-linear-gradient(135deg, var(--line) 0 6px, transparent 6px 12px);
 }
 
 .lab-types {
@@ -9283,7 +9357,7 @@ button.player-chip {
 
 .fxgl-head {
   display: grid;
-  grid-template-columns: 44px 1fr 44px;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
   align-items: center;
   gap: 8px;
 }

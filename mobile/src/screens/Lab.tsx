@@ -1,13 +1,12 @@
 import { useEffect, useMemo, useState } from "preact/hooks";
 import { silence } from "../sound";
-import { FxGlLab, glTitles } from "./FxGlLab";
-import { FxLab } from "./FxLab";
+import { FxGlLab, labCards } from "./FxGlLab";
+import { FxLab, useLabCards } from "./FxLab";
 
-export type LabMode = "cards" | "signatures" | "game" | "runs";
+export type LabMode = "cards" | "game" | "runs";
 
 const MODES: { key: LabMode; label: string }[] = [
   { key: "cards", label: "Cards" },
-  { key: "signatures", label: "Signatures" },
   { key: "game", label: "Game" },
   { key: "runs", label: "Runs" },
 ];
@@ -32,35 +31,29 @@ export function labMode(): LabMode | null {
   return null;
 }
 
-function CardEffects() {
-  const [typeOf, setTypeOf] = useState<Map<string, string> | null>(null);
+function Cards() {
+  const { cards, byPlain } = useLabCards();
   const [type, setType] = useState(() => new URLSearchParams(location.search).get("type") ?? "all");
-  useEffect(() => {
-    fetch("data/cards.json")
-      .then((r) => r.json())
-      .then((all: { title: string; type: string }[]) => setTypeOf(new Map(all.flatMap((c) => [[c.title, c.type], [c.title.normalize("NFD").replace(/[\u0300-\u036f]/g, ""), c.type]]))))
-      .catch(() => setTypeOf(new Map()));
-  }, []);
   const groups = useMemo(() => {
-    const titles = glTitles();
-    return TYPES.map((g) => ({ ...g, titles: new Set(g.types.length ? titles.filter((t) => g.types.includes(typeOf?.get(t) ?? "")) : titles) })).filter((g) => g.titles.size);
-  }, [typeOf]);
+    const all = labCards(byPlain);
+    return TYPES.map((g) => ({ ...g, cards: g.types.length ? all.filter((c) => g.types.includes(c.card?.type ?? "")) : all })).filter((g) => g.cards.length);
+  }, [byPlain]);
   const current = groups.find((g) => g.key === type) ?? groups[0];
   useEffect(() => {
-    history.replaceState(null, "", `${location.pathname}?lab${current.key === "all" ? "" : `&type=${current.key}`}`);
-  }, [current.key]);
-  if (!typeOf) return null;
+    if (current) history.replaceState(null, "", `${location.pathname}?lab${current.key === "all" ? "" : `&type=${current.key}`}`);
+  }, [current?.key]);
+  if (!cards || !current) return null;
   return (
     <>
       <div class="tabs lab-types" role="tablist">
         {groups.map((g) => (
           <button role="tab" aria-selected={g.key === current.key} class={g.key === current.key ? "on" : ""} onClick={() => setType(g.key)}>
             {g.label}
-            <span class="lab-count">{g.titles.size}</span>
+            <span class="lab-count">{g.cards.length}</span>
           </button>
         ))}
       </div>
-      <FxGlLab key={current.key} only={current.key === "all" ? undefined : current.titles} />
+      <FxGlLab key={current.key} cards={current.cards} byPlain={byPlain} />
     </>
   );
 }
@@ -68,7 +61,7 @@ function CardEffects() {
 export function Lab({ initial }: { initial: LabMode }) {
   const [mode, setMode] = useState(initial);
   useEffect(() => {
-    silence(mode === "cards");
+    silence(false);
     if (mode !== "cards") history.replaceState(null, "", `${location.pathname}?lab=${mode}`);
   }, [mode]);
   return (
@@ -80,7 +73,7 @@ export function Lab({ initial }: { initial: LabMode }) {
           </button>
         ))}
       </div>
-      {mode === "cards" ? <CardEffects /> : <FxLab key={mode} scope={mode} />}
+      {mode === "cards" ? <Cards /> : <FxLab key={mode} scope={mode} />}
     </div>
   );
 }

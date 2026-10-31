@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
-import { INSTALL, PLAY, REZ, SCORE } from "../fx/signatures";
-import { FX, type Kind, glEffect } from "../fx/gl";
+import { FIRE, INSTALL, PLAY, REZ, SCORE, fireSignature } from "../fx/signatures";
+import { FX, type Kind, glEffect, setGlOff } from "../fx/gl";
 import { setAim } from "../fx/gl/aim";
 import { setFxSpeed } from "../fx/gl/stage";
+import { type Card, cardScene, extraScenes, plain } from "./FxLab";
+import { LabScene, useSwipe } from "./LabScene";
+import { KINDS, KIND_LABEL, ReviewBox, noteKey, useReviews } from "./labReview";
 
 const CODES: Record<string, string> = {
   "Sure Gamble": "30030",
@@ -166,48 +169,41 @@ const CODES: Record<string, string> = {
   "Off the Books": "35071",
 };
 
-const ICE = new Set(["Ping", "Flyswatter", "Event Horizon", "Pharos", "Sleipnir", "Tocsin", "Semak-samun", "Bumi 1.0", "Biawak", "Funhouse", "Bran 1.0", "Doomscroll", "Whitespace", "Syailendra", "Flywheel", "Kessleroid", "Lethe", "Scatter Field", "Lionsmane", "Empiricist", "Vicsek", "Ansel 1.0", "Diviner", "Karuna", "Ballista", "Palisade", "Tithe", "Mycoweb", "N-Pot", "Lamplighter"]);
-const KINDS: Kind[] = ["play", "install", "rez", "use", "score"];
-const KIND_LABEL: Record<Kind, string> = { play: "Play", install: "Install", rez: "Rez", use: "Effect", score: "Score" };
 const SPEEDS = [1, 0.5, 0.25];
-const OLD: Partial<Record<Kind, Record<string, (r: DOMRect) => void>>> = { play: PLAY, install: INSTALL, rez: REZ, score: SCORE };
+const DOM: Partial<Record<Kind, Record<string, (r: DOMRect) => void>>> = { play: PLAY, install: INSTALL, rez: REZ, score: SCORE };
 
-const ALL_CARDS = Object.keys(CODES)
-  .map((title) => ({ title, code: CODES[title], ice: ICE.has(title), kinds: KINDS.filter((k) => FX[k][title]) }))
-  .filter((c) => c.kinds.length)
-  .sort((a, b) => a.title.localeCompare(b.title));
+export interface LabCard {
+  title: string;
+  code: string;
+  card?: Card;
+  ice: boolean;
+  kinds: Kind[];
+  gl: Set<Kind>;
+  dom: Set<Kind>;
+}
 
-export const glTitles = () => ALL_CARDS.map((c) => c.title);
+const hasDom = (kind: Kind, title: string) => (kind === "use" ? FIRE.includes(title) : !!DOM[kind]?.[title]);
+
+export function labCards(byPlain: Map<string, Card>): LabCard[] {
+  const titles = new Set([...KINDS.flatMap((k) => Object.keys(FX[k])), ...Object.values(DOM).flatMap((m) => Object.keys(m ?? {})), ...FIRE]);
+  return [...titles]
+    .map((title) => {
+      const card = byPlain.get(plain(title));
+      const gl = new Set(KINDS.filter((k) => FX[k][title]));
+      const dom = new Set(KINDS.filter((k) => hasDom(k, title)));
+      return { title, card, code: CODES[title] ?? card?.code ?? "", ice: card?.type === "ICE", kinds: KINDS.filter((k) => gl.has(k) || dom.has(k)), gl, dom };
+    })
+    .filter((c) => c.code && c.kinds.length)
+    .sort((a, b) => a.title.localeCompare(b.title));
+}
 
 const art = (code: string) => `https://card-images.netrunnerdb.com/v2/large/${code}.jpg`;
 const thumb = (code: string) => `https://card-images.netrunnerdb.com/v2/small/${code}.jpg`;
 const box = (el: Element | null | undefined) => el?.getBoundingClientRect() ?? null;
-const NOTES = "nsg.fxnotes";
-type Review = { stars?: number; status?: "ok" | "issue"; note?: string; v?: string };
-type Notes = Record<string, Review>;
-const noteKey = (title: string, kind: Kind) => `${title} · ${KIND_LABEL[kind]}`;
-const nameOf = (key: string) => {
-  const at = key.lastIndexOf(" · ");
-  const kind = KINDS.find((k) => KIND_LABEL[k] === key.slice(at + 3));
-  return kind ? (FX[kind][key.slice(0, at)] ?? "") : "";
-};
-const reviewed = (r?: Review) => !!r && (!!r.stars || !!r.status || !!r.note?.trim());
-const mark = (r?: Review) => (!reviewed(r) ? "" : r!.status === "issue" ? "issue" : r!.status === "ok" ? "ok" : "noted");
-const stars = (n?: number) => (n ? `${"★".repeat(n)}${"☆".repeat(5 - n)}` : "");
-const summary = (r: Review) => [r.status === "ok" ? "OK" : r.status === "issue" ? "ISSUE" : "", stars(r.stars), r.note?.trim() ?? ""].filter(Boolean).join(" · ");
-const line = (k: string, r: Review) => [`- ${k}`, r.v ? `v:${r.v}` : "", r.status === "ok" ? "OK" : r.status === "issue" ? "ISSUE" : "", r.stars ? `${"★".repeat(r.stars)}${"☆".repeat(5 - r.stars)}` : "", r.note?.trim() ?? ""].filter(Boolean).join(" · ");
-
-function loadNotes(): Notes {
-  try {
-    const raw = JSON.parse(localStorage.getItem(NOTES) ?? "{}") as Record<string, Review | string>;
-    return Object.fromEntries(Object.entries(raw).map(([k, v]) => [k, typeof v === "string" ? { note: v } : v]));
-  } catch {
-    return {};
-  }
-}
 
 const VIEW = "nsg.fxlab";
-type View = { title?: string; kind?: Kind; query?: string; speed?: number; tile?: boolean; aimed?: boolean; todo?: boolean };
+type Mode = "isolated" | "game";
+type View = { title?: string; kind?: Kind; query?: string; speed?: number; tile?: boolean; aimed?: boolean; todo?: boolean; mode?: Mode; dom?: boolean };
 
 function loadView(): View {
   try {
@@ -217,31 +213,7 @@ function loadView(): View {
   }
 }
 
-const PASS = "nsg.fxpass";
-type Pass = { n: number; prev: Notes };
-
-function loadPass(): Pass {
-  try {
-    const p = JSON.parse(localStorage.getItem(PASS) ?? "null") as Pass | null;
-    if (p && typeof p.n === "number") return { n: p.n, prev: p.prev ?? {} };
-  } catch {}
-  return { n: 1, prev: {} };
-}
-
-function savePass(p: Pass) {
-  try {
-    localStorage.setItem(PASS, JSON.stringify(p));
-  } catch {}
-}
-
-function saveNotes(n: Notes) {
-  try {
-    localStorage.setItem(NOTES, JSON.stringify(n));
-  } catch {}
-}
-
-export function FxGlLab({ only }: { only?: Set<string> } = {}) {
-  const CARDS = useMemo(() => (only ? ALL_CARDS.filter((c) => only.has(c.title)) : ALL_CARDS), [only]);
+export function FxGlLab({ cards: CARDS, byPlain }: { cards: LabCard[]; byPlain: Map<string, Card> }) {
   const [saved] = useState(loadView);
   const [pick, setPick] = useState(() => Math.max(0, CARDS.findIndex((c) => c.title === saved.title)));
   const [kind, setKind] = useState<Kind>(() => (saved.kind && CARDS[pick]?.kinds.includes(saved.kind) ? saved.kind : CARDS[pick].kinds[0]));
@@ -252,18 +224,26 @@ export function FxGlLab({ only }: { only?: Set<string> } = {}) {
   const [tile, setTile] = useState(!!saved.tile);
   const [aimed, setAimed] = useState(!!saved.aimed);
   const [todo, setTodo] = useState(!!saved.todo);
-  const [notes, setNotes] = useState<Notes>(loadNotes);
-  const [pass, setPass] = useState<Pass>(loadPass);
-  const [versions, setVersions] = useState<Record<string, string>>({});
-  const [sent, setSent] = useState("");
+  const [mode, setMode] = useState<Mode>(saved.mode === "game" ? "game" : "isolated");
+  const [preferDom, setPreferDom] = useState(!!saved.dom);
+  const [nonce, setNonce] = useState(0);
+  const reviews = useReviews();
   const img = useRef<HTMLImageElement>(null);
   const stage = useRef<HTMLDivElement>(null);
   const strip = useRef<HTMLDivElement>(null);
   const run = useRef(0);
   const pending = useRef(false);
   const card = CARDS[pick];
+  const dom = card.dom.has(kind) && (preferDom || !card.gl.has(kind));
+  const both = card.dom.has(kind) && card.gl.has(kind);
 
-  const play = async (old = false) => {
+  useEffect(() => {
+    setGlOff(dom);
+  }, [dom]);
+  useEffect(() => () => setGlOff(false), []);
+
+  const play = async () => {
+    if (mode === "game") return setNonce((n) => n + 1);
     const el = img.current;
     if (!el) return;
     if (busy) {
@@ -275,39 +255,36 @@ export function FxGlLab({ only }: { only?: Set<string> } = {}) {
     const rect = el.getBoundingClientRect();
     const q = (sel: string) => box(stage.current?.querySelector(sel));
     setAim(aimed ? { advanced: ["lab-target"], gone: [q(".fxgl-gone")].filter((r): r is DOMRect => !!r), hostOf: new Map([["lab-self", "lab-target"]]), corpLost: 3, gripLost: 2 } : { advanced: [], gone: [], hostOf: new Map(), corpLost: 0, gripLost: 0 });
-    if (old) {
-      OLD[kind]?.[card.title]?.(rect);
+    if (dom) {
+      if (kind === "use") fireSignature(card.title, rect, [rect.left + rect.width / 2, rect.bottom + 60]);
+      else DOM[kind]?.[card.title]?.(rect);
       await new Promise((r) => setTimeout(r, 2400));
     } else await glEffect(kind, card.title, rect, card.code, el, "runner", aimed && kind === "use" ? (stage.current?.querySelector(".fxgl-target") ?? null) : null);
     setBusy(false);
     if (run.current === id) run.current = 0;
   };
 
+  const scene = useMemo(() => {
+    const c = card.card;
+    if (mode !== "game" || !c) return undefined;
+    const extra = extraScenes(byPlain).find((e) => plain(e.label) === card.title && e.group.toLowerCase() === (kind === "use" ? "use" : kind));
+    if (extra) return extra.scene();
+    return cardScene(c, kind === "use" && card.ice ? "fire" : kind);
+  }, [mode, card, kind, nonce, byPlain]);
+
   useEffect(() => setFxSpeed(speed), [speed]);
   useEffect(() => {
-    void Promise.all([import("../fx/gl/versions").then((m) => m.fxVersions()), import("../fx/gl/baseline.json").then((m) => m.default as Record<string, string>)]).then(([cur, base]) => {
-      setVersions(cur);
-      const stamp = (n: Notes) => Object.fromEntries(Object.entries(n).map(([k, r]) => [k, r.v ? r : { ...r, v: base[nameOf(k)] }]));
-      const fixed = stamp(loadNotes());
-      const p = loadPass();
-      const next = { n: p.n, prev: stamp(p.prev) };
-      setNotes(fixed);
-      saveNotes(fixed);
-      setPass(next);
-      savePass(next);
-    });
-  }, []);
-  useEffect(() => {
     try {
-      localStorage.setItem(VIEW, JSON.stringify({ title: CARDS[pick].title, kind, query, speed, tile, aimed, todo }));
+      localStorage.setItem(VIEW, JSON.stringify({ title: card.title, kind, query, speed, tile, aimed, todo, mode, dom: preferDom }));
     } catch {}
-  }, [pick, kind, query, speed, tile, aimed, todo]);
+  }, [pick, kind, query, speed, tile, aimed, todo, mode, preferDom]);
   useEffect(() => () => setFxSpeed(1), []);
 
   useEffect(() => {
+    if (mode === "game") return;
     const t = setTimeout(() => void play(), 450);
     return () => clearTimeout(t);
-  }, [pick, kind, tile, aimed]);
+  }, [pick, kind, tile, aimed, mode, dom]);
 
   useEffect(() => {
     if (busy) return;
@@ -317,24 +294,26 @@ export function FxGlLab({ only }: { only?: Set<string> } = {}) {
       return () => clearTimeout(t);
     }
     if (!loop) return;
-    const t = setTimeout(() => void play(), 500);
+    const t = setTimeout(() => void play(), mode === "game" ? 3200 : 500);
     return () => clearTimeout(t);
-  }, [loop, busy]);
+  }, [loop, busy, nonce]);
 
   useEffect(() => {
     const el = strip.current?.querySelector<HTMLElement>(".on");
     if (el && strip.current) strip.current.scrollTo({ left: el.offsetLeft - (strip.current.clientWidth - el.offsetWidth) / 2, behavior: "smooth" });
-  }, [pick]);
+  }, [pick, mode]);
 
   const choose = (i: number) => {
     const next = (i + CARDS.length) % CARDS.length;
     setPick(next);
     if (!CARDS[next].kinds.includes(kind)) setKind(CARDS[next].kinds[0]);
+    if (mode === "game") setNonce((n) => n + 1);
   };
+  const swipe = useSwipe((dir) => choose(pick + dir));
 
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
-      if ((e.target as HTMLElement)?.tagName === "INPUT") return;
+      if ((e.target as HTMLElement)?.tagName === "INPUT" || (e.target as HTMLElement)?.tagName === "TEXTAREA") return;
       if (e.key === "ArrowRight") choose(pick + 1);
       else if (e.key === "ArrowLeft") choose(pick - 1);
       else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
@@ -348,84 +327,103 @@ export function FxGlLab({ only }: { only?: Set<string> } = {}) {
     return () => removeEventListener("keydown", key);
   });
 
-  const key = noteKey(card.title, kind);
-  const filled = Object.entries(notes).filter(([, v]) => reviewed(v));
-  const review = notes[key] ?? {};
-  const before = pass.prev[key];
-  const versionOf = (k: string) => versions[nameOf(k)];
-  const last = (k: string) => (reviewed(notes[k]) ? notes[k] : pass.prev[k]);
-  const changed = (k: string) => {
-    const r = last(k);
-    const v = versionOf(k);
-    return !!r?.v && !!v && r.v !== v;
-  };
-  const tag = (k: string) => (changed(k) ? "changed" : mark(notes[k]));
-  const toReview = (k: string) => changed(k);
-  const pendingCount = CARDS.reduce((n, c) => n + c.kinds.filter((k) => toReview(noteKey(c.title, k))).length, 0);
-  const shown = CARDS.map((c, i) => ({ c, i })).filter(({ c, i }) => c.title.toLowerCase().includes(query.trim().toLowerCase()) && (!todo || !pendingCount || i === pick || c.kinds.some((k) => toReview(noteKey(c.title, k)))));
-  const update = (patch: Review) => {
-    const r = { ...review, ...patch, v: versionOf(key) };
-    const next = { ...notes, [key]: r };
-    if (!reviewed(r)) delete next[key];
-    setNotes(next);
-    saveNotes(next);
-  };
-  const send = async () => {
-    const total = CARDS.reduce((n, c) => n + c.kinds.length, 0);
-    const stale = CARDS.flatMap((c) => c.kinds.map((k) => noteKey(c.title, k))).filter((k) => changed(k));
-    const text = [`FX lab review · pass ${pass.n} (${filled.length}/${total} reviewed)`, ...filled.map(([k, v]) => line(k, v)), ...(stale.length ? ["", `Changed since an earlier review, not re-reviewed yet (${stale.length}):`, ...stale.map((k) => `- ${k} · v:${versionOf(k)}`)] : [])].join("\n");
-    try {
-      if (navigator.share) {
-        await navigator.share({ text });
-        setSent("Shared");
-      } else {
-        await navigator.clipboard.writeText(text);
-        setSent("Copied");
-      }
-    } catch (e) {
-      if ((e as Error)?.name === "AbortError") return;
-      try {
-        await navigator.clipboard.writeText(text);
-        setSent("Copied");
-      } catch {
-        setSent("Copy failed");
-      }
-    }
-    setTimeout(() => setSent(""), 2000);
-  };
-  const newPass = () => {
-    if (!confirm(`Start review pass ${pass.n + 1}? Pass ${pass.n} reviews stay visible as "previous".`)) return;
-    const next = { n: pass.n + 1, prev: { ...pass.prev, ...Object.fromEntries(filled) } };
-    setPass(next);
-    savePass(next);
-    setNotes({});
-    saveNotes({});
-  };
-  const clearNotes = () => {
-    if (!confirm(`Delete ${filled.length} reviews?`)) return;
-    setNotes({});
-    saveNotes({});
-  };
+  const keyOf = (c: LabCard, k: Kind, d = c.dom.has(k) && (preferDom || !c.gl.has(k))) => noteKey(c.title, k, d);
+  const key = keyOf(card, kind, dom);
+  const { tag, changed } = reviews;
+  const pendingCount = CARDS.reduce((n, c) => n + c.kinds.filter((k) => changed(noteKey(c.title, k))).length, 0);
+  const shown = CARDS.map((c, i) => ({ c, i })).filter(({ c, i }) => c.title.toLowerCase().includes(query.trim().toLowerCase()) && (!todo || !pendingCount || i === pick || c.kinds.some((k) => changed(noteKey(c.title, k)))));
+  const allKeys = CARDS.flatMap((c) => c.kinds.map((k) => noteKey(c.title, k)));
 
   const classes = ["fxgl-card", card.ice ? "ice" : "", card.ice && kind === "install" ? "unrezzed" : "", tile ? "tile-size" : ""].join(" ");
 
+  const head = (
+    <header class="fxgl-head" {...swipe}>
+      <button class="fxgl-nav" onClick={() => choose(pick - 1)} aria-label="Previous card">
+        ‹
+      </button>
+      <div class="fxgl-name">
+        <span class="label">
+          {pick + 1}/{CARDS.length}
+          {card.gl.size ? "" : " · no WebGL effect"}
+        </span>
+        <strong>{card.title}</strong>
+      </div>
+      <button class="fxgl-nav" onClick={() => choose(pick + 1)} aria-label="Next card">
+        ›
+      </button>
+    </header>
+  );
+
+  const kinds = (
+    <div class="fxgl-kinds" role="tablist">
+      {card.kinds.map((k) => (
+        <button role="tab" aria-selected={k === kind} class={[k === kind ? "on" : "", k === kind && busy ? "playing" : "", tag(keyOf(card, k))].join(" ")} onClick={() => (k === kind ? void play() : (setKind(k), mode === "game" && setNonce((n) => n + 1)))}>
+          {KIND_LABEL[k]}
+        </button>
+      ))}
+    </div>
+  );
+
+  const switches = (
+    <div class="fxgl-controls">
+      <button class={mode === "game" ? "on" : ""} onClick={() => setMode(mode === "game" ? "isolated" : "game")}>
+        {mode === "game" ? "In game" : "Isolated"}
+      </button>
+      <button class={dom ? "on" : ""} disabled={!both} onClick={() => setPreferDom(!preferDom)}>
+        {dom ? "No WebGL" : "WebGL"}
+      </button>
+      <button class={loop ? "on" : ""} onClick={() => setLoop(!loop)}>
+        Loop
+      </button>
+      <button onClick={() => void play()}>Replay</button>
+    </div>
+  );
+
+  const list = (
+    <>
+      <div class="fxgl-filter">
+        <button class={todo && pendingCount ? "on" : ""} disabled={!pendingCount} onClick={() => setTodo(!todo)}>
+          Changed, not reviewed ({pendingCount})
+        </button>
+      </div>
+      <input class="fxgl-search" type="search" placeholder={`Search ${CARDS.length} cards`} value={query} onInput={(e) => setQuery((e.target as HTMLInputElement).value)} />
+      <div class="fxgl-strip" ref={strip}>
+        {shown.map(({ c, i }) => (
+          <button class={[i === pick ? "on" : "", (["changed", "issue"].find((m) => c.kinds.some((k) => tag(keyOf(c, k)) === m)) ?? c.kinds.map((k) => tag(keyOf(c, k))).find(Boolean) ?? "")].join(" ")} onClick={() => choose(i)} aria-label={c.title}>
+            <img src={thumb(c.code)} alt="" loading="lazy" />
+            <span>{c.title}</span>
+            <small>{c.kinds.map((k) => KIND_LABEL[k]).join(" · ")}</small>
+          </button>
+        ))}
+      </div>
+    </>
+  );
+
+  if (mode === "game")
+    return (
+      <LabScene
+        scene={scene}
+        byPlain={byPlain}
+        controls={
+          <div class="lab-controls">
+            {head}
+            {kinds}
+            {switches}
+            <details class="lab-more">
+              <summary>Review · cards</summary>
+              <ReviewBox reviews={reviews} k={key} keys={allKeys} />
+              {list}
+            </details>
+          </div>
+        }
+      />
+    );
+
   return (
     <div class="screen fxgl">
-      <header class="fxgl-head">
-        <button class="fxgl-nav" onClick={() => choose(pick - 1)} aria-label="Previous card">
-          ‹
-        </button>
-        <div class="fxgl-name">
-          <span class="label">FX lab</span>
-          <strong>{card.title}</strong>
-        </div>
-        <button class="fxgl-nav" onClick={() => choose(pick + 1)} aria-label="Next card">
-          ›
-        </button>
-      </header>
-
-      <div class={`fxgl-stage ${tile ? "small" : ""}`} ref={stage}>
-        <img ref={img} data-cid="lab-self" class={classes} src={art(card.code)} alt={card.title} crossOrigin="anonymous" />
+      {head}
+      <div class={`fxgl-stage ${tile ? "small" : ""}`} ref={stage} {...swipe}>
+        <img ref={img} data-cid="lab-self" class={classes} src={art(card.code)} alt={card.title} crossOrigin="anonymous" draggable={false} />
         {aimed && (
           <div class="fxgl-aim" aria-hidden="true">
             <div class="playfield">
@@ -448,19 +446,9 @@ export function FxGlLab({ only }: { only?: Set<string> } = {}) {
           </div>
         )}
       </div>
-
-      <div class="fxgl-kinds" role="tablist">
-        {card.kinds.map((k) => (
-          <button role="tab" aria-selected={k === kind} class={[k === kind ? "on" : "", k === kind && busy ? "playing" : "", tag(noteKey(card.title, k))].join(" ")} onClick={() => (k === kind ? void play() : setKind(k))}>
-            {KIND_LABEL[k]}
-          </button>
-        ))}
-      </div>
-
+      {kinds}
+      {switches}
       <div class="fxgl-controls">
-        <button class={loop ? "on" : ""} onClick={() => setLoop(!loop)}>
-          Loop
-        </button>
         <button onClick={() => setSpeed(SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length])}>{speed === 1 ? "1×" : speed === 0.5 ? "½×" : "¼×"}</button>
         <button class={tile ? "on" : ""} onClick={() => setTile(!tile)}>
           {tile ? "Tile" : "Big"}
@@ -468,67 +456,9 @@ export function FxGlLab({ only }: { only?: Set<string> } = {}) {
         <button class={aimed ? "on" : ""} onClick={() => setAimed(!aimed)}>
           Targets
         </button>
-        <button disabled={busy || !OLD[kind]?.[card.title]} onClick={() => play(true)}>
-          Old
-        </button>
       </div>
-
-      <div class="fxgl-note">
-        <div class="fxgl-rate">
-          <div class="fxgl-stars" role="radiogroup" aria-label="Rating">
-            {[1, 2, 3, 4, 5].map((n) => (
-              <button role="radio" aria-checked={review.stars === n} aria-label={`${n} star${n > 1 ? "s" : ""}`} class={(review.stars ?? 0) >= n ? "on" : ""} onClick={() => update({ stars: review.stars === n ? undefined : n })}>
-                ★
-              </button>
-            ))}
-          </div>
-          <button class={`fxgl-status ok ${review.status === "ok" ? "on" : ""}`} onClick={() => update({ status: review.status === "ok" ? undefined : "ok" })}>
-            OK
-          </button>
-          <button class={`fxgl-status issue ${review.status === "issue" ? "on" : ""}`} onClick={() => update({ status: review.status === "issue" ? undefined : "issue" })}>
-            Issue
-          </button>
-        </div>
-        <div class="fxgl-review-meta">
-          <span>Pass {pass.n}</span>
-          {versionOf(key) && <span>v:{versionOf(key)}</span>}
-          {changed(key) && <span class="fxgl-changed">Changed since your {reviewed(review) ? "" : "last "}review</span>}
-        </div>
-        {before && reviewed(before) && !reviewed(review) && (
-          <div class="fxgl-prev">
-            Previously: {summary(before)}
-            {before.v && before.v !== versionOf(key) ? ` (v:${before.v})` : ""}
-          </div>
-        )}
-        <textarea rows={2} placeholder={`Feedback on ${key}`} value={review.note ?? ""} onInput={(e) => update({ note: (e.target as HTMLTextAreaElement).value })} />
-        <div class="fxgl-note-actions">
-          <button class="fxgl-play" disabled={!filled.length} onClick={send}>
-            {sent || `Send ${filled.length} review${filled.length === 1 ? "" : "s"}`}
-          </button>
-          <button disabled={!filled.length} onClick={newPass}>
-            New pass
-          </button>
-          <button disabled={!filled.length} onClick={clearNotes}>
-            Clear
-          </button>
-        </div>
-      </div>
-
-      <div class="fxgl-filter">
-        <button class={todo && pendingCount ? "on" : ""} disabled={!pendingCount} onClick={() => setTodo(!todo)}>
-          Changed, not reviewed ({pendingCount})
-        </button>
-      </div>
-      <input class="fxgl-search" type="search" placeholder={`Search ${CARDS.length} cards`} value={query} onInput={(e) => setQuery((e.target as HTMLInputElement).value)} />
-      <div class="fxgl-strip" ref={strip}>
-        {shown.map(({ c, i }) => (
-          <button class={[i === pick ? "on" : "", (["changed", "issue"].find((m) => c.kinds.some((k) => tag(noteKey(c.title, k)) === m)) ?? c.kinds.map((k) => tag(noteKey(c.title, k))).find(Boolean) ?? "")].join(" ")} onClick={() => choose(i)} aria-label={c.title}>
-            <img src={thumb(c.code)} alt="" loading="lazy" />
-            <span>{c.title}</span>
-            <small>{c.kinds.map((k) => KIND_LABEL[k]).join(" · ")}</small>
-          </button>
-        ))}
-      </div>
+      <ReviewBox reviews={reviews} k={key} keys={allKeys} />
+      {list}
     </div>
   );
 }
