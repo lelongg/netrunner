@@ -973,13 +973,13 @@ export async function pharos(rect: DOMRect, code: string, ready?: Ready, board?:
     const base = Math.atan2(at(0.6, 0.6)[1] - lamp[1], at(0.6, 0.6)[0] - lamp[0]);
     const a = base + sweep;
     const steps = 14;
-    const reach = unit * 2;
+    const reach = unit * 2.6;
     for (const w of [0.05, 0.1, 0.16])
       for (let i = 0; i < steps; i++) {
         const r0 = (reach * i) / steps;
         const r1 = (reach * (i + 1)) / steps;
         const p = (r: number, d: number) => [lamp[0] + Math.cos(a + d) * r, lamp[1] + Math.sin(a + d) * r];
-        beam.poly([...p(r0, -w), ...p(r1, -w), ...p(r1, w), ...p(r0, w)]).fill({ color: 0xfff1c0, alpha: 0.1 * on * Math.pow(1 - i / steps, 1.6) });
+        beam.poly([...p(r0, -w), ...p(r1, -w), ...p(r1, w), ...p(r0, w)]).fill({ color: 0xfff1c0, alpha: 0.12 * on * (1 - Math.pow(i / steps, 2.2)) });
       }
     return t < 2.2;
   });
