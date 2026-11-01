@@ -1,22 +1,22 @@
 ## base
 
-### design split · Corp 358 of 576 · decision 43 ms
+### design split · Corp 357 of 576 · decision 39 ms
 
 | Corp \ Runner | Party Hard | Stolen Goods | Planning Ahead | total |
 |---|---|---|---|---|
 | Discretion Advised | 37 | 31 | 36 | 104 |
-| Advanced Yomi | 40 | 23 | 37 | 100 |
+| Advanced Yomi | 40 | 23 | 36 | 99 |
 | Hyper Velocity | 15 | 19 | 22 | 56 |
 | Quick and Dirty | 32 | 37 | 29 | 98 |
 
 Corp mistakes: Hyper Velocity stolen-from-remote 94, Quick and Dirty stolen-from-remote 67, Discretion Advised stolen-from-remote 57, Discretion Advised unrezzable-install 52, Advanced Yomi stolen-from-remote 52, Hyper Velocity rich-credit-click 49, Quick and Dirty unrezzable-install 47, Hyper Velocity broke-streak 27
 
-### test split · Corp 389 of 576 · decision 43 ms
+### test split · Corp 390 of 576 · decision 39 ms
 
 | Corp \ Runner | Party Hard | Stolen Goods | Planning Ahead | total |
 |---|---|---|---|---|
 | Discretion Advised | 36 | 30 | 34 | 100 |
-| Advanced Yomi | 37 | 27 | 42 | 106 |
+| Advanced Yomi | 37 | 28 | 42 | 107 |
 | Hyper Velocity | 25 | 28 | 28 | 81 |
 | Quick and Dirty | 35 | 33 | 34 | 102 |
 
@@ -27,11 +27,11 @@ Corp mistakes: Hyper Velocity stolen-from-remote 94, Discretion Advised unrezzab
 | Corp \ Runner | Party Hard | Stolen Goods | Planning Ahead | total |
 |---|---|---|---|---|
 | Discretion Advised | 20 | 16 | 20 | 56 |
-| Advanced Yomi | 21 | 33 | 20 | 74 |
+| Advanced Yomi | 21 | 32 | 21 | 74 |
 | Hyper Velocity | 32 | 25 | 27 | 84 |
 | Quick and Dirty | 24 | 17 | 19 | 60 |
 
-Runner mistakes: Stolen Goods rich-credit-click 127, Stolen Goods paid-and-stopped-new-ice 66, Planning Ahead paid-and-stopped-new-ice 62, Party Hard paid-and-stopped-new-ice 48, Party Hard rich-credit-click 39, Party Hard paid-and-stopped-known-ice 25, Stolen Goods paid-and-stopped-known-ice 25, Planning Ahead rich-credit-click 19
+Runner mistakes: Stolen Goods rich-credit-click 135, Stolen Goods paid-and-stopped-new-ice 66, Planning Ahead paid-and-stopped-new-ice 61, Party Hard paid-and-stopped-new-ice 48, Party Hard rich-credit-click 39, Stolen Goods paid-and-stopped-known-ice 25, Party Hard paid-and-stopped-known-ice 23, Planning Ahead rich-credit-click 19
 
 ### test split · Runner 257 of 576 · decision 25 ms
 
@@ -42,4 +42,4 @@ Runner mistakes: Stolen Goods rich-credit-click 127, Stolen Goods paid-and-stopp
 | Hyper Velocity | 35 | 25 | 24 | 84 |
 | Quick and Dirty | 21 | 16 | 26 | 63 |
 
-Runner mistakes: Stolen Goods rich-credit-click 76, Stolen Goods paid-and-stopped-new-ice 63, Planning Ahead rich-credit-click 58, Party Hard paid-and-stopped-new-ice 55, Planning Ahead paid-and-stopped-new-ice 49, Party Hard rich-credit-click 36, Planning Ahead paid-and-stopped-known-ice 19, Party Hard paid-and-stopped-known-ice 14
+Runner mistakes: Stolen Goods rich-credit-click 76, Stolen Goods paid-and-stopped-new-ice 63, Planning Ahead rich-credit-click 58, Party Hard paid-and-stopped-new-ice 54, Planning Ahead paid-and-stopped-new-ice 49, Party Hard rich-credit-click 36, Planning Ahead paid-and-stopped-known-ice 19, Stolen Goods paid-and-stopped-known-ice 15
