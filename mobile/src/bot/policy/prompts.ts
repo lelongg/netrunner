@@ -68,6 +68,18 @@ export function genericSelect(obs: Observation): Proposal[] {
     if (done) out.push({ move: choiceMove(obs, done), score: 25, why: "pay the rest from the credit pool", kind: "select" });
     return out;
   }
+  const mu = msg.match(/insufficient mu to install (.+?)\. trash/i);
+  if (mu) {
+    const incoming = obs.hand.find((c) => c.title === mu[1]) ?? { type: "Program", ...obs.info({ title: mu[1] }), title: mu[1] };
+    const size = (c: any) => Number(obs.info(c)?.memoryunits ?? c.memoryunits ?? 1);
+    const freed = (obs.view.runner?.rig?.program ?? []).filter((c: any) => c.selected).reduce((n: number, c: any) => n + size(c), 0);
+    const need = size(incoming) - (Number(obs.me.memory?.available ?? 4) - Number(obs.me.memory?.used ?? 0)) - freed;
+    const worth = (c: any) => cardWorth(obs, c) + 10 * Number(c.counter?.virus ?? 0);
+    const victim = [...cards].filter(mine).sort((a, b) => worth(a) - worth(b))[0];
+    if (need > 0 && victim && worth(victim) < cardWorth(obs, incoming)) out.push({ move: selectMove(obs, victim), score: 30, why: `free memory by trashing ${victim.title}`, kind: "select" });
+    if (done) out.push({ move: choiceMove(obs, done), score: need > 0 ? 25 : 40, why: need > 0 ? "keep my programs" : "enough memory freed", kind: "select" });
+    return out;
+  }
   if (/discard/i.test(msg)) {
     pick = [...cards].sort((a, b) => keepWorth(obs, a) - keepWorth(obs, b))[0];
     why = `discard ${pick?.title ?? "the least valuable card"}`;

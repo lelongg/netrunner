@@ -27,7 +27,7 @@ export function simulatable(p: Proposal, obs: Observation): boolean {
   if (obs.run || obs.encounter) return false;
   if (command === "choice" || command === "select") {
     const prompt = obs.prompt;
-    if (!prompt || !obs.myTurn) return false;
+    if (!prompt || !obs.myTurn || /insufficient mu/i.test(obs.promptText)) return false;
     const card = prompt.card;
     if (card && card.side && String(card.side).toLowerCase() !== obs.side) return false;
     return !HIDDEN.test(`${obs.promptText} ${card ? obs.info(card).text ?? "" : ""}`);
@@ -46,7 +46,7 @@ export function viewSignature(view: any, side: Side): string {
   const servers = Object.values<any>(view?.corp?.servers ?? {});
   const rig = view?.runner?.rig ?? {};
   const prompt = me["prompt-state"] ?? me.prompt?.[0];
-  return [me.click, me.credit, me["agenda-point"], Array.isArray(me.hand) ? me.hand.length : me["hand-count"], view?.log?.length, servers.map((s) => `${(s.ices ?? []).map((i: any) => `${i.rezzed ? 1 : 0}${i["advance-counter"] ?? 0}`).join("")}/${(s.content ?? []).map((c: any) => `${c.rezzed ? 1 : 0}${c["advance-counter"] ?? 0}`).join("")}`).join("|"), ["program", "hardware", "resource"].map((z) => (rig[z] ?? []).length).join(","), prompt?.["prompt-type"], prompt?.eid?.eid, view?.run?.phase, view?.run?.position, view?.["active-player"], view?.turn].join(":");
+  return [me.click, me.credit, me["agenda-point"], Array.isArray(me.hand) ? me.hand.length : me["hand-count"], view?.log?.length, servers.map((s) => `${(s.ices ?? []).map((i: any) => `${i.rezzed ? 1 : 0}${i["advance-counter"] ?? 0}`).join("")}/${(s.content ?? []).map((c: any) => `${c.rezzed ? 1 : 0}${c["advance-counter"] ?? 0}`).join("")}`).join("|"), ["program", "hardware", "resource"].map((z) => `${(rig[z] ?? []).length}${(rig[z] ?? []).filter((c: any) => c.selected).length}`).join(","), prompt?.["prompt-type"], prompt?.eid?.eid, view?.run?.phase, view?.run?.position, view?.["active-player"], view?.turn].join(":");
 }
 
 export function applyMoves(engine: EngineApi, game: GameHandle, side: Side, moves: Move[]): SimOutcome {
