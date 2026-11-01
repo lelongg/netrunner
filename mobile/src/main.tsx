@@ -470,7 +470,7 @@ function App() {
   }
 
   const { lobby } = session;
-  if (!lobby.started) return <Lobby session={session} db={loaded.db} matchups={loaded.matchups} onLeave={leave} onWatch={() => watch(lobby.code, true)} />;
+  if (!lobby.started) return <Lobby session={session} db={loaded.db} matchups={loaded.matchups} onLeave={lobby.role !== "local" && lobby.role !== "spectator" && lobby.opponentName ? exit : leave} onWatch={() => watch(lobby.code, true)} />;
   if (diving) return <Opening label={lobby.vsBot ? "solo game" : lobby.role === "local" ? "local game" : lobby.code || "game"} ready />;
 
   if (hotSeat) {
