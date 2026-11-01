@@ -130,8 +130,8 @@ export async function leech(rect: DOMRect, code: string, ready?: Ready, board?: 
       const r = 1 - e;
       d.s.position.set(mouth[0] + (dx * Math.cos(a) - dy * Math.sin(a)) * r, mouth[1] + (dx * Math.sin(a) + dy * Math.cos(a)) * r);
       d.s.rotation = Math.atan2(-dy, -dx) + Math.PI / 2;
-      d.s.alpha = k > 0 && k < 1 ? 0.9 : 0;
-      d.s.scale.set((unit / 180) * 0.35);
+      d.s.alpha = k > 0 && k < 1 ? 1 : 0;
+      d.s.scale.set((unit / 180) * 0.75 * (1 - 0.45 * e));
       if (k >= 1) landed++;
     }
     const swell = landed / drops.length;
@@ -189,37 +189,47 @@ export async function tranquilizerPose(rect: DOMRect, code: string, ready?: Read
   await done();
 }
 
-const SCREEN = [0.45, 0.1, 0.94, 0.34] as const;
+const SCREEN: [Pt, Pt, Pt, Pt] = [
+  [0.45, 0.112],
+  [0.96, 0.095],
+  [0.967, 0.333],
+  [0.457, 0.293],
+];
+
+function onScreen(at: (u: number, v: number) => Pt, s: number, r: number): Pt {
+  const [a, b, c, d] = SCREEN;
+  const top = [a[0] + (b[0] - a[0]) * s, a[1] + (b[1] - a[1]) * s];
+  const bot = [d[0] + (c[0] - d[0]) * s, d[1] + (c[1] - d[1]) * s];
+  return at(top[0] + (bot[0] - top[0]) * r, top[1] + (bot[1] - top[1]) * r);
+}
 
 function screenQuad(at: (u: number, v: number) => Pt, k = 1): number[] {
-  const [u0, v0, u1, v1] = SCREEN;
-  return [...at(u0, v0 + 0.02), ...at(u1, v0), ...at(u1, v0 + (v1 - v0) * k), ...at(u0, v0 + 0.02 + (v1 - v0 - 0.04) * k)];
+  return [...onScreen(at, 0, 0), ...onScreen(at, 1, 0), ...onScreen(at, 1, k), ...onScreen(at, 0, k)];
 }
 
 export async function redTeamPose(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const [u0, v0, u1, v1] = SCREEN;
   const g = new Graphics();
   g.blendMode = "add";
   fx.addChild(g);
-  const rows = Array.from({ length: 9 }, () => ({ u: rnd(u0 + 0.03, u1 - 0.25), w: rnd(0.05, 0.2), v: rnd(v0 + 0.04, v1 - 0.04) }));
+  const rows = Array.from({ length: 11 }, () => ({ s: rnd(0.05, 0.7), w: rnd(0.08, 0.3), r: rnd(0.08, 0.92) }));
   root.addChild(fx);
   await run(app, (t) => {
     g.clear();
     const k = ease.out(span(t, 0.05, 0.6));
     const fade = 1 - span(t, 1.3, 1.7);
     if (k > 0) g.poly(screenQuad(at, k)).fill({ color: 0x66c8ff, alpha: 0.12 * fade });
-    const scan = v0 + (v1 - v0) * k;
+    g.poly(screenQuad(at)).stroke({ width: 1.2, color: 0x8fd8ff, alpha: 0.6 * span(t, 0, 0.3) * fade });
     if (k < 1)
-      g.moveTo(...at(u0, scan))
-        .lineTo(...at(u1, scan))
+      g.moveTo(...onScreen(at, 0, k))
+        .lineTo(...onScreen(at, 1, k))
         .stroke({ width: 1.8, color: WHITE, alpha: 0.9 });
-    rows.forEach((r, i) => {
-      if (r.v > scan) return;
+    rows.forEach((row, i) => {
+      if (row.r > k) return;
       const on = Math.random() < 0.92 ? 1 : 0;
-      const w = r.w * (0.6 + 0.4 * Math.sin(t * 6 + i));
-      g.moveTo(...at(r.u, r.v))
-        .lineTo(...at(r.u + w, r.v))
+      const w = row.w * (0.6 + 0.4 * Math.sin(t * 6 + i));
+      g.moveTo(...onScreen(at, row.s, row.r))
+        .lineTo(...onScreen(at, Math.min(0.97, row.s + w), row.r))
         .stroke({ width: unit * 0.008, color: 0x8fd8ff, alpha: 0.7 * on * fade });
     });
     return t < 1.7;
@@ -229,7 +239,6 @@ export async function redTeamPose(rect: DOMRect, code: string, ready?: Ready, bo
 
 export async function redTeam(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const [u0, v0, u1, v1] = SCREEN;
   const g = new Graphics();
   g.blendMode = "add";
   fx.addChild(g);
@@ -241,9 +250,9 @@ export async function redTeam(rect: DOMRect, code: string, ready?: Ready, board?
     const alarm = 0.5 + 0.5 * Math.sin(t * 14);
     g.poly(screenQuad(at)).fill({ color: 0xff3040, alpha: 0.12 * alarm * fade * span(t, 0, 0.2) });
     for (let i = 0; i < 7; i++) {
-      const v = v0 + 0.03 + ((((i * 0.045 + t * 0.12) % (v1 - v0 - 0.06)) + v1 - v0 - 0.06) % (v1 - v0 - 0.06));
-      g.moveTo(...at(u0 + 0.02, v))
-        .lineTo(...at(u0 + 0.02 + 0.08 + ((i * 37) % 10) * 0.02, v))
+      const r = 0.08 + (((i * 0.13 + t * 0.5) % 0.84) + 0.84) % 0.84;
+      g.moveTo(...onScreen(at, 0.04, r))
+        .lineTo(...onScreen(at, 0.2 + ((i * 37) % 10) * 0.04, r))
         .stroke({ width: unit * 0.008, color: 0xff6a70, alpha: 0.7 * fade });
     }
     const k = ease.out(span(t, 0.2, 0.7));

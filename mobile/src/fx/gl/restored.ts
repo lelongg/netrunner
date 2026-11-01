@@ -1,6 +1,6 @@
 import { Graphics } from "pixi.js";
 import { Emitter, ease, glowTexture, layer, run, span, sparkTexture } from "./stage";
-import { type Board, GREEN, RED, type Ready, Smoke, burst, scene } from "./kit";
+import { type Board, GREEN, RED, type Ready, Smoke, burst, coinTexture, scene } from "./kit";
 import { type Pt, glowSprite, lerp, prism, rnd, tether } from "./more";
 import { sealTexture } from "./third";
 
@@ -8,29 +8,51 @@ export async function governmentSubsidy(rect: DOMRect, code: string, ready?: Rea
   const { app, root, done, unit, at } = await scene(rect, code, ready, board);
   const fx = layer(root, false);
   const hand = at(0.38, 0.32);
-  const seal = glowSprite(fx, sealTexture(), 0xe8b84a);
+  const flare = glowSprite(fx, glowTexture(), 0xffd36a);
+  flare.position.set(...hand);
+  flare.alpha = 0;
+  const seal = glowSprite(fx, sealTexture(), 0xffd36a);
   seal.position.set(...hand);
+  seal.blendMode = "normal";
+  const shine = glowSprite(fx, sealTexture(), 0xfff0b0);
+  shine.position.set(...hand);
   const rings = new Graphics();
+  rings.blendMode = "add";
   fx.addChild(rings);
   const motes = new Emitter(fx);
+  const coins = new Emitter(fx);
   let stamped = false;
   await run(app, (t, dt) => {
     const drop = ease.inOut(span(t, 0.05, 0.4));
-    seal.blendMode = "normal";
-    seal.alpha = 0.75 * Math.min(1, drop * 2) * (1 - span(t, 1.1, 1.5));
+    const out = 1 - span(t, 1.1, 1.5);
+    seal.alpha = Math.min(1, drop * 2) * out;
     seal.scale.set((unit / 96) * (0.9 - 0.45 * drop));
     seal.rotation = (1 - drop) * 0.6;
+    shine.alpha = 0.55 * Math.sin(Math.PI * span(t, 0.38, 0.9)) * out;
+    shine.scale.copyFrom(seal.scale);
+    shine.rotation = seal.rotation;
+    const f = Math.sin(Math.PI * span(t, 0.38, 0.8));
+    flare.alpha = 0.85 * f;
+    flare.scale.set((unit / 128) * (0.3 + 0.35 * f));
     if (drop >= 1 && !stamped) {
       stamped = true;
-      burst(motes, ...hand, 12, 0xe8b84a, unit * 1.1, { life: 0.55, scale: 0.25 });
+      burst(motes, ...hand, 16, 0xffd36a, unit * 1.2, { life: 0.6, scale: 0.32 });
+      for (let i = 0; i < 9; i++) {
+        const a = rnd(-Math.PI * 0.95, -Math.PI * 0.05);
+        const v = unit * rnd(0.9, 1.6);
+        coins.add(coinTexture(), ...hand, { vx: Math.cos(a) * v, vy: Math.sin(a) * v, gravity: unit * 3.2, spin: rnd(-6, 6), life: rnd(0.7, 1), scale: (unit * 0.06) / 64, blend: "normal" });
+      }
       navigator.vibrate?.(30);
     }
     rings.clear();
-    const k = span(t, 0.4, 1);
-    if (k > 0 && k < 1) rings.circle(...hand, unit * (0.18 + 0.2 * ease.out(k))).stroke({ width: unit * 0.012 * (1 - k) + 1, color: 0xe8b84a, alpha: 0.6 * (1 - k) });
-    if (t > 0.4 && t < 1.2 && Math.random() < 0.2) motes.add(sparkTexture(), ...at(rnd(0.05, 0.95), rnd(0.12, 0.48)), { vy: -unit * 0.1, life: 0.6, tint: 0xf0d48a, scale: 0.14 * (unit / 180), alpha: 0.6, grow: -0.2 });
+    for (let n = 0; n < 2; n++) {
+      const k = span(t, 0.4 + n * 0.12, 1 + n * 0.12);
+      if (k > 0 && k < 1) rings.circle(...hand, unit * (0.18 + 0.28 * ease.out(k))).stroke({ width: unit * 0.016 * (1 - k) + 1, color: 0xffd95a, alpha: 0.85 * (1 - k) });
+    }
+    if (t > 0.4 && t < 1.2 && Math.random() < 0.3) motes.add(sparkTexture(), ...at(rnd(0.05, 0.95), rnd(0.12, 0.48)), { vy: -unit * 0.12, life: 0.7, tint: 0xffe08a, scale: 0.22 * (unit / 180), alpha: 0.85, grow: -0.2 });
     motes.step(dt);
-    return t < 1.7 || motes.list.length > 0;
+    coins.step(dt);
+    return t < 1.7 || motes.list.length > 0 || coins.list.length > 0;
   });
   await done();
 }
