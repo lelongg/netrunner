@@ -260,7 +260,7 @@ export class Agent {
     const out: { d: { name: string; identity: string; cards: { qty: number; title: string }[] }; sd: Side; title: string }[] = [];
     for (const m of this.engine.precons() as any[]) for (const sd of ["corp", "runner"] as Side[]) out.push({ d: m[sd], sd, title: m.title });
     for (const d of CORE_DECKS) out.push({ d, sd: d.side, title: "Core" });
-    for (const d of SAMPLE_DECKS) out.push({ d, sd: d.side, title: d.name.startsWith("Learn to Play") ? "Learn to Play" : "NSG Core" });
+    for (const d of SAMPLE_DECKS) out.push({ d, sd: d.side, title: d.name.startsWith("Learn to Play") ? "Learn to Play" : d.key.startsWith("cbb-") ? "Core Battle Box" : "NSG Core" });
     return out;
   }
 
