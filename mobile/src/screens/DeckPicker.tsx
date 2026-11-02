@@ -10,6 +10,7 @@ import { Icon } from "../icons";
 import { type GameFormat, FORMATS, analyze, deckFormat } from "../deckrules";
 import { findPolicy } from "../bot/index.ts";
 import { CORE_DECKS } from "../bot/policy/decks/core.ts";
+import { SAMPLE_DECKS } from "../bot/policy/decks/samples.ts";
 import { t } from "../i18n";
 import { settings } from "../settings";
 
@@ -44,7 +45,7 @@ function preconChoices(side: Side, db: CardDb, matchups: Matchup[], format: Game
     return format === "preconstructed" || !problemIn(format, db, wire) ? [wire] : [];
   });
   if (format === "preconstructed") return starters;
-  const catalogue = CORE_DECKS.filter((d) => d.side === side).flatMap((d) => {
+  const catalogue = [...CORE_DECKS, ...SAMPLE_DECKS].filter((d) => d.side === side).flatMap((d) => {
     try {
       const wire = toWire(fromPrecon(d, db));
       return problemIn(format, db, wire) ? [] : [wire];

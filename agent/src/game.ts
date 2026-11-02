@@ -8,6 +8,7 @@ import { candidateActions } from "../../mobile/src/game/candidates";
 import { cardLine, gameLines, logLines } from "../../mobile/src/game/describe";
 import { type WireDeck, fromPrecon, importNrdb, toWire } from "../../mobile/src/decks";
 import { CORE_DECKS } from "../../mobile/src/bot/policy/decks/core";
+import { SAMPLE_DECKS } from "../../mobile/src/bot/policy/decks/samples";
 import { relayUrl, storeTicket } from "../../mobile/src/net/relay";
 import { FORMATS, GAME_FORMATS, type FormatKey, type GameFormat, analyze, dealtFormat, deckFormat } from "../../mobile/src/deckrules";
 
@@ -259,6 +260,7 @@ export class Agent {
     const out: { d: { name: string; identity: string; cards: { qty: number; title: string }[] }; sd: Side; title: string }[] = [];
     for (const m of this.engine.precons() as any[]) for (const sd of ["corp", "runner"] as Side[]) out.push({ d: m[sd], sd, title: m.title });
     for (const d of CORE_DECKS) out.push({ d, sd: d.side, title: "Core" });
+    for (const d of SAMPLE_DECKS) out.push({ d, sd: d.side, title: d.name.startsWith("Learn to Play") ? "Learn to Play" : "NSG Core" });
     return out;
   }
 
