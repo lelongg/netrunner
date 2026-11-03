@@ -5,6 +5,8 @@ import { registerPolicy } from "../registry.ts";
 import { agendaProgress, coverage, isIcebreaker, playCostOf } from "../tactics.ts";
 import type { DeckPolicy, Observation, Plan, Proposal } from "../types.ts";
 import { CORE_ANARCH } from "./core.ts";
+import { samplesOf } from "./samples.ts";
+import { runnerExtra, runnerPrompt, runnerProposals } from "./extras.ts";
 import { centralPressure } from "./gateway-runner.ts";
 
 const memoryLeft = (obs: Observation) => Number(obs.me.memory?.available ?? 4) - Number(obs.me.memory?.used ?? 0);
@@ -24,9 +26,7 @@ function bestHost(obs: Observation, candidates: any[]): any | null {
   return candidates.map((ice) => ({ ice, worth: hostWorth(obs, ice) })).filter((x) => x.worth > 0).sort((a, b) => b.worth - a.worth)[0]?.ice ?? null;
 }
 
-function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
-  const out = centralPressure.proposals(obs, plan, base);
-  const push = (p: Proposal | null) => p && out.push(p);
+function extras(obs: Observation, plan: Plan, out: Proposal[], push: (p: Proposal | null) => void) {
   const mu = memoryLeft(obs);
   const cov = coverage(obs);
   const rigTitles = new Set(obs.rig.map((c: any) => c.title));
@@ -65,19 +65,16 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
   for (const p of out) {
     if (p.kind === "install" && /^install (Botulus|Leech|Fermenter|Gourmand|Cookbook)$/.test(p.why)) p.score = Math.min(p.score, 18);
   }
-  return out;
 }
 
 function prompt(obs: Observation, plan: Plan): Proposal | null {
-  const deck = centralPressure.prompt(obs, plan);
-  if (deck) return deck;
   const text = obs.promptText;
   if (promptFrom(obs) === "Botulus" && obs.promptType === "select") {
     const options = [...selectable(obs)];
     const host = options.find((c: any) => c.cid === obs.memory.notes.botulusHost) ?? bestHost(obs, options) ?? options[0];
     if (host) return { move: selectMove(obs, host), score: 80, why: `Botulus: host it on ${host.title}`, kind: "select" };
   }
-  if (/^you accessed/i.test(text) && obs.promptType !== "select") {
+  if (/^you accessed/i.test(text) && obs.promptType !== "select" && String(obs.me.identity?.title ?? "").startsWith("René")) {
     const trash = (Array.isArray(obs.prompt.choices) ? obs.prompt.choices : []).find((c: any) => /pay \d+ \[credits?\] to trash/i.test(String(c.value ?? "")));
     const cost = Number(String(trash?.value ?? "").match(/pay (\d+)/i)?.[1] ?? 99);
     const card = obs.prompt.card;
@@ -86,12 +83,14 @@ function prompt(obs: Observation, plan: Plan): Proposal | null {
   return null;
 }
 
+runnerExtra(extras, prompt);
+
 export const coreAnarch: DeckPolicy = registerPolicy({
   id: "core-anarch-virus",
-  version: "0.4.0",
+  version: "0.5.0",
   side: "runner",
-  decks: [CORE_ANARCH],
+  decks: [CORE_ANARCH, ...samplesOf("Anarch", "runner")],
   ...centralPressure,
-  proposals,
-  prompt,
+  proposals: runnerProposals,
+  prompt: runnerPrompt,
 });

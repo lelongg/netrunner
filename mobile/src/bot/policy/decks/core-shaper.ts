@@ -6,6 +6,8 @@ import { fromCandidate } from "../runs.ts";
 import { isIcebreaker, playCostOf, rezCostOf } from "../tactics.ts";
 import type { DeckPolicy, Observation, Plan, Proposal } from "../types.ts";
 import { CORE_SHAPER } from "./core.ts";
+import { samplesOf } from "./samples.ts";
+import { runnerExtra, runnerPrompt, runnerProposals } from "./extras.ts";
 import { centralPressure } from "./gateway-runner.ts";
 
 const memoryLeft = (obs: Observation) => Number(obs.me.memory?.available ?? 4) - Number(obs.me.memory?.used ?? 0);
@@ -19,9 +21,7 @@ function tranquilizerHost(obs: Observation): any | null {
   return hosts.sort((a: any, b: any) => rezCostOf(b) - rezCostOf(a))[0] ?? null;
 }
 
-function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
-  const out = centralPressure.proposals(obs, plan, base);
-  const push = (p: Proposal | null) => p && out.push(p);
+function extras(obs: Observation, plan: Plan, out: Proposal[], push: (p: Proposal | null) => void) {
   const mu = memoryLeft(obs);
   const rdRun = centralPressure.targets(obs, 0, true).find((t) => t.server.key === "rd");
   const rdOpen = !!rdRun && rdRun.damage === 0 && rdRun.credits <= obs.credits;
@@ -54,12 +54,9 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
     if (p.kind === "install" && /^install (Conduit|Devadatta Drone|DZMZ Optimizer|Pantograph|GAMEDRAGON™ Pro|Azimat|"Knickknack" O'Brian)$/.test(p.why)) p.score = Math.min(p.score, 18);
     if (p.kind === "run" && /^run R&D/.test(p.why) && (conduit || inRig(obs, "Devadatta Drone"))) p.score += 6;
   }
-  return out;
 }
 
 function prompt(obs: Observation, plan: Plan): Proposal | null {
-  const deck = centralPressure.prompt(obs, plan);
-  if (deck) return deck;
   const from = promptFrom(obs);
   const text = obs.promptText;
   if (from === "Tāo Salonga: Telepresence Magician" && obs.promptType !== "select") {
@@ -94,12 +91,14 @@ function prompt(obs: Observation, plan: Plan): Proposal | null {
   return null;
 }
 
+runnerExtra(extras, prompt);
+
 export const coreShaper: DeckPolicy = registerPolicy({
   id: "core-shaper-lock",
-  version: "0.3.0",
+  version: "0.4.0",
   side: "runner",
-  decks: [CORE_SHAPER],
+  decks: [CORE_SHAPER, ...samplesOf("Shaper", "runner")],
   ...centralPressure,
-  proposals,
-  prompt,
+  proposals: runnerProposals,
+  prompt: runnerPrompt,
 });

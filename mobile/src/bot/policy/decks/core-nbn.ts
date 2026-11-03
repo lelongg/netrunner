@@ -5,6 +5,8 @@ import { registerPolicy } from "../registry.ts";
 import { agendaProgress, tagged } from "../tactics.ts";
 import type { DeckPolicy, Observation, Plan, Proposal } from "../types.ts";
 import { CORE_NBN } from "./core.ts";
+import { samplesOf } from "./samples.ts";
+import { corpExtra, corpPrompt, corpProposals } from "./extras.ts";
 import { glacier } from "./gateway-corp.ts";
 
 const runnerTags = (obs: Observation) => Number(obs.opp.tag?.base ?? obs.opp.tag?.total ?? 0);
@@ -15,8 +17,7 @@ const ranLastTurn = (obs: Observation) => {
 const runnerResources = (obs: Observation): any[] => obs.view.runner?.rig?.resource ?? [];
 const runnerRig = (obs: Observation): any[] => [...(obs.view.runner?.rig?.program ?? []), ...(obs.view.runner?.rig?.hardware ?? [])];
 
-function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
-  return glacier.proposals(obs, plan, base, (out, push) => {
+function extras(obs: Observation, plan: Plan, out: Proposal[], push: (p: Proposal | null) => void) {
   const tags = runnerTags(obs);
   const isTagged = tagged(obs.view) || tags > 0;
   const runnerCredits = Number(obs.opp.credit ?? 0);
@@ -57,12 +58,9 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
     if (p.kind === "install-agenda" && isTagged && obs.hand.some((c) => c.title === "Orbital Superiority" && p.why.includes(c.title))) p.score += 6;
     if (p.kind === "install-ice" && isTagged && /Lamplighter|Doomscroll/.test(p.why)) p.score += 4;
   }
-  });
 }
 
 function prompt(obs: Observation, plan: Plan): Proposal | null {
-  const deck = glacier.prompt(obs, plan);
-  if (deck) return deck;
   const from = promptFrom(obs);
   const text = obs.promptText;
   if (from === "Idiosyncresis" && /trash/i.test(text) && obs.promptType !== "select") {
@@ -96,12 +94,14 @@ function prompt(obs: Observation, plan: Plan): Proposal | null {
   return null;
 }
 
+corpExtra(extras, prompt);
+
 export const coreNbn: DeckPolicy = registerPolicy({
   id: "core-nbn-tags",
-  version: "0.3.0",
+  version: "0.4.0",
   side: "corp",
-  decks: [CORE_NBN],
+  decks: [CORE_NBN, ...samplesOf("NBN", "corp")],
   ...glacier,
-  proposals,
-  prompt,
+  proposals: corpProposals,
+  prompt: corpPrompt,
 });

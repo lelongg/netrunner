@@ -5,20 +5,22 @@ import { registerPolicy } from "../registry.ts";
 import { agendaProgress, tagged } from "../tactics.ts";
 import type { DeckPolicy, Observation, Plan, Proposal } from "../types.ts";
 import { CORE_WEYLAND } from "./core.ts";
+import { samplesOf } from "./samples.ts";
+import { corpExtra, corpPrompt, corpProposals } from "./extras.ts";
 import { glacier } from "./gateway-corp.ts";
 
 const advancement = (c: any) => agendaProgress(c).have;
 const runnerGrip = (obs: Observation) => Number(obs.opp["hand-count"] ?? 0);
 const advanceableIce = (obs: Observation) => obs.servers.flatMap((s) => s.ices).filter((i: any) => /you can advance this ice/i.test(obs.info(i).text ?? ""));
 
-function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
-  return glacier.proposals(obs, plan, base, (out, push) => {
+function extras(obs: Observation, plan: Plan, out: Proposal[], push: (p: Proposal | null) => void) {
   const installed = glacier.agendaIn(obs);
   const advancedIce = ((obs.memory.notes.kinds as string[] | undefined) ?? []).includes("advance-ice");
   const freshAdvance = (card: any, score: number, why: string, kind = "advance") => {
     if (advancement(card) === 0 && obs.credits >= 1) push(proposal(cardAction(obs, card, "advance"), score, why, kind));
   };
-  for (const ice of advanceableIce(obs)) {
+  const btl = String(obs.me.identity?.title ?? "").startsWith("Weyland Consortium: Built to Last");
+  for (const ice of btl ? advanceableIce(obs) : []) {
     if (!ice.rezzed || advancedIce) continue;
     const have = advancement(ice);
     if (have === 0) freshAdvance(ice, obs.credits <= 6 ? 50 : 38, `advance ${ice.title}: Built to Last pays two credits back`, "advance-ice");
@@ -27,7 +29,7 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
   const bait = glacier.remotes(obs).find((s) => s.ices.length > 0 && !s.content.length);
   for (const s of glacier.remotes(obs)) {
     for (const card of s.content) {
-      if (card.title === "Clearinghouse") freshAdvance(card, 54, "advance Clearinghouse: two credits back and a threat");
+      if (card.title === "Clearinghouse") freshAdvance(card, btl ? 54 : 44, btl ? "advance Clearinghouse: two credits back and a threat" : "advance Clearinghouse: a growing threat");
     }
   }
   const kpi = glacier.inHand(obs, "Key Performance Indicators");
@@ -41,12 +43,9 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
   for (const p of out) {
     if (p.kind === "advance" && installed && p.why.includes(installed.card.title) && advancement(installed.card) === 0) p.score += 4;
   }
-  });
 }
 
 function prompt(obs: Observation, plan: Plan): Proposal | null {
-  const deck = glacier.prompt(obs, plan);
-  if (deck) return deck;
   const from = promptFrom(obs);
   const text = obs.promptText;
   if (from === "Key Performance Indicators" && obs.promptType !== "select") {
@@ -75,12 +74,14 @@ function prompt(obs: Observation, plan: Plan): Proposal | null {
   return null;
 }
 
+corpExtra(extras, prompt);
+
 export const coreWeyland: DeckPolicy = registerPolicy({
   id: "core-weyland-advance",
-  version: "0.3.0",
+  version: "0.4.0",
   side: "corp",
-  decks: [CORE_WEYLAND],
+  decks: [CORE_WEYLAND, ...samplesOf("Weyland Consortium", "corp")],
   ...glacier,
-  proposals,
-  prompt,
+  proposals: corpProposals,
+  prompt: corpPrompt,
 });

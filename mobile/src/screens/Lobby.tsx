@@ -8,7 +8,7 @@ import type { Session } from "../session";
 import { QrCode } from "../QrCode";
 import { relayUrl } from "../net/relay";
 import { Cta, Picker, Ticker } from "../ui";
-import { DeckPicker, defaultDeck } from "./DeckPicker";
+import { DeckPicker, defaultDeck, randomDeck } from "./DeckPicker";
 import { DeckRow, Decks, DeckView } from "./Decks";
 import { useBackClose } from "../back";
 import { Icon } from "../icons";
@@ -236,6 +236,19 @@ function Seat({ label, side, deck, db, matchups, onPick, onSide, locked, name, o
           {t(label)}
           {name && onName && <NameField name={name} onSave={onName} />}
         </span>
+        {label === "Bot" && !dealt && !locked && (
+          <button
+            class="ghost seat-random"
+            onClick={() => {
+              const d = randomDeck(side, db, matchups, format, deck);
+              if (d) onPick(d);
+            }}
+            aria-label={t("Random deck")}
+          >
+            <Icon name="dice" />
+            {t("Random")}
+          </button>
+        )}
         {onSide ? (
           <div class="side-switch" role="radiogroup" aria-label={t("Your side")}>
             {(["corp", "runner"] as Side[]).map((s) => (

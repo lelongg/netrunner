@@ -1,3 +1,4 @@
+import type { Side } from "../../../engine.ts";
 import type { CoreDeck } from "./core.ts";
 
 export const SAMPLE_DECKS: CoreDeck[] = [
@@ -904,3 +905,5 @@ export const SAMPLE_DECKS: CoreDeck[] = [
     ],
   },
 ];
+
+export const samplesOf = (faction: string, side: Side) => SAMPLE_DECKS.filter((d) => d.faction === faction && d.side === side);
