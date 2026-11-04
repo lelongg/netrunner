@@ -227,7 +227,7 @@ export function runnerProposals(obs: Observation): Proposal[] {
     const cost = playCostOf(card);
     if (card.type === "Event") {
       const gain = gainOf(info.text);
-      if (gain > cost && cost <= obs.credits) push(proposal(playOf(obs, card), obs.credits < 8 ? 65 + (gain - cost) : 45, `play ${card.title}: +${gain - cost} net`, "economy"));
+      if (gain > cost && cost <= obs.credits && !subtypes(card).includes("Run")) push(proposal(playOf(obs, card), obs.credits < 8 ? 65 + (gain - cost) : 45, `play ${card.title}: +${gain - cost} net`, "economy"));
     } else if (card.type === "Resource" && isEconomy(info.text) && obs.credits >= cost + 1) push(proposal(playOf(obs, card), 55, `install ${card.title} for economy`, "install-economy"));
   }
   const covered = coverage(obs);

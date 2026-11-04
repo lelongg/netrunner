@@ -2277,3 +2277,12 @@ describe("corp keeps what it can use when poor (replay PB3SHFG2)", () => {
     expect(r.decide().record.chosen?.why ?? "").toMatch(/Government Subsidy/);
   });
 });
+
+describe("runner keeps off a successful run that Measured Response would punish (replay 7Z8JFRNE)", () => {
+  it("does not end turn 12 with Clean Getaway on two cards and seven credits", () => {
+    const r = new Replayed(fileURLToPath(new URL("./replays/7Z8JFRNE.json", import.meta.url)));
+    r.until((e, x) => x.turn === 12 && e.side === "runner" && e.command === "play" && x.view().runner.click === 1, true);
+    const { record } = r.decide();
+    expect(record.chosen?.why ?? "").not.toMatch(/Clean Getaway/);
+  });
+});

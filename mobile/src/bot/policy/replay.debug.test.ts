@@ -41,5 +41,6 @@ it.skipIf(!file)("replays a shared game and shows what the current bot would do"
     r.step();
   }
   const end = r.view("corp");
+  if (process.env.LOG) for (const line of end.log ?? []) console.log(`LOG ${String(line.text?.["raw-text"] ?? line.text ?? "")}`);
   console.log("\nFINAL", JSON.stringify({ corp: end.corp["agenda-point"], runner: end.runner["agenda-point"], turn: end.turn }));
 }, 600000);

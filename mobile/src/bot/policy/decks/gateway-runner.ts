@@ -95,9 +95,45 @@ function copiesLeft(obs: Observation, deck: DeckList, test: (title: string, text
   return deck.cards.filter((c) => test(c.title, obs.info({ title: c.title }).text ?? "")).reduce((n, c) => n + Math.max(0, c.qty - gone.filter((t) => t === c.title).length), 0);
 }
 
-export function meatThreat(obs: Observation): { damage: number; server: string } | null {
-  const deck = opponentDeck(obs);
-  if (!deck) return null;
+export interface MeatThreat {
+  damage: number;
+  server: string;
+  pay: number;
+  source: string;
+}
+
+function seenDeck(obs: Observation): DeckList {
+  return { identity: String(obs.opp.identity?.title ?? ""), cards: [...obs.memory.opponentTitles].map((title) => ({ qty: 1, title })) } as DeckList;
+}
+
+function punishingOperation(obs: Observation, deck: DeckList): MeatThreat | null {
+  const threatLevel = Math.max(Number(obs.opp["agenda-point"] ?? 0), Number(obs.me["agenda-point"] ?? 0));
+  const corpCredits = Number(obs.opp.credit ?? 0) + 2;
+  let worst: MeatThreat | null = null;
+  for (const c of deck.cards) {
+    const info = obs.info({ title: c.title }) as any;
+    const text = String(info.text ?? "");
+    const m = text.match(/do (\d+) meat damage unless the runner pays (\d+)/i);
+    if (info.type !== "Operation" || !m || !/made a successful run during their last turn/i.test(text)) continue;
+    const level = text.match(/threat level is (\d+) or greater/i);
+    if (level && threatLevel < Number(level[1])) continue;
+    if (Number(info.cost ?? 0) > corpCredits || copiesLeft(obs, deck, (title) => title === c.title) <= 0) continue;
+    const damage = Number(m[1]);
+    if (!worst || damage > worst.damage) worst = { damage, server: "", pay: Number(m[2]), source: c.title };
+  }
+  return worst;
+}
+
+export function meatThreat(obs: Observation): MeatThreat | null {
+  const deck = opponentDeck(obs) ?? seenDeck(obs);
+  const operation = punishingOperation(obs, deck);
+  const agenda = agendaThreat(obs, deck);
+  if (!operation) return agenda;
+  if (!agenda) return operation;
+  return agenda.damage >= operation.damage ? agenda : operation;
+}
+
+function agendaThreat(obs: Observation, deck: DeckList): MeatThreat | null {
   const meat = deck.cards
     .map((c) => ({ title: c.title, info: obs.info({ title: c.title }) as any }))
     .map((x) => ({ ...x, m: String(x.info.text ?? "").match(/if the runner is tagged, do (\d+) meat damage/i), need: Number(x.info.advancementcost ?? 99) }))
@@ -111,7 +147,7 @@ export function meatThreat(obs: Observation): { damage: number; server: string }
   const server = obs.servers.find((s) => s.remote && s.content.some((c: any) => !c.rezzed && !c.title && meat.some((x) => agendaProgress(c).have + 3 - tagClicks >= x.need)));
   if (!server || (!tagged && !trail)) return null;
   const damage = Math.max(...meat.map((x) => Number(x.m![1]))) + (spike ? Math.max(...meat.map((x) => Number(x.info.agendapoints ?? 0))) : 0);
-  return { damage, server: server.label };
+  return { damage, server: server.label, pay: 8, source: "Public Trail" };
 }
 
 function fullyCovered(obs: Observation, t: Target) {
@@ -410,10 +446,12 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
     if (draw) push(proposal(draw, 76, "draw: tagged with no credits to clear it, so the grip must absorb meat damage", "draw"));
   }
   const meat = meatThreat(obs);
-  const exposed = meat && obs.hand.length <= meat.damage && obs.credits < 8;
+  const exposed = meat && obs.hand.length <= meat.damage && obs.credits < meat.pay;
   if (exposed && ranSuccessfullyThisTurn(obs) && drawsThisTurn < 4 && (obs.me["deck-count"] ?? 0) > 0) {
     const draw = byCommand(obs, "draw")[0];
-    if (draw) push(proposal(draw, 77, `draw: ${meat.damage} damage would flatline this grip if the Corp tags and scores ${meat.server}`, "draw"));
+    if (draw) push(proposal(draw, 77, meat.server ? `draw: ${meat.damage} damage would flatline this grip if the Corp tags and scores ${meat.server}` : `draw: ${meat.source} would flatline this grip for ${meat.damage} meat damage`, "draw"));
+    const credit = byCommand(obs, "credit")[0];
+    if (credit && meat.pay - obs.credits <= obs.clicks && meat.pay - obs.credits > 0) push(proposal(credit, 78, `take a credit: ${meat.pay} credits pay off ${meat.source}`, "credit"));
   }
   const thin = obs.hand.length <= 1;
   const floor = reserve(obs);
@@ -487,9 +525,9 @@ function proposals(obs: Observation, plan: Plan, base: Proposal[]): Proposal[] {
         p.why += " (an unrezzed ice may be one the rig cannot break)";
       }
     }
-    if (exposed && !ranSuccessfullyThisTurn(obs) && (p.kind === "run" || p.kind === "run-event" || p.kind === "click-economy") && !p.why.includes(meat.server) && /\b(run|into)\b/i.test(p.why)) {
+    if (exposed && !ranSuccessfullyThisTurn(obs) && (p.kind === "run" || p.kind === "run-event" || p.kind === "click-economy") && (!meat.server || !p.why.includes(meat.server)) && /\b(run|into)\b/i.test(p.why)) {
       p.score = Math.min(p.score, 20);
-      p.why += ` (a successful run lets Public Trail tag before ${meat.server} scores for ${meat.damage} damage)`;
+      p.why += meat.server ? ` (a successful run lets ${meat.source} tag before ${meat.server} scores for ${meat.damage} damage)` : ` (a successful run opens ${meat.source}: ${meat.damage} meat damage unless ${meat.pay} credits)`;
     }
     if (p.kind === "run") {
       const t = ts.find((x) => p.why.startsWith(`run ${x.server.label}`));
