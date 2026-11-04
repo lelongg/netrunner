@@ -460,6 +460,11 @@ when Tranquilizer will derez the ice again or breaking it costs at most half the
 thin purse, purge Tranquilizer counters only when they would derez at least 5 credits of
 rezzed ice, and rank its discards by what it can still play: Corp 353 / 389, 354 / 388 and
 358 / 388 after each step, inside the interval of 362 / 384.
+Replay 7Z8JFRNE then had the Runner treat Measured Response (and any operation doing meat
+damage unless paid, after a successful run) as a flatline threat, reading the cards seen when
+the Corp's deck is not a known list, and keep run events out of the generic economy
+proposals; merged with the sample-deck policies, the grid read Runner 273 / 265, inside the
+interval of 273 / 256.
 
 The spread between versions is inside the interval of 1152 games (about ±33 on a sum),
 so none of this is a measured gain: the 72-game local batches that motivated v1 (27 to
