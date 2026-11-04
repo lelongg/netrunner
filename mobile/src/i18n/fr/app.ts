@@ -159,6 +159,8 @@ export default {
   "The deck is drafted when the game starts.": "Le deck est drafté au début de la partie.",
   "Not legal in {format}": "Non légal en {format}",
   "Choose a deck": "Choisir un deck",
+  Random: "Au hasard",
+  "Random deck": "Deck au hasard",
   "your opponent": "votre adversaire",
   "Netrunner game": "Partie de Netrunner",
   "Code: {code}": "Code : {code}",

@@ -1,15 +1,16 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "preact/hooks";
-import { cardImage, type Side } from "../engine";
-import { Count } from "../fx/ui";
-import { Meter } from "../ui";
-import { replayFx, setCardCodes } from "../fx/director";
-import type { Info, Plan } from "../fx/cards";
+import { useEffect, useMemo, useState } from "preact/hooks";
+import type { Side } from "../engine";
 import { FIRE, INSTALL, PLAY, REZ, SCORE } from "../fx/signatures";
-import { tileEl } from "../fx/core";
 import { motionOff, settings } from "../settings";
+import { Icon } from "../icons";
+import { DockButton, LabScene, LabSheet, useSwipe } from "./LabScene";
+import { ReviewBox, useReviews } from "./labReview";
 
-interface Card {
+export interface Card {
   title: string;
+  text?: string;
+  set_code?: string;
+  setname?: string;
   code?: string;
   type: string;
   side: string;
@@ -17,7 +18,7 @@ interface Card {
   agendapoints?: number;
 }
 
-interface Slot {
+export interface Slot {
   cid: string;
   title: string;
   code?: string;
@@ -25,12 +26,14 @@ interface Slot {
   subtypes?: string[];
   side: "Corp" | "Runner";
   zone: string[];
+  holder?: Side;
   rezzed?: boolean;
+  virus?: number;
   strength?: number;
   adv?: number;
 }
 
-interface Model {
+export interface Model {
   slots: Slot[];
   credits: Record<Side, number>;
   clicks: Record<Side, number>;
@@ -51,7 +54,7 @@ interface Move {
   holder?: Side;
 }
 
-interface Scene {
+export interface Scene {
   before: Model;
   after: Model;
   lines?: string[];
@@ -60,7 +63,7 @@ interface Scene {
   then?: { lines: string[]; after: number };
 }
 
-interface Entry {
+export interface Entry {
   id: string;
   label: string;
   group: string;
@@ -68,9 +71,9 @@ interface Entry {
   scene: () => Scene;
 }
 
-const plain = (t: string) => t.normalize("NFD").replace(/[̀-ͯ]/g, "");
+export const plain = (t: string) => t.normalize("NFD").replace(/[̀-ͯ]/g, "");
 
-function base(): Model {
+export function base(): Model {
   return {
     slots: [
       { cid: "ice-barrier", title: "Ice Wall", type: "ICE", subtypes: ["Barrier"], side: "Corp", zone: ["servers", "remote1", "ices"], rezzed: true },
@@ -78,8 +81,8 @@ function base(): Model {
       { cid: "ice-sentry", title: "Archer", type: "ICE", subtypes: ["Sentry"], side: "Corp", zone: ["servers", "remote1", "ices"], rezzed: true },
       { cid: "asset", title: "PAD Campaign", type: "Asset", side: "Corp", zone: ["servers", "remote1", "content"], rezzed: false },
       { cid: "brk-fracter", title: "Corroder", type: "Program", subtypes: ["Icebreaker", "Fracter"], side: "Runner", zone: ["rig", "program"], strength: 2 },
-      { cid: "brk-decoder", title: "Unity", type: "Program", subtypes: ["Icebreaker", "Decoder"], side: "Runner", zone: ["rig", "program"], strength: 1 },
-      { cid: "brk-killer", title: "Carmen", type: "Program", subtypes: ["Icebreaker", "Killer"], side: "Runner", zone: ["rig", "program"], strength: 2 },
+      { cid: "brk-decoder", title: "Gordian Blade", type: "Program", subtypes: ["Icebreaker", "Decoder"], side: "Runner", zone: ["rig", "program"], strength: 2 },
+      { cid: "brk-killer", title: "Mimic", type: "Program", subtypes: ["Icebreaker", "Killer"], side: "Runner", zone: ["rig", "program"], strength: 3 },
       { cid: "res", title: "Daily Casts", type: "Resource", side: "Runner", zone: ["rig", "resource"] },
       { cid: "hand-1", title: "Sure Gamble", type: "Event", side: "Runner", zone: ["hand"] },
       { cid: "hand-2", title: "Diesel", type: "Event", side: "Runner", zone: ["hand"] },
@@ -105,56 +108,42 @@ function slot(m: Model, cid: string) {
   return m.slots.find((s) => s.cid === cid)!;
 }
 
-function toView(m: Model, codes: Map<string, Card>) {
-  const card = (s: Slot) => ({
-    cid: s.cid,
-    title: s.title,
-    code: codes.get(plain(s.title))?.code,
-    type: s.type,
-    subtypes: s.subtypes ?? [],
-    side: s.side,
-    zone: s.zone,
-    rezzed: s.rezzed,
-    "current-strength": s.strength,
-    "advance-counter": s.adv,
-  });
-  const at = (...zone: string[]) => m.slots.filter((s) => zone.every((z, i) => s.zone[i] === z)).map(card);
-  const ice = m.encounter ? m.slots.find((s) => s.cid === m.encounter!.cid) : undefined;
-  return {
-    "active-player": m.active,
-    winner: m.winner,
-    corp: {
-      credit: m.credits.corp,
-      click: m.clicks.corp,
-      "agenda-point": m.points.corp,
-      identity: { cid: "id-corp", title: "Nebula Talent Management: Making Stars", type: "Identity", side: "Corp", face: m.face },
-      hand: at("hand").filter((c) => c.side === "Corp"),
-      servers: {
-        hq: { ices: [], content: [] },
-        remote1: { ices: at("servers", "remote1", "ices"), content: at("servers", "remote1", "content") },
-      },
-    },
-    runner: {
-      credit: m.credits.runner,
-      click: m.clicks.runner,
-      "agenda-point": m.points.runner,
-      tag: { base: m.tags },
-      hand: at("hand").filter((c) => c.side === "Runner"),
-      rig: { program: at("rig", "program"), hardware: at("rig", "hardware"), resource: at("rig", "resource") },
-    },
-    run: m.run ? { server: [m.run.server], phase: m.run.phase, position: m.run.position } : undefined,
-    encounters: ice ? { ice: card(ice), "encounter-count": m.encounter!.count } : undefined,
-    log: [],
-  };
+const BREAKS: [string, string, number, string][] = [
+  ["Fracter", "ice-barrier", 1, "Ice Wall"],
+  ["Decoder", "ice-gate", 2, "Enigma"],
+  ["Killer", "ice-sentry", 3, "Archer"],
+];
+
+function ability(card: Card) {
+  const text = (card.text ?? "").replace(/<[^>]+>/g, "");
+  const raw = text.match(/\[click\][^:\n]*:\s*([^.\n]+)/i)?.[1] ?? text.match(/(?:^|\n)(?:[^:\n]{0,40}):\s*([^.\n]+)/)?.[1] ?? text.match(/you may ([^.\n]+)/i)?.[1];
+  if (!raw) return { line: "use its ability", credits: 0 };
+  const line = raw.charAt(0).toLowerCase() + raw.slice(1);
+  return { line: line.replace(/\[credit\]/gi, " [Credits]"), credits: Number(line.match(/(?:gain|take) (\d+)\s*\[credit/i)?.[1] ?? 0) };
 }
 
-function info(s: Slot | undefined, zone: string[] | undefined, holder: Side, codes: Map<string, Card>): Info | undefined {
-  if (!s || !zone) return undefined;
-  const c = codes.get(plain(s.title));
-  return { cid: s.cid, zone: zone.join("/"), holder, owner: s.side === "Corp" ? "corp" : "runner", code: c?.code, type: s.type, title: s.title, facedown: false, points: c?.agendapoints ?? 0 };
+function useScene(card: Card, m: Model): Scene {
+  const { line, credits } = ability(card);
+  if (card.side === "Corp") {
+    const before = edit(m, (x) => x.slots.push({ cid: "subject", title: card.title, type: card.type, subtypes: card.subtypes, side: "Corp", zone: ["servers", "remote1", "content"], rezzed: true }));
+    return { before, after: edit(before, (x) => (x.credits.corp += credits)), me: "runner", lines: [`Corp uses ${card.title} to ${line}.`] };
+  }
+  const zone = ["rig", card.type === "Hardware" ? "hardware" : card.type === "Resource" ? "resource" : "program"];
+  const subject: Slot = { cid: "subject", title: card.title, type: card.type, subtypes: card.subtypes, side: "Runner", zone, strength: 3 };
+  if ((card.subtypes ?? []).includes("Icebreaker")) {
+    const [, ice, position, iceTitle] = BREAKS.find(([t]) => card.subtypes?.includes(t)) ?? BREAKS[2];
+    const before = edit(m, (x) => {
+      x.slots.push(subject);
+      x.run = { server: "remote1", position, phase: "encounter-ice" };
+      x.encounter = { cid: ice, count: 1 };
+    });
+    return { before, after: before, me: "runner", lines: [`Gerald pays 1 [Credits] to use ${card.title} to break 1 subroutine on ${iceTitle}.`] };
+  }
+  const before = edit(m, (x) => x.slots.push(subject));
+  return { before, after: edit(before, (x) => (x.credits.runner += credits)), me: "runner", lines: [`Gerald uses ${card.title} to ${line}.`] };
 }
 
-function cardScene(card: Card, kind: string): Scene {
+export function cardScene(card: Card, kind: string): Scene {
   const corp = card.side === "Corp";
   const me: Side = corp ? "corp" : "runner";
   const who = corp ? "Corp" : "Gerald";
@@ -194,18 +183,34 @@ function cardScene(card: Card, kind: string): Scene {
     };
     const before = edit(m, running);
     const after = edit(before, () => {});
-    const text = card.title === "Tithe" ? "do 1 net damage" : card.title === "Anoetic Void" ? "end the run" : "do 2 net damage";
+    const sub = card.text?.match(/\[subroutine\]\s*([^\n]+)/i)?.[1].replace(/<[^>]+>/g, "").replace(/\.$/, "");
+    const text = sub ? sub.charAt(0).toLowerCase() + sub.slice(1) : "end the run";
     return { before, after, me: "runner", lines: [`Corp uses ${card.title} to ${text}.`] };
   }
+  if (kind === "use") return useScene(card, m);
   return { before: m, after: m };
 }
 
-function extraScenes(byPlain: Map<string, Card>): Entry[] {
+export function extraScenes(byPlain: Map<string, Card>): Entry[] {
   const code = (t: string) => byPlain.get(plain(t))?.code;
   const real = (t: string) => byPlain.get(plain(t));
   const out: Entry[] = [];
   const orbital = real("Orbital Superiority");
   if (orbital) out.push({ id: "c:orbital", label: orbital.title, group: "Score", code: orbital.code, scene: () => cardScene(orbital, "score") });
+  const atl = real("Above the Law");
+  if (atl)
+    out.push({
+      id: "c:atl",
+      label: atl.title,
+      group: "Score",
+      code: atl.code,
+      scene: () => {
+        const s = cardScene(atl, "score");
+        s.after = edit(s.after, (x) => (slot(x, "res").zone = ["discard"]));
+        s.lines = [...(s.lines ?? []), "Corp uses Above the Law to trash Daily Casts."];
+        return s;
+      },
+    });
   const sam = real("Send a Message");
   if (sam)
     out.push({
@@ -298,7 +303,7 @@ function extraScenes(byPlain: Map<string, Card>): Entry[] {
   return out.map((e) => ({ ...e, code: e.code ?? code(e.label) }));
 }
 
-function generic(byPlain: Map<string, Card>, plainEvent: string, plainAgenda: string, plainIce: string): Entry[] {
+export function generic(byPlain: Map<string, Card>, plainEvent: string, plainAgenda: string, plainIce: string): Entry[] {
   const g = (label: string, group: string, scene: () => Scene): Entry => ({ id: `g:${label}`, label, group, scene });
   const run = (x: Model, position = 3, ice = "ice-sentry") => {
     x.run = { server: "remote1", position, phase: "encounter-ice" };
@@ -339,7 +344,7 @@ function generic(byPlain: Map<string, Card>, plainEvent: string, plainAgenda: st
     g("Steal an agenda", "Agendas", () => {
       const before = edit(base(), (x) => x.slots.push({ cid: "stolen", title: agenda.title, type: "Agenda", side: "Corp", zone: ["servers", "remote1", "content"] }));
       const after = edit(base(), (x) => {
-        x.slots.push({ cid: "stolen", title: agenda.title, type: "Agenda", side: "Corp", zone: ["scored"] });
+        x.slots.push({ cid: "stolen", title: agenda.title, type: "Agenda", side: "Corp", zone: ["scored"], holder: "runner" });
         x.points.runner += agenda.agendapoints ?? 2;
       });
       return { before, after, me: "runner", lines: [`Gerald steals ${agenda.title} and gains ${agenda.agendapoints ?? 2} agenda points.`], move: { cid: "stolen", from: ["servers", "remote1", "content"], to: ["scored"], holder: "runner" } };
@@ -355,17 +360,24 @@ function generic(byPlain: Map<string, Card>, plainEvent: string, plainAgenda: st
       const after = edit(before, (x) => (slot(x, "brk-fracter").strength = 4));
       return { before, after, me: "runner", lines: ["Gerald pays 2 [Credits] to use Corroder to add 2 strength."] };
     }),
-    g("Break with a killer", "Run", () => ({ before: edit(base(), (x) => run(x)), after: edit(base(), (x) => run(x)), me: "runner", lines: ["Gerald pays 1 [Credits] to use Carmen to break 1 subroutine on Archer."] })),
+    g("Break with a killer", "Run", () => ({ before: edit(base(), (x) => run(x)), after: edit(base(), (x) => run(x)), me: "runner", lines: ["Gerald pays 1 [Credits] to use Mimic to break 1 subroutine on Archer."] })),
     g("Break with a fracter", "Run", () => ({ before: edit(base(), (x) => run(x, 1, "ice-barrier")), after: edit(base(), (x) => run(x, 1, "ice-barrier")), me: "runner", lines: ["Gerald pays 1 [Credits] to use Corroder to break 1 subroutine on Ice Wall."] })),
-    g("Break with a decoder", "Run", () => ({ before: edit(base(), (x) => run(x, 2, "ice-gate")), after: edit(base(), (x) => run(x, 2, "ice-gate")), me: "runner", lines: ["Gerald pays 1 [Credits] to use Unity to break 1 subroutine on Enigma."] })),
-    g("Break every subroutine", "Run", () => ({ before: edit(base(), (x) => run(x)), after: edit(base(), (x) => run(x)), me: "runner", lines: ["Gerald pays 3 [Credits] to use Carmen to break all 3 subroutines on Archer."] })),
+    g("Break with a decoder", "Run", () => ({ before: edit(base(), (x) => run(x, 2, "ice-gate")), after: edit(base(), (x) => run(x, 2, "ice-gate")), me: "runner", lines: ["Gerald pays 1 [Credits] to use Gordian Blade to break 1 subroutine on Enigma."] })),
+    g("Break every subroutine", "Run", () => ({ before: edit(base(), (x) => run(x)), after: edit(base(), (x) => run(x)), me: "runner", lines: ["Gerald pays 2 [Credits] to use Mimic to break all 2 subroutines on Archer."] })),
     g("Pass a piece of ice", "Run", () => ({ before: edit(base(), (x) => run(x, 3)), after: edit(base(), (x) => ((x.run = { server: "remote1", position: 2, phase: "approach-ice" }), (x.encounter = { cid: "ice-gate", count: 1 }))), me: "runner" })),
     g("Subroutine: end the run", "Subroutines", () => ({ before: edit(base(), (x) => run(x, 1, "ice-barrier")), after: edit(base(), (x) => run(x, 1, "ice-barrier")), me: "runner", lines: ["Corp uses Ice Wall to end the run."] })),
     g("Subroutine: net damage", "Subroutines", () => ({ before: edit(base(), (x) => run(x)), after: edit(base(), (x) => run(x)), me: "runner", lines: ["Corp uses Archer to do 2 net damage."] })),
-    g("Subroutine: trash a program", "Subroutines", () => ({ before: edit(base(), (x) => run(x)), after: edit(base(), (x) => run(x)), me: "runner", lines: ["Corp uses Archer to trash 1 installed program."] })),
+    g("Subroutine: trash a program", "Subroutines", () => {
+      const before = edit(base(), (x) => run(x));
+      const after = edit(before, (x) => (slot(x, "brk-decoder").zone = ["discard"]));
+      return { before, after, me: "runner", lines: ["Corp uses Archer to trash Gordian Blade."], move: { cid: "brk-decoder", from: ["rig", "program"], to: ["discard"], holder: "runner" } };
+    }),
     g("Subroutine: lose credits", "Subroutines", () => ({ before: edit(base(), (x) => run(x)), after: edit(base(), (x) => ((x.credits.runner -= 3), run(x))), me: "runner", lines: ["Corp uses Archer to make the Runner lose 3 [Credits]."] })),
     g("Subroutine: give a tag", "Subroutines", () => ({ before: edit(base(), (x) => run(x)), after: edit(base(), (x) => ((x.tags += 1), run(x))), me: "runner", lines: ["Corp uses Archer to give the Runner 1 tag."] })),
-    g("Subroutine: derez", "Subroutines", () => ({ before: edit(base(), (x) => run(x)), after: edit(base(), (x) => run(x)), me: "runner", lines: ["Corp uses Archer to derez Daily Casts."] })),
+    g("Subroutine: derez", "Subroutines", () => {
+      const before = edit(base(), (x) => run(x));
+      return { before, after: edit(before, (x) => (slot(x, "ice-gate").rezzed = false)), me: "runner", lines: ["Corp uses Archer to derez Enigma."] };
+    }),
     g("Net damage", "Damage", () => ({ before: base(), after: base(), me: "runner", lines: ["Corp does 2 net damage."] })),
     g("Meat damage", "Damage", () => ({ before: base(), after: base(), me: "runner", lines: ["Corp does 2 meat damage."] })),
     g("Core damage", "Damage", () => ({ before: base(), after: base(), me: "runner", lines: ["Corp does 1 core damage."] })),
@@ -379,212 +391,120 @@ function generic(byPlain: Map<string, Card>, plainEvent: string, plainAgenda: st
     g("R&D card left in place (Corp view)", "Run end", () => ({ before: base(), after: base(), me: "corp", lines: [`Gerald accesses ${agenda.title} from R&D.`], then: { lines: ["Gerald's run on R&D ends."], after: 2000 } })),
     g("Unseen R&D card trashed (Corp view)", "Run end", () => ({ before: base(), after: base(), me: "corp", lines: ["Gerald accesses an unseen card from R&D."], then: { lines: ["Gerald pays 0 [Credits] to trash Hedge Fund from R&D."], after: 2000 } })),
     g("Unseen R&D card stolen (Corp view)", "Run end", () => ({ before: base(), after: base(), me: "corp", lines: ["Gerald accesses an unseen card from R&D."], then: { lines: [`Gerald steals ${agenda.title} from R&D.`], after: 2000 } })),
-    g("Purge virus counters", "Other", () => ({ before: base(), after: base(), me: "runner", lines: ["Corp purges virus counters."] })),
+    g("Purge virus counters", "Other", () => {
+      const sucker: Slot = { cid: "virus", title: "Datasucker", type: "Program", subtypes: ["Virus"], side: "Runner", zone: ["rig", "program"], virus: 3 };
+      const before = edit(base(), (x) => x.slots.push(sucker));
+      return { before, after: edit(base(), (x) => x.slots.push({ ...sucker, virus: 0 })), me: "runner", lines: ["Corp purges virus counters."] };
+    }),
     g("Expose a card", "Other", () => ({ before: base(), after: base(), me: "runner", lines: ["Gerald exposes PAD Campaign."] })),
-    g("Identity flips", "Other", () => ({ before: base(), after: edit(base(), (x) => (x.face = "back")), me: "runner" })),
+    g("Identity flips", "Other", () => ({ before: base(), after: edit(base(), (x) => (x.face = "back")), me: "corp" })),
     g("Victory", "Game end", () => ({ before: base(), after: edit(base(), (x) => (x.winner = "runner")), me: "runner" })),
     g("Defeat", "Game end", () => ({ before: base(), after: edit(base(), (x) => (x.winner = "corp")), me: "runner" })),
   ];
 }
 
-function Tile({ s, codes, hidden }: { s: Slot; codes: Map<string, Card>; hidden?: boolean }) {
-  const code = codes.get(plain(s.title))?.code;
-  const faceup = s.side === "Runner" || s.rezzed !== false;
-  return (
-    <div class="tile-wrap" style={hidden ? { visibility: "hidden" } : undefined}>
-      <div class={`tile fxlab-tile ${s.side === "Corp" ? "corp" : "runner"}`} data-cid={s.cid}>
-        {faceup && code ? <img class="card-image" src={cardImage(code, "small")} alt={s.title} crossOrigin="anonymous" /> : <span class="fxlab-back">{s.side === "Corp" ? "CORP" : "RUNNER"}</span>}
-      </div>
-      {s.adv ? <span class="fxlab-adv">▲ {s.adv}</span> : null}
-    </div>
-  );
-}
+export type SceneScope = "game" | "runs";
 
-function Board({ m, codes }: { m: Model; codes: Map<string, Card> }) {
-  const at = (...zone: string[]) => m.slots.filter((s) => zone.every((z, i) => s.zone[i] === z));
-  const pips = (side: Side, n: number) => (
-    <div class="fxlab-points" data-anchor={`${side}-points`}>
-      {Array.from({ length: 7 }, (_, i) => (
-        <i class={i < n ? "on" : ""} />
-      ))}
-    </div>
-  );
-  return (
-    <div class="fxlab-board">
-      <div class="fxlab-panel" data-anchor="corp-panel">
-        <span class="big">
-          <Count value={m.credits.corp} anchor="corp-credits" />
-        </span>
-        <Meter value={m.clicks.corp} max={3} anchor="corp-clicks" />
-        {pips("corp", m.points.corp)}
-        <span class="fxlab-pile" data-anchor="corp-deck">
-          R&D
-        </span>
-        <span class="fxlab-pile" data-anchor="corp-hand">
-          HQ
-        </span>
-      </div>
-      <div class={`server fxlab-server ${m.run ? "running" : ""}`}>
-        <div class="tile-wrap">
-          <div class="tile fxlab-tile corp" data-cid="id-corp">
-            <img class="card-image" src={cardImage(m.face === "back" ? "35057-0" : "35057", "small")} alt="Identity" crossOrigin="anonymous" />
-          </div>
-        </div>
-        {at("servers", "remote1", "ices").map((s) => (
-          <Tile s={s} codes={codes} hidden={m.hidden?.includes(s.cid)} />
-        ))}
-        {at("servers", "remote1", "content").map((s) => (
-          <Tile s={s} codes={codes} hidden={m.hidden?.includes(s.cid)} />
-        ))}
-      </div>
-      <div class="fxlab-rig">
-        {at("rig").map((s) => (
-          <Tile s={s} codes={codes} hidden={m.hidden?.includes(s.cid)} />
-        ))}
-      </div>
-      <div class="fxlab-hand" data-anchor="runner-hand">
-        {at("hand").map((s) => (
-          <Tile s={s} codes={codes} hidden={m.hidden?.includes(s.cid)} />
-        ))}
-      </div>
-      <div class="fxlab-panel" data-anchor="runner-panel">
-        <span class="big">
-          <Count value={m.credits.runner} anchor="runner-credits" />
-        </span>
-        <Meter value={m.clicks.runner} max={4} anchor="runner-clicks" />
-        {pips("runner", m.points.runner)}
-        <span class="fxlab-pile" data-anchor="runner-deck">
-          Stack
-        </span>
-        <span class="fxlab-tags">{m.tags ? `${m.tags} tag` : ""}</span>
-      </div>
-    </div>
-  );
-}
+const RUN_GROUPS = new Set(["Run", "Subroutines", "Run end"]);
 
-const frame = () => new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
-
-export function FxLab() {
+export function useLabCards() {
   const [cards, setCards] = useState<Card[]>();
-  const [model, setModel] = useState<Model>(base);
-  const [query, setQuery] = useState("");
-  const [group, setGroup] = useState("All");
-  const [current, setCurrent] = useState<string>();
-  const [auto, setAuto] = useState(false);
-  const busy = useRef(false);
-  const pending = useRef<(() => void) | null>(null);
-
-  useLayoutEffect(() => {
-    const replay = pending.current;
-    pending.current = null;
-    replay?.();
-  }, [model]);
-
   useEffect(() => {
     fetch("data/cards.json")
       .then((r) => r.json())
-      .then((all: Card[]) => setCards(all));
+      .then((all: Card[]) => setCards(all))
+      .catch(() => setCards([]));
   }, []);
-
   const byPlain = useMemo(() => new Map((cards ?? []).map((c) => [plain(c.title), c])), [cards]);
+  return { cards, byPlain };
+}
+
+export function FxLab({ scope }: { scope: SceneScope }) {
+  const { cards, byPlain } = useLabCards();
+  const reviews = useReviews();
+  const [group, setGroup] = useState("All");
+  const [current, setCurrent] = useState(0);
+  const [nonce, setNonce] = useState(0);
+  const [auto, setAuto] = useState(false);
+  const [sheet, setSheet] = useState<"list" | "review" | null>(null);
 
   const entries = useMemo<Entry[]>(() => {
     if (!cards) return [];
     const animated = new Set([...Object.keys(PLAY), ...Object.keys(SCORE), ...Object.keys(REZ), ...Object.keys(INSTALL), ...FIRE]);
     const pick = (type: string, side: string) => cards.find((c) => c.type === type && c.side === side && !animated.has(plain(c.title)) && c.code)?.title ?? "";
-    const list = generic(byPlain, plain(pick("Event", "Runner")), plain(pick("Agenda", "Corp")), plain(pick("ICE", "Corp")));
-    const add = (titles: string[], kind: string, label: string) => {
-      for (const t of titles) {
-        const c = byPlain.get(t);
-        if (c) list.push({ id: `c:${kind}:${t}`, label: c.title, group: label, code: c.code, scene: () => cardScene(c, kind) });
-      }
-    };
-    add(Object.keys(PLAY), "play", "Play");
-    add(Object.keys(INSTALL), "install", "Install");
-    add(Object.keys(REZ), "rez", "Rez");
-    add(Object.keys(SCORE), "score", "Score");
-    add(FIRE, "fire", "Subroutine");
-    list.push(...extraScenes(byPlain));
-    return list;
-  }, [cards, byPlain]);
+    return generic(byPlain, plain(pick("Event", "Runner")), plain(pick("Agenda", "Corp")), plain(pick("ICE", "Corp"))).filter((e) => RUN_GROUPS.has(e.group) === (scope === "runs"));
+  }, [cards, byPlain, scope]);
 
   const groups = useMemo(() => ["All", ...new Set(entries.map((e) => e.group))], [entries]);
-  const shown = entries.filter((e) => (group === "All" || e.group === group) && (!query || e.label.toLowerCase().includes(query.toLowerCase())));
-
-  async function run(e: Entry) {
-    if (busy.current) return;
-    busy.current = true;
-    setCurrent(e.id);
-    document.querySelector(".fx-layer")?.replaceChildren();
-    const scene = e.scene();
-    const me = scene.me ?? "runner";
-    const known = new Set(base().slots.map((x) => x.cid));
-    setModel({ ...scene.before, hidden: scene.before.slots.filter((x) => !known.has(x.cid)).map((x) => x.cid) });
-    await frame();
-    let plan: Plan | undefined;
-    if (scene.move) {
-      const mv = scene.move;
-      const holder = mv.holder ?? me;
-      const src = mv.from?.[0] === "deck" ? document.querySelector(`[data-anchor="${holder}-deck"]`)?.getBoundingClientRect() : tileEl(mv.cid)?.getBoundingClientRect();
-      const s = scene.after.slots.find((x) => x.cid === mv.cid) ?? scene.before.slots.find((x) => x.cid === mv.cid);
-      plan = { moves: [{ cid: mv.cid, from: info(s, mv.from, holder, byPlain), to: info(s, mv.to, holder, byPlain), src: src ?? null, clone: null }] };
-    }
-    setCardCodes((t) => byPlain.get(plain(t))?.code);
-    pending.current = () => {
-      replayFx(toView(scene.before, byPlain), toView(scene.after, byPlain), me, scene.lines ?? [], plan);
-      const then = scene.then;
-      if (then) setTimeout(() => replayFx(toView(scene.after, byPlain), toView(scene.after, byPlain), me, then.lines), then.after);
-    };
-    setModel(scene.after);
-    setTimeout(() => (busy.current = false), 400);
-  }
+  const shown = entries.filter((e) => group === "All" || e.group === group);
+  const entry = shown[Math.min(current, shown.length - 1)];
+  const label = scope === "runs" ? "Runs" : "Game";
+  const keyOf = (e: Entry) => `${label} · ${e.label}`;
+  const scene = useMemo(() => entry?.scene(), [entry, nonce]);
+  const go = (i: number) => {
+    setCurrent((i + shown.length) % shown.length);
+    setNonce((n) => n + 1);
+  };
+  const swipe = useSwipe((dir) => go(current + dir));
 
   useEffect(() => {
     if (!auto) return;
-    let i = Math.max(0, shown.findIndex((e) => e.id === current) + 1);
-    let stop = false;
-    const step = async () => {
-      if (stop || i >= shown.length) return setAuto(false);
-      await run(shown[i++]);
-      setTimeout(step, 2800);
-    };
-    step();
-    return () => {
-      stop = true;
-    };
-  }, [auto]);
+    const t = setTimeout(() => (current + 1 < shown.length ? go(current + 1) : setAuto(false)), 2800);
+    return () => clearTimeout(t);
+  }, [auto, current, nonce]);
 
+  if (!entry) return <div class="lab-loading label">Loading…</div>;
+  const at = Math.min(current, shown.length - 1);
   return (
-    <div class="fxlab">
-      <Board m={model} codes={byPlain} />
-      <div class="fxlab-controls">
-        <div class="fxlab-row">
-          <input class="fxlab-search" placeholder={`Search ${entries.length} animations`} value={query} onInput={(e) => setQuery((e.target as HTMLInputElement).value)} />
-          <button class={auto ? "primary" : ""} onClick={() => setAuto(!auto)}>
-            {auto ? "Stop" : "Play all"}
-          </button>
-        </div>
-        <div class="fxlab-groups">
-          {groups.map((g) => (
-            <button class={g === group ? "on" : ""} onClick={() => setGroup(g)}>
-              {g}
-            </button>
-          ))}
-        </div>
-        {motionOff() && <p class="fxlab-note">Animations are turned off in Settings, so only sounds will play.</p>}
-        {!settings.sound && <p class="fxlab-note">Sounds are turned off in Settings.</p>}
+    <div class="lab-view">
+      <div class="lab-stage" {...swipe}>
+        <LabScene scene={scene} byPlain={byPlain} />
       </div>
-      <div class="fxlab-list">
-        {shown.map((e) => (
-          <button class={`fxlab-item ${e.id === current ? "on" : ""}`} onClick={() => run(e)}>
-            {e.code ? <img src={cardImage(e.code, "small")} alt="" loading="lazy" crossOrigin="anonymous" /> : <span class="fxlab-dot" />}
-            <span>
-              <b>{e.label}</b>
-              <small>{e.group}</small>
-            </span>
-          </button>
-        ))}
-      </div>
+      <header class="lab-bar">
+        <button class="lab-nav" onClick={() => go(current - 1)} aria-label="Previous scene">
+          <Icon name="chevron-left" />
+        </button>
+        <button class="lab-title" onClick={() => setSheet("list")}>
+          <span class="label">
+            {entry.group} · {at + 1}/{shown.length}
+          </span>
+          <strong>{entry.label}</strong>
+        </button>
+        <button class="lab-nav" onClick={() => go(current + 1)} aria-label="Next scene">
+          <Icon name="chevron-right" />
+        </button>
+      </header>
+      {(motionOff() || !settings.sound) && <p class="fxlab-note">{motionOff() ? "Animations are turned off in Settings, so only sounds will play." : "Sounds are turned off in Settings."}</p>}
+      <nav class="lab-dock">
+        <DockButton icon="play" label="Replay" onClick={() => setNonce((n) => n + 1)} />
+        <DockButton icon="step-forward" label={auto ? "Stop" : "Play all"} on={auto} onClick={() => setAuto(!auto)} />
+        <DockButton icon="search" label="Scenes" onClick={() => setSheet("list")} />
+        <DockButton icon="star" label="Review" mark={reviews.tag(keyOf(entry))} onClick={() => setSheet("review")} />
+      </nav>
+      {sheet === "list" && (
+        <LabSheet title={`${label} scenes`} onClose={() => setSheet(null)}>
+          <div class="lab-chips">
+            {groups.map((g) => (
+              <button class={g === group ? "on" : ""} onClick={() => (setGroup(g), setCurrent(0), setNonce((n) => n + 1))}>
+                {g}
+              </button>
+            ))}
+          </div>
+          <div class="lab-rows">
+            {shown.map((e, i) => (
+              <button class={[i === at ? "on" : "", reviews.tag(keyOf(e))].join(" ")} onClick={() => (go(i), setSheet(null))}>
+                <span>{e.label}</span>
+                <small>{e.group}</small>
+              </button>
+            ))}
+          </div>
+        </LabSheet>
+      )}
+      {sheet === "review" && (
+        <LabSheet title={keyOf(entry)} onClose={() => setSheet(null)}>
+          <ReviewBox reviews={reviews} k={keyOf(entry)} keys={entries.map(keyOf)} />
+        </LabSheet>
+      )}
     </div>
   );
 }

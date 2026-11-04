@@ -250,6 +250,7 @@ export default {
   "Unknown cards": "Cartes inconnues",
   "Bot plays it generically": "Le bot le joue de façon générique",
   "Bot trained on this deck": "Bot entraîné sur ce deck",
+  "Bot knows this deck": "Le bot connaît ce deck",
   "Bot plays it like {deck}": "Le bot le joue comme {deck}",
   "Bot plays it like its faction deck": "Le bot le joue comme le deck de sa faction",
   "View deck {name}": "Voir le deck {name}",

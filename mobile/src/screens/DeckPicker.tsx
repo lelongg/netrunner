@@ -10,6 +10,8 @@ import { Icon } from "../icons";
 import { type GameFormat, FORMATS, analyze, deckFormat } from "../deckrules";
 import { findPolicy } from "../bot/index.ts";
 import { CORE_DECKS } from "../bot/policy/decks/core.ts";
+import { SAMPLE_DECKS } from "../bot/policy/decks/samples.ts";
+import { fingerprint } from "../bot/policy/registry.ts";
 import { t } from "../i18n";
 import { settings } from "../settings";
 
@@ -44,7 +46,7 @@ function preconChoices(side: Side, db: CardDb, matchups: Matchup[], format: Game
     return format === "preconstructed" || !problemIn(format, db, wire) ? [wire] : [];
   });
   if (format === "preconstructed") return starters;
-  const catalogue = CORE_DECKS.filter((d) => d.side === side).flatMap((d) => {
+  const catalogue = [...CORE_DECKS, ...SAMPLE_DECKS].filter((d) => d.side === side).flatMap((d) => {
     try {
       const wire = toWire(fromPrecon(d, db));
       return problemIn(format, db, wire) ? [] : [wire];
@@ -53,6 +55,14 @@ function preconChoices(side: Side, db: CardDb, matchups: Matchup[], format: Game
     }
   });
   return [...catalogue, ...starters];
+}
+
+export function randomDeck(side: Side, db: CardDb, matchups: Matchup[], format: GameFormat, current?: WireDeck): WireDeck | undefined {
+  const all = preconChoices(side, db, matchups, format);
+  const known = all.filter((w) => botPlay(side, w).rank === 0);
+  const pool = (known.length ? known : all).filter((w) => w.name !== current?.name);
+  const from = pool.length ? pool : all;
+  return from[Math.floor(Math.random() * from.length)];
 }
 
 export function defaultDeck(side: Side, db: CardDb, matchups: Matchup[], format: GameFormat): WireDeck | undefined {
@@ -64,10 +74,12 @@ export function defaultDeck(side: Side, db: CardDb, matchups: Matchup[], format:
   return preconChoices(side, db, matchups, format)[0];
 }
 
+const SAMPLE_PRINTS = new Set(SAMPLE_DECKS.map((d) => fingerprint(d)));
+
 export function botPlay(side: Side, w: WireDeck): { rank: number; text: string } {
   const match = findPolicy(side, { identity: w.identity, cards: w.cards });
   if (!match) return { rank: 2, text: t("Bot plays it generically") };
-  if (match.exact) return { rank: 0, text: t("Bot trained on this deck") };
+  if (match.exact) return { rank: 0, text: SAMPLE_PRINTS.has(match.fingerprint) ? t("Bot knows this deck") : t("Bot trained on this deck") };
   const near = match.policy.decks.map((d) => CORE_DECKS.find((c) => c.identity === d.identity && c.cards.length === d.cards.length)?.name ?? d.identity).find(Boolean);
   return { rank: 1, text: near ? t("Bot plays it like {deck}", { deck: near }) : t("Bot plays it like its faction deck") };
 }

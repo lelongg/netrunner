@@ -57,6 +57,25 @@ export type IconName = keyof typeof PATHS | keyof typeof SYMBOLS;
 
 export const ICON_SET: Record<string, unknown> = { ...PATHS, ...SYMBOLS };
 
+export function iconElement(name: IconName): Element {
+  if (name in SYMBOLS) {
+    const span = document.createElement("span");
+    span.className = `sym sym-${name}`;
+    span.textContent = SYMBOLS[name as keyof typeof SYMBOLS];
+    return span;
+  }
+  const { box, d } = PATHS[name as keyof typeof PATHS];
+  const ns = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(ns, "svg");
+  svg.setAttribute("class", `icon icon-${name}`);
+  svg.setAttribute("viewBox", box);
+  for (const [k, v] of Object.entries({ fill: "none", stroke: "currentColor", "stroke-width": "2.6", "stroke-linecap": "square", "stroke-linejoin": "miter" })) svg.setAttribute(k, v);
+  const path = document.createElementNS(ns, "path");
+  path.setAttribute("d", d);
+  svg.appendChild(path);
+  return svg;
+}
+
 export function Icon({ name, class: className }: { name: IconName; class?: string }) {
   if (name in SYMBOLS)
     return (

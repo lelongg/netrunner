@@ -1,5 +1,6 @@
 import { animate as motion } from "motion";
 import { motionOff } from "../settings";
+import { type IconName, iconElement } from "../icons";
 
 const TRANSFORMS = ["transformPerspective", "x", "y", "rotate", "rotateY", "skewX", "scale", "scaleX", "scaleY"] as const;
 
@@ -120,17 +121,17 @@ export function points(from: Point, segments: Element[], tone: Tone = "gold") {
     const el = node(`fx-comet tone-${tone}`);
     el.style.left = `${from[0]}px`;
     el.style.top = `${from[1]}px`;
+    el.style.opacity = "0";
     const delay = i * 0.14;
-    animate(el, { x: [0, dx], y: [0, dy], rotate: [angle, angle], scaleX: [0.4, 1.8, 0.9], opacity: [0, 1, 1] }, { duration: 0.6, delay, ease: [0.55, 0, 0.85, 0.45] }).finished.then(
+    animate(el, { opacity: [0, 1] }, { duration: 0.1, delay, keep: true });
+    animate(el, { x: [0, dx], y: [0, dy], rotate: [angle, angle], scaleX: [0.4, 1.8, 0.9] }, { duration: 0.6, delay, ease: [0.55, 0, 0.85, 0.45] }).finished.then(
       () => {
         el.remove();
         ring(to, tone, 70);
         burst(to, tone, 10, 40, { size: 4, gravity: 0 });
         const pending = seg instanceof HTMLElement && !!seg.dataset.pending;
         if (pending) delete (seg as HTMLElement).dataset.pending;
-        animate(seg, { scaleY: [pending ? 3.5 : 1, 3, 1], opacity: [pending ? 0 : 1, 1, 1], filter: ["brightness(1)", "brightness(2.5)", "brightness(1)"] }, { duration: 0.5, ease: "easeOut" }).finished.then(() => {
-          if (pending) (seg as HTMLElement).style.opacity = "";
-        });
+        animate(seg, { scaleY: [pending ? 3.5 : 1, 3, 1], filter: ["brightness(1)", "brightness(2.5)", "brightness(1)"] }, { duration: 0.5, ease: "easeOut" });
       },
       () => el.remove(),
     );
@@ -230,6 +231,7 @@ export function ring(at: Point, tone: Tone = "cyan", size = 120, delay = 0) {
   el.style.top = `${at[1] - size / 2}px`;
   el.style.width = `${size}px`;
   el.style.height = `${size}px`;
+  el.style.opacity = "0";
   done(animate(el, { scale: [0.15, 1], opacity: [1, 0] }, { duration: 0.6, delay, ease: [0.2, 0.8, 0.3, 1] }), el);
 }
 
@@ -243,12 +245,13 @@ export function rays(at: Point, tone: Tone = "gold", size = 520, duration = 1.4)
   done(animate(el, { scale: [0.3, 1.1, 1.2], opacity: [0, 0.9, 0], rotate: [0, 50] }, { duration, ease: "easeOut" }), el);
 }
 
-export function floater(at: Point, text: string, tone: Tone = "cyan", rise = 60, big = false) {
+export function floater(at: Point, text: string, tone: Tone = "cyan", rise = 60, big = false, icon?: IconName) {
   if (reduced()) return;
   const el = node(`fx-floater tone-${tone} ${big ? "big" : ""}`);
   el.textContent = text;
-  el.style.left = `${at[0]}px`;
-  el.style.top = `${at[1]}px`;
+  if (icon) el.appendChild(iconElement(icon));
+  el.style.left = `${Math.max(8, Math.min(innerWidth - el.offsetWidth - 8, at[0] - el.offsetWidth / 2))}px`;
+  el.style.top = `${at[1] - el.offsetHeight / 2}px`;
   done(animate(el, { y: [10, -rise * 0.4, -rise], scale: [0.4, 1.2, 1], opacity: [0, 1, 0] }, { duration: 1.1, times: [0, 0.25, 1], ease: "easeOut" }), el);
 }
 
@@ -275,8 +278,10 @@ export function stamp(at: Point, text: string, tone: Tone = "red") {
   if (reduced()) return;
   const el = node(`fx-stamp tone-${tone}`);
   el.textContent = text;
-  el.style.left = `${at[0]}px`;
-  el.style.top = `${at[1]}px`;
+  const w = Math.min(el.offsetWidth, innerWidth - 24);
+  el.style.maxWidth = `${innerWidth - 24}px`;
+  el.style.left = `${Math.max(12, Math.min(innerWidth - w - 12, at[0] - w / 2))}px`;
+  el.style.top = `${at[1] - el.offsetHeight / 2}px`;
   done(animate(el, { scale: [2.6, 0.92, 1, 1], rotate: [-14, -8, -8, -8], opacity: [0, 1, 1, 0] }, { duration: 1.3, times: [0, 0.16, 0.3, 1], ease: "easeOut" }), el);
 }
 
@@ -300,6 +305,7 @@ export function coins(from: Point, to: Point, n: number, tone: Tone = "gold", de
     const el = node(`fx-coin tone-${tone}`);
     el.style.left = `${from[0] - 7}px`;
     el.style.top = `${from[1] - 7}px`;
+    el.style.opacity = "0";
     const dx = to[0] - from[0];
     const dy = to[1] - from[1];
     const lift = -40 - Math.random() * 50;

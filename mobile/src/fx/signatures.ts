@@ -872,9 +872,7 @@ export function corroder(r: DOMRect) {
 export function padCampaign(r: DOMRect) {
   if (reduced()) return;
   const at: Point = [r.left + r.width / 2, r.top + r.height * 0.35];
-  for (let i = 0; i < 4; i++) ring(at, "blue", 60 + i * 50, i * 0.12);
-  setTimeout(() => {
-  }, 400);
+  for (let i = 0; i < 4; i++) ring(at, "blue", 200, i * 0.2);
   buzz([10, 20, 10]);
 }
 

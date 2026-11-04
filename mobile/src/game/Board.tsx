@@ -185,6 +185,10 @@ function Opponent({ view, side, name }: { view: any; side: Side; name: string })
         <div class="opp-stats">
           <Meter value={active ? (p.click ?? 0) : 0} max={Math.max(active ? (p.click ?? 0) : 0, side === "runner" ? 4 : 3)} anchor={`${side}-clicks`} />
           <span class="label stats">
+            <Stat icon="click" label={t("Clicks")}>
+              {active ? (p.click ?? 0) : 0}
+            </Stat>
+            {" · "}
             <span data-anchor={side === "runner" ? "runner-hand" : undefined}>
               <Stat icon="hand" label={side === "runner" ? t("Grip") : t("HQ")}>
                 {p["hand-count"] ?? 0}/{handMax(p)}
@@ -206,15 +210,12 @@ function ScoreHalf({ side, points, req }: { side: Side; points: number; req: num
     shown.current = points;
     if (points <= before || !row.current || motionOff()) return;
     const segs = [...row.current.children].slice(before, points) as HTMLElement[];
-    for (const seg of segs) {
-      seg.style.opacity = "0";
-      seg.dataset.pending = "1";
-    }
+    for (const seg of segs) seg.dataset.pending = "1";
     setTimeout(() => {
       segs.forEach((seg, i) => {
         if (!seg.dataset.pending) return;
         delete seg.dataset.pending;
-        animate(seg, { scaleY: [4, 1], opacity: [0, 1] }, { duration: 0.5, delay: i * 0.12, ease: [0.2, 1.4, 0.4, 1] }).finished.then(() => (seg.style.opacity = ""));
+        animate(seg, { scaleY: [4, 1] }, { duration: 0.5, delay: i * 0.12, ease: [0.2, 1.4, 0.4, 1] });
       });
     }, 5000);
   }, [points]);
@@ -268,6 +269,10 @@ function MeBar({ view, side, name, onUndo }: { view: any; side: Side; name: stri
           <span class="label">
             <Stat icon="click" label={t("Clicks")}>
               {clicks}
+            </Stat>
+            {" · "}
+            <Stat icon="hand" label={side === "runner" ? t("Grip") : t("HQ")}>
+              {p["hand-count"] ?? (p.hand ?? []).length}/{handMax(p)}
             </Stat>
             {extras(p, side).map((x) => [" · ", x])}
           </span>
@@ -504,11 +509,11 @@ function CorpArea({ view, side, mine, onTap, onZone, selectable, runServer }: { 
   };
   return (
     <div class="area corp-area">
+      {!mine && <Piles view={view} zoneOwner="corp" viewer={side} onTap={onTap} onZone={onZone} selectable={selectable} centrals={false} />}
       <div class="row">
         <span class="label">{t("Servers")}</span>
         <span class="label">サーバー</span>
       </div>
-      {!mine && <Piles view={view} zoneOwner="corp" viewer={side} onTap={onTap} onZone={onZone} selectable={selectable} centrals={false} />}
       <Overflow class={`servers ${mine ? "mine" : "theirs"}`}>
         {serverOrder(servers).map((key) => {
           const s = servers[key] ?? { content: [], ices: [] };
@@ -1520,7 +1525,7 @@ export function Board({ session, engine, db, side, view: live, onSwitchSide, onL
           {hand.map((c) => (
             <CardTile key={c.cid} card={c} owner onTap={tap} selectable={selectable.has(c.cid)} />
           ))}
-          {watching && hand.length === 0 && Array.from({ length: me["hand-count"] ?? 0 }, () => <div class={`tile back ${side}`}><span class="back-label">{side === "corp" ? t("CORP") : t("RUN")}</span></div>)}
+          {watching && hand.length === 0 && Array.from({ length: me["hand-count"] ?? 0 }, () => <div class={`tile back ${side}`} />)}
           {hand.length === 0 && !(watching && me["hand-count"]) && <span class="hint">{side === "runner" ? t("Empty grip") : t("HQ is empty")}</span>}
         </div>
       </footer>

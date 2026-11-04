@@ -2278,6 +2278,30 @@ describe("corp keeps what it can use when poor (replay PB3SHFG2)", () => {
   });
 });
 
+describe("runner frees only the memory it needs", () => {
+  it("trashes one cheap program to fit Cleaver and keeps its icebreakers", () => {
+    const s = new Scenario("core-hb", "core-shaper", 3);
+    s.endTurn("corp");
+    s.clearHand("runner");
+    const progs = ["Echelon", "Unity", "Conduit", "Leech"];
+    s.summon("runner", ...progs);
+    s.credits("runner", 40);
+    for (const c of progs) {
+      s.clicks("runner", 4);
+      s.install("runner", c);
+    }
+    s.summon("runner", "Cleaver");
+    s.clicks("runner", 4);
+    s.install("runner", "Cleaver");
+    for (let i = 0; i < 8 && /insufficient mu/i.test(s.view("runner").runner?.["prompt-state"]?.msg ?? ""); i++) s.play("runner", s.decide("runner")!);
+    const rig = s.view("runner").runner.rig.program.map((c: any) => c.title).sort();
+    expect(rig).toContain("Echelon");
+    expect(rig).toContain("Unity");
+    expect(rig).toContain("Cleaver");
+    expect(rig.length).toBe(4);
+  });
+});
+
 describe("runner keeps off a successful run that Measured Response would punish (replay 7Z8JFRNE)", () => {
   it("does not end turn 12 with Clean Getaway on two cards and seven credits", () => {
     const r = new Replayed(fileURLToPath(new URL("./replays/7Z8JFRNE.json", import.meta.url)));

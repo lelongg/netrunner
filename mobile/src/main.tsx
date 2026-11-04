@@ -10,7 +10,7 @@ import { installTips } from "./tips";
 import { PeekHost, installCardPeek } from "./peek";
 import { installCardPresent } from "./fx/present";
 import { installMotion, useLoop } from "./fx/ui";
-import { silence, unlockSound } from "./sound";
+import { unlockSound } from "./sound";
 import { dive } from "./fx/dive";
 import { Credits } from "./screens/Credits";
 import { Profile } from "./screens/Profile";
@@ -29,8 +29,7 @@ import { Home } from "./screens/Home";
 import { type Tab, TabBar } from "./screens/HomeModern";
 import { Lobby } from "./screens/Lobby";
 import { Guide } from "./screens/Guide";
-import { FxLab } from "./screens/FxLab";
-import { FxGlLab } from "./screens/FxGlLab";
+import { Lab, labMode } from "./screens/Lab";
 import { markTutorial, skipTutorial, tutorialState } from "./tutorial";
 import { fromPrecon, seedStarters, toWire } from "./decks";
 import { type Role, type SavedGame, Session, clearSave, listSaves, loadSave, newRoomCode, saveId } from "./session";
@@ -40,6 +39,7 @@ import { applySettings, motionOff, onSettings, settings } from "./settings";
 import { useLanguage } from "./cardtext";
 import { MotionGlobalConfig } from "motion";
 import { t } from "./i18n";
+import { readNav, resetNav } from "./nav";
 
 const joinParam = new URLSearchParams(location.search).get("join")?.toUpperCase() ?? undefined;
 const gameParam = new URLSearchParams(location.search).get("game") ?? undefined;
@@ -63,6 +63,7 @@ if (agentParam)
     sessionStorage.setItem("nsg.agent", "1");
   } catch {}
 if (joinParam || watchParam || replayParam) history.replaceState(null, "", location.pathname);
+const restored = joinParam || gameParam || watchParam || replayParam ? {} : readNav();
 
 function useSession(session: Session | null) {
   const [, setTick] = useState(0);
@@ -171,11 +172,17 @@ function App() {
   openCredits = session ? undefined : () => setCredits(true);
   const [matching, setMatching] = useState(false);
   const [seeking, setSeeking] = useState(() => !!pendingSeek());
-  const [guide, setGuide] = useState(() => !joinParam && !gameParam && !watchParam && !replayParam && tutorialState() === null);
+  const [guide, setGuide] = useState(() => !joinParam && !gameParam && !watchParam && !replayParam && !restored.tab && tutorialState() === null);
   const firstRun = guide && tutorialState() === null;
-  const [archive, setArchive] = useState<string | boolean>(false);
-  const [decks, setDecks] = useState<false | { id?: string; side?: Side }>(false);
-  const [sharedReplay, setSharedReplay] = useState(replayParam ? { code: replayParam, relay: replayRelay } : undefined);
+  const [archive, setArchive] = useState<string | boolean>(restored.tab === "history" && !restored.shared ? (restored.game ?? true) : false);
+  const [decks, setDecks] = useState<false | { id?: string; side?: Side; resume?: string }>(restored.tab === "decks" ? { side: restored.side, resume: restored.deck } : false);
+  const [sharedReplay, setSharedReplay] = useState(replayParam ? { code: replayParam, relay: replayRelay } : restored.tab === "history" ? restored.shared : undefined);
+  useEffect(() => {
+    const tab = decks ? "decks" : archive || sharedReplay ? "history" : undefined;
+    const now = readNav();
+    if (now.tab === tab && now.shared?.code === sharedReplay?.code) return;
+    resetNav(tab ? { tab, shared: sharedReplay, side: decks ? decks.side : undefined, deck: decks ? (decks.id ?? decks.resume) : undefined } : {});
+  }, [decks, archive, sharedReplay]);
   const [opening, setOpeningState] = useState<string | null>(joinParam ?? watchParam ?? gameParam?.replace(/^local:.*/, "local game") ?? null);
   const [held, setHeld] = useState<string | null>(null);
   const [diving, setDiving] = useState(false);
@@ -335,7 +342,7 @@ function App() {
   if (decks && loaded && !session)
     return (
       <>
-        <Decks db={loaded.db} matchups={loaded.matchups} initialDeck={decks.id} initialSide={decks.side} onClose={() => setDecks(false)} />
+        <Decks db={loaded.db} matchups={loaded.matchups} initialDeck={decks.id} initialSide={decks.side} resume={decks.resume} onClose={() => setDecks(false)} />
         {tabs("decks")}
       </>
     );
@@ -463,7 +470,7 @@ function App() {
   }
 
   const { lobby } = session;
-  if (!lobby.started) return <Lobby session={session} db={loaded.db} matchups={loaded.matchups} onLeave={leave} onWatch={() => watch(lobby.code, true)} />;
+  if (!lobby.started) return <Lobby session={session} db={loaded.db} matchups={loaded.matchups} onLeave={lobby.role !== "local" && lobby.role !== "spectator" && lobby.opponentName ? exit : leave} onWatch={() => watch(lobby.code, true)} />;
   if (diving) return <Opening label={lobby.vsBot ? "solo game" : lobby.role === "local" ? "local game" : lobby.code || "game"} ready />;
 
   if (hotSeat) {
@@ -609,8 +616,7 @@ installTips();
 installCardPeek();
 installCardPresent();
 installMotion();
-const lab = new URLSearchParams(location.search).has("fxgl");
-if (lab) silence();
+const lab = labMode();
 unlockSound();
 if (!lab) {
   initMusic();
@@ -621,12 +627,7 @@ startEngineWorker();
 render(
   lab ? (
     <>
-      <FxGlLab />
-      <UpdateBanner />
-    </>
-  ) : new URLSearchParams(location.search).has("animations") ? (
-    <>
-      <FxLab />
+      <Lab initial={lab} />
       <UpdateBanner />
     </>
   ) : (

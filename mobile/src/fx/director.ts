@@ -4,11 +4,11 @@ import { currentIce } from "../game/actions";
 import { serverName } from "../game/text";
 import { t as tr } from "../i18n";
 import { type Plan, accessStage, collect, moveKinds, pendingGain, play, prepare } from "./cards";
-import { setAim } from "./gl/aim";
+import { aim, setAim } from "./gl/aim";
 import { handOff, hasGl, letGoEffects } from "./gl";
 import { cleaver, fireSignature, leech, planogramResult, regolith, rezSignature, snare, transmission, useSignature, hasUseEffect } from "./signatures";
 import { cue, play as sound } from "../sound";
-import { type Point, type Tone, anchor, animate, banner, burst, buzz, haptics, creditChange, tapToSkip, done, flash, floater, gate, glitch, layer, lunge, mid, node, place, pointOf, punch, rays, rectOf, reduced, ring, shake, slash, split, stamp, tileEl, vignette, visible, wrapEl, scoreSegment } from "./core";
+import { type Point, type Tone, anchor, animate, banner, burst, buzz, haptics, creditChange, tapToSkip, done, flash, floater, gate, glitch, layer, lunge, mid, node, place, pointOf, punch, rectOf, reduced, ring, shake, slash, split, stamp, tileEl, vignette, visible, wrapEl, scoreSegment } from "./core";
 
 export type IceKind = "sentry" | "gate" | "barrier" | "other";
 
@@ -32,6 +32,7 @@ export interface Snap {
   ices: Set<unknown>;
   adv: Map<unknown, number>;
   strength: Map<unknown, number>;
+  virus: Map<unknown, number>;
   server?: string;
   phase?: string;
   ice?: unknown;
@@ -51,6 +52,7 @@ function snap(view: any): Snap {
   const ices = new Set<unknown>();
   const adv = new Map<unknown, number>();
   const strength = new Map<unknown, number>();
+  const virus = new Map<unknown, number>();
   const walk = (x: any) => {
     if (!x || typeof x !== "object") return;
     if (Array.isArray(x)) return x.forEach(walk);
@@ -60,6 +62,7 @@ function snap(view: any): Snap {
       const a = (x["advance-counter"] ?? 0) + (x["extra-advance-counter"] ?? 0);
       if (a) adv.set(x.cid, a);
       if (x["current-strength"] != null && x.side === "Runner") strength.set(x.cid, x["current-strength"]);
+      if (x.counter?.virus) virus.set(x.cid, Number(x.counter.virus));
       walk(x.hosted);
       return;
     }
@@ -79,6 +82,7 @@ function snap(view: any): Snap {
     ices,
     adv,
     strength,
+    virus,
     server: view.run?.server?.[0],
     phase: view.run?.phase,
     ice: ice?.cid,
@@ -332,7 +336,20 @@ function breakStyle(breaker: any, ice: any): BreakStyle {
   return kind === "barrier" ? "fracter" : kind === "gate" ? "decoder" : "killer";
 }
 
+function allBroken(at: Point, iceEl: HTMLElement | null, tone: Tone) {
+  setTimeout(() => {
+    slash(at, tone, 170, 45);
+    setTimeout(() => slash(at, tone, 170, -45), 90);
+    if (iceEl) animate(iceEl, { filter: ["brightness(1)", "brightness(2.6)", "brightness(1)"], scale: [1, 1.08, 1] }, { duration: 0.45, ease: "easeOut" });
+    ring(at, tone, 200, 0.12);
+    burst(at, tone, 30, 120, { size: 6, shards: true, gravity: 60 });
+    shake(0.5);
+    buzz([30, 30, 90]);
+  }, 420);
+}
+
 function breakHit(style: BreakStyle, at: Point, iceEl: HTMLElement | null, power: number) {
+  if (power >= 3) allBroken(at, iceEl, style === "fracter" ? "orange" : style === "decoder" ? "blue" : "red");
   if (style === "fracter") {
     if (iceEl) animate(iceEl, { scale: [0.9, 1.04, 1], x: [0, -8, 6, -3, 0] }, { duration: 0.4 });
     for (let i = 0; i < 4 + power; i++) slash(at, "orange", 40 + Math.random() * 40, Math.random() * 360);
@@ -369,6 +386,18 @@ function digitize(el: HTMLElement | null, tone: Tone) {
   if (visible(r)) burst(mid(r), tone, 10, 50, { size: 3, gravity: 0, shards: true });
 }
 
+function derezFx(cid: unknown) {
+  const el = tileEl(cid) as HTMLElement | null;
+  const pt = pointOf(el);
+  if (!pt) return;
+  digitize(el, "violet");
+  if (el) animate(el, { filter: ["brightness(2.2)", "brightness(0.4) grayscale(1)", "brightness(1)"], scale: [1.06, 0.96, 1] }, { duration: 0.7, ease: "easeOut" });
+  ring(pt, "violet", 130);
+  burst(pt, "violet", 14, 50, { size: 3, gravity: 80 });
+  shake(0.3);
+  buzz([40, 30, 40]);
+}
+
 function rezFlip(cid: unknown, tone: Tone, dramatic: boolean) {
   const el = tileEl(cid);
   const r = rectOf(el);
@@ -390,16 +419,18 @@ function rezFlip(cid: unknown, tone: Tone, dramatic: boolean) {
   }, 260);
 }
 
-function confetti() {
-  const colors = ["#f6e03a", "#22d3ee", "#ff3b30", "#ffffff", "#c792ff"];
-  for (let i = 0; i < 70; i++) {
-    const el = node("fx-confetti");
-    el.style.left = `${Math.random() * innerWidth}px`;
-    el.style.top = `-20px`;
-    el.style.background = colors[i % colors.length];
-    const fall = innerHeight * (0.7 + Math.random() * 0.5);
-    done(animate(el, { y: [0, fall], x: [0, (Math.random() - 0.5) * 160], rotate: [0, (Math.random() - 0.5) * 900], opacity: [1, 1, 0] }, { duration: 1.8 + Math.random() * 1.4, delay: Math.random() * 0.6, ease: [0.2, 0.5, 0.4, 1] }), el);
-  }
+const NOISE = "01#$%&*+=<>/\\|{}[]?ABCDEFX";
+
+function decode(s: HTMLElement, ch: string, delay: number, steps = 9) {
+  s.textContent = "\u00a0";
+  let n = 0;
+  const step = () => {
+    if (!s.isConnected) return;
+    if (n++ >= steps) return void (s.textContent = ch);
+    s.textContent = NOISE[Math.floor(Math.random() * NOISE.length)];
+    setTimeout(step, 45);
+  };
+  setTimeout(step, delay);
 }
 
 let spectating = false;
@@ -409,7 +440,8 @@ const clicksText = (n: number) => (n === 1 ? tr("1 click") : tr("{n} clicks", { 
 function finale(won: boolean, label?: string) {
   if (reduced()) return;
   const el = node(`fx-finale ${won ? "won" : "lost"}`);
-  const word = node("fx-finale-word", el);
+  const frame = node("fx-finale-frame", el);
+  const word = node("fx-finale-word", frame);
   const text = label ?? (won ? tr("VICTORY") : tr("DEFEAT"));
   const letters = [...text].map((ch) => {
     const s = document.createElement("span");
@@ -417,27 +449,36 @@ function finale(won: boolean, label?: string) {
     word.appendChild(s);
     return s;
   });
-  animate(el, { opacity: [0, 1] }, { duration: 0.4 });
-  letters.forEach((s, i) =>
-    animate(s, won ? { y: [-160, 0], rotate: [(i % 2 ? 1 : -1) * 40, 0], opacity: [0, 1] } : { y: [0, 0], scale: [2.4, 1], opacity: [0, 1], filter: ["blur(10px)", "blur(0px)"] }, {
-      type: "spring",
-      visualDuration: 0.5,
-      bounce: won ? 0.45 : 0.1,
-      delay: 0.2 + i * 0.07,
-    }),
-  );
+  animate(el, { opacity: [0, 1] }, { duration: 0.3 });
   const center: Point = [innerWidth / 2, innerHeight / 2];
   if (won) {
+    letters.forEach((s, i) => {
+      decode(s, s.textContent ?? "", 150 + i * 70);
+      animate(s, { opacity: [0, 1], scaleY: [2.2, 1] }, { duration: 0.25, delay: 0.15 + i * 0.07, ease: "easeOut" });
+    });
+    const scan = node("fx-finale-scan", el);
+    animate(scan, { y: ["-10vh", "110vh"], opacity: [0, 1, 1, 0] }, { duration: 1.1, delay: 0.5, ease: "easeInOut" });
     setTimeout(() => {
-      rays(center, "gold", Math.max(innerWidth, innerHeight) * 1.1, 2.6);
-      ring(center, "gold", 420);
-      flash("gold", 0.4);
-      confetti();
-      buzz([60, 60, 60, 60, 200]);
-    }, 650);
+      ring(center, "cyan", 420);
+      ring(center, "gold", 260, 0.12);
+      flash("cyan", 0.3);
+      for (let i = 0; i < 4; i++) setTimeout(() => burst([innerWidth * (0.2 + Math.random() * 0.6), innerHeight * (0.35 + Math.random() * 0.3)], i % 2 ? "gold" : "cyan", 14, 120, { size: 3, gravity: 0 }), i * 140);
+      buzz([40, 40, 40, 40, 160]);
+    }, 150 + letters.length * 70 + 400);
   } else {
+    letters.forEach((s, i) =>
+      animate(s, { opacity: [0, 1, 0.2, 1, 0.5, 1], x: [0, (Math.random() - 0.5) * 30, (Math.random() - 0.5) * 16, 0], filter: ["blur(8px)", "blur(0px)"] }, { duration: 0.6, delay: 0.2 + i * 0.06, ease: "linear" }),
+    );
+    for (let k = 0; k < 4; k++) {
+      const slice = word.cloneNode(true) as HTMLElement;
+      slice.classList.add("fx-finale-slice");
+      const top = 12 + k * 20;
+      slice.style.clipPath = `inset(${top}% 0 ${100 - top - 12}% 0)`;
+      frame.appendChild(slice);
+      animate(slice, { x: [0, (k % 2 ? 1 : -1) * (14 + Math.random() * 20), 0, (k % 2 ? -1 : 1) * 10, 0], opacity: [0, 1, 0, 1, 0] }, { duration: 0.45, delay: 0.75 + k * 0.4, ease: "linear" });
+    }
+    [650, 1000, 1500, 2100].forEach((ms, i) => setTimeout(() => glitch(i ? 1.4 : 2.2), ms));
     setTimeout(() => {
-      glitch(2);
       flash("red", 0.45, 0.9);
       shake(1.4);
       buzz([200, 80, 300]);
@@ -447,7 +488,7 @@ function finale(won: boolean, label?: string) {
 }
 
 export interface Hit {
-  kind: "break" | "fire" | "use" | "damage" | "purge" | "trash-access" | "access";
+  kind: "break" | "fire" | "use" | "damage" | "purge" | "trash-access" | "access" | "expose";
   zone?: string;
   ice?: any;
   breaker?: any;
@@ -457,7 +498,7 @@ export interface Hit {
   power?: number;
 }
 
-let accessing: { title: string; unseen: boolean; stop: () => void; resolve: (verb: string, title?: string) => void; away: (where: "stolen" | "trashed") => void } | null = null;
+let accessing: { title: string; zone: string; unseen: boolean; stop: () => void; resolve: (verb: string, title?: string) => void; away: (where: "stolen" | "trashed") => void } | null = null;
 let stageFreeAt = 0;
 let accessLog: { seq: number; lines: string[]; run: boolean }[] = [];
 let accessSeq = 0;
@@ -493,6 +534,7 @@ function readLog(view: any, from: number, render: (m: unknown) => string, before
     } else if ((m = text.match(/(\d+)?\s*(net|meat|core|brain) damage/i)) && /\b(suffers?|takes?|deals?|does|trashes)\b/i.test(text)) {
       out.push({ kind: "damage", text: m[2], power: /core|brain/i.test(m[2]) ? 1.6 : 1 });
     } else if (/purges? virus counters/i.test(text)) out.push({ kind: "purge" });
+    else if ((m = text.match(/\bexposes? (.+?)(?: in (?:the root of )?.+?)?\.?$/i))) out.push({ kind: "expose", text: m[1] });
     else if ((m = text.match(/\b(?:accesses|to access) (.+?) from (.+?)\.?$/i))) out.push({ kind: "access", text: m[1], zone: m[2] });
   }
   const hits = out.filter((h) => {
@@ -506,10 +548,11 @@ function readLog(view: any, from: number, render: (m: unknown) => string, before
   accessLog = [...accessLog.slice(-20), { seq: ++accessSeq, lines: texts, run: !!view.run }];
   if (accessing) {
     const pending = accessing;
-    const line = texts.find((t) => movesCard(t, pending.title) || (pending.unseen && /\b(?:steals?|trash(?:es)?)\b/i.test(t)));
+    const trashedFrom = new RegExp(`\\btrash(?:es)?\\s+(.+?)\\s+from\\s+${pending.zone.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i");
+    const line = texts.find((t) => (pending.unseen ? /\bsteals?\b/i.test(t) || trashedFrom.test(t) : movesCard(t, pending.title)));
     if (line) {
       const stolen = /\bsteals?\b/i.test(line);
-      const named = line.match(/\b(?:steals?|trash(?:es)?)\s+(.+?)(?:\s+from\b.*)?\.?$/i)?.[1];
+      const named = stolen ? line.match(/\bsteals?\s+(.+?)(?:\s+and gains\b.*|\s+from\b.*)?\.?$/i)?.[1] : line.match(trashedFrom)?.[1];
       const trashed = !stolen && /\btrash/i.test(line);
       if (stolen || trashed) pending.resolve(stolen ? "Stolen" : "Trashed", pending.unseen ? named : undefined);
       setTimeout(() => accessing === pending && (stolen ? pending.away("stolen") : trashed ? pending.away("trashed") : pending.stop()), stolen ? 2500 : 1600);
@@ -719,9 +762,9 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
     const card = findIn(view, cid);
     const isIce = card?.type === "ICE";
     const flip = () => {
+      if (card?.code && !reduced()) return showdown(card, "rez", (big, ghost) => rezSignature(card.title, big, card.code, ghost, "corp"));
       rezFlip(cid, isIce ? KIND_TONE[iceKind(card)] : "blue", isIce && !!now.server);
       setTimeout(() => {
-        if (isIce && card) return showdown(card, "rez", (big, ghost) => rezSignature(card.title, big, card.code, ghost, "corp"));
         const r = rectOf(tileEl(cid));
         if (visible(r)) rezSignature(card?.title, r, card?.code, tileEl(cid) as HTMLElement | null, "corp");
       }, 450);
@@ -753,8 +796,19 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
     const pt = pointOf(el);
     if (!pt) continue;
     animate(el!, { scale: [1.25, 1], filter: ["brightness(2)", "brightness(1)"] }, { type: "spring", visualDuration: 0.35, bounce: 0.5 });
-    floater([pt[0], pt[1] - 20], tr("+{n} str", { n: str - before }), "cyan", 60, true);
+    floater([pt[0], pt[1] - 20], `+${str - before}`, "cyan", 60, true, "strength");
     burst(pt, "cyan", 12, 40, { size: 4, gravity: -50 });
+  }
+
+  const derezByIce = hits.some((h) => h.kind === "fire" && /\bderez/i.test(h.text ?? ""));
+  for (const [cid, up] of now.rezzed) if (!up && prev.rezzed.get(cid) && !derezByIce) derezFx(cid);
+
+  if (now.tags < prev.tags) {
+    const at = runnerTarget(me);
+    ring(at, "cyan", 150);
+    burst(at, "cyan", 16, 60, { size: 3, gravity: -40 });
+    floater([at[0], at[1] - 26], `−${prev.tags - now.tags}`, "cyan", 60, true, "tag");
+    buzz(30);
   }
 
   if (now.tags > prev.tags) {
@@ -805,7 +859,9 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
     used.add(card.cid);
     setTimeout(() => {
       const el = tileEl(card.cid) as HTMLElement | null;
-      useSignature(card.title, el ? rectOf(el) : null, card.code, el, owner);
+      const r = rectOf(el);
+      if (visible(r)) useSignature(card.title, r, card.code, el, owner) ?? fireSignature(card.title, r, runnerTarget(me));
+      else if (card.code && hasUseEffect(card.title)) showdown(card, "use", (big, ghost) => useSignature(card.title, big, card.code, ghost, owner));
     }, delay * 1000);
   };
   for (const h of hits) {
@@ -849,19 +905,34 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
         const at = runnerTarget(me);
         const icePoint = pointOf(iceEl);
         setTimeout(() => fireSignature(h.ice.title, rectOf(tileEl(h.ice.cid)), runnerTarget(me)), 380);
-        if (hasGl("use", h.ice.title)) showdown(h.ice, "fire", (big, ghost) => useSignature(h.ice.title, big, h.ice.code, ghost, "corp"), shortText(text));
+        if (hasGl("use", h.ice.title)) showdown(h.ice, "fire", (big, ghost) => useSignature(h.ice.title, big, h.ice.code, ghost, "corp"));
         if (/end the run/i.test(text)) {
           punch(iceEl, 1.12);
           gate(wrapEl(h.ice.cid) ?? iceEl, tone);
           if (icePoint) ring(icePoint, tone, 150, 0.2);
           buzz(50);
         } else if (/damage|trash|tag|lose|derez|uninstall|destroy/i.test(text)) {
-          lunge(iceEl, at, {
+          const damage = text.match(/\b(net|meat|core|brain) damage/i)?.[1];
+          const gone = aim().gone[0];
+          const derezzed = [...now.rezzed].find(([cid, up]) => !up && prev.rezzed.get(cid))?.[0];
+          const target: Point = damage
+            ? at
+            : /\blose\b.*credit/i.test(text)
+              ? (pointOf(anchor("runner-credits")) ?? at)
+              : /\b(trash|uninstall|destroy)/i.test(text) && gone
+                ? [gone.left + gone.width / 2, gone.top + gone.height / 2]
+                : /\bderez/i.test(text) && derezzed != null
+                  ? (pointOf(tileEl(derezzed)) ?? at)
+                  : at;
+          const quiet = !!damage || target !== at || /\btag\b/i.test(text);
+          lunge(iceEl, target, {
             reach: 0.9,
             onHit: () => {
-              ring(at, "red", 170);
-              burst(at, "red", 22, 90, { size: 6, gravity: 30 });
-              floater([at[0], at[1] - 30], shortText(text), "red", 50, true);
+              if (damage) return damageHit(damage.toLowerCase());
+              if (/\bderez/i.test(text) && derezzed != null) return derezFx(derezzed);
+              ring(target, "red", 170);
+              burst(target, "red", 22, 90, { size: 6, gravity: 30 });
+              if (!quiet) floater([target[0], target[1] - 30], shortText(text), "red", 50, true);
               shake(0.45);
               glitch(0.35);
               buzz([60, 30, 60]);
@@ -877,6 +948,7 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
       }, delay * 1000);
       t += 0.55;
     } else if (h.kind === "damage") {
+      if (hits.some((f) => f.kind === "fire" && /\bdamage\b/i.test(f.text ?? ""))) continue;
       const delay = t;
       setTimeout(() => damageHit(String(h.text ?? "").toLowerCase()), delay * 1000);
       t += 0.3;
@@ -895,6 +967,25 @@ function events(prev: Snap, now: Snap, view: any, me: Side, render: (m: unknown)
       flash("violet", 0.35);
       ring([innerWidth / 2, innerHeight / 2], "violet", 360);
       stamp([innerWidth / 2, innerHeight * 0.4], tr("Purge"), "violet");
+      let i = 0;
+      for (const [cid, n] of prev.virus) {
+        if ((now.virus.get(cid) ?? 0) >= n) continue;
+        const el = tileEl(cid) as HTMLElement | null;
+        const pt = pointOf(el);
+        if (!pt) continue;
+        setTimeout(() => {
+          digitize(el, "violet");
+          if (el) animate(el, { x: [0, -5, 5, -3, 0], filter: ["brightness(1)", "brightness(2) hue-rotate(60deg)", "brightness(1)"] }, { duration: 0.5 });
+          burst(pt, "violet", 18, 60, { size: 3, gravity: -60 });
+          floater([pt[0], pt[1] - 20], `−${n - (now.virus.get(cid) ?? 0)}`, "violet", 60, true, "virus");
+        }, 350 + i++ * 150);
+      }
+    } else if (h.kind === "expose") {
+      const corp = view.corp?.servers;
+      const card = byTitle(corp, h.text ?? "") ?? hidden(corp)[0];
+      const code = codeOf(h.text ?? "");
+      if (card && code) setTimeout(() => expose(tileEl(card.cid) as HTMLElement | null, code), t * 1000);
+      t += 1.6;
     }
   }
 
@@ -927,6 +1018,36 @@ function breached(server: string, me: Side) {
     if (corp) shake(0.5);
   }, 300);
   buzz(corp ? [80, 40, 80] : [30, 30, 30, 30, 80]);
+}
+
+function hidden(root: any): any[] {
+  const out: any[] = [];
+  const walk = (x: any) => {
+    if (!x || typeof x !== "object") return;
+    if (Array.isArray(x)) return x.forEach(walk);
+    if (x.cid != null && x.zone) return void (!x.rezzed && !x.title && out.push(x));
+    for (const v of Object.values(x)) walk(v);
+  };
+  walk(root);
+  return out;
+}
+
+function expose(el: HTMLElement | null, code: string) {
+  const r = rectOf(el);
+  if (!el || !visible(r)) return;
+  const pt = mid(r);
+  const ghost = node("fx-ghost fx-expose");
+  place(ghost, r);
+  const img = document.createElement("img");
+  img.className = "fx-card-img";
+  img.src = `https://card-images.netrunnerdb.com/v2/large/${code}.jpg`;
+  ghost.appendChild(img);
+  ghost.style.transformOrigin = "50% 50%";
+  ring(pt, "cyan", 140);
+  digitize(el, "cyan");
+  buzz(20);
+  const flip = animate(ghost, { rotateY: [90, 0, 0, 90], scale: [1, 1.35, 1.35, 1], opacity: [0, 1, 1, 0] }, { duration: 1.6, times: [0, 0.18, 0.82, 1], ease: "easeInOut" });
+  done(flip, ghost);
 }
 
 function byTitle(root: any, title: string): any {
@@ -962,15 +1083,16 @@ function findIn(view: any, cid: unknown): any {
 
 const staged = new Set<unknown>();
 
-function showdown(ice: any, kind: "rez" | "fire", run: (big: DOMRect, ghost: HTMLElement) => Promise<void> | void, caption = "") {
+function showdown(ice: any, kind: "rez" | "fire" | "use", run: (big: DOMRect, ghost: HTMLElement) => Promise<void> | void, caption = "") {
   if (reduced() || staged.has(ice.cid) || !ice.code) return;
   staged.add(ice.cid);
   const el = tileEl(ice.cid);
   const r = rectOf(el);
-  const tone = KIND_TONE[iceKind(ice)];
+  const sideways = ice.type === "ICE";
+  const tone: Tone = sideways ? KIND_TONE[iceKind(ice)] : ice.side === "Runner" ? "cyan" : "blue";
   quietUntil = performance.now() + 2200;
-  const w = Math.min(innerWidth * 0.8, 320);
-  const h = w * (63 / 88);
+  const w = sideways ? Math.min(innerWidth * 0.8, 320) : Math.min(innerWidth * 0.5, 220);
+  const h = sideways ? w * (63 / 88) : w * (88 / 63);
   const big = new DOMRect((innerWidth - w) / 2, Math.max(70, innerHeight * 0.42 - h / 2), w, h);
   const from = visible(r) ? r! : big;
   const stageEl = node(`fx-showdown tone-${tone}`);
@@ -980,17 +1102,19 @@ function showdown(ice: any, kind: "rez" | "fire", run: (big: DOMRect, ghost: HTM
   const left = () => Math.max(0, until - performance.now());
   place(ghost, big);
   const img = document.createElement("img");
-  img.className = "fx-ice-img";
+  img.className = sideways ? "fx-ice-img" : "fx-card-img";
   img.src = `https://card-images.netrunnerdb.com/v2/large/${ice.code}.jpg`;
   img.alt = ice.title ?? "";
-  img.style.width = `${h}px`;
-  img.style.height = `${w}px`;
+  if (sideways) {
+    img.style.width = `${h}px`;
+    img.style.height = `${w}px`;
+  }
   ghost.appendChild(img);
   const aura = node(`fx-aura tone-${tone}`, ghost);
   const label = node("fx-showdown-label", stageEl);
   const t1 = document.createElement("span");
   t1.className = "fx-showdown-kind";
-  t1.textContent = kind === "rez" ? `${tr("Rez")} · ${(ice.subtypes ?? []).slice(0, 2).join(" · ")}` : caption || tr("Subroutine");
+  t1.textContent = kind === "rez" ? [tr("Rez"), ...(ice.subtypes ?? []).slice(0, 2)].join(" · ") : kind === "use" ? tr("Ability") : caption || tr("Subroutine");
   const t2 = document.createElement("span");
   t2.className = "fx-showdown-title";
   t2.textContent = ice.title ?? "";
@@ -1134,6 +1258,8 @@ function accessShow(view: any, title: string, zone: string) {
     t2.textContent = revealed!;
     if (accessing?.stop === stop) accessing.title = revealed!;
     if (accessStage.current?.end === stop) accessStage.current.title = revealed!;
+    const origin = ghost.style.transformOrigin;
+    ghost.style.transformOrigin = "50% 50%";
     animate(ghost, { rotateY: [0, 90] }, { duration: 0.18, ease: "easeIn" }).finished.then(() => {
       ghost.querySelector(".fx-card-back")?.remove();
       const img = document.createElement("img");
@@ -1141,11 +1267,11 @@ function accessShow(view: any, title: string, zone: string) {
       img.src = `https://card-images.netrunnerdb.com/v2/large/${face}.jpg`;
       img.alt = revealed!;
       ghost.prepend(img);
-      animate(ghost, { rotateY: [-90, 0] }, { duration: 0.22, ease: "easeOut" });
+      animate(ghost, { rotateY: [-90, 0] }, { duration: 0.22, ease: "easeOut" }).finished.then(() => (ghost.style.transformOrigin = origin));
     });
   };
   const timer = setTimeout(stop, 45000);
-  accessing = { title, unseen, stop, resolve, away };
+  accessing = { title, zone, unseen, stop, resolve, away };
   accessStage.current = { title, at: [big.left + big.width / 2, big.top + big.height / 2], end: stop };
 }
 

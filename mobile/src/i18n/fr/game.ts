@@ -184,11 +184,12 @@ export default {
   "+{n} str": "+{n} force",
   "Jacked out": "Déconnecté·e",
   "Run ended": "Piratage terminé",
-  "Breached": "Serveur percé",
+  "Breached": "Percé",
   "Breach": "Percée",
   "Subroutine": "Routine",
   "Runner accesses": "Lae Runner accède",
   "Unseen card": "Carte inconnue",
   "Stolen": "Volé",
+  "Scored": "Finalisé",
   "Trashed": "Effacé",
 } as Record<string, string>;

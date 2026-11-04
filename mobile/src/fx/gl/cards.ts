@@ -3,6 +3,8 @@ import { GlitchFilter, GlowFilter, GodrayFilter, MotionBlurFilter, RGBSplitFilte
 import { Emitter, filterPoint, focusFilter, ease, glowTexture, lightning, run, span, sparkTexture, stage } from "./stage";
 import { type Board, Smoke, CREDIT, CYAN, GOLD, GREEN, RED, type Ready, VIOLET, WHITE, billTexture, bubbleTexture, burst, coinTexture, petalTexture, pt, ringAt, scene, shimmer } from "./kit";
 
+const rnd = (a: number, b: number) => a + Math.random() * (b - a);
+
 export async function sureGamble(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, card, fx, zoom, done, cx } = await scene(rect, code, ready, board);
   const glow = new GlowFilter({ color: GOLD, distance: 11, outerStrength: 0, innerStrength: 0, quality: 0.2 });
@@ -278,7 +280,7 @@ export async function carmen(rect: DOMRect, code: string, ready?: Ready, board?:
 
 export async function predictivePlanogram(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
   const { app, root, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const prey = at(0.58, 0.19);
+  const prey = at(0.615, 0.22);
   const grid = new Graphics();
   grid.blendMode = "add";
   const reticle = new Graphics();
@@ -299,7 +301,7 @@ export async function predictivePlanogram(rect: DOMRect, code: string, ready?: R
     const wob = (1 - lock) * unit * 0.25;
     const rx = prey[0] + Math.sin(t * 7) * wob;
     const ry = prey[1] + Math.cos(t * 5) * wob;
-    const r = unit * (0.16 - 0.06 * lock);
+    const r = unit * (0.2 - 0.06 * lock);
     reticle.clear();
     reticle.circle(rx, ry, r).stroke({ width: 1.5, color: RED, alpha: k });
     for (let i = 0; i < 4; i++) {
@@ -434,7 +436,7 @@ export async function creativeCommission(rect: DOMRect, code: string, ready?: Re
           .moveTo(sx, sy)
           .lineTo(hx, hy)
           .stroke({ width: unit * 0.006, color: st.color, alpha: 0.55 });
-        if (Math.random() < 0.6) motes.add(sparkTexture(), hx, hy, { vx: (Math.random() - 0.5) * unit * 0.3, vy: (Math.random() - 0.5) * unit * 0.3, life: 0.5, drag: 2, tint: st.color, scale: 0.22 * (unit / 180), grow: -0.3 });
+        if (Math.random() < 0.3) motes.add(sparkTexture(), hx, hy, { vx: (Math.random() - 0.5) * unit * 0.3, vy: (Math.random() - 0.5) * unit * 0.3, life: 0.5, drag: 2, tint: st.color, scale: 0.22 * (unit / 180), grow: -0.3, alpha: 0.6 });
       }
     }
     if (!shed && t > 2.1) {
@@ -477,48 +479,78 @@ export async function pettyCash(rect: DOMRect, code: string, ready?: Ready, boar
 }
 
 export async function jailbreak(rect: DOMRect, code: string, ready?: Ready, board?: Board) {
-  const { app, card, fx, done, unit, at } = await scene(rect, code, ready, board);
-  const [cx, cy] = at(0.5, 0.3);
+  const { app, root, card, fx, done, unit, at, cx } = await scene(rect, code, ready, board);
+  const foot = at(0.535, 0.3);
+  const aura = at(0.26, 0.19);
   const split = new RGBSplitFilter({ red: { x: 0, y: 0 }, green: { x: 0, y: 0 }, blue: { x: 0, y: 0 } });
-  const wave = new ShockwaveFilter({ center: { x: 0, y: 0 }, amplitude: unit * 0.08, wavelength: unit * 0.5, speed: unit * 3, brightness: 1.1, radius: -1, time: 0 });
+  const wave = new ShockwaveFilter({ center: { x: 0, y: 0 }, amplitude: unit * 0.035, wavelength: unit * 0.4, speed: unit * 2.6, brightness: 1.15, radius: -1, time: 0 });
   card.filters = [wave, split];
-  const lock = new Graphics();
-  fx.addChild(lock);
+  const dust = new Smoke(fx);
+  const arcs = new Graphics();
+  arcs.blendMode = "add";
+  const lines = new Graphics();
+  lines.blendMode = "add";
+  fx.addChild(arcs, lines);
+  const flash = new Sprite(glowTexture());
+  flash.anchor.set(0.5);
+  flash.blendMode = "add";
+  flash.position.set(...foot);
+  flash.alpha = 0;
+  fx.addChild(flash);
   const shards = new Emitter(fx);
-  const s = unit * 0.38;
-  let broke = false;
+  const rays = Array.from({ length: 22 }, (_, i) => ({ a: (i / 22) * Math.PI * 2 + rnd(-0.08, 0.08), len: rnd(0.5, 1), w: rnd(1, 2.6) }));
+  const HIT = 0.42;
+  let hit = false;
   await run(app, (t, dt) => {
-    lock.clear();
-    const lk = span(t, 0, 0.2);
-    const open = ease.back(span(t, 0.55, 0.75));
-    const shake = t > 0.2 && t < 0.55 ? Math.sin(t * 90) * 4 : 0;
-    const a = lk * (1 - span(t, 0.75, 0.95));
-    if (a > 0) {
-      const x = cx + shake;
-      lock
-        .roundRect(x - s * 0.45, cy - s * 0.1, s * 0.9, s * 0.7, 8)
-        .fill({ color: 0x0b0c0e, alpha: 0.9 * a })
-        .stroke({ color: RED, width: 3, alpha: a });
-      lock
-        .moveTo(x - s * 0.28, cy - s * 0.1)
-        .lineTo(x - s * 0.28, cy - s * 0.35 - open * s * 0.25)
-        .arc(x, cy - s * 0.35 - open * s * 0.25, s * 0.28, Math.PI, 0)
-        .lineTo(x + s * 0.28, cy - s * 0.1 - open * s * 0.25);
-      lock.stroke({ width: 5, color: RED, alpha: a });
-      lock.circle(x, cy + s * 0.22, s * 0.07).fill({ color: RED, alpha: a });
+    const charge = span(t, 0, HIT);
+    const after = 1 - span(t, HIT, HIT + 0.5);
+    arcs.clear();
+    if (t < HIT + 0.5 && Math.floor(t * 24) % 2 === 0) {
+      const n = t < HIT ? 2 + Math.floor(charge * 3) : 3;
+      for (let i = 0; i < n; i++) {
+        const a0 = rnd(0, Math.PI * 2);
+        const a1 = a0 + rnd(0.8, 2);
+        const r = unit * rnd(0.14, 0.26);
+        lightning(arcs, aura[0] + Math.cos(a0) * r, aura[1] + Math.sin(a0) * r * 0.8, aura[0] + Math.cos(a1) * r, aura[1] + Math.sin(a1) * r * 0.8, unit * 0.08, RED, unit * (0.006 + 0.006 * charge) * (t < HIT ? 1 : after));
+      }
     }
-    if (t > 0.55 && !broke) {
-      broke = true;
-      burst(shards, cx, cy, 40, RED, unit * 3.2, { life: 0.8, scale: 0.55 * (unit / 180) });
-      navigator.vibrate?.([30, 30, 60]);
+    if (t >= HIT && !hit) {
+      hit = true;
+      navigator.vibrate?.([40, 20, 70]);
+      burst(shards, ...foot, 26, WHITE, unit * 3, { life: 0.5, scale: 0.4 * (unit / 180) });
+      for (let i = 0; i < 34; i++) {
+        const a = Math.PI + rnd(-0.9, 0.6);
+        const v = unit * rnd(1.5, 4);
+        shards.add(sparkTexture(), aura[0] + rnd(-1, 1) * unit * 0.1, aura[1] + rnd(-1, 1) * unit * 0.08, { vx: Math.cos(a) * v, vy: Math.sin(a) * v, drag: 2, gravity: unit * 1.5, life: rnd(0.5, 0.9), tint: i % 3 ? RED : 0xffb0a0, scale: (unit / 180) * rnd(0.3, 0.55) });
+      }
+      for (let i = 0; i < 7; i++) {
+        const [x, y] = at(rnd(0.3, 0.75), rnd(0.47, 0.53));
+        dust.puff(x, y, { vx: rnd(-1, 1) * unit * 0.25, vy: -unit * rnd(0.05, 0.2), life: rnd(0.8, 1.2), size: unit * rnd(0.25, 0.4), tint: 0xd8c8b8, alpha: 0.45 });
+      }
     }
-    wave.time = Math.max(0, t - 0.55);
-    wave.center = filterPoint(card, cx, cy);
-    const g = t > 0.55 && t < 0.8 ? (1 - (t - 0.55) / 0.25) * 9 : 0;
+    const since = t - HIT;
+    const pop = since >= 0 ? Math.exp(-since * 7) : 0;
+    flash.alpha = since >= 0 ? pop : charge * charge * 0.35;
+    flash.scale.set((unit / 128) * (0.15 + 0.35 * charge + 0.6 * (1 - pop) * (since >= 0 ? 1 : 0)));
+    lines.clear();
+    if (since >= 0 && since < 0.45) {
+      const k = since / 0.45;
+      for (const r of rays) {
+        const r0 = unit * (0.1 + 0.6 * k);
+        const r1 = r0 + unit * 0.5 * r.len * (1 - k);
+        lines.moveTo(foot[0] + Math.cos(r.a) * r0, foot[1] + Math.sin(r.a) * r0).lineTo(foot[0] + Math.cos(r.a) * r1, foot[1] + Math.sin(r.a) * r1);
+        lines.stroke({ width: r.w, color: WHITE, alpha: 0.85 * (1 - k) });
+      }
+    }
+    wave.time = Math.max(0, since);
+    wave.center = filterPoint(card, ...foot);
+    card.x = cx + (since >= 0 && since < 0.3 ? Math.sin(since * 80) * unit * 0.025 * (1 - since / 0.3) : 0);
+    const g = since >= 0 && since < 0.3 ? (1 - since / 0.3) * 8 : 0;
     split.red = { x: -g, y: 0 };
-    split.blue = { x: g, y: 0 };
+    split.blue = { x: g, y: g * 0.3 };
     shards.step(dt);
-    return t < 1.6 || shards.list.length > 0;
+    dust.step(dt);
+    return t < 1.7 || shards.list.length > 0;
   });
   await done();
 }

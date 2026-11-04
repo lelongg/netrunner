@@ -7,3 +7,4 @@ import "./core-anarch.ts";
 import "./core-nbn.ts";
 import "./core-weyland.ts";
 import "./core-shaper.ts";
+import "./core-cards.ts";

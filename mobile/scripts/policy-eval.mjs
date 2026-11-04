@@ -9,6 +9,7 @@ import { positionFeatures } from "../src/bot/policy/features.ts";
 import { fingerprint, findPolicy, listPolicies } from "../src/bot/policy/registry.ts";
 import "../src/bot/policy/decks/index.ts";
 import { CORE_CORP_DECKS, CORE_RUNNER_DECKS, coreDeck } from "../src/bot/policy/decks/core.ts";
+import { SAMPLE_DECKS } from "../src/bot/policy/decks/samples.ts";
 import { parseDecklist } from "../src/decks.ts";
 import { existsSync, readFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
@@ -236,6 +237,7 @@ function playGame({ seed, matchup, players, maxActions, full, m = matchups[match
   const mistakes = {};
   const note = (k) => (mistakes[k] = (mistakes[k] ?? 0) + 1);
   let lastRunServer = null;
+  const held = { corp: new Set(), runner: new Set() };
   let runnerPoints = 0;
   const thinInstalls = [];
   const remoteAgendas = (view) => Object.entries(view.corp?.servers ?? {}).flatMap(([key, s]) => (key.startsWith("remote") ? (s.content ?? []).filter((c) => c.type === "Agenda").map((c) => ({ key, cid: c.cid, card: c, ices: s.ices ?? [] })) : []));
@@ -335,6 +337,7 @@ function playGame({ seed, matchup, players, maxActions, full, m = matchups[match
         }
       }
     }
+    for (const sd of ["corp", "runner"]) for (const c of views[sd][sd]?.hand ?? []) if (c?.title) held[sd].add(c.title);
     const v = views.corp;
     if (v.run?.server?.[0]) lastRunServer = serverName(String(v.run.server[0]));
     const pts = Number(v.runner?.["agenda-point"] ?? 0);
@@ -409,7 +412,12 @@ function playGame({ seed, matchup, players, maxActions, full, m = matchups[match
     const b = P[s].bot;
     return b && "records" in b ? { refused: b.refused, unhandled: b.unhandled, decisions: b.records.length, avgMs: Number(avg(decisionMs[s]).toFixed(3)), maxMs: Number(max(decisionMs[s]).toFixed(2)) } : { avgMs: Number(avg(decisionMs[s]).toFixed(3)), maxMs: Number(max(decisionMs[s]).toFixed(2)) };
   };
+  const said = lines.join("\n");
+  const unused = Object.fromEntries(["corp", "runner"].map((sd) => [sd, [...new Set(m[sd].cards.map((c) => c.title))].filter((t) => held[sd].has(t) && !said.includes(t))]));
+  const drawn = Object.fromEntries(["corp", "runner"].map((sd) => [sd, [...held[sd]]]));
   return {
+    unused,
+    drawn,
     seed,
     matchup,
     matchupTitle: m.title,
@@ -444,7 +452,7 @@ const positionsFile = args.positions ? String(args.positions) : null;
 const outRoot = args.out ? String(args.out) : null;
 const splitBase = hash32(`split:${split}`) % 1_000_000;
 const pickDeck = (key, side) => {
-  const d = coreDeck(String(key));
+  const d = coreDeck(String(key)) ?? SAMPLE_DECKS.find((x) => x.key === String(key));
   if (!d || d.side !== side) throw new Error(`Unknown ${side} core deck: ${key}`);
   return d;
 };
@@ -498,6 +506,14 @@ async function series(m, out) {
   }
   const mistakes = {};
   for (const r of results) for (const [k, c] of Object.entries(r.mistakes ?? {})) mistakes[k] = (mistakes[k] ?? 0) + c;
+  for (const sd of ["corp", "runner"]) {
+    const never = {};
+    const drew = {};
+    for (const r of results) for (const t of r.unused?.[sd] ?? []) never[t] = (never[t] ?? 0) + 1;
+    for (const r of results) for (const t of r.drawn?.[sd] ?? []) drew[t] = (drew[t] ?? 0) + 1;
+    const all = Object.entries(never).filter(([t, c]) => c === drew[t]).map(([t, c]) => `${t} (${c})`);
+    if (all.length) console.log(`${sd} held but never used: ${all.join(", ")}`);
+  }
   console.log(`situations: ${JSON.stringify(kinds)}${out ? ` → ${out}` : ""}`);
   console.log(`mistakes over ${games} games: ${JSON.stringify(mistakes)}`);
   if (out) {
