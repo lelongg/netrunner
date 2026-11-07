@@ -9,7 +9,7 @@
           "games": 48,
           "total": 346,
           "played": 576,
-          "decisionMs": 39.6,
+          "decisionMs": 35.766666666666666,
           "mistakes": {
             "Discretion Advised thin-install": 7,
             "Discretion Advised thin-install-stolen": 3,
@@ -50,7 +50,7 @@
           "games": 48,
           "total": 379,
           "played": 576,
-          "decisionMs": 38.358333333333334,
+          "decisionMs": 34.96666666666666,
           "mistakes": {
             "Discretion Advised stolen-from-remote": 40,
             "Discretion Advised unrezzable-install": 57,
@@ -61,11 +61,11 @@
             "Discretion Advised broke-streak": 8,
             "Discretion Advised thin-install-stolen": 4,
             "Advanced Yomi rich-credit-click": 8,
-            "Advanced Yomi stolen-from-remote": 43,
+            "Advanced Yomi stolen-from-remote": 45,
             "Advanced Yomi thin-install": 11,
-            "Advanced Yomi unrezzable-install": 24,
+            "Advanced Yomi unrezzable-install": 25,
             "Advanced Yomi broke-streak": 6,
-            "Advanced Yomi rez-to-broke": 6,
+            "Advanced Yomi rez-to-broke": 5,
             "Advanced Yomi broke-with-economy-in-hand": 3,
             "Advanced Yomi thin-install-stolen": 1,
             "Hyper Velocity rich-credit-click": 58,
@@ -90,17 +90,17 @@
           "side": "runner",
           "opponent": "ref",
           "games": 48,
-          "total": 273,
+          "total": 274,
           "played": 576,
-          "decisionMs": 23.308333333333337,
+          "decisionMs": 26.233333333333334,
           "mistakes": {
             "Party Hard paid-and-stopped-known-ice": 15,
             "Party Hard paid-and-stopped-new-ice": 41,
             "Party Hard rich-credit-click": 21,
             "Stolen Goods rich-credit-click": 62,
             "Stolen Goods paid-and-stopped-known-ice": 20,
-            "Stolen Goods paid-and-stopped-new-ice": 67,
-            "Planning Ahead paid-and-stopped-new-ice": 63,
+            "Stolen Goods paid-and-stopped-new-ice": 65,
+            "Planning Ahead paid-and-stopped-new-ice": 62,
             "Planning Ahead paid-and-stopped-known-ice": 16,
             "Planning Ahead rich-credit-click": 18,
             "Planning Ahead paid-and-stopped-jacked-out": 1
@@ -110,18 +110,18 @@
           "side": "runner",
           "opponent": "ref",
           "games": 48,
-          "total": 267,
+          "total": 266,
           "played": 576,
-          "decisionMs": 22.366666666666664,
+          "decisionMs": 25.59166666666667,
           "mistakes": {
-            "Party Hard paid-and-stopped-new-ice": 55,
-            "Party Hard paid-and-stopped-known-ice": 18,
+            "Party Hard paid-and-stopped-new-ice": 54,
+            "Party Hard paid-and-stopped-known-ice": 17,
             "Party Hard rich-credit-click": 45,
             "Stolen Goods paid-and-stopped-new-ice": 65,
             "Stolen Goods paid-and-stopped-known-ice": 15,
             "Stolen Goods rich-credit-click": 23,
             "Stolen Goods paid-and-stopped-jacked-out": 1,
-            "Planning Ahead paid-and-stopped-new-ice": 52,
+            "Planning Ahead paid-and-stopped-new-ice": 53,
             "Planning Ahead rich-credit-click": 41,
             "Planning Ahead paid-and-stopped-known-ice": 19
           }
@@ -162,8 +162,8 @@
         "corp:broke-streak": 2,
         "corp:broke-with-economy-in-hand": 8
       },
-      "decisionMs": 44.1,
-      "decisionMaxMs": 1924.3
+      "decisionMs": 40.6,
+      "decisionMaxMs": 1801.6
     },
     {
       "config": "base",
@@ -195,8 +195,8 @@
         "corp:broke-streak": 1,
         "corp:thin-install-stolen": 1
       },
-      "decisionMs": 45.3,
-      "decisionMaxMs": 1626.1
+      "decisionMs": 41.5,
+      "decisionMaxMs": 1546.8
     },
     {
       "config": "base",
@@ -228,8 +228,8 @@
         "runner:paid-and-stopped-new-ice": 6,
         "corp:broke-streak": 2
       },
-      "decisionMs": 26.1,
-      "decisionMaxMs": 977.6
+      "decisionMs": 25.3,
+      "decisionMaxMs": 1020.1
     },
     {
       "config": "base",
@@ -262,8 +262,8 @@
         "corp:thin-install": 6,
         "corp:thin-install-stolen": 1
       },
-      "decisionMs": 27.4,
-      "decisionMaxMs": 1213.8
+      "decisionMs": 26.2,
+      "decisionMaxMs": 1201.3
     },
     {
       "config": "base",
@@ -295,8 +295,8 @@
         "corp:rich-credit-click": 2,
         "corp:thin-install": 1
       },
-      "decisionMs": 47.2,
-      "decisionMaxMs": 1885
+      "decisionMs": 59.6,
+      "decisionMaxMs": 2300.7
     },
     {
       "config": "base",
@@ -329,8 +329,8 @@
         "corp:rich-credit-click": 2,
         "corp:broke-streak": 3
       },
-      "decisionMs": 40.3,
-      "decisionMaxMs": 2312.4
+      "decisionMs": 51.3,
+      "decisionMaxMs": 2837.5
     },
     {
       "config": "base",
@@ -351,8 +351,8 @@
         "Decked": 1
       },
       "mistakes": {
-        "runner:paid-and-stopped-known-ice": 11,
-        "runner:paid-and-stopped-new-ice": 15,
+        "runner:paid-and-stopped-known-ice": 8,
+        "runner:paid-and-stopped-new-ice": 16,
         "runner:rich-credit-click": 48,
         "corp:stolen-from-remote": 13,
         "corp:rez-to-broke": 4,
@@ -363,8 +363,8 @@
         "runner:paid-and-stopped-jacked-out": 2,
         "corp:broke-streak": 2
       },
-      "decisionMs": 42.9,
-      "decisionMaxMs": 1243.1
+      "decisionMs": 43.5,
+      "decisionMaxMs": 1207.1
     },
     {
       "config": "base",
@@ -386,18 +386,18 @@
       },
       "mistakes": {
         "corp:rich-credit-click": 4,
-        "corp:stolen-from-remote": 16,
-        "runner:rich-credit-click": 40,
+        "corp:stolen-from-remote": 18,
+        "runner:rich-credit-click": 39,
         "runner:paid-and-stopped-new-ice": 13,
-        "runner:paid-and-stopped-known-ice": 7,
+        "runner:paid-and-stopped-known-ice": 6,
         "corp:thin-install": 4,
-        "corp:unrezzable-install": 6,
+        "corp:unrezzable-install": 7,
         "corp:broke-streak": 3,
-        "corp:rez-to-broke": 2,
+        "corp:rez-to-broke": 1,
         "runner:paid-and-stopped-jacked-out": 4
       },
-      "decisionMs": 39,
-      "decisionMaxMs": 1603.3
+      "decisionMs": 38,
+      "decisionMaxMs": 1561.5
     },
     {
       "config": "base",
@@ -430,8 +430,8 @@
         "corp:rich-credit-click": 8,
         "corp:thin-install": 2
       },
-      "decisionMs": 53.6,
-      "decisionMaxMs": 2056.4
+      "decisionMs": 31.2,
+      "decisionMaxMs": 1117.7
     },
     {
       "config": "base",
@@ -463,8 +463,8 @@
         "corp:thin-install": 1,
         "corp:rich-credit-click": 2
       },
-      "decisionMs": 50.4,
-      "decisionMaxMs": 2234.2
+      "decisionMs": 28.7,
+      "decisionMaxMs": 1369.2
     },
     {
       "config": "base",
@@ -486,8 +486,8 @@
       },
       "mistakes": {
         "corp:thin-install": 3,
-        "runner:paid-and-stopped-new-ice": 14,
-        "runner:paid-and-stopped-known-ice": 5,
+        "runner:paid-and-stopped-new-ice": 15,
+        "runner:paid-and-stopped-known-ice": 6,
         "corp:stolen-from-remote": 14,
         "corp:broke-streak": 6,
         "runner:rich-credit-click": 22,
@@ -497,8 +497,8 @@
         "runner:paid-and-stopped-jacked-out": 3,
         "corp:rez-to-broke": 1
       },
-      "decisionMs": 55.8,
-      "decisionMaxMs": 2674.8
+      "decisionMs": 32.2,
+      "decisionMaxMs": 1537.6
     },
     {
       "config": "base",
@@ -531,8 +531,8 @@
         "runner:paid-and-stopped-known-ice": 11,
         "corp:rez-to-broke": 2
       },
-      "decisionMs": 50.9,
-      "decisionMaxMs": 1928.7
+      "decisionMs": 29.6,
+      "decisionMaxMs": 1041.5
     },
     {
       "config": "base",
@@ -563,8 +563,8 @@
         "corp:rich-credit-click": 12,
         "corp:unrezzable-install": 6
       },
-      "decisionMs": 22.5,
-      "decisionMaxMs": 1090.2
+      "decisionMs": 22,
+      "decisionMaxMs": 929
     },
     {
       "config": "base",
@@ -599,8 +599,8 @@
         "runner:rich-credit-click": 5,
         "runner:paid-and-stopped-jacked-out": 2
       },
-      "decisionMs": 24.6,
-      "decisionMaxMs": 1452.8
+      "decisionMs": 24.3,
+      "decisionMaxMs": 1711.3
     },
     {
       "config": "base",
@@ -632,8 +632,8 @@
         "runner:paid-and-stopped-known-ice": 3,
         "runner:rich-credit-click": 4
       },
-      "decisionMs": 41.1,
-      "decisionMaxMs": 1466.5
+      "decisionMs": 20.3,
+      "decisionMaxMs": 737.8
     },
     {
       "config": "base",
@@ -665,8 +665,8 @@
         "corp:thin-install": 3,
         "corp:unrezzable-install": 12
       },
-      "decisionMs": 38.5,
-      "decisionMaxMs": 1376
+      "decisionMs": 19.1,
+      "decisionMaxMs": 629.8
     },
     {
       "config": "base",
@@ -699,8 +699,8 @@
         "corp:thin-install-stolen": 1,
         "runner:paid-and-stopped-jacked-out": 1
       },
-      "decisionMs": 36,
-      "decisionMaxMs": 1405.1
+      "decisionMs": 46.8,
+      "decisionMaxMs": 1810.9
     },
     {
       "config": "base",
@@ -734,8 +734,8 @@
         "runner:paid-and-stopped-known-ice": 4,
         "runner:rich-credit-click": 1
       },
-      "decisionMs": 40.4,
-      "decisionMaxMs": 1759.1
+      "decisionMs": 51.9,
+      "decisionMaxMs": 2282.4
     },
     {
       "config": "base",
@@ -769,8 +769,8 @@
         "corp:rich-credit-click": 13,
         "runner:paid-and-stopped-jacked-out": 1
       },
-      "decisionMs": 33.3,
-      "decisionMaxMs": 1151.5
+      "decisionMs": 43.5,
+      "decisionMaxMs": 1586.4
     },
     {
       "config": "base",
@@ -803,8 +803,8 @@
         "corp:rez-to-broke": 2,
         "corp:broke-streak": 2
       },
-      "decisionMs": 33.4,
-      "decisionMaxMs": 1367.3
+      "decisionMs": 45.2,
+      "decisionMaxMs": 1938.2
     },
     {
       "config": "base",
@@ -836,8 +836,8 @@
         "corp:rich-credit-click": 2,
         "corp:thin-install-stolen": 1
       },
-      "decisionMs": 33.6,
-      "decisionMaxMs": 1085.5
+      "decisionMs": 30,
+      "decisionMaxMs": 1052
     },
     {
       "config": "base",
@@ -868,8 +868,8 @@
         "runner:paid-and-stopped-new-ice": 5,
         "corp:broke-with-economy-in-hand": 1
       },
-      "decisionMs": 31.1,
-      "decisionMaxMs": 1297.8
+      "decisionMs": 28.4,
+      "decisionMaxMs": 1149.1
     },
     {
       "config": "base",
@@ -902,8 +902,8 @@
         "corp:rich-credit-click": 4,
         "runner:paid-and-stopped-jacked-out": 1
       },
-      "decisionMs": 39,
-      "decisionMaxMs": 1769.4
+      "decisionMs": 34.2,
+      "decisionMaxMs": 1438.4
     },
     {
       "config": "base",
@@ -935,8 +935,8 @@
         "corp:unrezzable-install": 5,
         "corp:thin-install-stolen": 1
       },
-      "decisionMs": 39,
-      "decisionMaxMs": 1612.1
+      "decisionMs": 35.4,
+      "decisionMaxMs": 1343.6
     },
     {
       "config": "base",
@@ -969,8 +969,8 @@
         "corp:broke-streak": 3,
         "runner:rich-credit-click": 1
       },
-      "decisionMs": 29.4,
-      "decisionMaxMs": 1864.2
+      "decisionMs": 28.8,
+      "decisionMaxMs": 1749.5
     },
     {
       "config": "base",
@@ -1003,7 +1003,7 @@
         "runner:rich-credit-click": 3
       },
       "decisionMs": 27.9,
-      "decisionMaxMs": 2505.5
+      "decisionMaxMs": 2868.4
     },
     {
       "config": "base",
@@ -1036,8 +1036,8 @@
         "corp:thin-install-stolen": 1,
         "corp:rich-credit-click": 1
       },
-      "decisionMs": 25,
-      "decisionMaxMs": 4244.9
+      "decisionMs": 23.5,
+      "decisionMaxMs": 3948
     },
     {
       "config": "base",
@@ -1072,8 +1072,8 @@
         "corp:rich-credit-click": 2,
         "corp:broke-streak": 1
       },
-      "decisionMs": 22.8,
-      "decisionMaxMs": 1939.6
+      "decisionMs": 21.7,
+      "decisionMaxMs": 1854.6
     },
     {
       "config": "base",
@@ -1105,8 +1105,8 @@
         "corp:broke-with-economy-in-hand": 4,
         "runner:rich-credit-click": 1
       },
-      "decisionMs": 21.3,
-      "decisionMaxMs": 2152
+      "decisionMs": 26.2,
+      "decisionMaxMs": 2649.4
     },
     {
       "config": "base",
@@ -1139,8 +1139,8 @@
         "corp:broke-with-economy-in-hand": 4,
         "corp:broke-streak": 1
       },
-      "decisionMs": 19.7,
-      "decisionMaxMs": 1333.4
+      "decisionMs": 23.4,
+      "decisionMaxMs": 1644
     },
     {
       "config": "base",
@@ -1171,8 +1171,8 @@
         "corp:rich-credit-click": 2,
         "corp:thin-install": 1
       },
-      "decisionMs": 13,
-      "decisionMaxMs": 1123.1
+      "decisionMs": 23.9,
+      "decisionMaxMs": 2133.6
     },
     {
       "config": "base",
@@ -1193,19 +1193,19 @@
         "Flatline": 4
       },
       "mistakes": {
-        "runner:paid-and-stopped-new-ice": 19,
-        "runner:paid-and-stopped-known-ice": 2,
-        "corp:unrezzable-install": 6,
+        "runner:paid-and-stopped-new-ice": 18,
+        "corp:unrezzable-install": 7,
         "runner:rich-credit-click": 8,
         "corp:broke-streak": 5,
-        "corp:stolen-from-remote": 16,
+        "corp:stolen-from-remote": 15,
+        "runner:paid-and-stopped-known-ice": 1,
         "corp:thin-install": 2,
         "corp:broke-with-economy-in-hand": 1,
         "corp:rez-to-broke": 4,
         "corp:rich-credit-click": 5
       },
-      "decisionMs": 13.5,
-      "decisionMaxMs": 1223.3
+      "decisionMs": 25.5,
+      "decisionMaxMs": 2126.5
     },
     {
       "config": "base",
@@ -1227,7 +1227,7 @@
         "Decked": 1
       },
       "mistakes": {
-        "runner:paid-and-stopped-new-ice": 18,
+        "runner:paid-and-stopped-new-ice": 16,
         "corp:stolen-from-remote": 16,
         "corp:broke-with-economy-in-hand": 2,
         "runner:rich-credit-click": 10,
@@ -1238,8 +1238,8 @@
         "corp:rich-credit-click": 2,
         "corp:thin-install": 3
       },
-      "decisionMs": 12.6,
-      "decisionMaxMs": 1188.2
+      "decisionMs": 25.1,
+      "decisionMaxMs": 2696.6
     },
     {
       "config": "base",
@@ -1271,8 +1271,8 @@
         "corp:thin-install": 5,
         "corp:rich-credit-click": 6
       },
-      "decisionMs": 12.2,
-      "decisionMaxMs": 1174.6
+      "decisionMs": 23.6,
+      "decisionMaxMs": 2437.5
     },
     {
       "config": "base",
@@ -1284,8 +1284,8 @@
       "split": "design",
       "games": 48,
       "wins": {
-        "corp": 24,
-        "runner": 24,
+        "corp": 23,
+        "runner": 25,
         "none": 0
       },
       "reasons": {
@@ -1294,16 +1294,16 @@
       },
       "mistakes": {
         "corp:stolen-from-remote": 18,
-        "runner:paid-and-stopped-new-ice": 22,
+        "runner:paid-and-stopped-new-ice": 21,
         "runner:paid-and-stopped-known-ice": 4,
-        "corp:unrezzable-install": 13,
+        "corp:unrezzable-install": 12,
         "runner:rich-credit-click": 9,
         "corp:thin-install": 3,
         "corp:broke-streak": 2,
         "corp:rich-credit-click": 1
       },
-      "decisionMs": 22.1,
-      "decisionMaxMs": 2074.1
+      "decisionMs": 30.9,
+      "decisionMaxMs": 2892.5
     },
     {
       "config": "base",
@@ -1315,8 +1315,8 @@
       "split": "test",
       "games": 48,
       "wins": {
-        "corp": 21,
-        "runner": 27,
+        "corp": 22,
+        "runner": 26,
         "none": 0
       },
       "reasons": {
@@ -1325,19 +1325,19 @@
       },
       "mistakes": {
         "corp:stolen-from-remote": 20,
-        "runner:paid-and-stopped-new-ice": 11,
-        "corp:unrezzable-install": 4,
+        "runner:paid-and-stopped-new-ice": 12,
+        "corp:unrezzable-install": 5,
+        "corp:rich-credit-click": 4,
         "corp:rez-to-broke": 3,
         "runner:rich-credit-click": 11,
         "corp:broke-streak": 1,
         "corp:thin-install": 8,
         "corp:thin-install-stolen": 2,
         "corp:broke-with-economy-in-hand": 3,
-        "runner:paid-and-stopped-known-ice": 1,
-        "corp:rich-credit-click": 1
+        "runner:paid-and-stopped-known-ice": 1
       },
-      "decisionMs": 20,
-      "decisionMaxMs": 1319.6
+      "decisionMs": 28.9,
+      "decisionMaxMs": 3101.7
     },
     {
       "config": "base",
@@ -1369,8 +1369,8 @@
         "corp:thin-install-stolen": 1,
         "runner:paid-and-stopped-known-ice": 2
       },
-      "decisionMs": 19.3,
-      "decisionMaxMs": 794.8
+      "decisionMs": 36,
+      "decisionMaxMs": 1742.8
     },
     {
       "config": "base",
@@ -1402,8 +1402,8 @@
         "corp:unrezzable-install": 3,
         "runner:paid-and-stopped-new-ice": 4
       },
-      "decisionMs": 19.4,
-      "decisionMaxMs": 1182.4
+      "decisionMs": 36.8,
+      "decisionMaxMs": 1976.6
     },
     {
       "config": "base",
@@ -1434,8 +1434,8 @@
         "corp:rich-credit-click": 6,
         "corp:unrezzable-install": 3
       },
-      "decisionMs": 32.2,
-      "decisionMaxMs": 1692.7
+      "decisionMs": 24.5,
+      "decisionMaxMs": 1117.7
     },
     {
       "config": "base",
@@ -1468,8 +1468,8 @@
         "runner:paid-and-stopped-known-ice": 4,
         "runner:rich-credit-click": 1
       },
-      "decisionMs": 30.2,
-      "decisionMaxMs": 1540.4
+      "decisionMs": 22.4,
+      "decisionMaxMs": 1137.5
     },
     {
       "config": "base",
@@ -1502,8 +1502,8 @@
         "corp:broke-with-economy-in-hand": 4,
         "runner:paid-and-stopped-known-ice": 1
       },
-      "decisionMs": 27.9,
-      "decisionMaxMs": 1853.4
+      "decisionMs": 28.2,
+      "decisionMaxMs": 1880.5
     },
     {
       "config": "base",
@@ -1535,8 +1535,8 @@
         "runner:paid-and-stopped-new-ice": 9,
         "corp:thin-install-stolen": 2
       },
-      "decisionMs": 34.1,
-      "decisionMaxMs": 1266.7
+      "decisionMs": 33.9,
+      "decisionMaxMs": 1238.8
     },
     {
       "config": "base",
@@ -1569,8 +1569,8 @@
         "runner:paid-and-stopped-known-ice": 5,
         "runner:rich-credit-click": 1
       },
-      "decisionMs": 34,
-      "decisionMaxMs": 2641.3
+      "decisionMs": 19,
+      "decisionMaxMs": 1372.4
     },
     {
       "config": "base",
@@ -1604,8 +1604,8 @@
         "corp:thin-install": 6,
         "corp:thin-install-stolen": 3
       },
-      "decisionMs": 29.4,
-      "decisionMaxMs": 1835.8
+      "decisionMs": 16.3,
+      "decisionMaxMs": 957.2
     },
     {
       "config": "base",
@@ -1637,8 +1637,8 @@
         "corp:rez-to-broke": 4,
         "corp:thin-install-stolen": 1
       },
-      "decisionMs": 16.3,
-      "decisionMaxMs": 946.7
+      "decisionMs": 27.4,
+      "decisionMaxMs": 1628.3
     },
     {
       "config": "base",
@@ -1669,8 +1669,8 @@
         "corp:thin-install": 3,
         "corp:broke-with-economy-in-hand": 1
       },
-      "decisionMs": 17,
-      "decisionMaxMs": 905.3
+      "decisionMs": 29.2,
+      "decisionMaxMs": 1629.8
     },
     {
       "config": "base",
@@ -1701,8 +1701,8 @@
         "runner:rich-credit-click": 8,
         "runner:paid-and-stopped-jacked-out": 1
       },
-      "decisionMs": 26.6,
-      "decisionMaxMs": 1386.8
+      "decisionMs": 21.3,
+      "decisionMaxMs": 1074.1
     },
     {
       "config": "base",
@@ -1736,8 +1736,8 @@
         "corp:broke-with-economy-in-hand": 1,
         "corp:thin-install-stolen": 2
       },
-      "decisionMs": 22.2,
-      "decisionMaxMs": 1642.6
+      "decisionMs": 17.5,
+      "decisionMaxMs": 1287.9
     }
   ]
 }
