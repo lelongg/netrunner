@@ -1,65 +1,65 @@
 # Learned evaluation fit
 
-418306 positions from 27357 games · train 334004, holdout 84302 (by game)
+418050 positions from 27357 games · train 333907, holdout 84143 (by game)
 
 | set | log-loss | baseline log-loss | accuracy | corp win rate |
 |---|---|---|---|---|
-| train | 0.541 | 0.650 | 72.2 % | 64.6 % |
-| holdout | 0.550 | 0.650 | 71.7 % | 64.6 % |
+| train | 0.541 | 0.649 | 72.2 % | 64.7 % |
+| holdout | 0.546 | 0.647 | 72.0 % | 65.1 % |
 
 | holdout slice | n | log-loss | accuracy |
 |---|---|---|---|
-| turns 1-4 | 21843 | 0.640 | 64.8 % |
-| turns 5-8 | 21315 | 0.587 | 69.2 % |
-| turns 9-12 | 19411 | 0.520 | 74.4 % |
-| turns 13+ | 21733 | 0.452 | 78.7 % |
+| turns 1-4 | 21838 | 0.636 | 65.1 % |
+| turns 5-8 | 21300 | 0.583 | 69.5 % |
+| turns 9-12 | 19400 | 0.514 | 74.8 % |
+| turns 13+ | 21605 | 0.448 | 78.9 % |
 
 Weights on standardized features (positive favours the Corp):
 
 | feature | weight |
 |---|---|
-| staticValue | +0.428 |
-| deck:core-nbn | -0.256 |
-| runnerPoints | -0.203 |
-| runnerPointsToWin | +0.203 |
-| deck:core-weyland | +0.195 |
-| pointsToWin | -0.194 |
-| points | +0.194 |
-| threatGain | +0.175 |
-| remoteAgendaPoints | +0.130 |
-| remoteProgress | +0.129 |
-| hqIce | +0.113 |
-| rdDensity | -0.112 |
+| staticValue | +0.429 |
+| deck:core-nbn | -0.255 |
+| runnerPointsToWin | +0.202 |
+| runnerPoints | -0.202 |
+| deck:core-weyland | +0.193 |
+| points | +0.191 |
+| pointsToWin | -0.191 |
+| threatGain | +0.174 |
+| remoteProgress | +0.135 |
+| remoteAgendaPoints | +0.129 |
+| hqIce | +0.116 |
+| rdDensity | -0.113 |
 | agendasInHand | -0.091 |
-| deck:core-anarch | -0.090 |
-| runnerRig | -0.087 |
-| runnerCoverage | -0.085 |
-| deck | +0.084 |
-| remoteIce | +0.072 |
-| agendaPointsInHand | -0.071 |
-| creditLead | +0.068 |
+| deck:core-anarch | -0.088 |
+| runnerCoverage | -0.087 |
+| runnerRig | -0.085 |
+| deck | +0.085 |
+| agendaPointsInHand | -0.070 |
+| creditLead | +0.069 |
+| remoteIce | +0.068 |
+| deck:core-hb | +0.066 |
 | oddsRD | -0.066 |
-| deck:core-hb | +0.064 |
-| deck:core-shaper | +0.064 |
-| archivesAgendas | -0.063 |
-| runnerBreakers | -0.060 |
-| threatLoss | -0.056 |
-| remotes | -0.055 |
-| runnerCredits | -0.055 |
-| hqUnrezzed | +0.046 |
-| runnerTags | +0.040 |
-| remoteUnrezzed | +0.039 |
-| rezDebt | +0.038 |
-| credits | +0.037 |
+| runnerBreakers | -0.065 |
+| deck:core-shaper | +0.063 |
+| archivesAgendas | -0.061 |
+| threatLoss | -0.057 |
+| runnerCredits | -0.056 |
+| remotes | -0.045 |
+| remoteUnrezzed | +0.045 |
+| hqUnrezzed | +0.040 |
+| runnerTags | +0.039 |
+| credits | +0.038 |
+| rezDebt | +0.034 |
 | unfunded | -0.032 |
-| hand | +0.029 |
-| rdIce | +0.026 |
-| deck:core-criminal | +0.025 |
-| oddsRemote | +0.019 |
-| oddsHQ | -0.018 |
-| turn | -0.009 |
-| deck:core-jinteki | -0.008 |
-| economyAssets | -0.006 |
-| runnerHand | +0.004 |
-| rdUnrezzed | +0.001 |
+| hand | +0.030 |
+| rdIce | +0.027 |
+| deck:core-criminal | +0.024 |
+| oddsHQ | -0.021 |
+| oddsRemote | +0.018 |
+| deck:core-jinteki | -0.009 |
+| turn | -0.008 |
+| economyAssets | -0.004 |
+| runnerHand | +0.003 |
+| rdUnrezzed | +0.002 |
 | badPub | +0.000 |
